@@ -1,5 +1,9 @@
 # Installation
 
+## From Releases
+
+Pre-built `.dmg` releases are available for **macOS Apple Silicon** (ARM64) on the [Releases](https://github.com/wu-hongjun/OpenInstax/releases) page. Download, mount, and drag the app to Applications.
+
 ## From Source
 
 ### Prerequisites
@@ -12,14 +16,18 @@
 ```bash
 git clone https://github.com/wu-hongjun/OpenInstax.git
 cd OpenInstax
-cargo build --release
+cargo build --workspace --release
 ```
 
 The CLI binary will be at `target/release/openinstax`.
 
-### Install
+### Install CLI
 
-Copy the binary to your PATH:
+```bash
+cargo install --path crates/openinstax-cli
+```
+
+Or copy manually:
 
 ```bash
 cp target/release/openinstax /usr/local/bin/
@@ -27,14 +35,26 @@ cp target/release/openinstax /usr/local/bin/
 
 ## macOS App
 
-The macOS app bundles the CLI binary and provides a native SwiftUI interface.
+The macOS app bundles the CLI binary and provides a native SwiftUI menu bar interface with drag-and-drop printing.
 
 ```bash
-./scripts/build-app.sh --release
+# Build the Rust workspace first
+cargo build --workspace --release
+
+# Build the app bundle (requires macOS)
+bash scripts/build-app.sh 0.1.0
 ```
 
+The `.app` bundle is created at `target/release/OpenInstax.app`. The script:
+
+1. Copies the CLI binary into the bundle (renamed `openinstax-cli`)
+2. Compiles the SwiftUI launcher with `swiftc`
+3. Generates `Info.plist` with version and BLE permission
+4. Ad-hoc codesigns the bundle
+5. Optionally creates a `.dmg` (if `create-dmg` is installed: `brew install create-dmg`)
+
 !!! note "Bluetooth Permissions"
-    On macOS, the app requires Bluetooth permission. The `Info.plist` must include `NSBluetoothAlwaysUsageDescription`. When running the CLI directly, macOS will prompt for Bluetooth access on first use.
+    The app includes `NSBluetoothAlwaysUsageDescription` in its `Info.plist` for BLE access. When running the CLI directly (outside the app bundle), macOS will prompt for Bluetooth permission on first use.
 
 ## Verify Installation
 

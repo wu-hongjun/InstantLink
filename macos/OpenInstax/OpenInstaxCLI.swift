@@ -8,14 +8,16 @@ class OpenInstaxCLI {
     private let cliPath: String
 
     init() {
-        // Look for the CLI binary next to the app executable
+        // Look for the CLI binary next to the app executable.
+        // The CLI is renamed to openinstax-cli inside the bundle to avoid
+        // case-insensitive collision with the SwiftUI launcher (OpenInstax).
         let bundle = Bundle.main
-        if let path = bundle.path(forAuxiliaryExecutable: "openinstax") {
+        if let path = bundle.path(forAuxiliaryExecutable: "openinstax-cli") {
             self.cliPath = path
         } else {
             // Fallback: assume it's in the same directory
             let execDir = bundle.bundlePath + "/Contents/MacOS"
-            self.cliPath = execDir + "/openinstax"
+            self.cliPath = execDir + "/openinstax-cli"
         }
     }
 

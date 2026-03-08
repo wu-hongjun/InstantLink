@@ -18,8 +18,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Build
+      - name: Install tools
+        run: brew install create-dmg
+
+      - name: Build Rust workspace
         run: cargo build --workspace --release
+
+      - name: Build .app bundle and DMG
+        run: bash scripts/build-app.sh "${GITHUB_REF_NAME}"
 
       - name: Package CLI
         run: |
@@ -46,5 +52,6 @@ jobs:
         with:
           generate_release_notes: true
           files: |
+            OpenInstax-*.dmg
             OpenInstax-CLI-*.zip
             OpenInstax-FFI-*.zip

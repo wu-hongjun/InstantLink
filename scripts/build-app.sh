@@ -1,44 +1,98 @@
-#!/bin/bash
-# Build the OpenInstax macOS app bundle.
+#!/usr/bin/env bash
 #
-# Usage: ./scripts/build-app.sh [--release]
+# build-app.sh — Build OpenInstax.app bundle and DMG
 #
-# This script:
-# 1. Builds the Rust CLI binary
-# 2. Builds the SwiftUI app
-# 3. Copies the CLI into the app bundle
+# Usage: bash scripts/build-app.sh <version>
+#   e.g. bash scripts/build-app.sh 0.1.0
+#
+# Expects release binary at target/release/openinstax.
+# Produces  target/release/OpenInstax.app/  and optionally a DMG.
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VERSION="${1:?Usage: build-app.sh <version>}"
+# Strip leading 'v' if present for plist version strings
+PLIST_VERSION="${VERSION#v}"
 
-# Parse args
-RELEASE=""
-CARGO_PROFILE="debug"
-if [[ "${1:-}" == "--release" ]]; then
-    RELEASE="--release"
-    CARGO_PROFILE="release"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+APP="$REPO_ROOT/target/release/OpenInstax.app"
+CONTENTS="$APP/Contents"
+MACOS_DIR="$CONTENTS/MacOS"
+
+echo "==> Building OpenInstax.app (version ${PLIST_VERSION})"
+
+# --- Clean previous build ------------------------------------------------
+rm -rf "$APP"
+mkdir -p "$MACOS_DIR"
+
+# --- Copy CLI binary ------------------------------------------------------
+CLI_SRC="$REPO_ROOT/target/release/openinstax"
+if [[ ! -f "$CLI_SRC" ]]; then
+  echo "ERROR: $CLI_SRC not found. Run 'cargo build --workspace --release' first." >&2
+  exit 1
 fi
+# Rename to openinstax-cli inside the bundle to avoid case-insensitive
+# collision with the SwiftUI launcher binary (OpenInstax).
+cp "$CLI_SRC" "$MACOS_DIR/openinstax-cli"
 
-echo "==> Building Rust CLI ($CARGO_PROFILE)..."
-cd "$PROJECT_DIR"
-cargo build $RELEASE -p openinstax-cli
+# --- Info.plist -----------------------------------------------------------
+sed "s/\${VERSION}/${PLIST_VERSION}/g" \
+  "$REPO_ROOT/macos/Info.plist.template" > "$CONTENTS/Info.plist"
 
-CLI_BINARY="$PROJECT_DIR/target/$CARGO_PROFILE/openinstax"
+# --- PkgInfo --------------------------------------------------------------
+printf 'APPL????' > "$CONTENTS/PkgInfo"
 
-echo "==> Building SwiftUI app..."
-cd "$PROJECT_DIR/macos"
-xcodebuild -scheme OpenInstax -configuration "${CARGO_PROFILE^}" build \
-    2>/dev/null || echo "Note: Xcode project not yet configured. Skipping SwiftUI build."
+# --- Resources ------------------------------------------------------------
+RESOURCES_DIR="$CONTENTS/Resources"
+mkdir -p "$RESOURCES_DIR"
 
-# If the app bundle exists, copy the CLI binary into it
-APP_BUNDLE="$PROJECT_DIR/macos/build/OpenInstax.app"
-if [[ -d "$APP_BUNDLE" ]]; then
-    echo "==> Copying CLI into app bundle..."
-    cp "$CLI_BINARY" "$APP_BUNDLE/Contents/MacOS/"
-    echo "==> Done! App at: $APP_BUNDLE"
+# --- Compile SwiftUI launcher (Contents/MacOS/OpenInstax) -----------------
+echo "==> Compiling SwiftUI launcher..."
+swiftc \
+  -target arm64-apple-macosx13.0 \
+  -O \
+  -o "$MACOS_DIR/OpenInstax" \
+  "$REPO_ROOT/macos/OpenInstax/OpenInstaxApp.swift" \
+  "$REPO_ROOT/macos/OpenInstax/OpenInstaxCLI.swift" \
+  -framework SwiftUI \
+  -framework AppKit \
+  -parse-as-library
+
+# --- Ad-hoc codesign (prevents "damaged" Gatekeeper error) ----------------
+echo "==> Ad-hoc signing app bundle..."
+codesign --force --deep -s - "$APP"
+
+echo "==> App bundle created at: $APP"
+
+# --- Build DMG (if create-dmg is available) -------------------------------
+if command -v create-dmg &>/dev/null; then
+  TAG="v${PLIST_VERSION}"
+  DMG_NAME="OpenInstax-${TAG}-aarch64-apple-darwin.dmg"
+  DMG_PATH="$REPO_ROOT/$DMG_NAME"
+
+  echo "==> Building DMG: $DMG_NAME"
+
+  DMG_STAGE="$REPO_ROOT/target/release/dmg-stage"
+  rm -rf "$DMG_STAGE"
+  mkdir -p "$DMG_STAGE"
+  cp -R "$APP" "$DMG_STAGE/"
+
+  # create-dmg fails if target exists
+  rm -f "$DMG_PATH"
+
+  create-dmg \
+    --volname "OpenInstax ${TAG}" \
+    --window-size 500 340 \
+    --icon-size 80 \
+    --app-drop-link 350 120 \
+    --icon "OpenInstax.app" 150 120 \
+    --no-internet-enable \
+    "$DMG_PATH" \
+    "$DMG_STAGE"
+
+  rm -rf "$DMG_STAGE"
+
+  echo "==> DMG created at: $DMG_PATH"
 else
-    echo "==> CLI binary at: $CLI_BINARY"
-    echo "    (Xcode project needed for full app bundle)"
+  echo "==> Skipping DMG (install create-dmg: brew install create-dmg)"
 fi

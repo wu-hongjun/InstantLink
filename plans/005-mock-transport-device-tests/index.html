@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://openinstax.hongjunwu.com/development/architecture/">
+        <link rel="canonical" href="https://openinstax.hongjunwu.com/plans/005-mock-transport-device-tests/">
       
       
-        <link rel="prev" href="../../reference/ffi/">
-      
-      
-        <link rel="next" href="../contributing/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Architecture - OpenInstax</title>
+        <title>Plan 005: MockTransport + Device-Layer Tests - OpenInstax</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture" class="md-skip">
+        <a href="#plan-005-mocktransport-device-layer-tests" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture
+              Plan 005: MockTransport + Device-Layer Tests
             
           </span>
         </div>
@@ -286,13 +282,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
           
   
   
@@ -650,10 +644,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -665,20 +657,17 @@
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -696,7 +685,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -711,37 +700,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
         
   
   
@@ -757,137 +719,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#crate-dependency-graph" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Crate Dependency Graph
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#openinstax-core" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        openinstax-core
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="openinstax-core">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#module-layers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Module Layers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#key-design-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Design Decisions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#openinstax-cli" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        openinstax-cli
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#openinstax-ffi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        openinstax-ffi
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#macos-app" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        macOS App
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="macOS App">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-process-instead-of-ffi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Process Instead of FFI?
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#no-daemon" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        No Daemon
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -900,7 +731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../development/contributing/" class="md-nav__link">
         
   
   
@@ -955,10 +786,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#crate-dependency-graph" class="md-nav__link">
+  <a href="#status-implemented" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Crate Dependency Graph
+        Status: Implemented
       
     </span>
   </a>
@@ -966,22 +797,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#openinstax-core" class="md-nav__link">
+  <a href="#problem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        openinstax-core
+        Problem
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="openinstax-core">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Solution">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#module-layers" class="md-nav__link">
+  <a href="#mocktransport-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Module Layers
+        MockTransport Design
       
     </span>
   </a>
@@ -989,10 +831,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#key-design-decisions" class="md-nav__link">
+  <a href="#test-coverage-22-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Design Decisions
+        Test Coverage (22 tests)
       
     </span>
   </a>
@@ -1005,60 +847,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#openinstax-cli" class="md-nav__link">
+  <a href="#results" class="md-nav__link">
     <span class="md-ellipsis">
       
-        openinstax-cli
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#openinstax-ffi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        openinstax-ffi
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#macos-app" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        macOS App
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="macOS App">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-process-instead-of-ffi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Process Instead of FFI?
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#no-daemon" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        No Daemon
+        Results
       
     </span>
   </a>
@@ -1085,53 +877,73 @@
   
 
 
-<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>OpenInstax follows a layered architecture mirroring <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>.</p>
-<h2 id="crate-dependency-graph">Crate Dependency Graph<a class="headerlink" href="#crate-dependency-graph" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>openinstax-cli ──→ openinstax-core
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>openinstax-ffi ──→ openinstax-core
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>macOS app ─────→ openinstax-cli (via Process)
-</code></pre></div>
-<h2 id="openinstax-core">openinstax-core<a class="headerlink" href="#openinstax-core" title="Permanent link">&para;</a></h2>
-<p>The core library handles all BLE communication and image processing. It is fully async (tokio + btleplug).</p>
-<h3 id="module-layers">Module Layers<a class="headerlink" href="#module-layers" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>printer.rs     ← High-level API (scan, connect, print_file)
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    ↓
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>device.rs      ← InstaxDevice trait + BleInstaxDevice (ACK flow)
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    ↓
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>transport.rs   ← BLE GATT transport (btleplug)
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    ↓
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>commands.rs    ← Command/Response enums, encode/decode
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    ↓
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>protocol.rs    ← Packet build/parse, checksum, fragmentation
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    ↓
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>models.rs      ← PrinterModel enum + specs
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>error.rs       ← InstaxError + Result alias
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>image.rs       ← Load, resize, JPEG encode, chunk
-</code></pre></div>
-<h3 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h3>
-<p><strong>Async throughout</strong>: btleplug requires tokio, so the entire core is async. The <code>InstaxDevice</code> trait uses <code>async_trait</code>.</p>
-<p><strong>Model auto-detection</strong>: After connecting, we query <code>IMAGE_SUPPORT_INFO</code> and match the returned width/height to a <code>PrinterModel</code>. This determines image dimensions and chunk sizes.</p>
-<p><strong>ACK-based flow</strong>: Each data chunk requires an ACK from the printer before sending the next. This is handled in <code>BleInstaxDevice::send_image_data</code>.</p>
-<p><strong>Automatic quality reduction</strong>: If the JPEG exceeds 105KB, quality is reduced in steps of 5 until it fits.</p>
-<p><strong>Transport trait</strong>: <code>transport::Transport</code> is a trait, enabling mock implementations for testing without hardware. A <code>MockTransport</code> (in <code>device.rs</code> <code>#[cfg(test)]</code> block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.</p>
-<h2 id="openinstax-cli">openinstax-cli<a class="headerlink" href="#openinstax-cli" title="Permanent link">&para;</a></h2>
-<p>Thin CLI layer using clap for argument parsing and indicatif for progress bars. All printer operations delegate to <code>openinstax_core::printer</code>.</p>
-<p>Supports <code>--json</code> output on all commands for machine consumption (used by the macOS app).</p>
-<h2 id="openinstax-ffi">openinstax-ffi<a class="headerlink" href="#openinstax-ffi" title="Permanent link">&para;</a></h2>
-<p>C FFI bindings using cbindgen. Manages a global tokio runtime (<code>OnceLock&lt;Runtime&gt;</code>) and a <code>Mutex</code>-protected device handle. All functions use <code>catch_unwind</code> to prevent Rust panics from crossing the FFI boundary.</p>
-<h2 id="macos-app">macOS App<a class="headerlink" href="#macos-app" title="Permanent link">&para;</a></h2>
-<p>SwiftUI app with menu bar extra and full window. Uses <code>OpenInstaxCLI.swift</code> to call the bundled CLI binary via <code>Process</code> (same pattern as StatusLight). Communication is via <code>--json</code> output parsing.</p>
-<h3 id="why-process-instead-of-ffi">Why Process Instead of FFI?<a class="headerlink" href="#why-process-instead-of-ffi" title="Permanent link">&para;</a></h3>
-<p>Following StatusLight's pattern, the macOS app wraps the CLI binary rather than linking the FFI directly. This provides:</p>
+<h1 id="plan-005-mocktransport-device-layer-tests">Plan 005: MockTransport + Device-Layer Tests<a class="headerlink" href="#plan-005-mocktransport-device-layer-tests" title="Permanent link">&para;</a></h1>
+<h2 id="status-implemented">Status: Implemented<a class="headerlink" href="#status-implemented" title="Permanent link">&para;</a></h2>
+<h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
+<p><code>device.rs</code> had zero test coverage because <code>BleInstaxDevice</code> requires a real BLE transport.</p>
+<h2 id="solution">Solution<a class="headerlink" href="#solution" title="Permanent link">&para;</a></h2>
+<p>Added a <code>#[cfg(test)] mod tests</code> block at the bottom of <code>device.rs</code> with:</p>
+<ol>
+<li><strong>MockTransport</strong> — implements <code>Transport</code> with a FIFO response queue and sent-bytes recording</li>
+<li><strong>7 response helpers</strong> — build <code>protocol::Packet</code> objects for each response type</li>
+<li><strong>Device construction helper</strong> — <code>make_device()</code> prepends model detection response</li>
+<li><strong>22 test functions</strong> covering all device behavior</li>
+</ol>
+<h3 id="mocktransport-design">MockTransport Design<a class="headerlink" href="#mocktransport-design" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Simpler deployment (single binary to bundle)</li>
-<li>Process isolation (crashes don't take down the app)</li>
-<li>Same interface as the CLI (JSON output)</li>
-<li>Easier debugging (can test CLI commands independently)</li>
+<li><code>send()</code> records raw bytes to <code>state.sent</code></li>
+<li><code>receive()</code> pops next <code>Result&lt;Packet&gt;</code> from queue (supports error injection)</li>
+<li>Uses <code>std::sync::Mutex</code> (not tokio) since mock is synchronous</li>
+<li>Constructor returns <code>(Box&lt;dyn Transport&gt;, Arc&lt;Mutex&lt;MockState&gt;&gt;)</code> for test assertions</li>
 </ul>
-<h2 id="no-daemon">No Daemon<a class="headerlink" href="#no-daemon" title="Permanent link">&para;</a></h2>
-<p>Unlike StatusLight, OpenInstax has no daemon crate. Instax printing is inherently one-shot: connect, transfer image, print, disconnect. There's no need for a persistent background service.</p>
+<h3 id="test-coverage-22-tests">Test Coverage (22 tests)<a class="headerlink" href="#test-coverage-22-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Tests</th>
+<th>What's covered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model Detection</td>
+<td>5</td>
+<td>Mini/Square/Wide detection, unknown dims, wrong response type</td>
+</tr>
+<tr>
+<td>Status Queries</td>
+<td>5</td>
+<td>Battery, film remaining, print count, full status, unexpected response</td>
+</tr>
+<tr>
+<td>LED Commands</td>
+<td>2</td>
+<td>set_led, led_off (verifies zeros sent)</td>
+</tr>
+<tr>
+<td>Print Flow</td>
+<td>2</td>
+<td>Single-chunk and 3-chunk transfer with offset verification</td>
+</tr>
+<tr>
+<td>Error Paths</td>
+<td>5</td>
+<td>DownloadStart/Data/End rejection, unexpected response, transport error</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>3</td>
+<td>Progress callback (i, total), disconnect delegation, name storage</td>
+</tr>
+</tbody>
+</table>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Total tests: 66 (was 44)</li>
+<li><code>cargo fmt</code>, <code>cargo clippy</code>, <code>cargo test</code> all pass clean</li>
+<li>No new files, no new dependencies, no changes to lib.rs or Cargo.toml</li>
+</ul>
 
 
 

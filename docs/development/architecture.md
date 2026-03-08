@@ -42,7 +42,7 @@ image.rs       ← Load, resize, JPEG encode, chunk
 
 **Automatic quality reduction**: If the JPEG exceeds 105KB, quality is reduced in steps of 5 until it fits.
 
-**Transport trait**: `transport::Transport` is a trait, enabling future mock implementations for testing without hardware.
+**Transport trait**: `transport::Transport` is a trait, enabling mock implementations for testing without hardware. A `MockTransport` (in `device.rs` `#[cfg(test)]` block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.
 
 ## openinstax-cli
 

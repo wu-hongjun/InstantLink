@@ -330,3 +330,424 @@ fn detect_model(width: u16, height: u16) -> Result<PrinterModel> {
         "unknown printer dimensions: {width}x{height}"
     )))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::{
+        OP_BATTERY_STATUS_INFO, OP_DATA, OP_DOWNLOAD_END, OP_DOWNLOAD_START, OP_HISTORY_INFO,
+        OP_IMAGE_SUPPORT_INFO, OP_LED_PATTERN_SETTINGS, OP_REMAINING_INFO,
+    };
+    use crate::protocol;
+    use async_trait::async_trait;
+    use std::collections::VecDeque;
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+
+    // ── MockTransport ──────────────────────────────────────────────────────
+
+    struct MockState {
+        responses: VecDeque<Result<protocol::Packet>>,
+        sent: Vec<Vec<u8>>,
+    }
+
+    struct MockTransport {
+        state: Arc<Mutex<MockState>>,
+    }
+
+    impl MockTransport {
+        fn new(
+            responses: Vec<Result<protocol::Packet>>,
+        ) -> (Box<dyn Transport>, Arc<Mutex<MockState>>) {
+            let state = Arc::new(Mutex::new(MockState {
+                responses: responses.into(),
+                sent: Vec::new(),
+            }));
+            let transport = Box::new(MockTransport {
+                state: Arc::clone(&state),
+            });
+            (transport, state)
+        }
+    }
+
+    #[async_trait]
+    impl Transport for MockTransport {
+        async fn send(&self, data: &[u8]) -> Result<()> {
+            self.state.lock().unwrap().sent.push(data.to_vec());
+            Ok(())
+        }
+
+        async fn receive(&self, _timeout: Duration) -> Result<protocol::Packet> {
+            self.state
+                .lock()
+                .unwrap()
+                .responses
+                .pop_front()
+                .unwrap_or(Err(InstaxError::Timeout))
+        }
+
+        async fn disconnect(&self) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    // ── Response helpers ───────────────────────────────────────────────────
+
+    fn image_support_info_packet(model: PrinterModel) -> Result<protocol::Packet> {
+        let spec = model.spec();
+        let mut payload = Vec::new();
+        payload.extend_from_slice(&(spec.width as u16).to_be_bytes());
+        payload.extend_from_slice(&(spec.height as u16).to_be_bytes());
+        Ok(protocol::Packet {
+            opcode: OP_IMAGE_SUPPORT_INFO,
+            payload,
+        })
+    }
+
+    fn download_ack_packet(opcode: u16, status: u8) -> Result<protocol::Packet> {
+        Ok(protocol::Packet {
+            opcode,
+            payload: vec![status],
+        })
+    }
+
+    fn battery_packet(level: u8) -> Result<protocol::Packet> {
+        Ok(protocol::Packet {
+            opcode: OP_BATTERY_STATUS_INFO,
+            payload: vec![level],
+        })
+    }
+
+    fn remaining_packet(remaining: u8) -> Result<protocol::Packet> {
+        Ok(protocol::Packet {
+            opcode: OP_REMAINING_INFO,
+            payload: vec![remaining],
+        })
+    }
+
+    fn history_packet(count: u32) -> Result<protocol::Packet> {
+        Ok(protocol::Packet {
+            opcode: OP_HISTORY_INFO,
+            payload: count.to_be_bytes().to_vec(),
+        })
+    }
+
+    fn led_ack_packet() -> Result<protocol::Packet> {
+        Ok(protocol::Packet {
+            opcode: OP_LED_PATTERN_SETTINGS,
+            payload: vec![],
+        })
+    }
+
+    // ── Device construction helper ─────────────────────────────────────────
+
+    async fn make_device(
+        model: PrinterModel,
+        extra_responses: Vec<Result<protocol::Packet>>,
+    ) -> (BleInstaxDevice, Arc<Mutex<MockState>>) {
+        let mut responses = vec![image_support_info_packet(model)];
+        responses.extend(extra_responses);
+        let (transport, state) = MockTransport::new(responses);
+        let device = BleInstaxDevice::new(transport, "TestPrinter".into())
+            .await
+            .expect("device creation should succeed");
+        (device, state)
+    }
+
+    // ── Model Detection ────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn detect_model_mini() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        assert_eq!(device.model(), PrinterModel::Mini);
+    }
+
+    #[tokio::test]
+    async fn detect_model_square() {
+        let (device, _) = make_device(PrinterModel::Square, vec![]).await;
+        assert_eq!(device.model(), PrinterModel::Square);
+    }
+
+    #[tokio::test]
+    async fn detect_model_wide() {
+        let (device, _) = make_device(PrinterModel::Wide, vec![]).await;
+        assert_eq!(device.model(), PrinterModel::Wide);
+    }
+
+    #[tokio::test]
+    async fn detect_model_unknown() {
+        let mut payload = Vec::new();
+        payload.extend_from_slice(&999u16.to_be_bytes());
+        payload.extend_from_slice(&999u16.to_be_bytes());
+        let packet = Ok(protocol::Packet {
+            opcode: OP_IMAGE_SUPPORT_INFO,
+            payload,
+        });
+        let (transport, _) = MockTransport::new(vec![packet]);
+        let Err(err) = BleInstaxDevice::new(transport, "Test".into()).await else {
+            panic!("expected error");
+        };
+        assert!(err.to_string().contains("unknown printer dimensions"));
+    }
+
+    #[tokio::test]
+    async fn detect_model_wrong_response() {
+        let (transport, _) = MockTransport::new(vec![battery_packet(50)]);
+        let Err(err) = BleInstaxDevice::new(transport, "Test".into()).await else {
+            panic!("expected error");
+        };
+        assert!(err.to_string().contains("expected ImageSupportInfo"));
+    }
+
+    // ── Status Queries ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn battery() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![battery_packet(85)]).await;
+        assert_eq!(device.battery().await.unwrap(), 85);
+    }
+
+    #[tokio::test]
+    async fn film_remaining() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![remaining_packet(8)]).await;
+        assert_eq!(device.film_remaining().await.unwrap(), 8);
+    }
+
+    #[tokio::test]
+    async fn print_count() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![history_packet(142)]).await;
+        assert_eq!(device.print_count().await.unwrap(), 142);
+    }
+
+    #[tokio::test]
+    async fn status_all() {
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![battery_packet(85), remaining_packet(8), history_packet(142)],
+        )
+        .await;
+        let status = device.status().await.unwrap();
+        assert_eq!(status.battery, 85);
+        assert_eq!(status.film_remaining, 8);
+        assert_eq!(status.print_count, 142);
+        assert_eq!(status.model, PrinterModel::Mini);
+        assert_eq!(status.name, "TestPrinter");
+    }
+
+    #[tokio::test]
+    async fn battery_unexpected_response() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![remaining_packet(5)]).await;
+        let result = device.battery().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("expected BatteryStatus"));
+    }
+
+    // ── LED Commands ───────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn set_led() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![led_ack_packet()]).await;
+        device.set_led(255, 128, 0, 1).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn led_off() {
+        let (device, state) = make_device(PrinterModel::Mini, vec![led_ack_packet()]).await;
+        device.led_off().await.unwrap();
+        let sent = &state.lock().unwrap().sent;
+        // sent[0] is ImageSupportInfo query, sent[1] is LED command
+        let led_packet = protocol::parse_packet(&sent[1]).unwrap();
+        assert_eq!(led_packet.opcode, OP_LED_PATTERN_SETTINGS);
+        assert_eq!(led_packet.payload, vec![0, 0, 0, 0]);
+    }
+
+    // ── Print Flow ─────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn send_image_data_single_chunk() {
+        let jpeg_data = vec![0u8; 100];
+        let chunks = vec![jpeg_data.clone()];
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![
+                download_ack_packet(OP_DOWNLOAD_START, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DOWNLOAD_END, 0),
+            ],
+        )
+        .await;
+        device
+            .send_image_data(&jpeg_data, &chunks, None)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn send_image_data_multi_chunk() {
+        let jpeg_data = vec![0u8; 2700];
+        let chunks = image::chunk_image_data(&jpeg_data, PrinterModel::Mini);
+        assert_eq!(chunks.len(), 3);
+        let (device, state) = make_device(
+            PrinterModel::Mini,
+            vec![
+                download_ack_packet(OP_DOWNLOAD_START, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DOWNLOAD_END, 0),
+            ],
+        )
+        .await;
+        device
+            .send_image_data(&jpeg_data, &chunks, None)
+            .await
+            .unwrap();
+
+        let sent = &state.lock().unwrap().sent;
+        // sent[0]=ImageSupportInfo, sent[1]=DownloadStart, sent[2..5]=Data, sent[5]=DownloadEnd
+
+        let pkt0 = protocol::parse_packet(&sent[2]).unwrap();
+        assert_eq!(pkt0.opcode, OP_DATA);
+        let offset0 = u32::from_be_bytes(pkt0.payload[0..4].try_into().unwrap());
+        assert_eq!(offset0, 0);
+
+        let pkt1 = protocol::parse_packet(&sent[3]).unwrap();
+        let offset1 = u32::from_be_bytes(pkt1.payload[0..4].try_into().unwrap());
+        assert_eq!(offset1, 900);
+
+        let pkt2 = protocol::parse_packet(&sent[4]).unwrap();
+        let offset2 = u32::from_be_bytes(pkt2.payload[0..4].try_into().unwrap());
+        assert_eq!(offset2, 1800);
+    }
+
+    // ── Error Paths ────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn download_start_rejected() {
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![download_ack_packet(OP_DOWNLOAD_START, 1)],
+        )
+        .await;
+        let result = device
+            .send_image_data(&[0u8; 100], &[vec![0u8; 100]], None)
+            .await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("download start rejected"));
+    }
+
+    #[tokio::test]
+    async fn data_chunk_rejected() {
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![
+                download_ack_packet(OP_DOWNLOAD_START, 0),
+                download_ack_packet(OP_DATA, 2),
+            ],
+        )
+        .await;
+        let result = device
+            .send_image_data(&[0u8; 100], &[vec![0u8; 100]], None)
+            .await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("data chunk 0 rejected"));
+    }
+
+    #[tokio::test]
+    async fn download_end_rejected() {
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![
+                download_ack_packet(OP_DOWNLOAD_START, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DOWNLOAD_END, 3),
+            ],
+        )
+        .await;
+        let result = device
+            .send_image_data(&[0u8; 100], &[vec![0u8; 100]], None)
+            .await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("download end rejected"));
+    }
+
+    #[tokio::test]
+    async fn unexpected_response_in_download() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![battery_packet(50)]).await;
+        let result = device
+            .send_image_data(&[0u8; 100], &[vec![0u8; 100]], None)
+            .await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("expected DownloadAck"));
+    }
+
+    #[tokio::test]
+    async fn transport_error_during_new() {
+        let (transport, _) = MockTransport::new(vec![Err(InstaxError::Timeout)]);
+        let result = BleInstaxDevice::new(transport, "Test".into()).await;
+        assert!(result.is_err());
+    }
+
+    // ── Other ──────────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn progress_callback() {
+        let jpeg_data = vec![0u8; 2700];
+        let chunks = image::chunk_image_data(&jpeg_data, PrinterModel::Mini);
+        assert_eq!(chunks.len(), 3);
+
+        let progress_log = Arc::new(Mutex::new(Vec::new()));
+        let log_clone = Arc::clone(&progress_log);
+
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![
+                download_ack_packet(OP_DOWNLOAD_START, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DATA, 0),
+                download_ack_packet(OP_DOWNLOAD_END, 0),
+            ],
+        )
+        .await;
+
+        let cb = move |i: usize, total: usize| {
+            log_clone.lock().unwrap().push((i, total));
+        };
+
+        device
+            .send_image_data(&jpeg_data, &chunks, Some(&cb))
+            .await
+            .unwrap();
+
+        let log = progress_log.lock().unwrap();
+        assert_eq!(*log, vec![(1, 3), (2, 3), (3, 3)]);
+    }
+
+    #[tokio::test]
+    async fn disconnect_delegates() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        device.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn name_stored_and_returned() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        assert_eq!(device.name(), "TestPrinter");
+    }
+}

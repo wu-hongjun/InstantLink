@@ -552,6 +552,11 @@ struct InspectorSectionCard<Content: View>: View {
 
 struct SelectedOverlayInspectorView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @FocusState private var focusedField: InspectorField?
+
+    private enum InspectorField: Hashable {
+        case textContent
+    }
 
     var body: some View {
         guard let overlay = viewModel.selectedOverlay else {
@@ -615,6 +620,12 @@ struct SelectedOverlayInspectorView: View {
                     }
                 }
                 .disabled(isLocked)
+            }
+            .onAppear {
+                focusRequestedTextOverlayIfNeeded()
+            }
+            .onChange(of: viewModel.textOverlayFocusRequest?.token) { _ in
+                focusRequestedTextOverlayIfNeeded()
             }
         )
     }
@@ -689,6 +700,7 @@ struct SelectedOverlayInspectorView: View {
                     viewModel.updateSelectedTextOverlay { $0.text = newValue }
                 }
             ))
+            .focused($focusedField, equals: .textContent)
 
             labeledSlider(L("Size"), value: Binding(
                 get: {
@@ -732,6 +744,16 @@ struct SelectedOverlayInspectorView: View {
                 Text(L("Strong")).tag(OverlayShadowStyle.strong)
             }
             .pickerStyle(.segmented)
+        }
+    }
+
+    private func focusRequestedTextOverlayIfNeeded() {
+        guard let request = viewModel.textOverlayFocusRequest,
+              request.overlayID == viewModel.selectedOverlayID,
+              let overlay = viewModel.selectedOverlay,
+              case .text = overlay.content else { return }
+        DispatchQueue.main.async {
+            focusedField = .textContent
         }
     }
 

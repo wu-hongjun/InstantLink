@@ -4,6 +4,11 @@ import ImageIO
 import SwiftUI
 import UniformTypeIdentifiers
 
+struct OverlayTextFocusRequest: Equatable {
+    let overlayID: UUID
+    let token = UUID()
+}
+
 // MARK: - View Model
 
 @MainActor
@@ -136,6 +141,7 @@ class ViewModel: ObservableObject {
         }
     }
     @Published var selectedOverlayID: UUID?
+    @Published var textOverlayFocusRequest: OverlayTextFocusRequest?
 
     var selectedOverlayIndex: Int? {
         guard let selectedOverlayID else { return nil }
@@ -737,6 +743,13 @@ class ViewModel: ObservableObject {
 
     func selectOverlay(_ id: UUID?) {
         selectedOverlayID = id
+    }
+
+    func requestTextOverlayEditing(_ id: UUID) {
+        selectOverlay(id)
+        guard let overlay = overlays.first(where: { $0.id == id }),
+              case .text = overlay.content else { return }
+        textOverlayFocusRequest = OverlayTextFocusRequest(overlayID: id)
     }
 
     func addOverlay(kind: OverlayKind) {

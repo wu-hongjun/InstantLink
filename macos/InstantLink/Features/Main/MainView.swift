@@ -422,13 +422,13 @@ struct MainView: View {
             get: { viewModel.captureMode },
             set: { viewModel.requestCaptureModeChange(to: $0) }
         )) {
-            Image(systemName: "photo.on.rectangle").tag(CaptureMode.file)
-            Image(systemName: "camera").tag(CaptureMode.camera)
+            Text(L("Printer")).tag(CaptureMode.file)
+            Text(L("Camera")).tag(CaptureMode.camera)
         }
         .pickerStyle(.segmented)
         .controlSize(.small)
         .labelsHidden()
-        .frame(width: 60)
+        .frame(width: 150)
         .onChange(of: viewModel.captureMode) { newMode in
             if newMode == .camera {
                 viewModel.requestCameraAccessAndStart()

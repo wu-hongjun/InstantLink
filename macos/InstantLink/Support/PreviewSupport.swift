@@ -232,6 +232,14 @@ struct OverlayPreviewItemView: View {
         )
         .opacity(item.opacity)
         .position(x: frame.midX, y: frame.midY)
+        .onTapGesture(count: 2) {
+            guard editable else { return }
+            if isTextOverlay {
+                viewModel.requestTextOverlayEditing(item.id)
+            } else {
+                viewModel.selectOverlay(item.id)
+            }
+        }
         .onTapGesture {
             guard editable else { return }
             viewModel.selectOverlay(item.id)
@@ -258,6 +266,13 @@ struct OverlayPreviewItemView: View {
 
     private var showsResizeHandles: Bool {
         editable && isSelected && !item.isLocked
+    }
+
+    private var isTextOverlay: Bool {
+        if case .text = item.content {
+            return true
+        }
+        return false
     }
 
     private var resizeHandles: some View {

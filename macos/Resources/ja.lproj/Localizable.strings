@@ -26,6 +26,7 @@
 "Reset Crop" = "切り抜きをリセット";
 "Scan for Printers" = "プリンターをスキャン";
 "Edit Image" = "画像を編集";
+"Done" = "完了";
 "Print" = "印刷";
 
 /* Status Display */
@@ -104,6 +105,7 @@
 "Language" = "言語";
 "System Default" = "システムデフォルト";
 "language_restart_note" = "言語の変更にはアプリの再起動が必要です。";
+"Restart" = "再起動";
 "Default Print Settings" = "デフォルト印刷設定";
 "default_fit_mode_description" = "新しい画像を開くときのデフォルトのフィットモード。";
 "Saved Printers" = "保存済みプリンター";
@@ -137,6 +139,7 @@
 
 /* Camera Mode */
 "Capture" = "撮影";
+"Capture & Print" = "撮影して印刷";
 "Retake" = "撮り直し";
 "No camera available" = "カメラがありません";
 "Camera access denied" = "カメラへのアクセスが拒否されました";

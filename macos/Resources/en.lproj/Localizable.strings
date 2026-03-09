@@ -26,6 +26,7 @@
 "Reset Crop" = "Reset Crop";
 "Scan for Printers" = "Scan for Printers";
 "Edit Image" = "Edit Image";
+"Done" = "Done";
 "Print" = "Print";
 
 /* Status Display */
@@ -104,6 +105,7 @@
 "Language" = "Language";
 "System Default" = "System Default";
 "language_restart_note" = "Changing the language requires restarting the app.";
+"Restart" = "Restart";
 "Default Print Settings" = "Default Print Settings";
 "default_fit_mode_description" = "The default fit mode used when opening new images.";
 "Saved Printers" = "Saved Printers";
@@ -137,6 +139,7 @@
 
 /* Camera Mode */
 "Capture" = "Capture";
+"Capture & Print" = "Capture & Print";
 "Retake" = "Retake";
 "No camera available" = "No camera available";
 "Camera access denied" = "Camera access denied";

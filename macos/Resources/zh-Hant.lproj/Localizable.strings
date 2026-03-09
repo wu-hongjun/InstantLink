@@ -26,6 +26,7 @@
 "Reset Crop" = "重設裁切";
 "Scan for Printers" = "掃描印表機";
 "Edit Image" = "編輯圖片";
+"Done" = "完成";
 "Print" = "列印";
 
 /* Status Display */
@@ -104,6 +105,7 @@
 "Language" = "語言";
 "System Default" = "系統預設";
 "language_restart_note" = "更改語言需要重新啟動應用程式。";
+"Restart" = "重新啟動";
 "Default Print Settings" = "預設列印設定";
 "default_fit_mode_description" = "開啟新圖片時使用的預設適應模式。";
 "Saved Printers" = "已儲存的印表機";
@@ -137,6 +139,7 @@
 
 /* Camera Mode */
 "Capture" = "拍照";
+"Capture & Print" = "拍照並列印";
 "Retake" = "重拍";
 "No camera available" = "沒有可用的相機";
 "Camera access denied" = "相機存取被拒絕";

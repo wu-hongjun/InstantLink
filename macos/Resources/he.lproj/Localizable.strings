@@ -27,6 +27,7 @@
 "Reset Crop" = "אפס חיתוך";
 "Scan for Printers" = "חפש מדפסות";
 "Edit Image" = "ערוך תמונה";
+"Done" = "סיום";
 "Print" = "הדפס";
 
 /* Status Display */
@@ -105,6 +106,7 @@
 "Language" = "שפה";
 "System Default" = "ברירת מחדל של המערכת";
 "language_restart_note" = "שינוי השפה מחייב הפעלה מחדש של האפליקציה.";
+"Restart" = "הפעל מחדש";
 "Default Print Settings" = "הגדרות הדפסה ברירת מחדל";
 "default_fit_mode_description" = "מצב ההתאמה שמשמש כברירת מחדל בפתיחת תמונות חדשות.";
 "Saved Printers" = "מדפסות שמורות";
@@ -138,6 +140,7 @@
 
 /* Camera Mode */
 "Capture" = "צלם";
+"Capture & Print" = "צלם והדפס";
 "Retake" = "צלם שוב";
 "No camera available" = "אין מצלמה זמינה";
 "Camera access denied" = "הגישה למצלמה נדחתה";

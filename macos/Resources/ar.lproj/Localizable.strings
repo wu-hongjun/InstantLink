@@ -26,6 +26,7 @@
 "Reset Crop" = "إعادة تعيين القص";
 "Scan for Printers" = "البحث عن طابعات";
 "Edit Image" = "تعديل الصورة";
+"Done" = "تم";
 "Print" = "طباعة";
 
 /* Status Display */
@@ -104,6 +105,7 @@
 "Language" = "اللغة";
 "System Default" = "الافتراضي للنظام";
 "language_restart_note" = "يتطلب تغيير اللغة إعادة تشغيل التطبيق.";
+"Restart" = "إعادة التشغيل";
 "Default Print Settings" = "إعدادات الطباعة الافتراضية";
 "default_fit_mode_description" = "وضع الملاءمة الافتراضي عند فتح صور جديدة.";
 "Saved Printers" = "الطابعات المحفوظة";
@@ -137,6 +139,7 @@
 
 /* Camera Mode */
 "Capture" = "التقاط";
+"Capture & Print" = "التقاط وطباعة";
 "Retake" = "إعادة التقاط";
 "No camera available" = "لا توجد كاميرا متاحة";
 "Camera access denied" = "تم رفض الوصول إلى الكاميرا";

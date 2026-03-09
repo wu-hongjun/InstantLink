@@ -52,7 +52,8 @@ int32_t instantlink_connect_named(const char *name, int32_t duration_secs);
 // Disconnect from the current printer.
 int32_t instantlink_disconnect(void);
 
-// Check if a printer is currently connected. Returns 1 if yes, 0 if no.
+// Check if a printer is currently connected.
+// Returns 1 if connected, 0 if not, -3 if internal error.
 int32_t instantlink_is_connected(void);
 ```
 
@@ -107,6 +108,13 @@ int32_t instantlink_device_model(char *out, int32_t out_len);
 // print_option: 0=Rich (vivid), 1=Natural (classic)
 int32_t instantlink_print(const char *path, uint8_t quality,
                           uint8_t fit_mode, uint8_t print_option);
+
+// Print with a progress callback.
+// Same as instantlink_print, but calls progress_cb(sent, total) after each chunk.
+// progress_cb may be NULL (behaves like instantlink_print).
+int32_t instantlink_print_with_progress(const char *path, uint8_t quality,
+                                         uint8_t fit_mode, uint8_t print_option,
+                                         void (*progress_cb)(uint32_t sent, uint32_t total));
 ```
 
 ### LED Control
@@ -122,12 +130,15 @@ int32_t instantlink_led_off(void);
 
 ## Swift Usage
 
-The macOS app uses `InstantLinkCLI.swift` (a Process wrapper around the CLI binary) rather than calling FFI directly. However, the FFI can be used from Swift via `dlopen`:
+The macOS app loads the FFI dylib at runtime via `dlopen`/`dlsym`. See `InstantLinkFFI.swift` for the complete wrapper that resolves all 17 symbols.
 
 ```swift
 import Foundation
 
-// Link against libinstantlink_ffi.a or load via dlopen
+// Load via dlopen (see InstantLinkFFI.swift for full implementation)
+let handle = dlopen("libinstantlink_ffi.dylib", RTLD_NOW)
+let initFn = dlsym(handle, "instantlink_init")
+// ... resolve other symbols
 
 instantlink_init()
 
@@ -136,13 +147,16 @@ if result == 0 {
     let battery = instantlink_battery()
     print("Battery: \(battery)%")
 
-    instantlink_print("/path/to/photo.jpg", 97, 0, 0)
+    // Print with progress callback
+    instantlink_print_with_progress("/path/to/photo.jpg", 97, 0, 0) { sent, total in
+        print("Progress: \(sent)/\(total)")
+    }
     instantlink_disconnect()
 }
 ```
 
-See `InstantLinkFFI.swift` for a complete `dlopen`-based wrapper that resolves all 16 symbols at runtime.
-
 ## Thread Safety
 
 The FFI layer maintains a global tokio runtime (`OnceLock<Runtime>`) and a `Mutex`-protected device handle. All functions are safe to call from any thread. The `Mutex` serializes access to the printer. All functions use `catch_unwind` to prevent Rust panics from crossing the FFI boundary.
+
+The `progress_cb` in `instantlink_print_with_progress` is called from the tokio runtime thread. The macOS app wraps the callback state with an `NSLock` to safely bridge between the C callback and Swift async contexts.

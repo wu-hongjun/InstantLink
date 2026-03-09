@@ -26,6 +26,7 @@
 "Reset Crop" = "重置裁剪";
 "Scan for Printers" = "扫描打印机";
 "Edit Image" = "编辑图片";
+"Done" = "完成";
 "Print" = "打印";
 
 /* Status Display */
@@ -104,6 +105,7 @@
 "Language" = "语言";
 "System Default" = "系统默认";
 "language_restart_note" = "更改语言需要重新启动应用。";
+"Restart" = "重新启动";
 "Default Print Settings" = "默认打印设置";
 "default_fit_mode_description" = "打开新图片时使用的默认适应模式。";
 "Saved Printers" = "已保存的打印机";
@@ -137,6 +139,7 @@
 
 /* Camera Mode */
 "Capture" = "拍照";
+"Capture & Print" = "拍照并打印";
 "Retake" = "重拍";
 "No camera available" = "没有可用的摄像头";
 "Camera access denied" = "摄像头访问被拒绝";

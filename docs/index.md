@@ -30,11 +30,11 @@ The Instax Link BLE protocol has been fully reverse-engineered by the open-sourc
 - LED color control with solid, blink, and breathe patterns
 - BLE scanner to discover nearby printers
 - JSON output mode for integration with other tools
-- Native macOS app with menu bar and drag-and-drop printing
-- C FFI (16 functions) for building native UIs
+- Native macOS app with image editor, camera capture, self-timer, film orientation toggle, film border preview, printer profiles, and auto-updates
+- C FFI (17 functions) for building native UIs
 
 ## Architecture
 
-InstantLink mirrors the architecture of [StatusLight](https://github.com/wu-hongjun/StatusLight), with the core library providing async BLE communication via btleplug, a CLI that calls core directly, and an FFI layer for the SwiftUI macOS app.
+InstantLink mirrors the architecture of [StatusLight](https://github.com/wu-hongjun/StatusLight), with the core library providing async BLE communication via btleplug, a CLI that calls core directly, and an FFI layer that the SwiftUI macOS app loads via `dlopen`/`dlsym`.
 
 Unlike StatusLight, there is no daemon crate. Instax printing is a one-shot operation (connect, print, disconnect) rather than a continuous service.

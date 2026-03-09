@@ -26,6 +26,7 @@
 "Reset Crop" = "Zuschnitt zurücksetzen";
 "Scan for Printers" = "Nach Druckern suchen";
 "Edit Image" = "Bild bearbeiten";
+"Done" = "Fertig";
 "Print" = "Drucken";
 
 /* Status Display */
@@ -104,6 +105,7 @@
 "Language" = "Sprache";
 "System Default" = "Systemstandard";
 "language_restart_note" = "Das Ändern der Sprache erfordert einen Neustart der App.";
+"Restart" = "Neustart";
 "Default Print Settings" = "Standard-Druckeinstellungen";
 "default_fit_mode_description" = "Der Standard-Anpassungsmodus beim Öffnen neuer Bilder.";
 "Saved Printers" = "Gespeicherte Drucker";
@@ -137,6 +139,7 @@
 
 /* Camera Mode */
 "Capture" = "Aufnehmen";
+"Capture & Print" = "Aufnehmen & Drucken";
 "Retake" = "Wiederholen";
 "No camera available" = "Keine Kamera verfügbar";
 "Camera access denied" = "Kamerazugriff verweigert";

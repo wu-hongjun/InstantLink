@@ -7,8 +7,7 @@ InstantLink follows a layered architecture mirroring [StatusLight](https://githu
 ```
 instantlink-cli ──→ instantlink-core
 instantlink-ffi ──→ instantlink-core
-macOS app ─────→ instantlink-cli (via Process)
-              └──→ instantlink-ffi (via dlopen, bundled dylib)
+macOS app ─────→ instantlink-ffi (via dlopen, bundled dylib)
 ```
 
 ## instantlink-core
@@ -49,7 +48,7 @@ image.rs       ← Load, resize, JPEG encode, chunk
 
 Thin CLI layer using clap for argument parsing and indicatif for progress bars. All printer operations delegate to `instantlink_core::printer`.
 
-Supports `--json` output on all commands for machine consumption (used by the macOS app).
+Supports `--json` output on all commands for machine consumption.
 
 ## instantlink-ffi
 
@@ -57,16 +56,17 @@ C FFI bindings using cbindgen. Manages a global tokio runtime (`OnceLock<Runtime
 
 ## macOS App
 
-SwiftUI app with menu bar extra and full window. Uses `InstantLinkCLI.swift` to call the bundled CLI binary via `Process` (same pattern as StatusLight). Communication is via `--json` output parsing.
+Native SwiftUI app with menu bar extra and full window. Single-file architecture (`InstantLinkApp.swift`) containing all views and the ViewModel. Communicates with printers via FFI — `InstantLinkFFI.swift` uses `dlopen`/`dlsym` to load the bundled `libinstantlink_ffi.dylib` and resolves all 17 symbols at runtime.
 
-### Why Process Instead of FFI?
+### Key Features
 
-Following StatusLight's pattern, the macOS app wraps the CLI binary rather than linking the FFI directly. This provides:
-
-- Simpler deployment (single binary to bundle)
-- Process isolation (crashes don't take down the app)
-- Same interface as the CLI (JSON output)
-- Easier debugging (can test CLI commands independently)
+- **Image editor**: Crop, contain, stretch fit modes; rotation; date stamps with multiple styles
+- **Camera capture**: Built-in camera with self-timer (off/2s/10s) and capture flash
+- **Film orientation**: Portrait/landscape toggle that inverts the aspect ratio for preview and applies 90° rotation at print time
+- **Film border preview**: `FilmFrameView` renders the physical Instax film card shape (white card with thick bottom border) around image previews
+- **Printer profiles**: Multi-printer management with custom names, colors, and saved BLE identifiers
+- **Auto-update**: Checks GitHub releases and downloads/installs updates in-app
+- **Localization**: 12 languages via `.lproj/Localizable.strings` bundles
 
 ## No Daemon
 

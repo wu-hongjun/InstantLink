@@ -203,6 +203,8 @@ class ViewModel: ObservableObject {
 
     // Film orientation
     @Published var filmOrientation: String = "default"  // "default" or "rotated"
+    // Capture and print — auto-commit and print after photo is taken
+    var autoPrintAfterCapture = false
 
     // Printer selection (for multi-printer switching)
     @Published var availablePrinters: [String] = []
@@ -650,8 +652,14 @@ class ViewModel: ObservableObject {
         let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
         let delegate = CameraPhotoCaptureDelegate { [weak self] image in
             DispatchQueue.main.async {
-                self?.capturedImage = image
-                self?.cameraState = .preview
+                guard let self = self else { return }
+                self.capturedImage = image
+                self.cameraState = .preview
+                if self.autoPrintAfterCapture {
+                    self.autoPrintAfterCapture = false
+                    self.commitCapture()
+                    Task { await self.printSelectedImage() }
+                }
             }
         }
         photoDelegate = delegate
@@ -691,6 +699,7 @@ class ViewModel: ObservableObject {
         timerTask?.cancel()
         timerTask = nil
         timerCountdown = nil
+        autoPrintAfterCapture = false
     }
 
     func commitCapture() {
@@ -1427,7 +1436,7 @@ struct FilmFrameView<Content: View>: View {
         }
     }
 
-    private func layout(availW: CGFloat, availH: CGFloat) -> (cardW: CGFloat, cardH: CGFloat, imgW: CGFloat, imgH: CGFloat, offsetY: CGFloat) {
+    private func layout(availW: CGFloat, availH: CGFloat) -> (cardW: CGFloat, cardH: CGFloat, imgW: CGFloat, imgH: CGFloat, offsetX: CGFloat, offsetY: CGFloat) {
         let tb = topBorder
         let bb = bottomBorder
         let sb = sideBorder
@@ -1455,9 +1464,14 @@ struct FilmFrameView<Content: View>: View {
         let imgW = isRotated ? imageAreaH : imageAreaW
         let imgH = isRotated ? imageAreaW : imageAreaH
 
-        let offsetY = isRotated ? CGFloat(0) : (tb - bb) / cardH_ratio * fitH / 2
+        // Offset the image within the card to create the asymmetric thick border.
+        // Non-rotated: thick border at bottom → shift image up (negative Y).
+        // Rotated: thick border moves to the right → shift image left (negative X).
+        let borderDelta = (tb - bb) / cardH_ratio / 2
+        let offsetX = isRotated ? borderDelta * fitW : CGFloat(0)
+        let offsetY = isRotated ? CGFloat(0) : borderDelta * fitH
 
-        return (fitW, fitH, imgW, imgH, offsetY)
+        return (fitW, fitH, imgW, imgH, offsetX, offsetY)
     }
 
     var body: some View {
@@ -1473,7 +1487,7 @@ struct FilmFrameView<Content: View>: View {
                     content()
                         .frame(width: l.imgW, height: l.imgH)
                         .clipped()
-                        .offset(x: 0, y: l.offsetY)
+                        .offset(x: l.offsetX, y: l.offsetY)
                 }
                 .position(x: geo.size.width / 2, y: geo.size.height / 2)
             }
@@ -1620,29 +1634,31 @@ struct CameraActionsView: View {
     var body: some View {
         VStack(spacing: 10) {
             if viewModel.cameraState == .viewfinder {
-                if viewModel.availableCameras.count > 1 {
-                    Picker(L("Camera"), selection: Binding(
-                        get: { viewModel.selectedCamera?.uniqueID ?? "" },
-                        set: { id in
-                            if let device = viewModel.availableCameras.first(where: { $0.uniqueID == id }) {
-                                viewModel.switchCamera(to: device)
+                // All controls in one row: [Camera picker] [Timer] [Orientation]
+                HStack(spacing: 8) {
+                    if viewModel.availableCameras.count > 1 {
+                        Picker(L("Camera"), selection: Binding(
+                            get: { viewModel.selectedCamera?.uniqueID ?? "" },
+                            set: { id in
+                                if let device = viewModel.availableCameras.first(where: { $0.uniqueID == id }) {
+                                    viewModel.switchCamera(to: device)
+                                }
+                            }
+                        )) {
+                            ForEach(viewModel.availableCameras, id: \.uniqueID) { device in
+                                Text(device.localizedName).tag(device.uniqueID)
                             }
                         }
-                    )) {
-                        ForEach(viewModel.availableCameras, id: \.uniqueID) { device in
-                            Text(device.localizedName).tag(device.uniqueID)
-                        }
+                        .labelsHidden()
                     }
-                    .labelsHidden()
-                }
 
-                HStack(spacing: 8) {
                     Picker(L("Timer"), selection: $viewModel.timerMode) {
                         Text(L("Off")).tag(0)
                         Text("2s").tag(2)
                         Text("10s").tag(10)
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
                     .frame(maxWidth: 140)
 
                     if viewModel.printerAspectRatio != nil {
@@ -1650,34 +1666,54 @@ struct CameraActionsView: View {
                             viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
                         } label: {
                             Image(systemName: viewModel.filmOrientation == "default"
-                                ? "rectangle.portrait" : "rectangle.landscape.rotate")
+                                ? "rectangle.portrait.arrowtriangle.2.outward" : "rectangle.landscape.arrowtriangle.2.outward")
                                 .font(.callout)
                         }
                         .help(L("Film Orientation"))
                     }
                 }
 
-                Button {
-                    if viewModel.timerCountdown != nil {
+                if viewModel.timerCountdown != nil {
+                    Button {
                         viewModel.cancelTimer()
-                    } else {
-                        viewModel.captureWithTimer()
-                    }
-                } label: {
-                    HStack {
-                        if viewModel.timerCountdown != nil {
+                    } label: {
+                        HStack {
                             Image(systemName: "xmark")
                             Text(L("Cancel"))
-                        } else {
-                            Image(systemName: "camera.shutter.button")
-                            Text(L("Capture"))
                         }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
+                    .controlSize(.large)
+                } else {
+                    HStack(spacing: 10) {
+                        Button {
+                            viewModel.autoPrintAfterCapture = false
+                            viewModel.captureWithTimer()
+                        } label: {
+                            HStack {
+                                Image(systemName: "camera.shutter.button")
+                                Text(L("Capture"))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .controlSize(.large)
+                        .disabled(viewModel.captureSession == nil)
+
+                        Button {
+                            viewModel.autoPrintAfterCapture = true
+                            viewModel.captureWithTimer()
+                        } label: {
+                            HStack {
+                                Image(systemName: "printer.fill")
+                                Text(L("Capture & Print"))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .disabled(viewModel.captureSession == nil || viewModel.printerName == nil)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(viewModel.captureSession == nil)
             } else {
                 HStack(spacing: 10) {
                     Button {
@@ -2420,9 +2456,25 @@ struct MainActionsView: View {
 
 struct ImageEditorView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            // Header with Done button
+            HStack {
+                Text(L("Edit Image"))
+                    .font(.headline)
+                Spacer()
+                Button(L("Done")) {
+                    dismiss()
+                }
+                .keyboardShortcut(.return, modifiers: [])
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
+            Divider()
+
             if viewModel.selectedImage != nil {
                 HSplitView {
                     EditorPreviewView()
@@ -2475,102 +2527,91 @@ struct EditorPreviewView: View {
                 .foregroundColor(isTargeted ? .accentColor : .secondary.opacity(0.5))
 
             if let image = viewModel.selectedImage {
-                ZStack(alignment: .topTrailing) {
-                    FilmFrameView(filmModel: viewModel.printerModelTag,
-                                  isRotated: viewModel.filmOrientation == "rotated") {
-                        if viewModel.fitMode == "crop", let ar = viewModel.orientedAspectRatio {
-                            Color.clear
-                                .aspectRatio(ar, contentMode: .fit)
-                                .background(
-                                    GeometryReader { geo in
-                                        Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
+                FilmFrameView(filmModel: viewModel.printerModelTag,
+                              isRotated: viewModel.filmOrientation == "rotated") {
+                    if viewModel.fitMode == "crop", let ar = viewModel.orientedAspectRatio {
+                        Color.clear
+                            .aspectRatio(ar, contentMode: .fit)
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
+                                }
+                            )
+                            .onPreferenceChange(CropFrameSizeKey.self) { size in
+                                localFrameSize = size
+                                viewModel.cropFrameSize = size
+                            }
+                            .overlay(
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .scaleEffect(effectiveZoom)
+                                    .offset(effectiveOffset(imageSize: image.size))
+                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                            )
+                            .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                DateStampOverlayView()
+                            }
+                            .clipped()
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture()
+                                    .updating($dragDelta) { value, state, _ in
+                                        state = value.translation
                                     }
-                                )
-                                .onPreferenceChange(CropFrameSizeKey.self) { size in
-                                    localFrameSize = size
-                                    viewModel.cropFrameSize = size
-                                }
-                                .overlay(
-                                    Image(nsImage: image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .scaleEffect(effectiveZoom)
-                                        .offset(effectiveOffset(imageSize: image.size))
-                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                                )
-                                .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                    DateStampOverlayView()
-                                }
-                                .clipped()
-                                .contentShape(Rectangle())
-                                .gesture(
-                                    DragGesture()
-                                        .updating($dragDelta) { value, state, _ in
-                                            state = value.translation
-                                        }
-                                        .onEnded { value in
-                                            let raw = CGSize(
-                                                width: viewModel.cropOffset.width + value.translation.width,
-                                                height: viewModel.cropOffset.height + value.translation.height
-                                            )
-                                            viewModel.cropOffset = clampedOffset(
-                                                raw: raw,
-                                                imageSize: image.size,
-                                                frameSize: localFrameSize,
-                                                zoom: viewModel.cropZoom
-                                            )
-                                        }
-                                )
-                                .simultaneousGesture(
-                                    MagnificationGesture()
-                                        .updating($magnifyDelta) { value, state, _ in
-                                            state = value
-                                        }
-                                        .onEnded { value in
-                                            let newZoom = min(max(viewModel.cropZoom * value, 1.0), 5.0)
-                                            viewModel.cropZoom = newZoom
-                                            viewModel.cropOffset = clampedOffset(
-                                                raw: viewModel.cropOffset,
-                                                imageSize: image.size,
-                                                frameSize: localFrameSize,
-                                                zoom: newZoom
-                                            )
-                                        }
-                                )
-                        } else if viewModel.fitMode == "contain", let ar = viewModel.orientedAspectRatio {
-                            Color.white
-                                .aspectRatio(ar, contentMode: .fit)
-                                .overlay(
-                                    Image(nsImage: image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                                )
-                                .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                    DateStampOverlayView()
-                                }
-                                .clipped()
-                        } else {
-                            Image(nsImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                                .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                    DateStampOverlayView()
-                                }
-                        }
+                                    .onEnded { value in
+                                        let raw = CGSize(
+                                            width: viewModel.cropOffset.width + value.translation.width,
+                                            height: viewModel.cropOffset.height + value.translation.height
+                                        )
+                                        viewModel.cropOffset = clampedOffset(
+                                            raw: raw,
+                                            imageSize: image.size,
+                                            frameSize: localFrameSize,
+                                            zoom: viewModel.cropZoom
+                                        )
+                                    }
+                            )
+                            .simultaneousGesture(
+                                MagnificationGesture()
+                                    .updating($magnifyDelta) { value, state, _ in
+                                        state = value
+                                    }
+                                    .onEnded { value in
+                                        let newZoom = min(max(viewModel.cropZoom * value, 1.0), 5.0)
+                                        viewModel.cropZoom = newZoom
+                                        viewModel.cropOffset = clampedOffset(
+                                            raw: viewModel.cropOffset,
+                                            imageSize: image.size,
+                                            frameSize: localFrameSize,
+                                            zoom: newZoom
+                                        )
+                                    }
+                            )
+                    } else if viewModel.fitMode == "contain", let ar = viewModel.orientedAspectRatio {
+                        Color.white
+                            .aspectRatio(ar, contentMode: .fit)
+                            .overlay(
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                            )
+                            .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                DateStampOverlayView()
+                            }
+                            .clipped()
+                    } else {
+                        Image(nsImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                            .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                DateStampOverlayView()
+                            }
                     }
-                    .padding(4)
-
-                    Button { viewModel.clearImage() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title3)
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(8)
                 }
+                .padding(4)
             }
         }
         .frame(minHeight: 250, idealHeight: 350)
@@ -3191,14 +3232,26 @@ struct LanguageSection: View {
         "en", "de", "es", "fr", "it", "ja", "ko", "pt-BR", "zh-Hans", "zh-Hant", "ar", "he"
     ]
 
-    @State private var selectedLanguage: String = {
+    private let initialLanguage: String
+
+    @State private var selectedLanguage: String
+
+    init() {
+        let saved: String
         if let langs = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
            let first = langs.first,
-           supportedLanguages.contains(first) {
-            return first
+           Self.supportedLanguages.contains(first) {
+            saved = first
+        } else {
+            saved = ""
         }
-        return ""
-    }()
+        self.initialLanguage = saved
+        self._selectedLanguage = State(initialValue: saved)
+    }
+
+    private var languageChanged: Bool {
+        selectedLanguage != initialLanguage
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -3220,9 +3273,30 @@ struct LanguageSection: View {
                 }
             }
 
-            Text(L("language_restart_note"))
-                .font(.caption)
-                .foregroundColor(.secondary)
+            if languageChanged {
+                HStack {
+                    Text(L("language_restart_note"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button(L("Restart")) {
+                        // Relaunch the app
+                        let url = Bundle.main.bundleURL
+                        let task = Process()
+                        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                        task.arguments = ["-n", url.path]
+                        try? task.run()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            NSApplication.shared.terminate(nil)
+                        }
+                    }
+                    .controlSize(.small)
+                }
+            } else {
+                Text(L("language_restart_note"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 

@@ -38,10 +38,10 @@
 
 ## macOS App (SwiftUI)
 
-- Single-file architecture: `macos/InstantLink/InstantLinkApp.swift` (~2200 lines)
+- Single-file architecture: `macos/InstantLink/InstantLinkApp.swift` (~2700 lines)
 - Compiled with `swiftc` directly (no Xcode project)
-- FFI loaded via `dlopen`/`dlsym` from `InstantLinkFFI.swift`
-- CLI bundled as `instantlink-cli` in `Contents/MacOS/`
+- FFI loaded via `dlopen`/`dlsym` from `InstantLinkFFI.swift` (17 symbols)
+- Features: image editor (crop/contain/stretch, rotation, date stamps), camera capture with self-timer (2s/10s), film orientation toggle, film border preview (`FilmFrameView`), printer profile management, auto-updates
 - Localization: 12 languages in `macos/Resources/{lang}.lproj/Localizable.strings`
 - `L()` helper in `Localization.swift` wraps `NSLocalizedString`
 

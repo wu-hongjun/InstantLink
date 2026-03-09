@@ -74,8 +74,16 @@ The printer model is auto-detected after connecting.
 - LED color control with solid, blink, and breathe patterns
 - BLE scanner to discover nearby printers
 - JSON output mode for integration with other tools
-- Native macOS app with menu bar and drag-and-drop printing
-- C FFI (16 functions) for building native UIs
+- Native macOS app with:
+  - Menu bar interface with drag-and-drop printing
+  - Built-in image editor with crop, rotate, and date stamps
+  - Camera capture mode with self-timer (2s / 10s countdown)
+  - Film orientation toggle (portrait/landscape) with print-time rotation
+  - Film border preview showing the physical Instax film shape
+  - Multi-printer management with saved profiles
+  - Auto-update via GitHub releases
+  - Localized in 12 languages
+- C FFI (17 functions) for building native UIs
 
 ## Project Structure
 
@@ -94,11 +102,13 @@ InstantLink/
 
 ## macOS App
 
-The macOS app provides a menu bar interface with drag-and-drop printing. It bundles the CLI binary and communicates via `--json` output (same pattern as [StatusLight](https://github.com/wu-hongjun/StatusLight)).
+The macOS app is a native SwiftUI application with menu bar integration. It loads the Rust core library via FFI (`dlopen`/`dlsym`) for direct BLE communication — no CLI subprocess needed.
+
+Features include drag-and-drop image printing, a built-in image editor, camera capture with self-timer, film orientation control, film border preview, date stamps, printer profile management, and auto-updates.
 
 ```bash
 # Build the app bundle
-bash scripts/build-app.sh 0.1.0
+bash scripts/build-app.sh 0.3.0
 ```
 
 ## Documentation

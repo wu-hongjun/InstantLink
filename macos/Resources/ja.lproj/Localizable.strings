@@ -155,3 +155,5 @@
 "print_failed_at" = "%d / %d 枚目で印刷失敗";
 "film_ran_out" = "%d / %d 枚目でフィルム切れ";
 "Remove" = "削除";
+"Move Left" = "左へ移動";
+"Move Right" = "右へ移動";

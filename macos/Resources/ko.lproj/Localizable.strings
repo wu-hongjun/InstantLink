@@ -155,3 +155,5 @@
 "print_failed_at" = "%d / %d번째에서 인쇄 실패";
 "film_ran_out" = "%d / %d장 후 필름 소진";
 "Remove" = "제거";
+"Move Left" = "왼쪽으로 이동";
+"Move Right" = "오른쪽으로 이동";

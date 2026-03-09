@@ -155,3 +155,5 @@
 "print_failed_at" = "第 %d / %d 張列印失敗";
 "film_ran_out" = "列印 %d / %d 張後底片用完";
 "Remove" = "移除";
+"Move Left" = "左移";
+"Move Right" = "右移";

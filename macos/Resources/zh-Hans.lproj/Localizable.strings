@@ -155,3 +155,5 @@
 "print_failed_at" = "第 %d / %d 张打印失败";
 "film_ran_out" = "打印 %d / %d 张后胶片用完";
 "Remove" = "移除";
+"Move Left" = "左移";
+"Move Right" = "右移";

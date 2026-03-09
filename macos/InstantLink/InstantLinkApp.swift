@@ -568,6 +568,14 @@ class ViewModel: ObservableObject {
         resetCropAdjustments()
     }
 
+    func moveQueueItem(from source: Int, to destination: Int) {
+        guard queue.indices.contains(source), destination >= 0, destination < queue.count else { return }
+        let item = queue.remove(at: source)
+        queue.insert(item, at: destination)
+        // Follow the moved item
+        selectedQueueIndex = destination
+    }
+
     // MARK: - Image Selection
 
     func selectImage() {
@@ -2542,22 +2550,58 @@ struct MainPreviewView: View {
 
 struct QueueStripView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @State private var draggingItemID: UUID?
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(Array(viewModel.queue.enumerated()), id: \.element.id) { index, item in
-                        QueueThumbnailView(item: item, isSelected: index == viewModel.selectedQueueIndex)
-                            .id(item.id)
-                            .onTapGesture { viewModel.selectQueueItem(at: index) }
-                            .contextMenu {
-                                Button(L("Remove")) {
-                                    viewModel.removeQueueItem(at: index)
+                        QueueThumbnailView(
+                            item: item,
+                            isSelected: index == viewModel.selectedQueueIndex,
+                            isDragging: draggingItemID == item.id
+                        )
+                        .id(item.id)
+                        .onTapGesture { viewModel.selectQueueItem(at: index) }
+                        .contextMenu {
+                            if index > 0 {
+                                Button(L("Move Left")) {
+                                    withAnimation { viewModel.moveQueueItem(from: index, to: index - 1) }
                                 }
                             }
+                            if index < viewModel.queue.count - 1 {
+                                Button(L("Move Right")) {
+                                    withAnimation { viewModel.moveQueueItem(from: index, to: index + 1) }
+                                }
+                            }
+                            Divider()
+                            Button(L("Remove")) {
+                                withAnimation { viewModel.removeQueueItem(at: index) }
+                            }
+                        }
+                        .onDrag {
+                            draggingItemID = item.id
+                            return NSItemProvider(object: item.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text], delegate: QueueDropDelegate(
+                            targetIndex: index,
+                            viewModel: viewModel,
+                            draggingItemID: $draggingItemID
+                        ))
                     }
+
+                    // Add button
+                    Button { viewModel.selectImage() } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .frame(width: 36, height: 44)
+                            .background(RoundedRectangle(cornerRadius: 4).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3])).foregroundColor(.secondary.opacity(0.4)))
+                    }
+                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 4)
                 .padding(.vertical, 4)
             }
             .onChange(of: viewModel.selectedQueueIndex) { _ in
@@ -2571,9 +2615,34 @@ struct QueueStripView: View {
     }
 }
 
+struct QueueDropDelegate: DropDelegate {
+    let targetIndex: Int
+    let viewModel: ViewModel
+    @Binding var draggingItemID: UUID?
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingItemID = nil
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let dragID = draggingItemID,
+              let sourceIndex = viewModel.queue.firstIndex(where: { $0.id == dragID }),
+              sourceIndex != targetIndex else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            viewModel.moveQueueItem(from: sourceIndex, to: targetIndex)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+}
+
 struct QueueThumbnailView: View {
     let item: QueueItem
     let isSelected: Bool
+    var isDragging: Bool = false
 
     var body: some View {
         Image(nsImage: item.image)
@@ -2586,7 +2655,8 @@ struct QueueThumbnailView: View {
                     .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             )
             .shadow(color: isSelected ? Color.accentColor.opacity(0.3) : .clear, radius: 3)
-            .scaleEffect(isSelected ? 1.08 : 1.0)
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+            .opacity(isDragging ? 0.5 : 1.0)
             .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 }

@@ -156,3 +156,5 @@
 "print_failed_at" = "Échec à l'image %d sur %d";
 "film_ran_out" = "Film épuisé après %d sur %d images";
 "Remove" = "Supprimer";
+"Move Left" = "Déplacer à gauche";
+"Move Right" = "Déplacer à droite";

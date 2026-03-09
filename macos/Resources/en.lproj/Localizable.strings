@@ -155,3 +155,5 @@
 "print_failed_at" = "Print failed at image %d of %d";
 "film_ran_out" = "Film ran out after %d of %d images";
 "Remove" = "Remove";
+"Move Left" = "Move Left";
+"Move Right" = "Move Right";

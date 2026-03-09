@@ -75,7 +75,8 @@
 "Rotated" = "旋转";
 "Horizontal" = "横向";
 "Vertical" = "纵向";
-"Use Current Timestamp as Default" = "将当前时间戳设为默认";
+"Use Selected Timestamp as Default" = "将所选时间戳设为默认";
+"Use Current Layout as Default" = "将当前布局设为默认";
 "Reset Defaults" = "重置默认设置";
 "Reset Zoom" = "重置缩放";
 

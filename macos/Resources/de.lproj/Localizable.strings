@@ -75,7 +75,8 @@
 "Rotated" = "Gedreht";
 "Horizontal" = "Horizontal";
 "Vertical" = "Vertikal";
-"Use Current Timestamp as Default" = "Aktuellen Zeitstempel als Standard verwenden";
+"Use Selected Timestamp as Default" = "Ausgewählten Zeitstempel als Standard verwenden";
+"Use Current Layout as Default" = "Aktuelles Layout als Standard verwenden";
 "Reset Defaults" = "Standardwerte zurücksetzen";
 "Reset Zoom" = "Zoom zurücksetzen";
 

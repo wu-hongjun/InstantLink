@@ -75,7 +75,8 @@
 "Rotated" = "مُدار";
 "Horizontal" = "أفقي";
 "Vertical" = "عمودي";
-"Use Current Timestamp as Default" = "استخدام الطابع الزمني الحالي كافتراضي";
+"Use Selected Timestamp as Default" = "استخدام الطابع الزمني المحدد كافتراضي";
+"Use Current Layout as Default" = "استخدام التخطيط الحالي كافتراضي";
 "Reset Defaults" = "إعادة تعيين الإعدادات الافتراضية";
 "Reset Zoom" = "إعادة تعيين التكبير";
 

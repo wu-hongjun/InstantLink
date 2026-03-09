@@ -81,6 +81,11 @@ class ViewModel: ObservableObject {
     @Published var batchPrintTotal: Int = 0
     @Published var newPhotoDefaults: NewPhotoDefaults = initialNewPhotoDefaults {
         didSet {
+            let sanitized = newPhotoDefaults.sanitized
+            if sanitized != newPhotoDefaults {
+                newPhotoDefaults = sanitized
+                return
+            }
             newPhotoDefaults.save()
             queueCoordinator.newPhotoDefaults = newPhotoDefaults
             if queue.isEmpty {
@@ -112,19 +117,18 @@ class ViewModel: ObservableObject {
     }
 
     // Crop interaction (pan & zoom)
-    @Published var cropOffset: CGSize = .zero {
+    @Published var cropOffsetNormalized: CGSize = .zero {
         didSet { persistSelectedQueueItemEditState() }
     }
     @Published var cropZoom: CGFloat = 1.0 {
         didSet { persistSelectedQueueItemEditState() }
     }
-    var cropFrameSize: CGSize = .zero
 
     // Rotation
-    @Published var rotationAngle: Int = 0 {  // 0, 90, 180, 270
+    @Published var rotationAngle: Int = initialNewPhotoDefaults.rotationAngle {  // 0, 90, 180, 270
         didSet { persistSelectedQueueItemEditState() }
     }
-    @Published var isHorizontallyFlipped: Bool = false {
+    @Published var isHorizontallyFlipped: Bool = initialNewPhotoDefaults.isHorizontallyFlipped {
         didSet { persistSelectedQueueItemEditState() }
     }
 
@@ -594,7 +598,7 @@ class ViewModel: ObservableObject {
     }
 
     func resetCropAdjustments() {
-        cropOffset = .zero
+        cropOffsetNormalized = .zero
         cropZoom = Self.minCropZoom
     }
 
@@ -609,7 +613,7 @@ class ViewModel: ObservableObject {
     var canResetCropAdjustments: Bool {
         selectedImage != nil &&
         fitMode == "crop" &&
-        (cropOffset != .zero || abs(cropZoom - Self.minCropZoom) > 0.001)
+        (cropOffsetNormalized != .zero || abs(cropZoom - Self.minCropZoom) > 0.001)
     }
 
     func quickZoomIn() {
@@ -626,26 +630,42 @@ class ViewModel: ObservableObject {
     }
 
     func setCropZoom(_ zoom: CGFloat) {
-        guard let image = selectedImage else { return }
         let newZoom = min(max(zoom, Self.minCropZoom), Self.maxCropZoom)
         cropZoom = newZoom
-        cropOffset = clampedCropOffset(
-            raw: cropOffset,
-            imageSize: image.size,
-            frameSize: cropFrameSize,
-            zoom: newZoom
+        if newZoom <= Self.minCropZoom + 0.001 {
+            cropOffsetNormalized = .zero
+        } else {
+            cropOffsetNormalized = clampedNormalizedCropOffset(cropOffsetNormalized)
+        }
+    }
+
+    func cropOffsetInPoints(imageSize: CGSize, frameSize: CGSize, zoom: CGFloat) -> CGSize {
+        let maxOff = maxCropOffsetPoints(imageSize: imageSize, frameSize: frameSize, zoom: zoom)
+        return CGSize(
+            width: maxOff.width * cropOffsetNormalized.width,
+            height: maxOff.height * cropOffsetNormalized.height
         )
     }
 
-    func clampedCropOffset(raw: CGSize, imageSize: CGSize, frameSize: CGSize, zoom: CGFloat) -> CGSize {
-        let maxOff = maxCropOffset(imageSize: imageSize, frameSize: frameSize, zoom: zoom)
+    func clampedCropOffsetPoints(raw: CGSize, imageSize: CGSize, frameSize: CGSize, zoom: CGFloat) -> CGSize {
+        let maxOff = maxCropOffsetPoints(imageSize: imageSize, frameSize: frameSize, zoom: zoom)
         return CGSize(
             width: min(max(raw.width, -maxOff.width), maxOff.width),
             height: min(max(raw.height, -maxOff.height), maxOff.height)
         )
     }
 
-    private func maxCropOffset(imageSize: CGSize, frameSize: CGSize, zoom: CGFloat) -> CGSize {
+    func normalizedCropOffset(from rawPoints: CGSize, imageSize: CGSize, frameSize: CGSize, zoom: CGFloat) -> CGSize {
+        let maxOff = maxCropOffsetPoints(imageSize: imageSize, frameSize: frameSize, zoom: zoom)
+        return clampedNormalizedCropOffset(
+            CGSize(
+                width: maxOff.width > 0 ? rawPoints.width / maxOff.width : 0,
+                height: maxOff.height > 0 ? rawPoints.height / maxOff.height : 0
+            )
+        )
+    }
+
+    private func maxCropOffsetPoints(imageSize: CGSize, frameSize: CGSize, zoom: CGFloat) -> CGSize {
         guard frameSize.width > 0, frameSize.height > 0 else { return .zero }
         let imageAR = imageSize.width / imageSize.height
         let frameAR = frameSize.width / frameSize.height
@@ -666,11 +686,28 @@ class ViewModel: ObservableObject {
         )
     }
 
-    func saveCurrentSettingsAsNewPhotoDefaults() {
-        if let snapshot = queueCoordinator.saveCurrentSettingsAsNewPhotoDefaults(
+    private func clampedNormalizedCropOffset(_ offset: CGSize) -> CGSize {
+        CGSize(
+            width: min(max(offset.width, -1), 1),
+            height: min(max(offset.height, -1), 1)
+        )
+    }
+
+    func saveCurrentLayoutAsNewPhotoDefaults() {
+        if let snapshot = queueCoordinator.saveCurrentLayoutAsNewPhotoDefaults(
             from: currentQueueEditingSnapshot()
                 ?? QueueEditingSnapshot(editState: makeCurrentQueueItemEditState())
         ) {
+            applyQueueEditingSnapshot(snapshot)
+        }
+        syncQueueCoordinatorState()
+    }
+
+    func saveSelectedTimestampOverlayAsNewPhotoDefaults() {
+        guard let overlay = selectedTimestampOverlay else {
+            return
+        }
+        if let snapshot = queueCoordinator.saveTimestampOverlayAsNewPhotoDefaults(overlay) {
             applyQueueEditingSnapshot(snapshot)
         }
         syncQueueCoordinatorState()
@@ -686,7 +723,7 @@ class ViewModel: ObservableObject {
     private func makeCurrentQueueItemEditState() -> QueueItemEditState {
         QueueItemEditState(
             fitMode: fitMode,
-            cropOffset: cropOffset,
+            cropOffsetNormalized: cropOffsetNormalized,
             cropZoom: cropZoom,
             rotationAngle: rotationAngle,
             isHorizontallyFlipped: isHorizontallyFlipped,
@@ -703,7 +740,7 @@ class ViewModel: ObservableObject {
     private func applyQueueEditingSnapshot(_ snapshot: QueueEditingSnapshot) {
         isApplyingQueueItemEditState = true
         fitMode = snapshot.fitMode
-        cropOffset = snapshot.cropOffset
+        cropOffsetNormalized = snapshot.cropOffsetNormalized
         cropZoom = snapshot.cropZoom
         rotationAngle = snapshot.rotationAngle
         isHorizontallyFlipped = snapshot.isHorizontallyFlipped
@@ -900,6 +937,12 @@ class ViewModel: ObservableObject {
             }
             return false
         }
+    }
+
+    var selectedTimestampOverlay: OverlayItem? {
+        guard let selectedOverlay,
+              case .timestamp = selectedOverlay.content else { return nil }
+        return selectedOverlay
     }
 
     func setDefaultTimestampOverlayEnabled(_ isEnabled: Bool) {
@@ -1198,25 +1241,27 @@ class ViewModel: ObservableObject {
     // MARK: - Print Preparation
 
     func prepareImageForPrint() -> (path: String, fit: String, tempFile: String?)? {
-        guard let path = selectedImagePath,
-              let image = selectedImage,
-              let prepared = PrintRenderService.preparePrint(
-                  PrintRenderService.Request(
-                      sourcePath: path,
-                      sourceImage: image,
-                      fitMode: fitMode,
-                      cropOffset: cropOffset,
-                      cropZoom: cropZoom,
-                      cropFrameSize: cropFrameSize,
-                      rotationAngle: rotationAngle,
-                      isHorizontallyFlipped: isHorizontallyFlipped,
-                      overlays: overlays,
-                      filmOrientation: filmOrientation,
-                      printerAspectRatio: printerAspectRatio,
-                      imageDate: imageDate,
-                      imageLocation: imageLocation
-                  )
-              ) else {
+        guard queue.indices.contains(selectedQueueIndex) else { return nil }
+        return prepareImageForPrint(queue[selectedQueueIndex])
+    }
+
+    private func prepareImageForPrint(_ item: QueueItem) -> (path: String, fit: String, tempFile: String?)? {
+        guard let prepared = PrintRenderService.preparePrint(
+            PrintRenderService.Request(
+                sourcePath: item.url.path,
+                sourceImage: item.image,
+                fitMode: item.editState.fitMode,
+                cropOffsetNormalized: item.editState.cropOffsetNormalized,
+                cropZoom: item.editState.cropZoom,
+                rotationAngle: item.editState.rotationAngle,
+                isHorizontallyFlipped: item.editState.isHorizontallyFlipped,
+                overlays: item.editState.overlays,
+                filmOrientation: item.editState.filmOrientation,
+                printerAspectRatio: printerAspectRatio,
+                imageDate: item.imageDate,
+                imageLocation: item.imageLocation
+            )
+        ) else {
             return nil
         }
 
@@ -1279,12 +1324,13 @@ class ViewModel: ObservableObject {
 
         for offset in 0..<count {
             let queueIndex = firstIndex + offset
+            let item = queue[queueIndex]
             await MainActor.run {
                 batchPrintIndex = offset + 1
                 selectQueueItem(at: queueIndex)
             }
 
-            guard let prepared = prepareImageForPrint() else {
+            guard let prepared = prepareImageForPrint(item) else {
                 await MainActor.run {
                     isPrinting = false
                     batchPrintTotal = 0

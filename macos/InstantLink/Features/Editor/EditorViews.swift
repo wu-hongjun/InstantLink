@@ -86,7 +86,6 @@ struct EditorPreviewView: View {
                             )
                             .onPreferenceChange(CropFrameSizeKey.self) { size in
                                 localFrameSize = size
-                                viewModel.cropFrameSize = size
                             }
                             .overlay(
                                 Image(nsImage: image)
@@ -110,12 +109,23 @@ struct EditorPreviewView: View {
                                         state = value.translation
                                     }
                                     .onEnded { value in
-                                        let raw = CGSize(
-                                            width: viewModel.cropOffset.width + value.translation.width,
-                                            height: viewModel.cropOffset.height + value.translation.height
+                                        let currentOffset = viewModel.cropOffsetInPoints(
+                                            imageSize: image.size,
+                                            frameSize: localFrameSize,
+                                            zoom: viewModel.cropZoom
                                         )
-                                        viewModel.cropOffset = viewModel.clampedCropOffset(
+                                        let raw = CGSize(
+                                            width: currentOffset.width + value.translation.width,
+                                            height: currentOffset.height + value.translation.height
+                                        )
+                                        let clamped = viewModel.clampedCropOffsetPoints(
                                             raw: raw,
+                                            imageSize: image.size,
+                                            frameSize: localFrameSize,
+                                            zoom: viewModel.cropZoom
+                                        )
+                                        viewModel.cropOffsetNormalized = viewModel.normalizedCropOffset(
+                                            from: clamped,
                                             imageSize: image.size,
                                             frameSize: localFrameSize,
                                             zoom: viewModel.cropZoom
@@ -178,11 +188,16 @@ struct EditorPreviewView: View {
     }
 
     private func effectiveOffset(imageSize: CGSize) -> CGSize {
-        let raw = CGSize(
-            width: viewModel.cropOffset.width + dragDelta.width,
-            height: viewModel.cropOffset.height + dragDelta.height
+        let currentOffset = viewModel.cropOffsetInPoints(
+            imageSize: imageSize,
+            frameSize: localFrameSize,
+            zoom: effectiveZoom
         )
-        let clamped = viewModel.clampedCropOffset(
+        let raw = CGSize(
+            width: currentOffset.width + dragDelta.width,
+            height: currentOffset.height + dragDelta.height
+        )
+        let clamped = viewModel.clampedCropOffsetPoints(
             raw: raw,
             imageSize: imageSize,
             frameSize: localFrameSize,
@@ -402,7 +417,7 @@ struct NewPhotoDefaultsPopover: View {
                 .labelsHidden()
             }
 
-            if let aspectRatio = viewModel.printerAspectRatio, aspectRatio != 1.0 {
+            if viewModel.printerAspectRatio != 1.0 {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L("Film Orientation"))
                         .font(.caption)
@@ -417,22 +432,50 @@ struct NewPhotoDefaultsPopover: View {
                 }
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("Rotate"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Picker("", selection: $viewModel.newPhotoDefaults.rotationAngle) {
+                    Text("0°").tag(0)
+                    Text("90°").tag(90)
+                    Text("180°").tag(180)
+                    Text("270°").tag(270)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            Toggle(L("Flip"), isOn: $viewModel.newPhotoDefaults.isHorizontallyFlipped)
+
             DefaultTimestampOverlayEditor()
 
             Divider()
 
-            HStack {
-                Button(L("Use Current Timestamp as Default")) {
-                    viewModel.saveCurrentSettingsAsNewPhotoDefaults()
-                }
-                .disabled(viewModel.selectedImage == nil)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Button(L("Use Selected Timestamp as Default")) {
+                        viewModel.saveSelectedTimestampOverlayAsNewPhotoDefaults()
+                    }
+                    .disabled(viewModel.selectedTimestampOverlay == nil)
 
-                Spacer()
+                    Spacer()
 
-                Button(L("Reset Defaults")) {
-                    viewModel.resetNewPhotoDefaults()
+                    Button(L("Use Current Layout as Default")) {
+                        viewModel.saveCurrentLayoutAsNewPhotoDefaults()
+                    }
+                    .disabled(viewModel.selectedImage == nil)
                 }
-                .disabled(viewModel.newPhotoDefaults == NewPhotoDefaults())
+
+                HStack {
+                    Spacer()
+
+                    Button(L("Reset Defaults")) {
+                        viewModel.resetNewPhotoDefaults()
+                    }
+                    .disabled(viewModel.newPhotoDefaults == NewPhotoDefaults())
+                }
             }
         }
         .padding(16)

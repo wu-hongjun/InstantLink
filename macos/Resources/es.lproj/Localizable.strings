@@ -75,7 +75,8 @@
 "Rotated" = "Girado";
 "Horizontal" = "Horizontal";
 "Vertical" = "Vertical";
-"Use Current Timestamp as Default" = "Usar la marca de tiempo actual como predeterminada";
+"Use Selected Timestamp as Default" = "Usar la marca de tiempo seleccionada como predeterminada";
+"Use Current Layout as Default" = "Usar el diseño actual como predeterminado";
 "Reset Defaults" = "Restablecer valores predeterminados";
 "Reset Zoom" = "Restablecer zoom";
 

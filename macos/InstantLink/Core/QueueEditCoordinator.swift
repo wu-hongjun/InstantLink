@@ -10,7 +10,7 @@ struct QueueImportItem {
 
 struct QueueEditingSnapshot: Equatable {
     var fitMode: String
-    var cropOffset: CGSize
+    var cropOffsetNormalized: CGSize
     var cropZoom: CGFloat
     var rotationAngle: Int
     var isHorizontallyFlipped: Bool
@@ -19,7 +19,7 @@ struct QueueEditingSnapshot: Equatable {
 
     init(editState: QueueItemEditState) {
         fitMode = editState.fitMode
-        cropOffset = editState.cropOffset
+        cropOffsetNormalized = editState.cropOffsetNormalized
         cropZoom = editState.cropZoom
         rotationAngle = editState.rotationAngle
         isHorizontallyFlipped = editState.isHorizontallyFlipped
@@ -30,7 +30,7 @@ struct QueueEditingSnapshot: Equatable {
     var editState: QueueItemEditState {
         QueueItemEditState(
             fitMode: fitMode,
-            cropOffset: cropOffset,
+            cropOffsetNormalized: cropOffsetNormalized,
             cropZoom: cropZoom,
             rotationAngle: rotationAngle,
             isHorizontallyFlipped: isHorizontallyFlipped,
@@ -247,12 +247,22 @@ final class QueueEditCoordinator: ObservableObject {
     }
 
     @discardableResult
-    func saveCurrentSettingsAsNewPhotoDefaults(from snapshot: QueueEditingSnapshot) -> QueueEditingSnapshot? {
-        newPhotoDefaults = NewPhotoDefaults(
-            fitMode: snapshot.fitMode,
-            overlays: defaultEligibleOverlays(from: snapshot.overlays),
-            filmOrientation: snapshot.filmOrientation
-        )
+    func saveCurrentLayoutAsNewPhotoDefaults(from snapshot: QueueEditingSnapshot) -> QueueEditingSnapshot? {
+        newPhotoDefaults.fitMode = snapshot.fitMode
+        newPhotoDefaults.rotationAngle = snapshot.rotationAngle
+        newPhotoDefaults.isHorizontallyFlipped = snapshot.isHorizontallyFlipped
+        newPhotoDefaults.filmOrientation = snapshot.filmOrientation
+        return queue.isEmpty
+            ? QueueEditingSnapshot(editState: makeQueueItemEditStateFromDefaults())
+            : nil
+    }
+
+    @discardableResult
+    func saveTimestampOverlayAsNewPhotoDefaults(_ overlay: OverlayItem?) -> QueueEditingSnapshot? {
+        guard let overlay, case .timestamp = overlay.content else { return nil }
+        var timestampOverlay = overlay
+        timestampOverlay.zIndex = 0
+        newPhotoDefaults.overlays = [timestampOverlay]
         return queue.isEmpty
             ? QueueEditingSnapshot(editState: makeQueueItemEditStateFromDefaults())
             : nil
@@ -284,6 +294,8 @@ final class QueueEditCoordinator: ObservableObject {
     private func makeQueueItemEditStateFromDefaults() -> QueueItemEditState {
         QueueItemEditState(
             fitMode: newPhotoDefaults.fitMode,
+            rotationAngle: newPhotoDefaults.rotationAngle,
+            isHorizontallyFlipped: newPhotoDefaults.isHorizontallyFlipped,
             overlays: newPhotoDefaults.overlays,
             filmOrientation: newPhotoDefaults.filmOrientation
         )
@@ -305,21 +317,5 @@ final class QueueEditCoordinator: ObservableObject {
         editState.filmOrientation = filmOrientation
         editState.isHorizontallyFlipped = isHorizontallyFlipped
         return editState
-    }
-
-    private func defaultEligibleOverlays(from overlays: [OverlayItem]) -> [OverlayItem] {
-        overlays
-            .filter { overlay in
-                if case .timestamp = overlay.content {
-                    return true
-                }
-                return false
-            }
-            .enumerated()
-            .map { index, overlay in
-                var overlay = overlay
-                overlay.zIndex = index
-                return overlay
-            }
     }
 }

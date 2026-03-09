@@ -65,21 +65,40 @@ struct NewPhotoDefaults: Codable, Equatable {
     static let storageKey = "newPhotoDefaults"
 
     var fitMode: String = "crop"
+    var rotationAngle: Int = 0
+    var isHorizontallyFlipped: Bool = false
     var overlays: [OverlayItem] = []
     var filmOrientation: String = "default"
 
     static func load() -> Self {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode(Self.self, from: data) {
-            return decoded
+            return decoded.sanitized
         }
         return Self()
     }
 
     func save() {
-        if let data = try? JSONEncoder().encode(self) {
+        if let data = try? JSONEncoder().encode(sanitized) {
             UserDefaults.standard.set(data, forKey: Self.storageKey)
         }
+    }
+
+    var sanitized: Self {
+        var sanitized = self
+        var didKeepTimestamp = false
+        sanitized.overlays = overlays
+            .filter { overlay in
+                guard case .timestamp = overlay.content else {
+                    return false
+                }
+                guard !didKeepTimestamp else {
+                    return false
+                }
+                didKeepTimestamp = true
+                return true
+            }
+        return sanitized
     }
 }
 
@@ -178,7 +197,7 @@ enum TimestampPresetCatalog {
 
 struct QueueItemEditState: Equatable {
     var fitMode: String
-    var cropOffset: CGSize = .zero
+    var cropOffsetNormalized: CGSize = .zero
     var cropZoom: CGFloat = 1.0
     var rotationAngle: Int = 0
     var isHorizontallyFlipped: Bool = false

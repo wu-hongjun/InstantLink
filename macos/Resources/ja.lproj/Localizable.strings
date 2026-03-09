@@ -75,7 +75,8 @@
 "Rotated" = "回転";
 "Horizontal" = "横向き";
 "Vertical" = "縦向き";
-"Use Current Timestamp as Default" = "現在のタイムスタンプをデフォルトにする";
+"Use Selected Timestamp as Default" = "選択したタイムスタンプをデフォルトにする";
+"Use Current Layout as Default" = "現在のレイアウトをデフォルトにする";
 "Reset Defaults" = "デフォルトに戻す";
 "Reset Zoom" = "ズームをリセット";
 

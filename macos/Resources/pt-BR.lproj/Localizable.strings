@@ -76,7 +76,8 @@
 "Rotated" = "Girado";
 "Horizontal" = "Horizontal";
 "Vertical" = "Vertical";
-"Use Current Timestamp as Default" = "Usar o carimbo de data/hora atual como padrão";
+"Use Selected Timestamp as Default" = "Usar o carimbo de data/hora selecionado como padrão";
+"Use Current Layout as Default" = "Usar o layout atual como padrão";
 "Reset Defaults" = "Restaurar padrões";
 "Reset Zoom" = "Redefinir zoom";
 

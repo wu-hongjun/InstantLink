@@ -15,6 +15,7 @@
 # Build artifacts
 *.dmg
 tmp/
+site/
 
 # References (cloned repos)
 references/*/

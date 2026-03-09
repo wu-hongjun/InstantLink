@@ -8,9 +8,8 @@ enum PrintRenderService {
         let sourcePath: String
         let sourceImage: NSImage
         let fitMode: String
-        let cropOffset: CGSize
+        let cropOffsetNormalized: CGSize
         let cropZoom: CGFloat
-        let cropFrameSize: CGSize
         let rotationAngle: Int
         let isHorizontallyFlipped: Bool
         let overlays: [OverlayItem]
@@ -48,10 +47,12 @@ enum PrintRenderService {
         if request.fitMode == "crop",
            let cropped = cropCGImage(
                currentCG,
-               printerAspectRatio: request.printerAspectRatio,
-               cropOffset: request.cropOffset,
-               cropZoom: request.cropZoom,
-               cropFrameSize: request.cropFrameSize
+               targetAspectRatio: orientedAspectRatio(
+                   printerAspectRatio: request.printerAspectRatio,
+                   filmOrientation: request.filmOrientation
+               ),
+               cropOffsetNormalized: request.cropOffsetNormalized,
+               cropZoom: request.cropZoom
            ) {
             currentCG = cropped
             processed = true
@@ -272,46 +273,48 @@ enum PrintRenderService {
 
     private static func cropCGImage(
         _ cgImage: CGImage,
-        printerAspectRatio: CGFloat?,
-        cropOffset: CGSize,
-        cropZoom: CGFloat,
-        cropFrameSize: CGSize
+        targetAspectRatio: CGFloat?,
+        cropOffsetNormalized: CGSize,
+        cropZoom: CGFloat
     ) -> CGImage? {
-        guard printerAspectRatio != nil,
-              (cropOffset != .zero || cropZoom != 1.0) else {
+        guard let targetAspectRatio,
+              (cropOffsetNormalized != .zero || cropZoom != 1.0) else {
             return nil
         }
 
         let pixelW = CGFloat(cgImage.width)
         let pixelH = CGFloat(cgImage.height)
-        let frameW = cropFrameSize.width
-        let frameH = cropFrameSize.height
-        guard frameW > 0, frameH > 0 else {
-            return nil
-        }
-
         let imageAR = pixelW / pixelH
-        let frameAR = frameW / frameH
-
-        let displayW: CGFloat
-        let displayH: CGFloat
-        if imageAR > frameAR {
-            displayH = frameH
-            displayW = frameH * imageAR
+        let cropRectSize: CGSize
+        if imageAR > targetAspectRatio {
+            cropRectSize = CGSize(
+                width: pixelH * targetAspectRatio / cropZoom,
+                height: pixelH / cropZoom
+            )
         } else {
-            displayW = frameW
-            displayH = frameW / imageAR
+            cropRectSize = CGSize(
+                width: pixelW / cropZoom,
+                height: pixelW / targetAspectRatio / cropZoom
+            )
         }
-
-        let pixelsPerScaledPoint = pixelW / (displayW * cropZoom)
-        let visibleX = (displayW * cropZoom - frameW) / 2 + cropOffset.width
-        let visibleY = (displayH * cropZoom - frameH) / 2 + cropOffset.height
+        let maxOffset = CGSize(
+            width: max(0, (pixelW - cropRectSize.width) / 2),
+            height: max(0, (pixelH - cropRectSize.height) / 2)
+        )
+        let normalizedOffset = CGSize(
+            width: min(max(cropOffsetNormalized.width, -1), 1),
+            height: min(max(cropOffsetNormalized.height, -1), 1)
+        )
+        let origin = CGPoint(
+            x: maxOffset.width + normalizedOffset.width * maxOffset.width,
+            y: maxOffset.height + normalizedOffset.height * maxOffset.height
+        )
 
         let cropRect = CGRect(
-            x: visibleX * pixelsPerScaledPoint,
-            y: visibleY * pixelsPerScaledPoint,
-            width: frameW * pixelsPerScaledPoint,
-            height: frameH * pixelsPerScaledPoint
+            x: origin.x,
+            y: origin.y,
+            width: cropRectSize.width,
+            height: cropRectSize.height
         )
 
         let bounds = CGRect(x: 0, y: 0, width: pixelW, height: pixelH)
@@ -398,7 +401,7 @@ enum PrintRenderService {
         let body = data.showsTime
             ? "\(timestampText(from: date, format: data.format, separator: preset.separator))\n\(timeStampText(from: date))"
             : timestampText(from: date, format: data.format, separator: preset.separator)
-        let fontSize = max(12, rect.height * (data.showsTime ? 0.34 : 0.58))
+        let fontSize = timestampFontSize(for: data, preset: preset, rectHeight: rect.height)
         let font = NSFont(name: preset.fontFamily, size: fontSize)
             ?? NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .medium)
         let paragraph = NSMutableParagraphStyle()
@@ -433,6 +436,17 @@ enum PrintRenderService {
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
+    }
+
+    static func timestampFontSize(
+        for data: TimestampOverlayData,
+        preset: DateStampPreset,
+        rectHeight: CGFloat
+    ) -> CGFloat {
+        let classicSize = TimestampPresetCatalog.presets["classic"]?.sizePercent ?? preset.sizePercent
+        let relativeScale = CGFloat(preset.sizePercent / max(classicSize, 0.0001))
+        let baseMultiplier: CGFloat = data.showsTime ? 0.34 : 0.58
+        return max(10, rectHeight * baseMultiplier * relativeScale)
     }
 
     private static func drawLocationOverlay(

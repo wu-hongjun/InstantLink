@@ -53,18 +53,17 @@ struct MainPreviewView: View {
                         if viewModel.fitMode == "crop", let ar = viewModel.orientedAspectRatio {
                             Color.clear
                                 .aspectRatio(ar, contentMode: .fit)
-                                .background(
-                                    GeometryReader { geo in
-                                        Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
-                                    }
-                                )
-                                .onPreferenceChange(CropFrameSizeKey.self) { size in
-                                    localFrameSize = size
-                                    viewModel.cropFrameSize = size
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
                                 }
-                                .overlay(
-                                    Image(nsImage: image)
-                                        .resizable()
+                            )
+                            .onPreferenceChange(CropFrameSizeKey.self) { size in
+                                localFrameSize = size
+                            }
+                            .overlay(
+                                Image(nsImage: image)
+                                    .resizable()
                                         .aspectRatio(contentMode: .fill)
                                         .scaleEffect(
                                             x: viewModel.isHorizontallyFlipped ? -effectiveZoom : effectiveZoom,
@@ -84,12 +83,23 @@ struct MainPreviewView: View {
                                             state = value.translation
                                         }
                                         .onEnded { value in
-                                            let raw = CGSize(
-                                                width: viewModel.cropOffset.width + value.translation.width,
-                                                height: viewModel.cropOffset.height + value.translation.height
+                                            let currentOffset = viewModel.cropOffsetInPoints(
+                                                imageSize: image.size,
+                                                frameSize: localFrameSize,
+                                                zoom: viewModel.cropZoom
                                             )
-                                            viewModel.cropOffset = viewModel.clampedCropOffset(
+                                            let raw = CGSize(
+                                                width: currentOffset.width + value.translation.width,
+                                                height: currentOffset.height + value.translation.height
+                                            )
+                                            let clamped = viewModel.clampedCropOffsetPoints(
                                                 raw: raw,
+                                                imageSize: image.size,
+                                                frameSize: localFrameSize,
+                                                zoom: viewModel.cropZoom
+                                            )
+                                            viewModel.cropOffsetNormalized = viewModel.normalizedCropOffset(
+                                                from: clamped,
                                                 imageSize: image.size,
                                                 frameSize: localFrameSize,
                                                 zoom: viewModel.cropZoom
@@ -186,11 +196,16 @@ struct MainPreviewView: View {
     }
 
     private func effectiveOffset(imageSize: CGSize) -> CGSize {
-        let raw = CGSize(
-            width: viewModel.cropOffset.width + dragDelta.width,
-            height: viewModel.cropOffset.height + dragDelta.height
+        let currentOffset = viewModel.cropOffsetInPoints(
+            imageSize: imageSize,
+            frameSize: localFrameSize,
+            zoom: effectiveZoom
         )
-        let clamped = viewModel.clampedCropOffset(
+        let raw = CGSize(
+            width: currentOffset.width + dragDelta.width,
+            height: currentOffset.height + dragDelta.height
+        )
+        let clamped = viewModel.clampedCropOffsetPoints(
             raw: raw,
             imageSize: imageSize,
             frameSize: localFrameSize,

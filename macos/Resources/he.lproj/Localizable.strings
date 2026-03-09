@@ -76,7 +76,8 @@
 "Rotated" = "מסובב";
 "Horizontal" = "אופקי";
 "Vertical" = "אנכי";
-"Use Current Timestamp as Default" = "השתמש בחותמת הזמן הנוכחית כברירת מחדל";
+"Use Selected Timestamp as Default" = "השתמש בחותמת הזמן שנבחרה כברירת מחדל";
+"Use Current Layout as Default" = "השתמש בפריסה הנוכחית כברירת מחדל";
 "Reset Defaults" = "אפס ברירות מחדל";
 "Reset Zoom" = "אפס זום";
 

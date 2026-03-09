@@ -75,7 +75,8 @@
 "Rotated" = "회전";
 "Horizontal" = "가로";
 "Vertical" = "세로";
-"Use Current Timestamp as Default" = "현재 타임스탬프를 기본값으로 사용";
+"Use Selected Timestamp as Default" = "선택한 타임스탬프를 기본값으로 사용";
+"Use Current Layout as Default" = "현재 레이아웃을 기본값으로 사용";
 "Reset Defaults" = "기본값으로 재설정";
 "Reset Zoom" = "확대 재설정";
 

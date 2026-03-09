@@ -76,7 +76,8 @@
 "Rotated" = "Ruotato";
 "Horizontal" = "Orizzontale";
 "Vertical" = "Verticale";
-"Use Current Timestamp as Default" = "Usa il timestamp corrente come predefinito";
+"Use Selected Timestamp as Default" = "Usa il timestamp selezionato come predefinito";
+"Use Current Layout as Default" = "Usa il layout corrente come predefinito";
 "Reset Defaults" = "Ripristina impostazioni predefinite";
 "Reset Zoom" = "Reimposta zoom";
 

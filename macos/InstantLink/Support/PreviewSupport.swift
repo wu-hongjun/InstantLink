@@ -427,7 +427,7 @@ struct TimestampPreviewView: View {
         let date = PrintRenderService.resolvedTimestampDate(for: data, imageDate: viewModel.imageDate)
         let preset = TimestampPresetCatalog.presets[data.presetKey] ?? TimestampPresetCatalog.presets["classic"]!
         let stampColor = Color(red: preset.color.0, green: preset.color.1, blue: preset.color.2)
-        let fontSize = max(10, size.height * (data.showsTime ? 0.32 : 0.52))
+        let fontSize = PrintRenderService.timestampFontSize(for: data, preset: preset, rectHeight: size.height)
 
         VStack(spacing: fontSize * 0.12) {
             Text(PrintRenderService.timestampText(from: date, format: data.format, separator: preset.separator))

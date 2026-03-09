@@ -145,6 +145,39 @@ struct PrinterProfile: Codable, Equatable, Identifiable {
 
 // MARK: - Queue Item
 
+struct NewPhotoDefaults: Codable, Equatable {
+    static let storageKey = "newPhotoDefaults"
+
+    var fitMode: String = "crop"
+    var dateStampEnabled: Bool = false
+    var showTimeRow: Bool = true
+    var dateStampPosition: String = "bottomRight"
+    var dateStampStyle: String = "classic"
+    var dateStampFormat: String = "ymd"
+    var lightBleedEnabled: Bool = false
+    var filmOrientation: String = "default"
+
+    static func load() -> Self {
+        if let data = UserDefaults.standard.data(forKey: storageKey),
+           let decoded = try? JSONDecoder().decode(Self.self, from: data) {
+            return decoded
+        }
+
+        var defaults = Self()
+        defaults.fitMode = UserDefaults.standard.string(forKey: "defaultFitMode") ?? defaults.fitMode
+        return defaults
+    }
+
+    func save() {
+        if let data = try? JSONEncoder().encode(self) {
+            UserDefaults.standard.set(data, forKey: Self.storageKey)
+            UserDefaults.standard.removeObject(forKey: "defaultFitMode")
+        }
+    }
+}
+
+private let initialNewPhotoDefaults = NewPhotoDefaults.load()
+
 struct QueueItemEditState: Equatable {
     var fitMode: String
     var cropOffset: CGSize = .zero
@@ -203,16 +236,21 @@ class ViewModel: ObservableObject {
     @Published var selectedQueueIndex: Int = 0
     @Published var batchPrintIndex: Int = 0
     @Published var batchPrintTotal: Int = 0
+    @Published var newPhotoDefaults: NewPhotoDefaults = initialNewPhotoDefaults {
+        didSet {
+            newPhotoDefaults.save()
+            if queue.isEmpty {
+                applyDefaultQueueItemEditState()
+            }
+        }
+    }
 
     var selectedImage: NSImage? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].image : nil }
     var selectedImagePath: String? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].url.path : nil }
     var imageDate: Date? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].imageDate : nil }
 
     // Print options
-    @Published var defaultFitMode: String = UserDefaults.standard.string(forKey: "defaultFitMode") ?? "crop" {
-        didSet { UserDefaults.standard.set(defaultFitMode, forKey: "defaultFitMode") }
-    }
-    @Published var fitMode: String = UserDefaults.standard.string(forKey: "defaultFitMode") ?? "crop" {
+    @Published var fitMode: String = initialNewPhotoDefaults.fitMode {
         didSet {
             guard !isApplyingQueueItemEditState else { return }
             if fitMode != oldValue {
@@ -237,22 +275,22 @@ class ViewModel: ObservableObject {
     }
 
     // Date stamp
-    @Published var dateStampEnabled: Bool = false {
+    @Published var dateStampEnabled: Bool = initialNewPhotoDefaults.dateStampEnabled {
         didSet { persistSelectedQueueItemEditState() }
     }
-    @Published var showTimeRow: Bool = true {
+    @Published var showTimeRow: Bool = initialNewPhotoDefaults.showTimeRow {
         didSet { persistSelectedQueueItemEditState() }
     }
-    @Published var dateStampPosition: String = "bottomRight" {
+    @Published var dateStampPosition: String = initialNewPhotoDefaults.dateStampPosition {
         didSet { persistSelectedQueueItemEditState() }
     }
-    @Published var dateStampStyle: String = "classic" {
+    @Published var dateStampStyle: String = initialNewPhotoDefaults.dateStampStyle {
         didSet { persistSelectedQueueItemEditState() }
     }
-    @Published var dateStampFormat: String = "ymd" {
+    @Published var dateStampFormat: String = initialNewPhotoDefaults.dateStampFormat {
         didSet { persistSelectedQueueItemEditState() }
     }
-    @Published var lightBleedEnabled: Bool = false {
+    @Published var lightBleedEnabled: Bool = initialNewPhotoDefaults.lightBleedEnabled {
         didSet { persistSelectedQueueItemEditState() }
     }
 
@@ -272,7 +310,7 @@ class ViewModel: ObservableObject {
     var timerTask: Task<Void, Never>? = nil
 
     // Film orientation
-    @Published var filmOrientation: String = "default" {  // "default" or "rotated"
+    @Published var filmOrientation: String = initialNewPhotoDefaults.filmOrientation {  // "default" or "rotated"
         didSet { persistSelectedQueueItemEditState() }
     }
     // Capture and print — auto-commit and print after photo is taken
@@ -710,6 +748,23 @@ class ViewModel: ObservableObject {
         cropZoom = 1.0
     }
 
+    func saveCurrentSettingsAsNewPhotoDefaults() {
+        newPhotoDefaults = NewPhotoDefaults(
+            fitMode: fitMode,
+            dateStampEnabled: dateStampEnabled,
+            showTimeRow: showTimeRow,
+            dateStampPosition: dateStampPosition,
+            dateStampStyle: dateStampStyle,
+            dateStampFormat: dateStampFormat,
+            lightBleedEnabled: lightBleedEnabled,
+            filmOrientation: filmOrientation
+        )
+    }
+
+    func resetNewPhotoDefaults() {
+        newPhotoDefaults = NewPhotoDefaults()
+    }
+
     private func makeCurrentQueueItemEditState() -> QueueItemEditState {
         QueueItemEditState(
             fitMode: fitMode,
@@ -726,16 +781,25 @@ class ViewModel: ObservableObject {
         )
     }
 
+    private func makeQueueItemEditStateFromDefaults() -> QueueItemEditState {
+        QueueItemEditState(
+            fitMode: newPhotoDefaults.fitMode,
+            dateStampEnabled: newPhotoDefaults.dateStampEnabled,
+            showTimeRow: newPhotoDefaults.showTimeRow,
+            dateStampPosition: newPhotoDefaults.dateStampPosition,
+            dateStampStyle: newPhotoDefaults.dateStampStyle,
+            dateStampFormat: newPhotoDefaults.dateStampFormat,
+            lightBleedEnabled: newPhotoDefaults.lightBleedEnabled,
+            filmOrientation: newPhotoDefaults.filmOrientation
+        )
+    }
+
     private func makeNewQueueItemEditState() -> QueueItemEditState {
-        var editState = makeCurrentQueueItemEditState()
-        editState.cropOffset = .zero
-        editState.cropZoom = 1.0
-        editState.rotationAngle = 0
-        return editState
+        makeQueueItemEditStateFromDefaults()
     }
 
     private func applyDefaultQueueItemEditState() {
-        applyQueueItemEditState(QueueItemEditState(fitMode: defaultFitMode))
+        applyQueueItemEditState(makeQueueItemEditStateFromDefaults())
     }
 
     private func applyQueueItemEditState(_ editState: QueueItemEditState) {
@@ -3144,6 +3208,7 @@ struct AccordionSection<Content: View>: View {
 
 struct EditorSidebarView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @State private var showDefaultsPopover = false
 
     var body: some View {
         ScrollView {
@@ -3245,12 +3310,171 @@ struct EditorSidebarView: View {
                         }
                     }
                 }
+
+                Divider()
+
+                Button {
+                    showDefaultsPopover = true
+                } label: {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.callout)
+                            .foregroundColor(.accentColor)
+                            .frame(width: 18, height: 18)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L("Defaults For New Photos"))
+                                .font(.callout)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            Text(L("Applies to photos added after this change. Existing queue items stay unchanged."))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.leading)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 2)
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.08))
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 12)
+                .popover(isPresented: $showDefaultsPopover, arrowEdge: .leading) {
+                    NewPhotoDefaultsPopover()
+                        .environmentObject(viewModel)
+                }
             }
             .padding(12)
         }
         .frame(minWidth: 200, idealWidth: 220, maxWidth: 260)
     }
 
+}
+
+struct NewPhotoDefaultsPopover: View {
+    @EnvironmentObject var viewModel: ViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(L("Defaults For New Photos"))
+                .font(.headline)
+
+            Text(L("Applies to photos added after this change. Existing queue items stay unchanged."))
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("Fit Mode"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Picker("", selection: $viewModel.newPhotoDefaults.fitMode) {
+                    Text(L("Crop")).tag("crop")
+                    Text(L("Contain")).tag("contain")
+                    Text(L("Stretch")).tag("stretch")
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            if let aspectRatio = viewModel.printerAspectRatio, aspectRatio != 1.0 {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("Film Orientation"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Picker("", selection: $viewModel.newPhotoDefaults.filmOrientation) {
+                        Text(L("Standard")).tag("default")
+                        Text(L("Rotated")).tag("rotated")
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("Date Stamp"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Toggle(L("Enabled"), isOn: $viewModel.newPhotoDefaults.dateStampEnabled)
+                    .font(.callout)
+
+                if viewModel.newPhotoDefaults.dateStampEnabled {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(ViewModel.presetOrder, id: \.self) { key in
+                                PresetCard(
+                                    preset: ViewModel.dateStampPresets[key]!,
+                                    isSelected: viewModel.newPhotoDefaults.dateStampStyle == key
+                                )
+                                .onTapGesture {
+                                    viewModel.newPhotoDefaults.dateStampStyle = key
+                                    viewModel.newPhotoDefaults.lightBleedEnabled =
+                                        ViewModel.dateStampPresets[key]!.defaultLightBleed
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Picker(L("Format"), selection: $viewModel.newPhotoDefaults.dateStampFormat) {
+                            Text("YY.MM.DD").tag("ymd")
+                            Text("MM.DD.YY").tag("mdy")
+                            Text("DD.MM.YY").tag("dmy")
+                        }
+                        .pickerStyle(.menu)
+                        .font(.callout)
+
+                        Picker(L("Position"), selection: $viewModel.newPhotoDefaults.dateStampPosition) {
+                            Text("\u{2198} BR").tag("bottomRight")
+                            Text("\u{2199} BL").tag("bottomLeft")
+                            Text("\u{2197} TR").tag("topRight")
+                            Text("\u{2196} TL").tag("topLeft")
+                        }
+                        .pickerStyle(.menu)
+                        .font(.callout)
+                    }
+
+                    HStack {
+                        Toggle(L("Time"), isOn: $viewModel.newPhotoDefaults.showTimeRow)
+                            .font(.callout)
+                        Spacer()
+                        Toggle(L("Glow"), isOn: $viewModel.newPhotoDefaults.lightBleedEnabled)
+                            .font(.callout)
+                    }
+                }
+            }
+
+            Divider()
+
+            HStack {
+                Button(L("Use Current Photo Settings")) {
+                    viewModel.saveCurrentSettingsAsNewPhotoDefaults()
+                }
+                .disabled(viewModel.selectedImage == nil)
+
+                Spacer()
+
+                Button(L("Reset Defaults")) {
+                    viewModel.resetNewPhotoDefaults()
+                }
+                .disabled(viewModel.newPhotoDefaults == NewPhotoDefaults())
+            }
+        }
+        .padding(16)
+        .frame(width: 320)
+    }
 }
 
 // MARK: - Printer Picker Sheet
@@ -3542,8 +3766,6 @@ struct SettingsView: View {
                     Divider().padding(.vertical, 12)
                     LanguageSection()
                     Divider().padding(.vertical, 12)
-                    DefaultPrintSettingsSection()
-                    Divider().padding(.vertical, 12)
                     PrinterManagementSection()
                 }
                 .padding(.horizontal, 24)
@@ -3726,31 +3948,6 @@ struct LanguageSection: View {
     private static func displayName(for code: String) -> String {
         let locale = Locale(identifier: code)
         return locale.localizedString(forIdentifier: code)?.localizedCapitalized ?? code
-    }
-}
-
-// MARK: - Default Print Settings Section
-
-struct DefaultPrintSettingsSection: View {
-    @EnvironmentObject var viewModel: ViewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L("Default Print Settings"))
-                .font(.headline)
-
-            Picker("", selection: $viewModel.defaultFitMode) {
-                Text(L("Crop")).tag("crop")
-                Text(L("Contain")).tag("contain")
-                Text(L("Stretch")).tag("stretch")
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-
-            Text(L("default_fit_mode_description"))
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
     }
 }
 

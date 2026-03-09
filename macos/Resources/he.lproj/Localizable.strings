@@ -59,11 +59,17 @@
 "Fit Mode" = "מצב התאמה";
 "Rotate" = "סיבוב";
 "Date Stamp" = "חותמת תאריך";
+"Defaults For New Photos" = "ברירות מחדל לתמונות חדשות";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "חל על תמונות שנוספו אחרי השינוי הזה. פריטים קיימים בתור נשארים ללא שינוי.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "חיתוך";
 "Contain" = "התאמה";
 "Stretch" = "מתיחה";
+"Standard" = "רגיל";
+"Rotated" = "מסובב";
+"Use Current Photo Settings" = "השתמש בהגדרות התמונה הנוכחית";
+"Reset Defaults" = "אפס ברירות מחדל";
 
 /* Editor — Rotation */
 "Rotate Left" = "סובב שמאלה";

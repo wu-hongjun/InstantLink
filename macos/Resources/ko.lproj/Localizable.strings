@@ -58,11 +58,17 @@
 "Fit Mode" = "맞춤 모드";
 "Rotate" = "회전";
 "Date Stamp" = "날짜 스탬프";
+"Defaults For New Photos" = "새 사진의 기본 설정";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "이 변경 이후에 추가된 사진에 적용됩니다. 기존 대기열 항목은 변경되지 않습니다.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "자르기";
 "Contain" = "맞춤";
 "Stretch" = "늘리기";
+"Standard" = "기본";
+"Rotated" = "회전";
+"Use Current Photo Settings" = "현재 사진 설정 사용";
+"Reset Defaults" = "기본값으로 재설정";
 
 /* Editor — Rotation */
 "Rotate Left" = "왼쪽으로 회전";

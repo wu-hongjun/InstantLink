@@ -58,11 +58,17 @@
 "Fit Mode" = "Modo de ajuste";
 "Rotate" = "Rotar";
 "Date Stamp" = "Sello de fecha";
+"Defaults For New Photos" = "Valores predeterminados para fotos nuevas";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "Se aplica a las fotos añadidas después de este cambio. Los elementos existentes de la cola no cambian.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "Recortar";
 "Contain" = "Contener";
 "Stretch" = "Estirar";
+"Standard" = "Estándar";
+"Rotated" = "Girado";
+"Use Current Photo Settings" = "Usar ajustes de la foto actual";
+"Reset Defaults" = "Restablecer valores predeterminados";
 
 /* Editor — Rotation */
 "Rotate Left" = "Rotar a la izquierda";

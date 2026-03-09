@@ -58,11 +58,17 @@
 "Fit Mode" = "Anpassungsmodus";
 "Rotate" = "Drehen";
 "Date Stamp" = "Datumsstempel";
+"Defaults For New Photos" = "Standardwerte für neue Fotos";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "Gilt für Fotos, die nach dieser Änderung hinzugefügt werden. Vorhandene Warteschlangeneinträge bleiben unverändert.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "Zuschneiden";
 "Contain" = "Einpassen";
 "Stretch" = "Strecken";
+"Standard" = "Standard";
+"Rotated" = "Gedreht";
+"Use Current Photo Settings" = "Aktuelle Fotoeinstellungen verwenden";
+"Reset Defaults" = "Standardwerte zurücksetzen";
 
 /* Editor — Rotation */
 "Rotate Left" = "Links drehen";

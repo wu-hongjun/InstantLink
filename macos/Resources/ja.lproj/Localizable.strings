@@ -58,11 +58,17 @@
 "Fit Mode" = "フィットモード";
 "Rotate" = "回転";
 "Date Stamp" = "日付スタンプ";
+"Defaults For New Photos" = "新しい写真のデフォルト設定";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "この変更の後に追加された写真に適用されます。既存のキュー項目は変更されません。";
 
 /* Editor — Fit Mode Options */
 "Crop" = "切り抜き";
 "Contain" = "収める";
 "Stretch" = "引き伸ばし";
+"Standard" = "標準";
+"Rotated" = "回転";
+"Use Current Photo Settings" = "現在の写真設定を使用";
+"Reset Defaults" = "デフォルトに戻す";
 
 /* Editor — Rotation */
 "Rotate Left" = "左に回転";

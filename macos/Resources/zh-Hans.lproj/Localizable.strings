@@ -58,11 +58,17 @@
 "Fit Mode" = "适应模式";
 "Rotate" = "旋转";
 "Date Stamp" = "日期印记";
+"Defaults For New Photos" = "新照片默认设置";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "仅适用于此更改后添加的照片。现有队列项目保持不变。";
 
 /* Editor — Fit Mode Options */
 "Crop" = "裁剪";
 "Contain" = "适应";
 "Stretch" = "拉伸";
+"Standard" = "标准";
+"Rotated" = "旋转";
+"Use Current Photo Settings" = "使用当前照片设置";
+"Reset Defaults" = "重置默认设置";
 
 /* Editor — Rotation */
 "Rotate Left" = "向左旋转";

@@ -58,11 +58,17 @@
 "Fit Mode" = "وضع الملاءمة";
 "Rotate" = "تدوير";
 "Date Stamp" = "ختم التاريخ";
+"Defaults For New Photos" = "الإعدادات الافتراضية للصور الجديدة";
+"Applies to photos added after this change. Existing queue items stay unchanged." = "ينطبق على الصور التي تتم إضافتها بعد هذا التغيير. تبقى عناصر قائمة الانتظار الحالية كما هي.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "قص";
 "Contain" = "احتواء";
 "Stretch" = "تمديد";
+"Standard" = "قياسي";
+"Rotated" = "مُدار";
+"Use Current Photo Settings" = "استخدام إعدادات الصورة الحالية";
+"Reset Defaults" = "إعادة تعيين الإعدادات الافتراضية";
 
 /* Editor — Rotation */
 "Rotate Left" = "تدوير لليسار";

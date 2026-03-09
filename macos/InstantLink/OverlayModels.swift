@@ -92,14 +92,12 @@ struct OverlayPlacement: Codable, Equatable {
     var normalizedCenterY: Double
     var normalizedWidth: Double
     var normalizedHeight: Double
-    var anchor: OverlayAnchor
 
     static let defaultPlacement = OverlayPlacement(
         normalizedCenterX: 0.5,
         normalizedCenterY: 0.5,
         normalizedWidth: 0.28,
-        normalizedHeight: 0.14,
-        anchor: .center
+        normalizedHeight: 0.14
     )
 
     var clamped: OverlayPlacement {
@@ -107,8 +105,7 @@ struct OverlayPlacement: Codable, Equatable {
             normalizedCenterX: Self.clamp(normalizedCenterX),
             normalizedCenterY: Self.clamp(normalizedCenterY),
             normalizedWidth: max(0.05, min(normalizedWidth, 1.0)),
-            normalizedHeight: max(0.05, min(normalizedHeight, 1.0)),
-            anchor: anchor
+            normalizedHeight: max(0.05, min(normalizedHeight, 1.0))
         )
     }
 
@@ -123,20 +120,6 @@ struct OverlayPlacement: Codable, Equatable {
     private static func clamp(_ value: Double) -> Double {
         max(0.0, min(value, 1.0))
     }
-}
-
-enum OverlayAnchor: String, Codable, CaseIterable, Identifiable {
-    case center
-    case topLeading
-    case top
-    case topTrailing
-    case leading
-    case trailing
-    case bottomLeading
-    case bottom
-    case bottomTrailing
-
-    var id: String { rawValue }
 }
 
 struct OverlayColor: Codable, Equatable, Hashable {

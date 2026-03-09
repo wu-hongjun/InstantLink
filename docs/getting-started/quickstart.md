@@ -36,7 +36,7 @@ Prints:     42
 instantlink print photo.jpg
 ```
 
-The image is automatically resized to fit your printer model. Use `--fit` to control how:
+The image is automatically resized to your printer model. Use `--fit` to control the result:
 
 ```bash
 # Crop to fill (default) — may cut edges
@@ -51,8 +51,6 @@ instantlink print photo.jpg --fit stretch
 
 ### Color Mode
 
-Choose between vivid and classic film colors:
-
 ```bash
 # Rich mode (default) — vivid colors
 instantlink print photo.jpg --color-mode rich
@@ -63,13 +61,11 @@ instantlink print photo.jpg --color-mode natural
 
 ### JPEG Quality
 
-Control output quality (affects file size):
-
 ```bash
 instantlink print photo.jpg --quality 90
 ```
 
-Quality automatically reduces if the image exceeds 105KB.
+If the encoded JPEG exceeds the connected model's size limit, InstantLink automatically lowers quality until it fits. Current caps are Mini `105KB`, Mini Link 3 `55KB`, Square `105KB`, and Wide `225KB`.
 
 ## 4. LED Control
 
@@ -83,7 +79,7 @@ instantlink led off
 
 ## 5. JSON Output
 
-All commands support `--json` for machine-readable output:
+`--json` is currently supported on `scan`, `info`, and `status`:
 
 ```bash
 instantlink status --json

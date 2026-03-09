@@ -365,8 +365,22 @@ class ViewModel: ObservableObject {
         return overlays[selectedOverlayIndex]
     }
 
+    private var savedFileModeEditState: QueueItemEditState?
+
     // Camera mode
-    @Published var captureMode: CaptureMode = .file
+    @Published var captureMode: CaptureMode = .file {
+        didSet {
+            guard captureMode != oldValue else { return }
+            if captureMode == .camera {
+                savedFileModeEditState = queue.indices.contains(selectedQueueIndex)
+                    ? makeCurrentQueueItemEditState()
+                    : nil
+                applyQueueItemEditState(makeCameraDraftEditState())
+            } else if oldValue == .camera {
+                restoreFileModeEditStateAfterCamera()
+            }
+        }
+    }
     @Published var cameraState: CameraState = .viewfinder
     @Published var capturedImage: NSImage?
     @Published var availableCameras: [AVCaptureDevice] = []
@@ -941,7 +955,7 @@ class ViewModel: ObservableObject {
     func saveCurrentSettingsAsNewPhotoDefaults() {
         newPhotoDefaults = NewPhotoDefaults(
             fitMode: fitMode,
-            overlays: overlays,
+            overlays: defaultEligibleOverlays(from: overlays),
             filmOrientation: filmOrientation
         )
     }
@@ -974,6 +988,10 @@ class ViewModel: ObservableObject {
         )
     }
 
+    private func makeCameraDraftEditState() -> QueueItemEditState {
+        makeQueueItemEditStateFromDefaults()
+    }
+
     private func makeCapturedQueueItemEditState() -> QueueItemEditState {
         var editState = makeQueueItemEditStateFromDefaults()
         editState.filmOrientation = filmOrientation
@@ -1004,8 +1022,36 @@ class ViewModel: ObservableObject {
 
     private func persistSelectedQueueItemEditState() {
         guard !isApplyingQueueItemEditState,
+              captureMode == .file,
               queue.indices.contains(selectedQueueIndex) else { return }
         queue[selectedQueueIndex].editState = makeCurrentQueueItemEditState()
+    }
+
+    private func restoreFileModeEditStateAfterCamera() {
+        if queue.indices.contains(selectedQueueIndex) {
+            applyQueueItemEditState(queue[selectedQueueIndex].editState)
+        } else if let savedFileModeEditState {
+            applyQueueItemEditState(savedFileModeEditState)
+        } else {
+            applyDefaultQueueItemEditState()
+        }
+        self.savedFileModeEditState = nil
+    }
+
+    private func defaultEligibleOverlays(from overlays: [OverlayItem]) -> [OverlayItem] {
+        overlays
+            .filter { overlay in
+                if case .timestamp = overlay.content {
+                    return true
+                }
+                return false
+            }
+            .enumerated()
+            .map { index, overlay in
+                var overlay = overlay
+                overlay.zIndex = index
+                return overlay
+            }
     }
 
     func selectOverlay(_ id: UUID?) {
@@ -1013,8 +1059,17 @@ class ViewModel: ObservableObject {
     }
 
     func addOverlay(kind: OverlayKind) {
+        let content: OverlayContent
+        switch kind {
+        case .image:
+            guard let asset = selectOverlayImageAsset() else { return }
+            content = .image(ImageOverlayData(asset: asset))
+        default:
+            content = defaultOverlayContent(for: kind)
+        }
+
         let overlay = OverlayItem(
-            content: defaultOverlayContent(for: kind),
+            content: content,
             placement: defaultOverlayPlacement(for: kind),
             opacity: 1.0,
             zIndex: (overlays.map(\.zIndex).max() ?? -1) + 1
@@ -1124,6 +1179,13 @@ class ViewModel: ObservableObject {
 
     func replaceSelectedImageOverlayAsset() {
         guard let selectedOverlay, case .image = selectedOverlay.content else { return }
+        guard let asset = selectOverlayImageAsset() else { return }
+        updateSelectedImageOverlay { data in
+            data.asset = asset
+        }
+    }
+
+    private func selectOverlayImageAsset() -> OverlayImageAsset? {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.image]
         panel.canChooseFiles = true
@@ -1133,10 +1195,8 @@ class ViewModel: ObservableObject {
         guard panel.runModal() == .OK,
               let url = panel.url,
               let image = NSImage(contentsOf: url),
-              let tiff = image.tiffRepresentation else { return }
-        updateSelectedImageOverlay { data in
-            data.asset = OverlayImageAsset(fileName: url.lastPathComponent, imageData: tiff)
-        }
+              let tiff = image.tiffRepresentation else { return nil }
+        return OverlayImageAsset(fileName: url.lastPathComponent, imageData: tiff)
     }
 
     var defaultTimestampOverlay: OverlayItem? {
@@ -1220,15 +1280,15 @@ class ViewModel: ObservableObject {
     private func defaultOverlayPlacement(for kind: OverlayKind) -> OverlayPlacement {
         switch kind {
         case .qrCode:
-            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.78, normalizedWidth: 0.22, normalizedHeight: 0.22, anchor: .center)
+            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.78, normalizedWidth: 0.22, normalizedHeight: 0.22)
         case .image:
-            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.24, normalizedWidth: 0.24, normalizedHeight: 0.24, anchor: .center)
+            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.24, normalizedWidth: 0.24, normalizedHeight: 0.24)
         case .timestamp:
-            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.9, normalizedWidth: 0.34, normalizedHeight: 0.1, anchor: .center)
+            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.9, normalizedWidth: 0.34, normalizedHeight: 0.1)
         case .location:
-            return OverlayPlacement(normalizedCenterX: 0.24, normalizedCenterY: 0.9, normalizedWidth: 0.34, normalizedHeight: 0.12, anchor: .center)
+            return OverlayPlacement(normalizedCenterX: 0.24, normalizedCenterY: 0.9, normalizedWidth: 0.34, normalizedHeight: 0.12)
         case .text:
-            return OverlayPlacement(normalizedCenterX: 0.5, normalizedCenterY: 0.16, normalizedWidth: 0.42, normalizedHeight: 0.14, anchor: .center)
+            return OverlayPlacement(normalizedCenterX: 0.5, normalizedCenterY: 0.16, normalizedWidth: 0.42, normalizedHeight: 0.14)
         }
     }
 
@@ -1928,6 +1988,57 @@ class ViewModel: ObservableObject {
         return context.makeImage()
     }
 
+    private func renderImageForCurrentPrintCanvas(_ cgImage: CGImage) -> CGImage? {
+        guard let targetAspectRatio = orientedAspectRatio else { return nil }
+
+        let sourceSize = CGSize(width: cgImage.width, height: cgImage.height)
+        let sourceAspectRatio = sourceSize.width / max(sourceSize.height, 1)
+        let canvasSize: CGSize
+        if fitMode == "crop" || abs(sourceAspectRatio - targetAspectRatio) < 0.0001 {
+            canvasSize = sourceSize
+        } else if sourceAspectRatio > targetAspectRatio {
+            canvasSize = CGSize(width: sourceSize.width, height: sourceSize.width / targetAspectRatio)
+        } else {
+            canvasSize = CGSize(width: sourceSize.height * targetAspectRatio, height: sourceSize.height)
+        }
+
+        let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: max(Int(canvasSize.width.rounded()), 1),
+            pixelsHigh: max(Int(canvasSize.height.rounded()), 1),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bitmapFormat: [],
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        )
+        guard let rep,
+              let graphicsContext = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+
+        let canvasRect = CGRect(origin: .zero, size: canvasSize)
+        let drawRect: CGRect
+        switch fitMode {
+        case "contain":
+            drawRect = AVMakeRect(aspectRatio: sourceSize, insideRect: canvasRect)
+        case "stretch", "crop":
+            drawRect = canvasRect
+        default:
+            drawRect = canvasRect
+        }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = graphicsContext
+        NSColor.white.setFill()
+        canvasRect.fill()
+        NSImage(cgImage: cgImage, size: NSSize(width: sourceSize.width, height: sourceSize.height)).draw(in: drawRect)
+        NSGraphicsContext.restoreGraphicsState()
+
+        return rep.cgImage
+    }
+
     // MARK: - Print Preparation
 
     @MainActor
@@ -1938,6 +2049,8 @@ class ViewModel: ObservableObject {
 
         var currentCG = cgImage
         var processed = false
+        var renderedToFinalCanvas = false
+        let hasVisibleOverlays = overlays.contains { !$0.isHidden }
 
         if fitMode == "crop", let cropped = cropCGImage(currentCG) {
             currentCG = cropped
@@ -1954,7 +2067,13 @@ class ViewModel: ObservableObject {
             processed = true
         }
 
-        if let composited = composeOverlays(on: currentCG) {
+        if (processed || hasVisibleOverlays), let canvasImage = renderImageForCurrentPrintCanvas(currentCG) {
+            currentCG = canvasImage
+            processed = true
+            renderedToFinalCanvas = true
+        }
+
+        if hasVisibleOverlays, let composited = composeOverlays(on: currentCG) {
             currentCG = composited
             processed = true
         }
@@ -1964,6 +2083,7 @@ class ViewModel: ObservableObject {
             if let rotated = rotateCGImage(currentCG, degrees: 90) {
                 currentCG = rotated
                 processed = true
+                renderedToFinalCanvas = true
             }
         }
 
@@ -1976,7 +2096,7 @@ class ViewModel: ObservableObject {
             ) else { return nil }
             do {
                 try jpegData.write(to: tempURL)
-                return (path: tempURL.path, fit: "stretch", tempFile: tempURL.path)
+                return (path: tempURL.path, fit: renderedToFinalCanvas ? "stretch" : fitMode, tempFile: tempURL.path)
             } catch {
                 return nil
             }

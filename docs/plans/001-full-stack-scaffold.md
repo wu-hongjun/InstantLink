@@ -2,6 +2,8 @@
 
 **Status:** Completed
 
+Historical implementation plan from the initial scaffold. Current source-of-truth behavior lives in the reference and development docs, which reflect later additions such as Rust 2024, Mini Link 3 support, the expanded FFI surface, and the macOS overlay editor.
+
 ## Goal
 
 Scaffold the entire InstantLink project from scratch: workspace, all crates, stub modules, full implementations, and macOS app. Verify compilation, clippy, formatting, and tests.
@@ -48,7 +50,7 @@ Implemented the BLE packet protocol and all command opcodes.
 - `FitMode` enum: Crop, Contain (white bars), Stretch
 - `load_image()` from file path, `load_image_from_bytes()` from raw data
 - `resize_image()` with model-aware dimensions using Lanczos3 filter
-- `encode_jpeg()` with automatic quality reduction (steps of 5) to fit 105KB
+- `encode_jpeg()` with automatic quality reduction to fit the target printer's size limit
 - `chunk_image_data()` using model-specific chunk sizes
 - `prepare_image()` pipeline: load → resize → encode → chunk
 - 10 unit tests
@@ -57,7 +59,7 @@ Implemented the BLE packet protocol and all command opcodes.
 
 **`models.rs`:**
 
-- `PrinterModel` enum (Mini, Square, Wide) with `ModelSpec` (dimensions, chunk size, name)
+- `PrinterModel` enum with model specs (dimensions, chunk size, name, image-size limits)
 
 **`transport.rs`:**
 
@@ -82,7 +84,7 @@ Implemented the BLE packet protocol and all command opcodes.
 **CLI (`main.rs` + `output.rs`):**
 
 - Commands: `scan`, `info`, `print`, `led set/off`, `status`
-- Global `--device` and `--json` flags
+- Global `--device` flag and JSON output where supported by the CLI
 - Progress bars via indicatif
 - JSON output for all commands
 
@@ -109,12 +111,12 @@ Implemented the BLE packet protocol and all command opcodes.
 | `cargo build --workspace` | Pass |
 | `cargo clippy --workspace -- -D warnings` | Pass (0 warnings) |
 | `cargo fmt --all` | Pass |
-| `cargo test --workspace` | Pass (44 tests) |
+| `cargo test --workspace` | Passed at scaffold completion; current totals have since grown |
 
 ## Key Decisions
 
 1. **Async-first**: btleplug requires tokio, so core is fully async
 2. **No daemon**: One-shot printing doesn't need a persistent service
-3. **Process wrapper over FFI**: macOS app calls CLI via Process (matches StatusLight)
+3. **Process wrapper over FFI**: the initial plan followed the StatusLight process-wrapper pattern; the shipped macOS app now uses the FFI dylib directly for printer control
 4. **Model auto-detection**: Query `IMAGE_SUPPORT_INFO` after connect, match dimensions
 5. **ACK-per-chunk**: Wait for printer ACK after each data chunk (reliable transfer)

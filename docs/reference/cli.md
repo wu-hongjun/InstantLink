@@ -4,8 +4,8 @@
 
 | Flag | Description |
 |------|-------------|
-| `--device <NAME>` | Target a specific printer by name |
-| `--json` | Output as JSON (for machine consumption) |
+| `--device <NAME>` | Target a specific printer by BLE name |
+| `--json` | JSON output where supported (`scan`, `info`, `status`) |
 | `--help` | Show help |
 | `--version` | Show version |
 
@@ -13,7 +13,7 @@
 
 ### `instantlink scan`
 
-Scan for nearby Instax Link printers via BLE.
+Scan for nearby Instax Link printers over BLE.
 
 ```bash
 instantlink scan
@@ -25,18 +25,19 @@ instantlink scan --json
 |--------|---------|-------------|
 | `--duration <SECS>` | `5` | BLE scan duration in seconds |
 
-**JSON output:** Array of printer name strings.
+JSON output is an array of printer names.
 
 ---
 
 ### `instantlink info`
 
-Show printer info: battery, film count, model, charging state, print history.
+Show battery, film, charging, model, and print-count data.
 
 ```bash
 instantlink info
 instantlink info --device "INSTAX-12345678"
 instantlink info --duration 10
+instantlink info --json
 ```
 
 | Option | Default | Description |
@@ -71,22 +72,22 @@ instantlink print photo.jpg --color-mode natural
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--quality <1-100>` | `97` | JPEG compression quality |
-| `--fit <mode>` | `crop` | Fit mode: `crop`, `contain`, or `stretch` |
-| `--color-mode <mode>` | `rich` | Color mode: `rich` (vivid) or `natural` (classic film look) |
+| `--fit <mode>` | `crop` | `crop`, `contain`, or `stretch` |
+| `--color-mode <mode>` | `rich` | `rich` or `natural` |
 
 **Fit modes:**
 
-- **crop** — Resize to fill, cropping edges as needed
-- **contain** — Resize to fit within bounds, adding white bars
-- **stretch** — Stretch to exact printer dimensions
+- `crop` resizes to fill, cropping edges when needed
+- `contain` preserves the full image and adds white bars
+- `stretch` warps to exact printer dimensions
 
-The image is automatically resized to the printer's native resolution and JPEG-compressed. If the compressed image exceeds 105KB, quality is automatically reduced.
+The printer model determines the final pixel size and maximum JPEG size. Current limits are Mini `105KB`, Mini Link 3 `55KB`, Square `105KB`, and Wide `225KB`.
 
 ---
 
 ### `instantlink led set <COLOR>`
 
-Set the printer's LED to a color and pattern.
+Set the printer LED color and pattern.
 
 ```bash
 instantlink led set "#FF0000"
@@ -95,15 +96,15 @@ instantlink led set "#00FF00" --pattern breathe
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--pattern <type>` | `solid` | Pattern: `solid`, `blink`, or `breathe` |
+| `--pattern <type>` | `solid` | `solid`, `blink`, or `breathe` |
 
-**Color format:** Hex string `#RRGGBB` or `RRGGBB`.
+Color format: `#RRGGBB` or `RRGGBB`.
 
 ---
 
 ### `instantlink led off`
 
-Turn off the printer's LED.
+Turn off the printer LED.
 
 ```bash
 instantlink led off
@@ -113,14 +114,14 @@ instantlink led off
 
 ### `instantlink status`
 
-Combined connectivity check and printer info.
+Combined connectivity check and printer status.
 
 ```bash
 instantlink status
 instantlink status --json
 ```
 
-**JSON output (connected):**
+**JSON output when connected:**
 
 ```json
 {
@@ -134,7 +135,7 @@ instantlink status --json
 }
 ```
 
-**JSON output (disconnected):**
+**JSON output when disconnected:**
 
 ```json
 {

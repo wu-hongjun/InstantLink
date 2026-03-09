@@ -1,6 +1,8 @@
 # Plan 006: Overlay System for macOS Editor
 
-**Status:** Proposed
+**Status:** Implemented
+
+This plan is now largely implemented in the macOS app. The shipped first pass includes `Text`, `QR code`, `Timestamp`, `Imported image`, and `Location` overlays backed by `OverlayModels.swift`. A few details below remain design history rather than exact current behavior.
 
 ## Goal
 
@@ -10,6 +12,7 @@ Introduce a first-class overlay system for the macOS app so users can place reus
 2. QR code
 3. Timestamp
 4. Imported image
+5. Location
 
 This should replace the current one-off date stamp model with a general system that is consistent across preview, editing, queue persistence, and print rendering.
 

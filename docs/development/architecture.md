@@ -1,73 +1,81 @@
 # Architecture
 
-InstantLink follows a layered architecture mirroring [StatusLight](https://github.com/wu-hongjun/StatusLight).
+InstantLink uses a layered Rust core with thin CLI and FFI frontends, plus a native SwiftUI macOS app.
 
-## Crate Dependency Graph
+## Dependency Graph
 
-```
+```text
 instantlink-cli ──→ instantlink-core
 instantlink-ffi ──→ instantlink-core
-macOS app ─────→ instantlink-ffi (via dlopen, bundled dylib)
+macOS app ───────→ instantlink-ffi (via dlopen, bundled dylib)
 ```
 
-## instantlink-core
+## `instantlink-core`
 
-The core library handles all BLE communication and image processing. It is fully async (tokio + btleplug).
+The core crate owns BLE communication, model detection, protocol encoding, and image preparation. It is fully async with `tokio` and `btleplug`.
 
 ### Module Layers
 
-```
+```text
 printer.rs     ← High-level API (scan, connect, print_file)
     ↓
-device.rs      ← PrinterDevice trait + BlePrinterDevice (ACK flow)
+device.rs      ← PrinterDevice trait + BlePrinterDevice
     ↓
 transport.rs   ← BLE GATT transport (btleplug)
     ↓
-commands.rs    ← Command/Response enums, encode/decode
+commands.rs    ← Command/Response enums
     ↓
 protocol.rs    ← Packet build/parse, checksum, fragmentation
     ↓
-models.rs      ← PrinterModel enum + specs
+models.rs      ← PrinterModel enum + per-model specs
 error.rs       ← PrinterError + Result alias
-image.rs       ← Load, resize, JPEG encode, chunk
+image.rs       ← Load, resize, encode, chunk
 ```
 
-### Key Design Decisions
+### Key Decisions
 
-**Async throughout**: btleplug requires tokio, so the entire core is async. The `PrinterDevice` trait uses `async_trait`.
+- **Async throughout**: `btleplug` requires async BLE access, so the core stays async end to end.
+- **Model-aware behavior**: `BlePrinterDevice::new` detects the printer model from `IMAGE_SUPPORT_INFO`, and uses the DIS model hint (`FI033`) first to distinguish Mini Link 3 from earlier Mini models.
+- **ACK-based transfer**: each image chunk is sent only after the previous chunk is acknowledged.
+- **Model-specific JPEG limits**: quality reduction targets each model's own image-size cap instead of a single global threshold.
+- **Transport abstraction**: `transport::Transport` allows mock transports in tests without requiring hardware.
 
-**Model auto-detection**: After connecting, we query `IMAGE_SUPPORT_INFO` and match the returned width/height to a `PrinterModel`. This determines image dimensions and chunk sizes.
+## `instantlink-cli`
 
-**ACK-based flow**: Each data chunk requires an ACK from the printer before sending the next. This is handled in `BlePrinterDevice::send_image_data`.
+The CLI is a thin `clap` frontend around `instantlink_core::printer`.
 
-**Automatic quality reduction**: If the JPEG exceeds 105KB, a binary search finds the highest quality that fits within the limit.
+- Commands: `scan`, `info`, `print`, `led set`, `led off`, `status`
+- JSON output is implemented for `scan`, `info`, and `status`
+- Human-readable flows use spinners and progress text rather than mirroring raw protocol events
 
-**Transport trait**: `transport::Transport` is a trait, enabling mock implementations for testing without hardware. A `MockTransport` (in `device.rs` `#[cfg(test)]` block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.
+## `instantlink-ffi`
 
-## instantlink-cli
+The FFI crate exposes the Rust core through a C ABI.
 
-Thin CLI layer using clap for argument parsing and indicatif for progress bars. All printer operations delegate to `instantlink_core::printer`.
-
-Supports `--json` output on all commands for machine consumption.
-
-## instantlink-ffi
-
-C FFI bindings using cbindgen. Manages a global tokio runtime (`OnceLock<Runtime>`) and a `Mutex`-protected device handle. All functions use `catch_unwind` to prevent Rust panics from crossing the FFI boundary.
+- Global `tokio` runtime via `OnceLock<Runtime>`
+- `Mutex`-protected connected device handle
+- `catch_unwind` on all extern entry points
+- 19 exported functions, including lifecycle, status, printing, LED control, and printer `shutdown` / `reset`
 
 ## macOS App
 
-Native SwiftUI app with menu bar extra and full window. Single-file architecture (`InstantLinkApp.swift`) containing all views and the ViewModel. Communicates with printers via FFI — `InstantLinkFFI.swift` uses `dlopen`/`dlsym` to load the bundled `libinstantlink_ffi.dylib` and resolves all 17 symbols at runtime.
+The macOS app lives in `macos/InstantLink/` and is no longer a single-file app.
 
-### Key Features
+- `InstantLinkApp.swift` contains the app entry point, view model, and most SwiftUI views
+- `OverlayModels.swift` defines the overlay data model and typed payloads
+- `InstantLinkFFI.swift` loads `libinstantlink_ffi.dylib` and resolves 19 symbols at runtime
+- `InstantLinkCLI.swift` still exists for CLI-backed tasks where appropriate
+- `.lproj/Localizable.strings` bundles provide 12-language localization
 
-- **Image editor**: Crop, contain, stretch fit modes; rotation; date stamps with multiple styles
-- **Camera capture**: Built-in camera with self-timer (off/2s/10s) and capture flash
-- **Film orientation**: Portrait/landscape toggle that inverts the aspect ratio for preview and applies 90° rotation at print time
-- **Film border preview**: `FilmFrameView` renders the physical Instax film card shape (white card with thick bottom border) around image previews
-- **Printer profiles**: Multi-printer management with custom names, colors, and saved BLE identifiers
-- **Auto-update**: Checks GitHub releases and downloads/installs updates in-app
-- **Localization**: 12 languages via `.lproj/Localizable.strings` bundles
+### macOS Editing Model
+
+The macOS app keeps per-photo edits in queue item state rather than one shared editor state.
+
+- Crop, rotation, flip, fit mode, and film orientation are stored per queue item
+- Overlays are first-class data: text, QR code, timestamp, imported image, and location
+- Preview and print use the same overlay composition pipeline so edited output matches what the user sees
+- New-photo defaults seed future imports without mutating existing queue items
 
 ## No Daemon
 
-Unlike StatusLight, InstantLink has no daemon crate. Instax printing is inherently one-shot: connect, transfer image, print, disconnect. There's no need for a persistent background service.
+InstantLink does not need a background daemon. Printing is a short-lived connect-transfer-print-disconnect workflow, and the macOS app talks to the printer directly through the bundled FFI dylib.

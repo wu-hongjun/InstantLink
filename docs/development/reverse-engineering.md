@@ -1,10 +1,13 @@
 # Reverse Engineering the Instax Link BLE Protocol
 
+!!! note "Scope"
+    This guide mixes protocol research background with implementation notes. The current InstantLink codebase only implements BLE GATT transport in production. RFCOMM/SPP and USB notes below are reverse-engineering context, not supported runtime transports.
+
 This guide documents how the Instax Link protocol was reverse-engineered by the open-source community, and provides a methodology for adding support for future devices.
 
 ## Background
 
-The Instax Link printers (Mini Link, Mini Link 2, Square Link, Wide Link) use a proprietary BLE GATT protocol that replaces the WiFi-based protocol of older SP-1/SP-2/SP-3 models. The protocol was reverse-engineered collaboratively via [jpwsutton/instax_api#21](https://github.com/jpwsutton/instax_api/issues/21), with working implementations in [javl/InstaxBLE](https://github.com/javl/InstaxBLE) (Python) and this project (Rust).
+The Instax Link printers (Mini Link, Mini Link 2, Mini Link 3, Square Link, Wide Link) use a proprietary BLE GATT protocol that replaces the WiFi-based protocol of older SP-1/SP-2/SP-3 models. The protocol was reverse-engineered collaboratively via [jpwsutton/instax_api#21](https://github.com/jpwsutton/instax_api/issues/21), with working implementations in [javl/InstaxBLE](https://github.com/javl/InstaxBLE) (Python) and this project (Rust).
 
 ## Methodology
 
@@ -52,7 +55,7 @@ The opcode's first byte is the **command group**, second byte is the **command w
 |-------|---------|----------|
 | `0x00` | Device info & capabilities | Version info, device queries |
 | `0x01` | Power & connection control | Shutdown, reset, sleep, BLE connect |
-| `0x02` | Support function queries | Battery, film, print history |
+| `0x02` | Support function queries | Battery, film, print count |
 | `0x10` | Image transfer | Download start/data/end, print |
 | `0x20` | Firmware update | FW download, upgrade, backup |
 | `0x30` | Hardware settings | Accelerometer, LEDs, printer head |
@@ -189,7 +192,7 @@ Key observations from the community:
 - Images are **always JPEG** (not raw pixels)
 - Variable block counts per image (depends on JPEG file size, not pixel count)
 - This explains why 69 blocks x 900 bytes = 62,100 bytes, not 600x800x3 = 1,440,000 bytes
-- Maximum JPEG size: ~105 KB
+- Maximum JPEG size is **model-specific** in InstantLink: Mini `105 KB`, Mini Link 3 `55 KB`, Square `105 KB`, Wide `225 KB`
 - Last chunk is **zero-padded** to full chunk size
 - Quality should be optimized via binary search to stay under the size limit
 
@@ -215,10 +218,11 @@ Key observations from the community:
 
 ### Adding support for new models:
 1. Capture BLE traffic with the official app
-2. Query Image Support Info — response dimensions identify the model
-3. Test with known chunk sizes (900B for mini/wide, 1808B for square)
-4. If a new model uses different chunk sizes, the DOWNLOAD_START response may contain the requested block size
-5. Verify JPEG quality limits — 105 KB may differ for newer models
+2. Query Image Support Info — response dimensions identify Mini, Square, and Wide
+3. For Mini Link 3, prefer the DIS model hint (`FI033`) before falling back to dimensions
+4. Test with known chunk sizes (900B for mini/wide, 1808B for square)
+5. If a new model uses different chunk sizes, the DOWNLOAD_START response may contain the requested block size
+6. Verify JPEG quality limits — they may differ by model
 
 ## Community References
 

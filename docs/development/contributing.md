@@ -9,9 +9,7 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-## Code Standards
-
-### Before Every Commit
+## Before Every Commit
 
 ```bash
 cargo fmt --all
@@ -19,82 +17,78 @@ cargo clippy --workspace -- -D warnings
 cargo test --workspace
 ```
 
-All three must pass cleanly. Clippy warnings are treated as errors.
+Clippy warnings are treated as errors in CI.
 
-### Commit Messages
+## Commit Messages
 
-Use [conventional commits](https://www.conventionalcommits.org/):
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `feat:` — New feature
-- `fix:` — Bug fix
-- `refactor:` — Code restructuring without behavior change
-- `docs:` — Documentation only
-- `test:` — Test additions/changes
-- `chore:` — Build, CI, tooling changes
+- `feat:` new behavior or user-facing capability
+- `fix:` bug fix
+- `refactor:` structural cleanup without intended behavior change
+- `docs:` documentation-only change
+- `test:` test-only change
+- `chore:` tooling, CI, or build-system change
 
-### Error Handling
+## Build and Release Notes
 
-- **Core crate**: Use `thiserror` with `PrinterError` enum and `Result<T>` alias
-- **CLI crate**: Use `anyhow` with `.context()` for user-facing errors
+- Use `bash scripts/build-app.sh <semver>` to build `target/release/InstantLink.app`
+- The script requires a semver argument such as `0.1.2` or `v0.1.2`
+- GitHub Releases are tag-driven via `.github/workflows/release.yml`
+- Tagged releases publish the macOS DMG plus separate CLI and FFI zip archives
 
-### Naming
+## Code Standards
 
-- Snake case for functions and variables
-- Pascal case for types and enums
-- `SCREAMING_SNAKE` for constants
+- Rust uses snake_case for functions/variables, PascalCase for types, and `SCREAMING_SNAKE_CASE` for constants
+- Prefer `thiserror`-based `PrinterError` in the core crate
+- Use `anyhow` with `.context(...)` in the CLI for user-facing command failures
+- Keep protocol and model knowledge in `instantlink-core`; avoid duplicating it in CLI or Swift
 
 ## Project Structure
 
-```
+```text
 InstantLink/
-├── Cargo.toml                    # Workspace root
-├── CLAUDE.md                     # Dev instructions
-├── mkdocs.yml                    # Documentation config
-├── docs/                         # MkDocs documentation
 ├── crates/
-│   ├── instantlink-core/          # BLE protocol, image processing, device comms
-│   ├── instantlink-cli/           # CLI binary
-│   └── instantlink-ffi/           # C FFI bindings
-├── macos/
-│   └── InstantLink/               # SwiftUI app
-├── scripts/
-│   └── build-app.sh              # App bundle build script
-└── references/                   # Cloned reference repos (gitignored)
+│   ├── instantlink-core/   # BLE protocol, device logic, image processing
+│   ├── instantlink-cli/    # CLI binary
+│   └── instantlink-ffi/    # C ABI wrapper for native apps
+├── macos/InstantLink/      # SwiftUI app, FFI loader, overlay models
+├── docs/                   # MkDocs documentation
+├── scripts/build-app.sh    # App bundle + DMG build script
+└── .github/workflows/      # CI and release automation
 ```
 
 ## Testing
 
-### Unit Tests (No Hardware)
-
-Protocol, command encoding/decoding, and image processing are fully tested without hardware:
+### Fast Tests
 
 ```bash
 cargo test --workspace
 ```
 
-Currently 68 unit tests covering:
+This covers protocol encoding/decoding, image preparation, mock transport flows, and device-level behavior without real hardware.
 
-- Packet checksum, build, parse, fragmentation, reassembly (18 tests)
-- Command encoding and response decoding (16 tests)
-- Image resize, JPEG encoding, chunking (12 tests)
-- Device layer: model detection, status queries, print flow, LED, error paths (22 tests)
+### Hardware Verification
 
-### Hardware Tests
-
-BLE transport and end-to-end printing require a real Instax Link printer:
+Prefer running the local CLI from the repo rather than relying on a separately installed binary:
 
 ```bash
-instantlink scan          # Verify printer discovery
-instantlink status        # Verify full communication
-instantlink print test.jpg  # Verify print pipeline
+cargo run -p instantlink-cli -- scan
+cargo run -p instantlink-cli -- info
+cargo run -p instantlink-cli -- status
+cargo run -p instantlink-cli -- print test.jpg
 ```
+
+Use a real printer for BLE discovery, status, print, and LED checks.
 
 ## Documentation
 
-Documentation is built with [MkDocs Material](https://squidfundraising.github.io/mkdocs-material-squidfundraising/):
+Docs are built with MkDocs Material:
 
 ```bash
 pip install mkdocs-material
-mkdocs serve    # Local preview at http://localhost:8000
-mkdocs build    # Build static site to site/
+mkdocs serve
+mkdocs build
 ```
+
+Update docs alongside behavior changes. Reference docs should describe the live codebase, not historical implementation details.

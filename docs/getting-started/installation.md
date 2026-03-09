@@ -2,16 +2,23 @@
 
 ## From Releases
 
-Pre-built `.dmg` releases are available for **macOS Apple Silicon** (ARM64) on the [Releases](https://github.com/wu-hongjun/InstantLink/releases) page. Download, mount, and drag the app to Applications.
+Prebuilt artifacts are published on the [Releases](https://github.com/wu-hongjun/InstantLink/releases) page for each tagged version:
+
+- `InstantLink-vX.Y.Z-aarch64-apple-darwin.dmg` for the macOS app
+- `InstantLink-CLI-vX.Y.Z.zip` for the standalone CLI
+- `InstantLink-FFI-vX.Y.Z.zip` for FFI consumers
+
+The app release targets **macOS Apple Silicon**. Download the `.dmg`, mount it, and drag `InstantLink.app` into `/Applications`.
 
 ## From Source
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) (stable, 2021 edition)
-- macOS (for BLE via CoreBluetooth) or Linux (with BlueZ)
+- [Rust](https://rustup.rs/) stable with edition `2024`
+- macOS for the SwiftUI app and BLE via CoreBluetooth
+- Linux is supported for CLI development and BLE via BlueZ
 
-### Build
+### Build the Workspace
 
 ```bash
 git clone https://github.com/wu-hongjun/InstantLink.git
@@ -21,41 +28,42 @@ cargo build --workspace --release
 
 The CLI binary will be at `target/release/instantlink`.
 
-### Install CLI
+### Install the CLI
 
 ```bash
 cargo install --path crates/instantlink-cli
 ```
 
-Or copy manually:
+Or copy the release binary manually:
 
 ```bash
 cp target/release/instantlink /usr/local/bin/
 ```
 
-## macOS App
+## Build the macOS App
 
-The macOS app bundles the CLI binary and provides a native SwiftUI menu bar interface with drag-and-drop printing.
+The app bundle embeds the CLI binary and the FFI dylib.
 
 ```bash
-# Build the Rust workspace first
-cargo build --workspace --release
-
-# Build the app bundle (requires macOS)
-bash scripts/build-app.sh 0.1.0
+bash scripts/build-app.sh 0.1.2
 ```
 
-The `.app` bundle is created at `target/release/InstantLink.app`. The script:
+`scripts/build-app.sh` requires a semver version argument. It builds the Rust workspace, compiles the SwiftUI launcher, bundles localizations and fonts, codesigns the app, and creates a `.dmg` when `create-dmg` is installed (`brew install create-dmg`).
 
-1. Copies the CLI binary into the bundle (renamed `instantlink-cli`)
-2. Bundles the FFI dylib (`libinstantlink_ffi.dylib`) into `Frameworks/`
-3. Compiles the SwiftUI launcher with `swiftc`
-4. Generates `Info.plist` with version and BLE permission
-5. Ad-hoc codesigns the bundle
-6. Optionally creates a `.dmg` (if `create-dmg` is installed: `brew install create-dmg`)
+The resulting bundle is written to `target/release/InstantLink.app`.
+
+## Build the FFI Header
+
+The checked-in header at `crates/instantlink-ffi/include/instantlink.h` is only refreshed when `INSTANTLINK_UPDATE_HEADER` is set:
+
+```bash
+INSTANTLINK_UPDATE_HEADER=1 cargo build --release -p instantlink-ffi
+```
+
+Without that environment variable, cbindgen writes the generated header into Cargo's `OUT_DIR`.
 
 !!! note "Bluetooth Permissions"
-    The app includes `NSBluetoothAlwaysUsageDescription` in its `Info.plist` for BLE access. When running the CLI directly (outside the app bundle), macOS will prompt for Bluetooth permission on first use.
+    `InstantLink.app` includes `NSBluetoothAlwaysUsageDescription`. When running the CLI directly outside the app bundle, macOS will prompt for Bluetooth permission on first use.
 
 ## Verify Installation
 

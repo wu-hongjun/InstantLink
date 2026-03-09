@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://instantlink.hongjunwu.com/reference/protocol/">
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/development/reverse-engineering/">
       
       
-        <link rel="prev" href="../cli/">
-      
-      
-        <link rel="next" href="../ffi/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Protocol - InstantLink</title>
+        <title>Reverse Engineering the Instax Link BLE Protocol - InstantLink</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ble-protocol-reference" class="md-skip">
+        <a href="#reverse-engineering-the-instax-link-ble-protocol" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Protocol
+              Reverse Engineering the Instax Link BLE Protocol
             
           </span>
         </div>
@@ -264,13 +260,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../cli/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
           
   
   
@@ -292,7 +286,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/architecture/" class="md-tabs__link">
+        <a href="../architecture/" class="md-tabs__link">
           
   
   
@@ -501,10 +495,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -518,20 +510,17 @@
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -549,7 +538,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -567,7 +556,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -592,37 +581,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Protocol
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
         
   
   
@@ -638,203 +600,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#ble-service" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BLE Service
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packet-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#checksum" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Checksum
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mtu-fragmentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MTU Fragmentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opcodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Opcodes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Opcodes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#query-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#image-transfer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Image Transfer
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#power-connection-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Power &amp; Connection Control
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#led-sensors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        LED &amp; Sensors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firmware-update-not-implemented" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Firmware Update (not implemented)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#print-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Print Flow
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Print Flow">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#print-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Print Options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#model-specific-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Model-Specific Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#alternative-transports" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Alternative Transports
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -847,7 +612,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ffi/" class="md-nav__link">
+      <a href="../../reference/ffi/" class="md-nav__link">
         
   
   
@@ -938,7 +703,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/architecture/" class="md-nav__link">
+      <a href="../architecture/" class="md-nav__link">
         
   
   
@@ -966,7 +731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/contributing/" class="md-nav__link">
+      <a href="../contributing/" class="md-nav__link">
         
   
   
@@ -1021,10 +786,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ble-service" class="md-nav__link">
+  <a href="#background" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BLE Service
+        Background
       
     </span>
   </a>
@@ -1032,55 +797,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#packet-format" class="md-nav__link">
+  <a href="#methodology" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Packet Format
+        Methodology
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#checksum" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Checksum
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mtu-fragmentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MTU Fragmentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opcodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Opcodes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Opcodes">
+    <nav class="md-nav" aria-label="Methodology">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#query-commands" class="md-nav__link">
+  <a href="#step-1-capture-ble-traffic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query Commands
+        Step 1: Capture BLE Traffic
       
     </span>
   </a>
@@ -1088,10 +820,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#image-transfer" class="md-nav__link">
+  <a href="#step-2-analyze-in-wireshark" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Image Transfer
+        Step 2: Analyze in Wireshark
       
     </span>
   </a>
@@ -1099,10 +831,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#power-connection-control" class="md-nav__link">
+  <a href="#step-3-identify-packet-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Power &amp; Connection Control
+        Step 3: Identify Packet Structure
       
     </span>
   </a>
@@ -1110,10 +842,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#led-sensors" class="md-nav__link">
+  <a href="#step-4-decode-opcodes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LED &amp; Sensors
+        Step 4: Decode Opcodes
       
     </span>
   </a>
@@ -1121,10 +853,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firmware-update-not-implemented" class="md-nav__link">
+  <a href="#step-5-decode-response-format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Firmware Update (not implemented)
+        Step 5: Decode Response Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-android-app-decompilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Android App Decompilation
       
     </span>
   </a>
@@ -1137,22 +880,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#print-flow" class="md-nav__link">
+  <a href="#transport-variants" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Print Flow
+        Transport Variants
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Print Flow">
+    <nav class="md-nav" aria-label="Transport Variants">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#print-options" class="md-nav__link">
+  <a href="#ble-device-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Print Options
+        BLE Device Discovery
       
     </span>
   </a>
@@ -1165,10 +908,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-specific-parameters" class="md-nav__link">
+  <a href="#device-info-queries-opcode-0x0001" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model-Specific Parameters
+        Device Info Queries (Opcode 0x0001)
       
     </span>
   </a>
@@ -1176,10 +919,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#alternative-transports" class="md-nav__link">
+  <a href="#led-animation-protocol" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Alternative Transports
+        LED Animation Protocol
       
     </span>
   </a>
@@ -1187,10 +930,82 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
+  <a href="#accelerometer-data-opcode-0x3000" class="md-nav__link">
     <span class="md-ellipsis">
       
-        References
+        Accelerometer Data (Opcode 0x3000)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image Encoding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-unknowns-future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Unknowns / Future Work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Known Unknowns / Future Work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#confirmed-on-hardware-instax-square-link" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirmed on hardware (Instax Square Link):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-yet-reverse-engineered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet reverse-engineered:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-support-for-new-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding support for new models:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#community-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Community References
       
     </span>
   </a>
@@ -1217,109 +1032,165 @@
   
 
 
-<h1 id="ble-protocol-reference">BLE Protocol Reference<a class="headerlink" href="#ble-protocol-reference" title="Permanent link">&para;</a></h1>
-<p>This documents the Instax Link BLE protocol as reverse-engineered by the open-source community.</p>
-<h2 id="ble-service">BLE Service<a class="headerlink" href="#ble-service" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>UUID</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Service</td>
-<td><code>70954782-2d83-473d-9e5f-81e1d02d5273</code></td>
-</tr>
-<tr>
-<td>Write Characteristic</td>
-<td><code>70954783-2d83-473d-9e5f-81e1d02d5273</code></td>
-</tr>
-<tr>
-<td>Notify Characteristic</td>
-<td><code>70954784-2d83-473d-9e5f-81e1d02d5273</code></td>
-</tr>
-</tbody>
-</table>
-<h2 id="packet-format">Packet Format<a class="headerlink" href="#packet-format" title="Permanent link">&para;</a></h2>
-<p>All communication uses the same packet structure:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[0x41 0x62] [length:2B] [opcode:2B] [payload...] [checksum:1B]
+<h1 id="reverse-engineering-the-instax-link-ble-protocol">Reverse Engineering the Instax Link BLE Protocol<a class="headerlink" href="#reverse-engineering-the-instax-link-ble-protocol" title="Permanent link">&para;</a></h1>
+<p>This guide documents how the Instax Link protocol was reverse-engineered by the open-source community, and provides a methodology for adding support for future devices.</p>
+<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
+<p>The Instax Link printers (Mini Link, Mini Link 2, Square Link, Wide Link) use a proprietary BLE GATT protocol that replaces the WiFi-based protocol of older SP-1/SP-2/SP-3 models. The protocol was reverse-engineered collaboratively via <a href="https://github.com/jpwsutton/instax_api/issues/21">jpwsutton/instax_api#21</a>, with working implementations in <a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a> (Python) and this project (Rust).</p>
+<h2 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-capture-ble-traffic">Step 1: Capture BLE Traffic<a class="headerlink" href="#step-1-capture-ble-traffic" title="Permanent link">&para;</a></h3>
+<p><strong>Android (preferred for packet capture):</strong></p>
+<ol>
+<li>Enable <em>Bluetooth HCI snoop log</em> in Developer Options</li>
+<li>Open the official Instax app and perform the action you want to capture (print, LED control, etc.)</li>
+<li>Disable the snoop log</li>
+<li>Pull the log file:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>adb<span class="w"> </span>pull<span class="w"> </span>/data/misc/bluetooth/logs/btsnoop_hci.log
+</code></pre></div></li>
+</ol>
+<p><strong>macOS (PacketLogger):</strong></p>
+<p>Apple's PacketLogger (from <a href="https://developer.apple.com/download/all/">Additional Tools for Xcode</a>) can capture BLE traffic directly.</p>
+<h3 id="step-2-analyze-in-wireshark">Step 2: Analyze in Wireshark<a class="headerlink" href="#step-2-analyze-in-wireshark" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Open the <code>.log</code> file in Wireshark</li>
+<li>Filter with <code>btspp</code> (for RFCOMM/SPP traffic) or <code>btatt</code> (for BLE GATT)</li>
+<li>Look for writes to the Write Characteristic (<code>70954783-...</code>) and notifications from the Notify Characteristic (<code>70954784-...</code>)</li>
+</ol>
+<h3 id="step-3-identify-packet-structure">Step 3: Identify Packet Structure<a class="headerlink" href="#step-3-identify-packet-structure" title="Permanent link">&para;</a></h3>
+<p>All Instax Link packets follow this format:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[Header:2B] [Length:2B] [Opcode:2B] [Payload:variable] [Checksum:1B]
 </code></pre></div>
+<ul>
+<li><strong>Client→Printer header</strong>: <code>0x41 0x62</code> (ASCII "Ab")</li>
+<li><strong>Printer→Client header</strong>: <code>0x61 0x42</code> (ASCII "aB")</li>
+<li><strong>Length</strong>: Big-endian u16, total packet size</li>
+<li><strong>Checksum</strong>: <code>(255 - (sum_of_all_preceding_bytes &amp; 255)) &amp; 255</code></li>
+<li>Validation: <code>sum(entire_packet_including_checksum) &amp; 255 == 255</code></li>
+</ul>
+<h3 id="step-4-decode-opcodes">Step 4: Decode Opcodes<a class="headerlink" href="#step-4-decode-opcodes" title="Permanent link">&para;</a></h3>
+<p>The opcode's first byte is the <strong>command group</strong>, second byte is the <strong>command within group</strong>:</p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Size</th>
-<th>Description</th>
+<th>Group</th>
+<th>Purpose</th>
+<th>Examples</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Header</td>
-<td>2 bytes</td>
-<td>Request: <code>0x41 0x62</code>, Response: <code>0x61 0x42</code></td>
+<td><code>0x00</code></td>
+<td>Device info &amp; capabilities</td>
+<td>Version info, device queries</td>
 </tr>
 <tr>
-<td>Length</td>
-<td>2 bytes</td>
-<td>Big-endian, total packet size (header + length + opcode + payload + checksum)</td>
+<td><code>0x01</code></td>
+<td>Power &amp; connection control</td>
+<td>Shutdown, reset, sleep, BLE connect</td>
 </tr>
 <tr>
-<td>Opcode</td>
-<td>2 bytes</td>
-<td>Command identifier (big-endian)</td>
+<td><code>0x02</code></td>
+<td>Support function queries</td>
+<td>Battery, film, print history</td>
 </tr>
 <tr>
-<td>Payload</td>
-<td>variable</td>
-<td>Command-specific data</td>
+<td><code>0x10</code></td>
+<td>Image transfer</td>
+<td>Download start/data/end, print</td>
 </tr>
 <tr>
-<td>Checksum</td>
-<td>1 byte</td>
-<td><code>(255 - (sum_of_preceding_bytes &amp; 255)) &amp; 255</code></td>
+<td><code>0x20</code></td>
+<td>Firmware update</td>
+<td>FW download, upgrade, backup</td>
+</tr>
+<tr>
+<td><code>0x30</code></td>
+<td>Hardware settings</td>
+<td>Accelerometer, LEDs, printer head</td>
+</tr>
+<tr>
+<td><code>0x80</code></td>
+<td>Camera settings</td>
+<td>Live view, post-view upload</td>
 </tr>
 </tbody>
 </table>
-<p>Minimum packet size is 7 bytes (header + length + opcode + checksum, no payload).</p>
-<h2 id="checksum">Checksum<a class="headerlink" href="#checksum" title="Permanent link">&para;</a></h2>
-<p>The checksum is computed over all bytes preceding it (header + length + opcode + payload):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">fn</span><span class="w"> </span><span class="nf">checksum</span><span class="p">(</span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">u8</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">sum</span><span class="p">:</span><span class="w"> </span><span class="kt">u32</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">map</span><span class="p">(</span><span class="o">|&amp;</span><span class="n">b</span><span class="o">|</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="kt">u32</span><span class="p">).</span><span class="n">sum</span><span class="p">();</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="p">((</span><span class="mi">255</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">sum</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mi">255</span><span class="p">))</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="kt">u8</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
+<h3 id="step-5-decode-response-format">Step 5: Decode Response Format<a class="headerlink" href="#step-5-decode-response-format" title="Permanent link">&para;</a></h3>
+<p>Responses include a <strong>return code</strong> byte after the opcode:
+- <code>0x00</code> = success
+- Non-zero = error/rejection</p>
+<p>For multiplexed queries (opcode <code>0x0002</code>), the response also includes the InfoType byte so you can match responses to requests.</p>
+<h3 id="step-6-android-app-decompilation">Step 6: Android App Decompilation<a class="headerlink" href="#step-6-android-app-decompilation" title="Permanent link">&para;</a></h3>
+<p>The official Instax app can be decompiled with jadx or apktool to discover:
+- Event type enumerations (all 64+ command/event types)
+- Payload field definitions
+- Image encoding parameters
+- Protocol state machines</p>
+<p>Key findings from app decompilation:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>SUPPORT_FUNCTION_AND_VERSION_INFO(0, 0)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>DEVICE_INFO_SERVICE(0, 1)
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>SUPPORT_FUNCTION_INFO(0, 2)
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>IDENTIFY_INFORMATION(0, 16)
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>SHUT_DOWN(1, 0)
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>RESET(1, 1)
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>AUTO_SLEEP_SETTINGS(1, 2)
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>BLE_CONNECT(1, 3)
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>PRINT_IMAGE_DOWNLOAD_START(16, 0)
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>PRINT_IMAGE_DOWNLOAD_DATA(16, 1)
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>PRINT_IMAGE_DOWNLOAD_END(16, 2)
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>PRINT_IMAGE_DOWNLOAD_CANCEL(16, 3)
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>PRINT_IMAGE(16, 128)           // 0x1080
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>REJECT_FILM_COVER(16, 129)     // 0x1081
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>FW_DOWNLOAD_START(32, 0)       // 0x2000
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>FW_DOWNLOAD_DATA(32, 1)
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>FW_DOWNLOAD_END(32, 2)
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>FW_UPGRADE_EXIT(32, 3)
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>FW_PROGRAM_INFO(32, 16)
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>FW_DATA_BACKUP(32, 17)
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>FW_UPDATE_REQUEST(32, 18)
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>XYZ_AXIS_INFO(48, 0)           // 0x3000
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>LED_PATTERN_SETTINGS(48, 1)    // 0x3001
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>AXIS_ACTION_SETTINGS(48, 2)
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>POWER_ONOFF_LED_SETTING(48, 3)
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>AR_LED_VIBRATION_SETTING(48, 4)
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>ADDITIONAL_PRINTER_INFO(48, 16) // 0x3010
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>PRINTER_HEAD_LIGHT_CORRECT_INFO(48, 17)
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>PRINTER_HEAD_LIGHT_CORRECT_SETTINGS(48, 18)
 </code></pre></div>
-<h2 id="mtu-fragmentation">MTU Fragmentation<a class="headerlink" href="#mtu-fragmentation" title="Permanent link">&para;</a></h2>
-<p>BLE packets larger than 182 bytes are split into sub-packets for transmission. The receiver reassembles them using the length field in the first sub-packet. The <code>PacketAssembler</code> buffers incoming fragments until a complete packet is received.</p>
-<h2 id="opcodes">Opcodes<a class="headerlink" href="#opcodes" title="Permanent link">&para;</a></h2>
-<h3 id="query-commands">Query Commands<a class="headerlink" href="#query-commands" title="Permanent link">&para;</a></h3>
-<p>All status queries use a single opcode (<code>0x0002</code> SUPPORT_FUNCTION_INFO) with an InfoType byte in the payload to select which information to retrieve.</p>
+<h2 id="transport-variants">Transport Variants<a class="headerlink" href="#transport-variants" title="Permanent link">&para;</a></h2>
+<p>The same packet protocol works over three transport layers:</p>
 <table>
 <thead>
 <tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Payload</th>
-<th>Description</th>
+<th>Transport</th>
+<th>Platform</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>0x0001</code></td>
-<td>Device Info Service</td>
-<td>SubIndex(1B)</td>
-<td>Query device info field by sub-index</td>
+<td><strong>BLE GATT</strong></td>
+<td>iOS, macOS, Linux</td>
+<td>Primary. Uses custom service UUID <code>70954782-...</code>. MTU=182, packets fragmented into sub-packets.</td>
 </tr>
 <tr>
-<td><code>0x0002</code></td>
-<td>Support Function Info</td>
-<td>InfoType(1B)</td>
-<td>Multiplexed query — InfoType selects the data</td>
+<td><strong>RFCOMM/SPP</strong></td>
+<td>Android</td>
+<td>Classic Bluetooth serial. Same packet format, no MTU fragmentation needed (MTU ~990).</td>
+</tr>
+<tr>
+<td><strong>USB CDC ACM</strong></td>
+<td>Any (via USB cable)</td>
+<td>Printer appears as <code>/dev/ttyACM0</code>. Vendor <code>04cb</code>, Product <code>5019</code>. Same packet format.</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Device Info sub-indices</strong> (payload byte for opcode <code>0x0001</code>):</p>
+<h3 id="ble-device-discovery">BLE Device Discovery<a class="headerlink" href="#ble-device-discovery" title="Permanent link">&para;</a></h3>
+<p>The printer advertises two BLE names:
+- <code>INSTAX-{serial}(IOS)</code> — connect to this one (BLE GATT)
+- <code>INSTAX-{serial}(ANDROID)</code> — RFCOMM/SPP endpoint</p>
+<p>Manufacturer data key: <code>0x04d8</code>, value: <code>01 00</code>.</p>
+<h2 id="device-info-queries-opcode-0x0001">Device Info Queries (Opcode 0x0001)<a class="headerlink" href="#device-info-queries-opcode-0x0001" title="Permanent link">&para;</a></h2>
+<p>The <code>DEVICE_INFO_SERVICE</code> command uses a sub-index byte in the payload to select which field to query:</p>
 <table>
 <thead>
 <tr>
@@ -1332,17 +1203,17 @@
 <tr>
 <td><code>0x00</code></td>
 <td>Manufacturer</td>
-<td><code>FUJIFILM</code></td>
+<td><code>FUJIFILM</code> (ASCII, length-prefixed)</td>
 </tr>
 <tr>
 <td><code>0x01</code></td>
 <td>Model</td>
-<td><code>SP-4</code> (Mini Link internal name)</td>
+<td><code>SP-4</code> (internal model name for Mini Link)</td>
 </tr>
 <tr>
 <td><code>0x02</code></td>
 <td>Serial Number</td>
-<td><code>10458647</code></td>
+<td><code>10458647</code> (ASCII)</td>
 </tr>
 <tr>
 <td><code>0x03</code></td>
@@ -1361,154 +1232,15 @@
 </tr>
 </tbody>
 </table>
-<p>Response format: <code>[return_code(1B)] [sub_index(1B)] [string_length(1B)] [ASCII data...]</code></p>
-<p><strong>InfoType values</strong> (payload byte for opcode <code>0x0002</code>):</p>
-<table>
-<thead>
-<tr>
-<th>InfoType</th>
-<th>Name</th>
-<th>Response Data</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x00</code></td>
-<td>Image Support Info</td>
-<td>Width(2B), Height(2B) — used for model detection</td>
-</tr>
-<tr>
-<td><code>0x01</code></td>
-<td>Battery Status</td>
-<td>State(1B), Level(1B, 0–100)</td>
-</tr>
-<tr>
-<td><code>0x02</code></td>
-<td>Printer Function Info</td>
-<td>Byte: bits 0–3 = film remaining, bit 7 = charging</td>
-</tr>
-<tr>
-<td><code>0x03</code></td>
-<td>Print History</td>
-<td>Print count(2B, big-endian)</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Response format</strong> for <code>0x0002</code>: <code>[return_code(1B)] [info_type(1B)] [data...]</code></p>
-<h3 id="image-transfer">Image Transfer<a class="headerlink" href="#image-transfer" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Payload</th>
-<th>Response</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x1000</code></td>
-<td>Download Start</td>
-<td>PictureType(1B) + PrintOption(1B) + PrintOption2(1B) + Zero(1B) + ImageSize(4B, big-endian)</td>
-<td>ACK status(1B)</td>
-</tr>
-<tr>
-<td><code>0x1001</code></td>
-<td>Data</td>
-<td>ChunkIndex(4B, big-endian) + chunk data</td>
-<td>ACK status(1B)</td>
-</tr>
-<tr>
-<td><code>0x1002</code></td>
-<td>Download End</td>
-<td>(none)</td>
-<td>ACK status(1B)</td>
-</tr>
-<tr>
-<td><code>0x1003</code></td>
-<td>Download Cancel</td>
-<td>(none)</td>
-<td>ACK status(1B)</td>
-</tr>
-<tr>
-<td><code>0x1080</code></td>
-<td>Print Image</td>
-<td>(none)</td>
-<td>Print status(1B)</td>
-</tr>
-</tbody>
-</table>
-<p>ACK status <code>0</code> indicates success; any other value means the operation was rejected.</p>
-<h3 id="power-connection-control">Power &amp; Connection Control<a class="headerlink" href="#power-connection-control" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Payload</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x0100</code></td>
-<td>Shut Down</td>
-<td>(none)</td>
-<td>Power off the printer</td>
-</tr>
-<tr>
-<td><code>0x0101</code></td>
-<td>Reset</td>
-<td>(none)</td>
-<td>Reset the printer</td>
-</tr>
-<tr>
-<td><code>0x0102</code></td>
-<td>Auto Sleep Settings</td>
-<td>TBD</td>
-<td>Configure auto-sleep timer</td>
-</tr>
-<tr>
-<td><code>0x0103</code></td>
-<td>BLE Connect</td>
-<td>TBD</td>
-<td>BLE-specific connection reservation</td>
-</tr>
-</tbody>
-</table>
-<h3 id="led-sensors">LED &amp; Sensors<a class="headerlink" href="#led-sensors" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Payload</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x3000</code></td>
-<td>XYZ Axis Info</td>
-<td>(none)</td>
-<td>Query accelerometer</td>
-</tr>
-<tr>
-<td><code>0x3001</code></td>
-<td>LED Pattern Settings</td>
-<td>See below</td>
-<td>Set LED color/animation</td>
-</tr>
-<tr>
-<td><code>0x3010</code></td>
-<td>Additional Printer Info</td>
-<td>Mode-specific</td>
-<td>Query additional info</td>
-</tr>
-</tbody>
-</table>
-<p><strong>LED Pattern payload format:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>[when:1B] [frame_count:1B] [speed:1B] [repeat:1B] [B,G,R per frame:3B each...]
+<p>Response format: <code>[return_code:1B] [sub_index:1B] [string_length:1B] [ASCII data...]</code></p>
+<p>Internal model names:
+- Mini Link = <code>SP-4</code>
+- Mini Link 2 = likely <code>SP-5</code> (unconfirmed)
+- Square Link = unknown
+- Wide Link = unknown</p>
+<h2 id="led-animation-protocol">LED Animation Protocol<a class="headerlink" href="#led-animation-protocol" title="Permanent link">&para;</a></h2>
+<p>The LED system supports multi-frame animations (not just static colors):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Payload: [when:1B] [frame_count:1B] [speed:1B] [repeat:1B] [B,G,R:3B per frame...]
 </code></pre></div>
 <table>
 <thead>
@@ -1524,7 +1256,7 @@
 </tr>
 <tr>
 <td><code>frame_count</code></td>
-<td>Number of color frames (1 for static, &gt;1 for animation)</td>
+<td>Number of color frames in animation</td>
 </tr>
 <tr>
 <td><code>speed</code></td>
@@ -1532,154 +1264,72 @@
 </tr>
 <tr>
 <td><code>repeat</code></td>
-<td><code>0</code>=once, <code>1-254</code>=repeat N times, <code>255</code>=loop forever</td>
+<td><code>0</code>=play once, <code>1-254</code>=repeat N times, <code>255</code>=loop forever</td>
 </tr>
 <tr>
 <td>Colors</td>
-<td><strong>BGR</strong> byte order per frame</td>
+<td><strong>BGR</strong> format (blue, green, red — not RGB) per frame</td>
 </tr>
 </tbody>
 </table>
-<p>For a simple static color: <code>[0x00, 0x01, 0x01, 0xFF, B, G, R]</code> (speed=1, repeat=forever)</p>
-<p><strong>Note</strong>: <code>repeat=0</code> (play once) causes the color to flash and revert to white. Use <code>repeat=0xFF</code> to keep the color on. Confirmed on Instax Square Link hardware.</p>
-<p><strong>Accelerometer response format:</strong> <code>&lt;hhhB</code> — three signed i16 (x, y, z) + one u8 (orientation)</p>
-<h3 id="firmware-update-not-implemented">Firmware Update (not implemented)<a class="headerlink" href="#firmware-update-not-implemented" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x2000</code></td>
-<td>FW Download Start</td>
-<td>Begin firmware transfer</td>
-</tr>
-<tr>
-<td><code>0x2001</code></td>
-<td>FW Download Data</td>
-<td>Firmware data chunk</td>
-</tr>
-<tr>
-<td><code>0x2002</code></td>
-<td>FW Download End</td>
-<td>End firmware transfer</td>
-</tr>
-<tr>
-<td><code>0x2003</code></td>
-<td>FW Upgrade Exit</td>
-<td>Exit upgrade mode</td>
-</tr>
-<tr>
-<td><code>0x2010</code></td>
-<td>FW Program Info</td>
-<td>Query firmware info</td>
-</tr>
-<tr>
-<td><code>0x2011</code></td>
-<td>FW Data Backup</td>
-<td>Backup current firmware</td>
-</tr>
-<tr>
-<td><code>0x2012</code></td>
-<td>FW Update Request</td>
-<td>Request firmware update</td>
-</tr>
-</tbody>
-</table>
-<h2 id="print-flow">Print Flow<a class="headerlink" href="#print-flow" title="Permanent link">&para;</a></h2>
-<p>The complete print sequence:</p>
-<ol>
-<li><strong>Connect</strong> to the printer via BLE</li>
-<li><strong>Discover services</strong> and subscribe to notifications on the notify characteristic</li>
-<li><strong>Query Image Support Info</strong> (opcode <code>0x0002</code>, InfoType <code>0x00</code>) to auto-detect the printer model from response dimensions</li>
-<li><strong>Prepare the image</strong>: resize to model dimensions, JPEG compress, split into chunks (last chunk zero-padded to full chunk size)</li>
-<li><strong>Send Download Start</strong> (<code>0x1000</code>) with picture type, print option, and JPEG data size; wait for ACK</li>
-<li><strong>Send Data chunks</strong> (<code>0x1001</code>) with sequential chunk index (0, 1, 2…) and chunk data; wait for ACK after each chunk</li>
-<li><strong>Send Download End</strong> (<code>0x1002</code>); wait for ACK</li>
-<li><strong>Send Print Image</strong> (<code>0x1080</code>); wait for print status response (0 = success)</li>
-<li><strong>Disconnect</strong></li>
-</ol>
-<h3 id="print-options">Print Options<a class="headerlink" href="#print-options" title="Permanent link">&para;</a></h3>
-<p>The Download Start command includes a <code>print_option</code> byte:</p>
+<p><strong>Hardware-verified</strong> (Instax Square Link, March 2026):
+- <strong>BGR byte ordering confirmed</strong> — sending <code>[B=0, G=0, R=255]</code> produces red light, <code>[B=255, G=0, R=0]</code> produces blue light.
+- <strong><code>repeat=0xFF</code> required</strong> for static colors — <code>repeat=0</code> causes the color to flash once and revert to white.
+- <strong><code>speed=1</code></strong> works for static colors (speed=0 caused the color to not display correctly).
+- For a simple static red: <code>[when=0, count=1, speed=1, repeat=255, B=0, G=0, R=255]</code></p>
+<h2 id="accelerometer-data-opcode-0x3000">Accelerometer Data (Opcode 0x3000)<a class="headerlink" href="#accelerometer-data-opcode-0x3000" title="Permanent link">&para;</a></h2>
+<p>Returns orientation data as a packed struct:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Format: &lt;hhhB (little-endian)
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  x: i16 — X axis acceleration
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  y: i16 — Y axis acceleration
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  z: i16 — Z axis acceleration
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  orientation: u8 — derived orientation value
+</code></pre></div>
+<p>The official Nintendo app continuously logs accelerometer values (discovered via <code>adb logcat "InstaxApplication:D *:S"</code>), suggesting this was used for motion-based features.</p>
+<h2 id="image-encoding">Image Encoding<a class="headerlink" href="#image-encoding" title="Permanent link">&para;</a></h2>
+<p>Key observations from the community:
+- Images are <strong>always JPEG</strong> (not raw pixels)
+- Variable block counts per image (depends on JPEG file size, not pixel count)
+- This explains why 69 blocks x 900 bytes = 62,100 bytes, not 600x800x3 = 1,440,000 bytes
+- Maximum JPEG size: ~105 KB
+- Last chunk is <strong>zero-padded</strong> to full chunk size
+- Quality should be optimized via binary search to stay under the size limit</p>
+<h2 id="known-unknowns-future-work">Known Unknowns / Future Work<a class="headerlink" href="#known-unknowns-future-work" title="Permanent link">&para;</a></h2>
+<h3 id="confirmed-on-hardware-instax-square-link">Confirmed on hardware (Instax Square Link):<a class="headerlink" href="#confirmed-on-hardware-instax-square-link" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>0x00</code> — Rich mode (vivid colors)</li>
-<li><code>0x01</code> — Natural mode (classic film look)</li>
+<li>BGR LED byte ordering (not RGB)</li>
+<li>LED repeat=255 required for persistent static colors</li>
+<li>LED speed=1 works for static; speed=0 does not display correctly</li>
+<li>Print flow: DOWNLOAD_START → DATA chunks (ACK per chunk) → DOWNLOAD_END → PRINT_IMAGE</li>
+<li>Accelerometer opcode exists but not yet tested on hardware</li>
 </ul>
-<h2 id="model-specific-parameters">Model-Specific Parameters<a class="headerlink" href="#model-specific-parameters" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Model</th>
-<th>Width</th>
-<th>Height</th>
-<th>Chunk Size</th>
-<th>Max Image Size</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Mini Link</td>
-<td>600</td>
-<td>800</td>
-<td>900 B</td>
-<td>~105 KB</td>
-</tr>
-<tr>
-<td>Square Link</td>
-<td>800</td>
-<td>800</td>
-<td>1808 B</td>
-<td>~105 KB</td>
-</tr>
-<tr>
-<td>Wide Link</td>
-<td>1260</td>
-<td>840</td>
-<td>900 B</td>
-<td>~105 KB</td>
-</tr>
-</tbody>
-</table>
-<p>Model is auto-detected from the Image Support Info response dimensions.</p>
-<h2 id="alternative-transports">Alternative Transports<a class="headerlink" href="#alternative-transports" title="Permanent link">&para;</a></h2>
-<p>The same packet protocol works over three transport layers:</p>
-<table>
-<thead>
-<tr>
-<th>Transport</th>
-<th>Platform</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>BLE GATT</td>
-<td>iOS, macOS, Linux</td>
-<td>Primary. MTU=182, packets fragmented.</td>
-</tr>
-<tr>
-<td>RFCOMM/SPP</td>
-<td>Android</td>
-<td>Classic Bluetooth serial. No MTU fragmentation needed.</td>
-</tr>
-<tr>
-<td>USB CDC ACM</td>
-<td>Any</td>
-<td>Printer appears as serial device (<code>/dev/ttyACM0</code>). Vendor <code>04cb</code>, Product <code>5019</code>.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h3 id="not-yet-reverse-engineered">Not yet reverse-engineered:<a class="headerlink" href="#not-yet-reverse-engineered" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Firmware update flow</strong> — Opcodes 0x2000-0x2012 exist but payload formats are unknown</li>
+<li><strong>Camera settings</strong> (0x80xx) — For models with camera features</li>
+<li><strong>REJECT_FILM_COVER</strong> (0x1081) — Purpose unclear, possibly for cartridge door detection</li>
+<li><strong>AXIS_ACTION_SETTINGS</strong> (0x3002) — May configure motion-triggered actions</li>
+<li><strong>POWER_ONOFF_LED_SETTING</strong> (0x3003) — Startup/shutdown LED behavior</li>
+<li><strong>AR_LED_VIBRATION_SETTING</strong> (0x3004) — AR-related haptic/LED feedback</li>
+<li><strong>PRINTER_HEAD_LIGHT_CORRECT</strong> (0x3011/0x3012) — Print head calibration</li>
+<li><strong>IDENTIFY_INFORMATION</strong> (0x0010) — Unknown identification data</li>
+<li><strong>BLE_CONNECT</strong> (0x0103) — BLE-specific connection reservation command</li>
+</ol>
+<h3 id="adding-support-for-new-models">Adding support for new models:<a class="headerlink" href="#adding-support-for-new-models" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Capture BLE traffic with the official app</li>
+<li>Query Image Support Info — response dimensions identify the model</li>
+<li>Test with known chunk sizes (900B for mini/wide, 1808B for square)</li>
+<li>If a new model uses different chunk sizes, the DOWNLOAD_START response may contain the requested block size</li>
+<li>Verify JPEG quality limits — 105 KB may differ for newer models</li>
+</ol>
+<h2 id="community-references">Community References<a class="headerlink" href="#community-references" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://github.com/jpwsutton/instax_api/issues/21">jpwsutton/instax_api#21</a> — Original BLE protocol reverse engineering thread</li>
-<li><a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a> — Python implementation</li>
+<li><a href="https://github.com/jpwsutton/instax_api">jpwsutton/instax_api</a> — Original WiFi protocol RE (SP-1/2/3)</li>
+<li><a href="https://github.com/jpwsutton/instax_api/issues/21">jpwsutton/instax_api#21</a> — BLE protocol RE thread (this document's primary source)</li>
+<li><a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a> — Python BLE implementation (Mini, Square, Wide)</li>
 <li><a href="https://github.com/linssenste/instax-link-web">linssenste/instax-link-web</a> — Web Bluetooth implementation</li>
 <li><a href="https://github.com/dgwilson/ESP32-Instax-Bridge">dgwilson/ESP32-Instax-Bridge</a> — ESP32 bridge</li>
-<li><a href="../../development/reverse-engineering/">Reverse Engineering Guide</a> — How to capture and analyze traffic for new devices</li>
 </ul>
 
 

@@ -330,7 +330,7 @@ struct MainView: View {
 
     private var groupedConnectedHeader: some View {
         HStack(spacing: 10) {
-            HeaderCapsule {
+            HStack(spacing: 8) {
                 printerIdentityControl
                 HeaderDivider()
                 printerPickerControl
@@ -339,7 +339,7 @@ struct MainView: View {
 
             Spacer(minLength: 0)
 
-            HeaderCapsule {
+            HStack(spacing: 8) {
                 captureModeControl
                 if viewModel.captureMode == .file && !viewModel.queue.isEmpty {
                     HeaderDivider()
@@ -347,15 +347,13 @@ struct MainView: View {
                 }
             }
 
-            HeaderCapsule {
+            HStack(spacing: 8) {
                 batteryStatusControl
                 HeaderDivider()
                 filmStatusControl
             }
 
-            HeaderCapsule {
-                settingsControl
-            }
+            settingsControl
         }
     }
 

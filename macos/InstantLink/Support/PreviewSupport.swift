@@ -170,24 +170,6 @@ struct AppPanelBackground: View {
     }
 }
 
-struct HeaderCapsule<Content: View>: View {
-    private let capsuleHeight: CGFloat = 34
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        HStack(spacing: 8) {
-            content()
-        }
-        .padding(.horizontal, 10)
-        .frame(height: capsuleHeight)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.22), lineWidth: 1)
-        )
-    }
-}
-
 struct CropFrameSizeKey: PreferenceKey {
     static var defaultValue: CGSize = .zero
 

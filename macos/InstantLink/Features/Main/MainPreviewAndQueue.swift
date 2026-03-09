@@ -496,10 +496,8 @@ struct QuickPrintToolbarView: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
-
-            toolbarDivider
 
             quickToolbarButton(
                 title: L("Rotate"),
@@ -524,10 +522,6 @@ struct QuickPrintToolbarView: View {
                 .accessibilityLabel(Text(L("Film Orientation")))
             }
 
-            Spacer(minLength: 0)
-
-            toolbarDivider
-
             quickToolbarButton(
                 title: L("Open File"),
                 systemImage: "plus",
@@ -541,12 +535,7 @@ struct QuickPrintToolbarView: View {
             )
             .disabled(viewModel.selectedImage == nil)
         }
-    }
-
-    private var toolbarDivider: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.16))
-            .frame(width: 1, height: 20)
+        .frame(maxWidth: .infinity)
     }
 
     private func quickToolbarButton(

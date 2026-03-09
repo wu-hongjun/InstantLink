@@ -145,17 +145,49 @@ struct PrinterProfile: Codable, Equatable, Identifiable {
 
 // MARK: - Queue Item
 
+struct QueueItemEditState: Equatable {
+    var fitMode: String
+    var cropOffset: CGSize = .zero
+    var cropZoom: CGFloat = 1.0
+    var rotationAngle: Int = 0
+    var dateStampEnabled: Bool = false
+    var showTimeRow: Bool = true
+    var dateStampPosition: String = "bottomRight"
+    var dateStampStyle: String = "classic"
+    var dateStampFormat: String = "ymd"
+    var lightBleedEnabled: Bool = false
+    var filmOrientation: String = "default"
+}
+
 struct QueueItem: Identifiable, Equatable {
-    let id = UUID()
+    let id: UUID
     let url: URL
     let image: NSImage
     let imageDate: Date?
+    var editState: QueueItemEditState
+
+    init(
+        id: UUID = UUID(),
+        url: URL,
+        image: NSImage,
+        imageDate: Date?,
+        editState: QueueItemEditState
+    ) {
+        self.id = id
+        self.url = url
+        self.image = image
+        self.imageDate = imageDate
+        self.editState = editState
+    }
 }
 
 // MARK: - View Model
 
 class ViewModel: ObservableObject {
+    static let maxQueueItems = 20
+
     let ffi: InstantLinkFFI
+    private var isApplyingQueueItemEditState = false
 
     // Printer state
     @Published var isConnected = false
@@ -181,24 +213,48 @@ class ViewModel: ObservableObject {
         didSet { UserDefaults.standard.set(defaultFitMode, forKey: "defaultFitMode") }
     }
     @Published var fitMode: String = UserDefaults.standard.string(forKey: "defaultFitMode") ?? "crop" {
-        didSet { resetCropAdjustments() }
+        didSet {
+            guard !isApplyingQueueItemEditState else { return }
+            if fitMode != oldValue {
+                resetCropAdjustments()
+            }
+            persistSelectedQueueItemEditState()
+        }
     }
 
     // Crop interaction (pan & zoom)
-    @Published var cropOffset: CGSize = .zero
-    @Published var cropZoom: CGFloat = 1.0
+    @Published var cropOffset: CGSize = .zero {
+        didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var cropZoom: CGFloat = 1.0 {
+        didSet { persistSelectedQueueItemEditState() }
+    }
     var cropFrameSize: CGSize = .zero
 
     // Rotation
-    @Published var rotationAngle: Int = 0  // 0, 90, 180, 270
+    @Published var rotationAngle: Int = 0 {  // 0, 90, 180, 270
+        didSet { persistSelectedQueueItemEditState() }
+    }
 
     // Date stamp
-    @Published var dateStampEnabled: Bool = false
-    @Published var showTimeRow: Bool = true
-    @Published var dateStampPosition: String = "bottomRight"
-    @Published var dateStampStyle: String = "classic"
-    @Published var dateStampFormat: String = "ymd"
-    @Published var lightBleedEnabled: Bool = false
+    @Published var dateStampEnabled: Bool = false {
+        didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var showTimeRow: Bool = true {
+        didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var dateStampPosition: String = "bottomRight" {
+        didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var dateStampStyle: String = "classic" {
+        didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var dateStampFormat: String = "ymd" {
+        didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var lightBleedEnabled: Bool = false {
+        didSet { persistSelectedQueueItemEditState() }
+    }
 
     // Camera mode
     @Published var captureMode: CaptureMode = .file
@@ -216,7 +272,9 @@ class ViewModel: ObservableObject {
     var timerTask: Task<Void, Never>? = nil
 
     // Film orientation
-    @Published var filmOrientation: String = "default"  // "default" or "rotated"
+    @Published var filmOrientation: String = "default" {  // "default" or "rotated"
+        didSet { persistSelectedQueueItemEditState() }
+    }
     // Capture and print — auto-commit and print after photo is taken
     var autoPrintAfterCapture = false
 
@@ -506,7 +564,6 @@ class ViewModel: ObservableObject {
     func switchPrinter(to name: String) {
         guard name != selectedPrinter else { return }
         selectedPrinter = name
-        filmOrientation = "default"
         // Disconnect existing connection before connecting to new printer
         Task {
             if ffi.isConnected() {
@@ -539,41 +596,72 @@ class ViewModel: ObservableObject {
     // MARK: - Queue Management
 
     func addImages(from urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        let hadSelectedQueueItem = queue.indices.contains(selectedQueueIndex)
+        if hadSelectedQueueItem {
+            persistSelectedQueueItemEditState()
+        }
+        let initialCount = queue.count
         for url in urls {
+            if queue.count >= Self.maxQueueItems { break }
             guard let image = NSImage(contentsOf: url) else { continue }
             let date = Self.extractImageDate(from: url)
-            queue.append(QueueItem(url: url, image: image, imageDate: date))
+            queue.append(QueueItem(
+                url: url,
+                image: image,
+                imageDate: date,
+                editState: makeNewQueueItemEditState()
+            ))
         }
         if !queue.isEmpty {
             selectedQueueIndex = queue.count - 1
-            rotationAngle = 0
-            resetCropAdjustments()
+            applyQueueItemEditState(queue[selectedQueueIndex].editState)
+        }
+        let addedCount = queue.count - initialCount
+        if addedCount == 0 && initialCount >= Self.maxQueueItems {
+            showStatus("Queue limit reached (\(Self.maxQueueItems) images max)")
+        } else if addedCount < urls.count {
+            showStatus("Added \(addedCount) of \(urls.count) images (\(Self.maxQueueItems) max in queue)")
         }
     }
 
     func removeQueueItem(at index: Int) {
         guard queue.indices.contains(index) else { return }
+        persistSelectedQueueItemEditState()
+        let wasSelected = index == selectedQueueIndex
         queue.remove(at: index)
         if queue.isEmpty {
             selectedQueueIndex = 0
+            applyDefaultQueueItemEditState()
         } else {
-            selectedQueueIndex = min(selectedQueueIndex, queue.count - 1)
+            let nextIndex: Int
+            if wasSelected {
+                nextIndex = min(index, queue.count - 1)
+            } else if index < selectedQueueIndex {
+                nextIndex = selectedQueueIndex - 1
+            } else {
+                nextIndex = selectedQueueIndex
+            }
+            selectedQueueIndex = nextIndex
+            applyQueueItemEditState(queue[nextIndex].editState)
         }
     }
 
     func selectQueueItem(at index: Int) {
         guard queue.indices.contains(index) else { return }
+        persistSelectedQueueItemEditState()
         selectedQueueIndex = index
-        rotationAngle = 0
-        resetCropAdjustments()
+        applyQueueItemEditState(queue[index].editState)
     }
 
     func moveQueueItem(from source: Int, to destination: Int) {
         guard queue.indices.contains(source), destination >= 0, destination < queue.count else { return }
+        persistSelectedQueueItemEditState()
         let item = queue.remove(at: source)
         queue.insert(item, at: destination)
         // Follow the moved item
         selectedQueueIndex = destination
+        applyQueueItemEditState(queue[destination].editState)
     }
 
     // MARK: - Image Selection
@@ -614,13 +702,62 @@ class ViewModel: ObservableObject {
     func clearImage() {
         queue.removeAll()
         selectedQueueIndex = 0
-        rotationAngle = 0
-        resetCropAdjustments()
+        applyDefaultQueueItemEditState()
     }
 
     func resetCropAdjustments() {
         cropOffset = .zero
         cropZoom = 1.0
+    }
+
+    private func makeCurrentQueueItemEditState() -> QueueItemEditState {
+        QueueItemEditState(
+            fitMode: fitMode,
+            cropOffset: cropOffset,
+            cropZoom: cropZoom,
+            rotationAngle: rotationAngle,
+            dateStampEnabled: dateStampEnabled,
+            showTimeRow: showTimeRow,
+            dateStampPosition: dateStampPosition,
+            dateStampStyle: dateStampStyle,
+            dateStampFormat: dateStampFormat,
+            lightBleedEnabled: lightBleedEnabled,
+            filmOrientation: filmOrientation
+        )
+    }
+
+    private func makeNewQueueItemEditState() -> QueueItemEditState {
+        var editState = makeCurrentQueueItemEditState()
+        editState.cropOffset = .zero
+        editState.cropZoom = 1.0
+        editState.rotationAngle = 0
+        return editState
+    }
+
+    private func applyDefaultQueueItemEditState() {
+        applyQueueItemEditState(QueueItemEditState(fitMode: defaultFitMode))
+    }
+
+    private func applyQueueItemEditState(_ editState: QueueItemEditState) {
+        isApplyingQueueItemEditState = true
+        fitMode = editState.fitMode
+        cropOffset = editState.cropOffset
+        cropZoom = editState.cropZoom
+        rotationAngle = editState.rotationAngle
+        dateStampEnabled = editState.dateStampEnabled
+        showTimeRow = editState.showTimeRow
+        dateStampPosition = editState.dateStampPosition
+        dateStampStyle = editState.dateStampStyle
+        dateStampFormat = editState.dateStampFormat
+        lightBleedEnabled = editState.lightBleedEnabled
+        filmOrientation = editState.filmOrientation
+        isApplyingQueueItemEditState = false
+    }
+
+    private func persistSelectedQueueItemEditState() {
+        guard !isApplyingQueueItemEditState,
+              queue.indices.contains(selectedQueueIndex) else { return }
+        queue[selectedQueueIndex].editState = makeCurrentQueueItemEditState()
     }
 
     // MARK: - Camera Session
@@ -707,8 +844,9 @@ class ViewModel: ObservableObject {
                 self.cameraState = .preview
                 if self.autoPrintAfterCapture {
                     self.autoPrintAfterCapture = false
-                    self.commitCapture()
-                    Task { await self.printSelectedImage() }
+                    if self.commitCapture() {
+                        Task { await self.printSelectedImage() }
+                    }
                 }
             }
         }
@@ -752,10 +890,11 @@ class ViewModel: ObservableObject {
         autoPrintAfterCapture = false
     }
 
-    func commitCapture() {
+    @discardableResult
+    func commitCapture() -> Bool {
         guard let image = capturedImage,
               let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData) else { return }
+              let bitmap = NSBitmapImageRep(data: tiffData) else { return false }
 
         // Center-crop to native printer aspect ratio (orientation rotation happens in prepareImageForPrint)
         var outputBitmap = bitmap
@@ -784,9 +923,14 @@ class ViewModel: ObservableObject {
             }
         }
 
+        guard queue.count < Self.maxQueueItems else {
+            showStatus("Queue limit reached (\(Self.maxQueueItems) images max)")
+            return false
+        }
+
         guard let jpegData = outputBitmap.representation(
             using: .jpeg, properties: [.compressionFactor: 0.9]
-        ) else { return }
+        ) else { return false }
 
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -795,19 +939,27 @@ class ViewModel: ObservableObject {
             try jpegData.write(to: tempURL)
         } catch {
             showStatus(L("Failed to save captured image: \(error.localizedDescription)"))
-            return
+            return false
         }
 
         // Append to queue so the file-mode preview matches
         let finalImage = NSImage(data: jpegData) ?? image
-        queue.append(QueueItem(url: tempURL, image: finalImage, imageDate: Date()))
+        if queue.indices.contains(selectedQueueIndex) {
+            persistSelectedQueueItemEditState()
+        }
+        queue.append(QueueItem(
+            url: tempURL,
+            image: finalImage,
+            imageDate: Date(),
+            editState: makeNewQueueItemEditState()
+        ))
         selectedQueueIndex = queue.count - 1
-        resetCropAdjustments()
-        rotationAngle = 0
+        applyQueueItemEditState(queue[selectedQueueIndex].editState)
         captureMode = .file
         stopCameraSession()
         capturedImage = nil
         cameraState = .viewfinder
+        return true
     }
 
     func rotateClockwise() { rotationAngle = (rotationAngle + 90) % 360 }
@@ -1186,9 +1338,7 @@ class ViewModel: ObservableObject {
         for i in 0..<count {
             await MainActor.run {
                 batchPrintIndex = i + 1
-                selectedQueueIndex = i
-                rotationAngle = 0
-                resetCropAdjustments()
+                selectQueueItem(at: i)
             }
 
             guard let prepared = prepareImageForPrint() else {
@@ -1852,8 +2002,9 @@ struct CameraActionsView: View {
                     .controlSize(.large)
 
                     Button {
-                        viewModel.commitCapture()
-                        viewModel.showImageEditor = true
+                        if viewModel.commitCapture() {
+                            viewModel.showImageEditor = true
+                        }
                     } label: {
                         HStack {
                             Image(systemName: "slider.horizontal.3")
@@ -1864,8 +2015,9 @@ struct CameraActionsView: View {
                     .controlSize(.large)
 
                     Button {
-                        viewModel.commitCapture()
-                        Task { await viewModel.printSelectedImage() }
+                        if viewModel.commitCapture() {
+                            Task { await viewModel.printSelectedImage() }
+                        }
                     } label: {
                         HStack {
                             Image(systemName: "printer.fill")

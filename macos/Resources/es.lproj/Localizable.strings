@@ -163,10 +163,12 @@
 "Timer" = "Temporizador";
 "Off" = "Apagado";
 "Film Orientation" = "Orientación de película";
+"Discard captured photo?" = "¿Descartar la foto capturada?";
 
 /* Print Queue */
 "print_n_images" = "Imprimir %d imágenes";
 "print_next_n" = "Imprimir siguientes %d";
+"No Film" = "Sin película";
 "printing_n_of_m" = "Imprimiendo %d de %d";
 "printed_n_images" = "¡%d imágenes impresas!";
 "print_failed_at" = "Impresión fallida en imagen %d de %d";

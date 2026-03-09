@@ -233,6 +233,13 @@ enum AppAppearance: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+enum StatusMessageTone {
+    case info
+    case success
+    case warning
+    case error
+}
+
 struct QueueItemEditState: Equatable {
     var fitMode: String
     var cropOffset: CGSize = .zero
@@ -466,6 +473,9 @@ class ViewModel: ObservableObject {
     @Published var isSearching = false
     @Published var isRefreshing = false
     @Published var statusMessage: String?
+    @Published var statusMessageTone: StatusMessageTone = .info
+    @Published var isStatusMessagePersistent = false
+    @Published var showCameraDiscardConfirmation = false
     @Published var coreVersion: String = "..."
     @Published var hasSearchedOnce = false
 
@@ -490,6 +500,8 @@ class ViewModel: ObservableObject {
     @Published var pairingAttempt = 0
     @Published var pairingStatus: String = L("Scanning...")
     private var pairingTask: Task<Void, Never>?
+    private var statusMessageDismissWorkItem: DispatchWorkItem?
+    private var pendingCaptureMode: CaptureMode?
 
     private var autoRefreshTimer: Timer?
 
@@ -520,7 +532,7 @@ class ViewModel: ObservableObject {
         isPairing = true
         pairingAttempt = 0
         pairingStatus = L("Scanning...")
-        statusMessage = nil
+        dismissStatusMessage()
 
         pairingTask = Task { [weak self] in
             guard let self = self else { return }
@@ -726,6 +738,7 @@ class ViewModel: ObservableObject {
     func addImages(from urls: [URL]) {
         guard !urls.isEmpty else { return }
         let hadSelectedQueueItem = queue.indices.contains(selectedQueueIndex)
+        let previousSelectedQueueIndex = selectedQueueIndex
         if hadSelectedQueueItem {
             persistSelectedQueueItemEditState()
         }
@@ -742,15 +755,22 @@ class ViewModel: ObservableObject {
                 editState: makeNewQueueItemEditState()
             ))
         }
-        if !queue.isEmpty {
+        if initialCount == 0, !queue.isEmpty {
             selectedQueueIndex = queue.count - 1
+            applyQueueItemEditState(queue[selectedQueueIndex].editState)
+        } else if hadSelectedQueueItem,
+                  queue.indices.contains(previousSelectedQueueIndex) {
+            selectedQueueIndex = previousSelectedQueueIndex
+            applyQueueItemEditState(queue[selectedQueueIndex].editState)
+        } else if !queue.isEmpty {
+            selectedQueueIndex = min(selectedQueueIndex, queue.count - 1)
             applyQueueItemEditState(queue[selectedQueueIndex].editState)
         }
         let addedCount = queue.count - initialCount
         if addedCount == 0 && initialCount >= Self.maxQueueItems {
-            showStatus("Queue limit reached (\(Self.maxQueueItems) images max)")
+            showStatus("Queue limit reached (\(Self.maxQueueItems) images max)", tone: .warning, autoDismiss: false)
         } else if addedCount < urls.count {
-            showStatus("Added \(addedCount) of \(urls.count) images (\(Self.maxQueueItems) max in queue)")
+            showStatus("Added \(addedCount) of \(urls.count) images (\(Self.maxQueueItems) max in queue)", tone: .warning, autoDismiss: false)
         }
     }
 
@@ -868,15 +888,52 @@ class ViewModel: ObservableObject {
     }
 
     func clearImage() {
-        queue.removeAll()
-        selectedQueueIndex = 0
-        applyDefaultQueueItemEditState()
+        removeSelectedQueueItem()
+    }
+
+    func removeSelectedQueueItem() {
+        guard queue.indices.contains(selectedQueueIndex) else { return }
+        removeQueueItem(at: selectedQueueIndex)
     }
 
     var printableQueueCountFromSelection: Int {
         guard !queue.isEmpty else { return 0 }
         let startIndex = queue.indices.contains(selectedQueueIndex) ? selectedQueueIndex : 0
         return min(queue.count - startIndex, filmRemaining)
+    }
+
+    var printNextActionLabel: String {
+        if filmRemaining <= 0 {
+            return L("No Film")
+        }
+        return L("print_next_n", printableQueueCountFromSelection)
+    }
+
+    var hasUncommittedCameraCapture: Bool {
+        captureMode == .camera && cameraState == .preview && capturedImage != nil
+    }
+
+    func requestCaptureModeChange(to newMode: CaptureMode) {
+        guard newMode != captureMode else { return }
+        if captureMode == .camera, newMode == .file, hasUncommittedCameraCapture {
+            pendingCaptureMode = newMode
+            showCameraDiscardConfirmation = true
+            return
+        }
+        pendingCaptureMode = nil
+        captureMode = newMode
+    }
+
+    func confirmPendingCaptureModeChange() {
+        let nextMode = pendingCaptureMode ?? .file
+        showCameraDiscardConfirmation = false
+        pendingCaptureMode = nil
+        captureMode = nextMode
+    }
+
+    func cancelPendingCaptureModeChange() {
+        showCameraDiscardConfirmation = false
+        pendingCaptureMode = nil
     }
 
     func resetCropAdjustments() {
@@ -1308,13 +1365,13 @@ class ViewModel: ObservableObject {
                         self.startCameraSession()
                     } else {
                         self.captureMode = .file
-                        self.statusMessage = L("Camera access denied")
+                        self.showError(L("Camera access denied"))
                     }
                 }
             }
         default:
             captureMode = .file
-            statusMessage = L("Camera access denied")
+            showError(L("Camera access denied"))
         }
     }
 
@@ -1456,7 +1513,7 @@ class ViewModel: ObservableObject {
         }
 
         guard queue.count < Self.maxQueueItems else {
-            showStatus("Queue limit reached (\(Self.maxQueueItems) images max)")
+            showStatus("Queue limit reached (\(Self.maxQueueItems) images max)", tone: .warning, autoDismiss: false)
             return false
         }
 
@@ -1470,7 +1527,7 @@ class ViewModel: ObservableObject {
         do {
             try jpegData.write(to: tempURL)
         } catch {
-            showStatus(L("failed_to_save_captured_image", error.localizedDescription))
+            showError(L("failed_to_save_captured_image", error.localizedDescription))
             return false
         }
 
@@ -2131,7 +2188,11 @@ class ViewModel: ObservableObject {
         await MainActor.run {
             isPrinting = false
             printProgress = nil
-            showStatus(success ? L("Printed!") : L("Print failed"))
+            if success {
+                showStatus(L("Printed!"), tone: .success)
+            } else {
+                showError(L("Print failed"))
+            }
         }
         await refreshStatus()
     }
@@ -2163,7 +2224,7 @@ class ViewModel: ObservableObject {
                 await MainActor.run {
                     isPrinting = false
                     batchPrintTotal = 0
-                    showStatus(L("print_failed_at", offset + 1, count))
+                    showError(L("print_failed_at", offset + 1, count))
                 }
                 return
             }
@@ -2186,7 +2247,7 @@ class ViewModel: ObservableObject {
                 await MainActor.run {
                     isPrinting = false
                     batchPrintTotal = 0
-                    showStatus(L("print_failed_at", offset + 1, count))
+                    showError(L("print_failed_at", offset + 1, count))
                 }
                 return
             }
@@ -2198,7 +2259,7 @@ class ViewModel: ObservableObject {
                 await MainActor.run {
                     isPrinting = false
                     batchPrintTotal = 0
-                    showStatus(L("film_ran_out", offset + 1, count))
+                    showError(L("film_ran_out", offset + 1, count))
                 }
                 return
             }
@@ -2248,11 +2309,37 @@ class ViewModel: ObservableObject {
 
     // MARK: - Status Message
 
-    func showStatus(_ message: String) {
+    func dismissStatusMessage() {
+        statusMessageDismissWorkItem?.cancel()
+        statusMessageDismissWorkItem = nil
+        statusMessage = nil
+        statusMessageTone = .info
+        isStatusMessagePersistent = false
+    }
+
+    func showStatus(
+        _ message: String,
+        tone: StatusMessageTone = .info,
+        autoDismiss: Bool = true,
+        duration: TimeInterval = 4
+    ) {
+        statusMessageDismissWorkItem?.cancel()
         statusMessage = message
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
-            if self?.statusMessage == message { self?.statusMessage = nil }
+        statusMessageTone = tone
+        isStatusMessagePersistent = !autoDismiss
+
+        guard autoDismiss else { return }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard self?.statusMessage == message else { return }
+            self?.dismissStatusMessage()
         }
+        statusMessageDismissWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
+    }
+
+    func showError(_ message: String) {
+        showStatus(message, tone: .error, autoDismiss: false)
     }
 
     // MARK: - Update Checking
@@ -2951,6 +3038,27 @@ struct MainView: View {
                 .background(Color.blue.opacity(0.1))
             }
 
+            if let message = viewModel.statusMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: statusBannerIcon)
+                        .font(.caption)
+                    Text(message)
+                        .font(.caption)
+                        .lineLimit(2)
+                    Spacer()
+                    if viewModel.isStatusMessagePersistent {
+                        Button(L("Dismiss")) {
+                            viewModel.dismissStatusMessage()
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(statusBannerBackground)
+            }
+
             if viewModel.isConnected {
                 // Status bar
                 HStack(spacing: 12) {
@@ -2993,7 +3101,10 @@ struct MainView: View {
 
                     Spacer()
 
-                    Picker("", selection: $viewModel.captureMode) {
+                    Picker("", selection: Binding(
+                        get: { viewModel.captureMode },
+                        set: { viewModel.requestCaptureModeChange(to: $0) }
+                    )) {
                         Image(systemName: "photo.on.rectangle").tag(CaptureMode.file)
                         Image(systemName: "camera").tag(CaptureMode.camera)
                     }
@@ -3067,12 +3178,6 @@ struct MainView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
-
-                    if let msg = viewModel.statusMessage {
-                        Text(msg)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -3214,6 +3319,18 @@ struct MainView: View {
             ImageEditorView()
                 .environmentObject(viewModel)
         }
+        .confirmationDialog(
+            L("Discard captured photo?"),
+            isPresented: $viewModel.showCameraDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("Remove"), role: .destructive) {
+                viewModel.confirmPendingCaptureModeChange()
+            }
+            Button(L("Cancel"), role: .cancel) {
+                viewModel.cancelPendingCaptureModeChange()
+            }
+        }
         .onAppear {
             lastQueueCount = viewModel.queue.count
             syncQueueStripVisibility(for: viewModel.queue.count, force: true)
@@ -3290,6 +3407,24 @@ struct MainView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isQueueStripVisible = true
             }
+        }
+    }
+
+    private var statusBannerIcon: String {
+        switch viewModel.statusMessageTone {
+        case .info: return "info.circle"
+        case .success: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .error: return "xmark.octagon.fill"
+        }
+    }
+
+    private var statusBannerBackground: Color {
+        switch viewModel.statusMessageTone {
+        case .info: return Color.blue.opacity(0.1)
+        case .success: return Color.green.opacity(0.12)
+        case .warning: return Color.orange.opacity(0.14)
+        case .error: return Color.red.opacity(0.14)
         }
     }
 }
@@ -3731,13 +3866,15 @@ struct MainPreviewView: View {
                     }
                     .padding(4)
 
-                    Button { viewModel.clearImage() } label: {
+                    Button { viewModel.removeSelectedQueueItem() } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
                             .symbolRenderingMode(.hierarchical)
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .help(L("Remove"))
+                    .accessibilityLabel(Text(L("Remove")))
                     .padding(8)
                 }
             } else {
@@ -3961,8 +4098,15 @@ struct MainActionsView: View {
         return L("Print")
     }
 
-    private var nextPrintLabel: String {
-        L("print_next_n", viewModel.printableQueueCountFromSelection)
+    private var printNextHint: String? {
+        guard viewModel.queue.count > 1, !viewModel.isPrinting else { return nil }
+        if !viewModel.isConnected {
+            return L("Connect to your printer")
+        }
+        if viewModel.filmRemaining <= 0 {
+            return L("No Film")
+        }
+        return nil
     }
 
     var body: some View {
@@ -3971,51 +4115,72 @@ struct MainActionsView: View {
                 QuickPrintAdjustmentsView()
                     .frame(maxWidth: .infinity)
 
-                Button {
-                    openEditor()
-                } label: {
-                    HStack {
-                        Image(systemName: "slider.horizontal.3")
-                        Text(L("Edit Image"))
+                HStack(spacing: 10) {
+                    Button {
+                        viewModel.selectImage()
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text(L("Open File"))
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
+                    .controlSize(.large)
+
+                    Button {
+                        openEditor()
+                    } label: {
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                            Text(L("Edit Image"))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .controlSize(.large)
+                    .disabled(viewModel.selectedImage == nil)
                 }
-                .controlSize(.large)
-                .disabled(viewModel.selectedImage == nil)
                 .frame(maxWidth: .infinity)
             }
 
             if viewModel.queue.count > 1 {
-                HStack(spacing: 10) {
-                    Button {
-                        Task { await viewModel.printSelectedImage() }
-                    } label: {
-                        HStack {
-                            Image(systemName: "printer")
-                            Text(L("Print Current"))
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 10) {
+                        Button {
+                            Task { await viewModel.printSelectedImage() }
+                        } label: {
+                            HStack {
+                                Image(systemName: "printer")
+                                Text(L("Print Current"))
+                            }
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .controlSize(.large)
-                    .disabled(viewModel.selectedImage == nil || !viewModel.isConnected || viewModel.isPrinting)
+                        .controlSize(.large)
+                        .disabled(viewModel.selectedImage == nil || !viewModel.isConnected || viewModel.isPrinting)
 
-                    Button {
-                        Task { await viewModel.printQueue(startingAt: viewModel.selectedQueueIndex) }
-                    } label: {
-                        HStack {
-                            Image(systemName: "printer.fill")
-                            Text(nextPrintLabel)
+                        Button {
+                            Task { await viewModel.printQueue(startingAt: viewModel.selectedQueueIndex) }
+                        } label: {
+                            HStack {
+                                Image(systemName: "printer.fill")
+                                Text(viewModel.printNextActionLabel)
+                            }
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .disabled(
+                            viewModel.selectedImage == nil ||
+                            !viewModel.isConnected ||
+                            viewModel.isPrinting ||
+                            viewModel.printableQueueCountFromSelection == 0
+                        )
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(
-                        viewModel.selectedImage == nil ||
-                        !viewModel.isConnected ||
-                        viewModel.isPrinting ||
-                        viewModel.printableQueueCountFromSelection == 0
-                    )
+
+                    if let printNextHint {
+                        Text(printNextHint)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             } else {
                 Button {

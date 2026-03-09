@@ -164,10 +164,12 @@
 "Timer" = "Minuterie";
 "Off" = "Désactivé";
 "Film Orientation" = "Orientation du film";
+"Discard captured photo?" = "Supprimer la photo capturée ?";
 
 /* Print Queue */
 "print_n_images" = "Imprimer %d images";
 "print_next_n" = "Imprimer les %d suivantes";
+"No Film" = "Plus de film";
 "printing_n_of_m" = "Impression %d sur %d";
 "printed_n_images" = "%d images imprimées !";
 "print_failed_at" = "Échec à l'image %d sur %d";

@@ -163,10 +163,12 @@
 "Timer" = "مؤقت";
 "Off" = "إيقاف";
 "Film Orientation" = "اتجاه الفيلم";
+"Discard captured photo?" = "هل تريد تجاهل الصورة الملتقطة؟";
 
 /* Print Queue */
 "print_n_images" = "طباعة %d صور";
 "print_next_n" = "طباعة %d التالية";
+"No Film" = "لا توجد أفلام";
 "printing_n_of_m" = "طباعة %d من %d";
 "printed_n_images" = "تمت طباعة %d صور!";
 "print_failed_at" = "فشلت الطباعة عند الصورة %d من %d";

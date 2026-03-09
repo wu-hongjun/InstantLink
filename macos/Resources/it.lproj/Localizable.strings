@@ -164,10 +164,12 @@
 "Timer" = "Timer";
 "Off" = "Spento";
 "Film Orientation" = "Orientamento pellicola";
+"Discard captured photo?" = "Scartare la foto acquisita?";
 
 /* Print Queue */
 "print_n_images" = "Stampa %d immagini";
 "print_next_n" = "Stampa prossime %d";
+"No Film" = "Pellicola esaurita";
 "printing_n_of_m" = "Stampa %d di %d";
 "printed_n_images" = "%d immagini stampate!";
 "print_failed_at" = "Stampa fallita all'immagine %d di %d";

@@ -926,7 +926,7 @@
 <li>Version substituted at build time</li>
 </ul>
 <h3 id="cli-binary-naming">CLI Binary Naming<a class="headerlink" href="#cli-binary-naming" title="Permanent link">&para;</a></h3>
-<p>The CLI binary is renamed <code>instantlink-cli</code> inside the bundle to avoid a case-insensitive filesystem collision with the SwiftUI launcher binary (<code>InstantLink</code>). <code>InstantLinkCLI.swift</code> updated to look for <code>instantlink-cli</code>.</p>
+<p>The CLI binary is renamed <code>instantlink-cli</code> inside the bundle to avoid a case-insensitive filesystem collision with the SwiftUI launcher binary (<code>InstantLink</code>). The current app no longer compiles <code>InstantLinkCLI.swift</code>; runtime printer operations use the FFI dylib directly, while the bundled CLI remains available for metadata lookups.</p>
 <h3 id="release-workflow">Release Workflow<a class="headerlink" href="#release-workflow" title="Permanent link">&para;</a></h3>
 <p>Updated to:
 1. Install <code>create-dmg</code> via Homebrew

@@ -1031,7 +1031,7 @@
 <li><code>Services/Profiles/</code></li>
 </ul>
 <h3 id="2-remove-or-formalize-instantlinkcliswift">2. Remove or formalize <code>InstantLinkCLI.swift</code><a class="headerlink" href="#2-remove-or-formalize-instantlinkcliswift" title="Permanent link">&para;</a></h3>
-<p>If the app is no longer using CLI process execution as a runtime path, delete <code>InstantLinkCLI.swift</code> and stop compiling it. If it must remain as fallback, make that fallback explicit and tested.</p>
+<p>Completed in March 2026: <code>InstantLinkCLI.swift</code> was removed and <code>scripts/build-app.sh</code> no longer compiles a Swift CLI fallback layer. The macOS app now uses the FFI dylib as its only printer/device runtime path, while the bundled CLI binary remains only for metadata/version lookups.</p>
 <h3 id="3-consolidate-printer-profile-editors">3. Consolidate printer profile editors<a class="headerlink" href="#3-consolidate-printer-profile-editors" title="Permanent link">&para;</a></h3>
 <p>There are parallel profile-editing paths in the macOS app. These should collapse into one shared editor component with shared validation and save logic.</p>
 <h2 id="p2-cleanup-sequence">P2 Cleanup Sequence<a class="headerlink" href="#p2-cleanup-sequence" title="Permanent link">&para;</a></h2>

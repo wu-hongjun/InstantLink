@@ -69,14 +69,15 @@
 
 /* Editor — Date Stamp Options */
 "Enabled" = "מופעל";
-"Show time" = "הצג שעה";
-"Light bleed" = "אפקט אור";
-"Style:" = "סגנון:";
-"Classic" = "קלאסי";
-"Dot Matrix" = "מטריצת נקודות";
-"B&W" = "שחור-לבן";
-"Format:" = "תבנית:";
-"Position:" = "מיקום:";
+"Quartz Date" = "Quartz Date";
+"Modern" = "Modern";
+"Data Back" = "Data Back";
+"Lab Print" = "Lab Print";
+"Machine" = "Machine";
+"Format" = "תבנית";
+"Position" = "מיקום";
+"Time" = "שעה";
+"Glow" = "זוהר";
 
 /* Printer Profile Sheet */
 "Printer Connected" = "המדפסת מחוברת";
@@ -140,3 +141,6 @@
 "Retake" = "צלם שוב";
 "No camera available" = "אין מצלמה זמינה";
 "Camera access denied" = "הגישה למצלמה נדחתה";
+"Timer" = "טיימר";
+"Off" = "כבוי";
+"Film Orientation" = "כיוון הפילם";

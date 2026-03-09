@@ -68,14 +68,15 @@
 
 /* Editor — Date Stamp Options */
 "Enabled" = "有効";
-"Show time" = "時刻を表示";
-"Light bleed" = "光漏れ";
-"Style:" = "スタイル：";
-"Classic" = "クラシック";
-"Dot Matrix" = "ドットマトリクス";
-"B&W" = "モノクロ";
-"Format:" = "フォーマット：";
-"Position:" = "位置：";
+"Quartz Date" = "Quartz Date";
+"Modern" = "Modern";
+"Data Back" = "Data Back";
+"Lab Print" = "Lab Print";
+"Machine" = "Machine";
+"Format" = "フォーマット";
+"Position" = "位置";
+"Time" = "時刻";
+"Glow" = "グロー";
 
 /* Printer Profile Sheet */
 "Printer Connected" = "プリンター接続済み";
@@ -139,3 +140,6 @@
 "Retake" = "撮り直し";
 "No camera available" = "カメラがありません";
 "Camera access denied" = "カメラへのアクセスが拒否されました";
+"Timer" = "タイマー";
+"Off" = "オフ";
+"Film Orientation" = "フィルム向き";

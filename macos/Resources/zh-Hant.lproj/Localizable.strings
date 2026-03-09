@@ -68,14 +68,15 @@
 
 /* Editor — Date Stamp Options */
 "Enabled" = "啟用";
-"Show time" = "顯示時間";
-"Light bleed" = "光暈效果";
-"Style:" = "樣式：";
-"Classic" = "經典";
-"Dot Matrix" = "點陣";
-"B&W" = "黑白";
-"Format:" = "格式：";
-"Position:" = "位置：";
+"Quartz Date" = "Quartz Date";
+"Modern" = "Modern";
+"Data Back" = "Data Back";
+"Lab Print" = "Lab Print";
+"Machine" = "Machine";
+"Format" = "格式";
+"Position" = "位置";
+"Time" = "時間";
+"Glow" = "光暈";
 
 /* Printer Profile Sheet */
 "Printer Connected" = "印表機已連線";
@@ -139,3 +140,6 @@
 "Retake" = "重拍";
 "No camera available" = "沒有可用的相機";
 "Camera access denied" = "相機存取被拒絕";
+"Timer" = "定時器";
+"Off" = "關閉";
+"Film Orientation" = "底片方向";

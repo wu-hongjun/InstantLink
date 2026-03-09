@@ -69,14 +69,15 @@
 
 /* Editor — Date Stamp Options */
 "Enabled" = "Attivato";
-"Show time" = "Mostra ora";
-"Light bleed" = "Effetto luce";
-"Style:" = "Stile:";
-"Classic" = "Classico";
-"Dot Matrix" = "Matrice di punti";
-"B&W" = "B/N";
-"Format:" = "Formato:";
-"Position:" = "Posizione:";
+"Quartz Date" = "Quartz Date";
+"Modern" = "Modern";
+"Data Back" = "Data Back";
+"Lab Print" = "Lab Print";
+"Machine" = "Machine";
+"Format" = "Formato";
+"Position" = "Posizione";
+"Time" = "Ora";
+"Glow" = "Bagliore";
 
 /* Printer Profile Sheet */
 "Printer Connected" = "Stampante connessa";
@@ -140,3 +141,6 @@
 "Retake" = "Riscatta";
 "No camera available" = "Nessuna fotocamera disponibile";
 "Camera access denied" = "Accesso alla fotocamera negato";
+"Timer" = "Timer";
+"Off" = "Spento";
+"Film Orientation" = "Orientamento pellicola";

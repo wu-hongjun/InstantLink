@@ -68,14 +68,15 @@
 
 /* Editor — Date Stamp Options */
 "Enabled" = "사용";
-"Show time" = "시간 표시";
-"Light bleed" = "빛 번짐";
-"Style:" = "스타일:";
-"Classic" = "클래식";
-"Dot Matrix" = "도트 매트릭스";
-"B&W" = "흑백";
-"Format:" = "형식:";
-"Position:" = "위치:";
+"Quartz Date" = "Quartz Date";
+"Modern" = "Modern";
+"Data Back" = "Data Back";
+"Lab Print" = "Lab Print";
+"Machine" = "Machine";
+"Format" = "형식";
+"Position" = "위치";
+"Time" = "시간";
+"Glow" = "발광";
 
 /* Printer Profile Sheet */
 "Printer Connected" = "프린터 연결됨";
@@ -139,3 +140,6 @@
 "Retake" = "다시 촬영";
 "No camera available" = "사용 가능한 카메라 없음";
 "Camera access denied" = "카메라 접근이 거부됨";
+"Timer" = "타이머";
+"Off" = "끔";
+"Film Orientation" = "필름 방향";

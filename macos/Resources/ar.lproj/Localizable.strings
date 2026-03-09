@@ -68,14 +68,15 @@
 
 /* Editor — Date Stamp Options */
 "Enabled" = "مفعّل";
-"Show time" = "إظهار الوقت";
-"Light bleed" = "تأثير ضوئي";
-"Style:" = "النمط:";
-"Classic" = "كلاسيكي";
-"Dot Matrix" = "مصفوفة نقطية";
-"B&W" = "أبيض وأسود";
-"Format:" = "التنسيق:";
-"Position:" = "الموضع:";
+"Quartz Date" = "Quartz Date";
+"Modern" = "Modern";
+"Data Back" = "Data Back";
+"Lab Print" = "Lab Print";
+"Machine" = "Machine";
+"Format" = "التنسيق";
+"Position" = "الموضع";
+"Time" = "الوقت";
+"Glow" = "توهّج";
 
 /* Printer Profile Sheet */
 "Printer Connected" = "الطابعة متصلة";
@@ -139,3 +140,6 @@
 "Retake" = "إعادة التقاط";
 "No camera available" = "لا توجد كاميرا متاحة";
 "Camera access denied" = "تم رفض الوصول إلى الكاميرا";
+"Timer" = "مؤقت";
+"Off" = "إيقاف";
+"Film Orientation" = "اتجاه الفيلم";

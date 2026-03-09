@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreText
 import SwiftUI
 import UniformTypeIdentifiers
 import ImageIO
@@ -22,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ViewModel.registerBundledFonts()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
             button.image = NSImage(systemSymbolName: "printer.fill", accessibilityDescription: L("InstantLink"))
@@ -144,7 +146,7 @@ struct PrinterProfile: Codable, Equatable, Identifiable {
 // MARK: - View Model
 
 class ViewModel: ObservableObject {
-    let ffi = InstantLinkFFI()!
+    let ffi: InstantLinkFFI
 
     // Printer state
     @Published var isConnected = false
@@ -194,6 +196,14 @@ class ViewModel: ObservableObject {
     private var photoOutput: AVCapturePhotoOutput?
     private var photoDelegate: CameraPhotoCaptureDelegate?
 
+    // Self-timer
+    @Published var timerMode: Int = 0          // 0=off, 2=2s, 10=10s
+    @Published var timerCountdown: Int? = nil  // nil = not counting down
+    var timerTask: Task<Void, Never>? = nil
+
+    // Film orientation
+    @Published var filmOrientation: String = "default"  // "default" or "rotated"
+
     // Printer selection (for multi-printer switching)
     @Published var availablePrinters: [String] = []
     @Published var selectedPrinter: String?
@@ -219,6 +229,16 @@ class ViewModel: ObservableObject {
         case "Instax Wide Link":    return 1260.0/840.0  // 1260×840
         default: return nil
         }
+    }
+
+    /// Aspect ratio adjusted for film orientation.
+    /// When "rotated", swaps width/height for non-square films.
+    var orientedAspectRatio: CGFloat? {
+        guard let ar = printerAspectRatio else { return nil }
+        if filmOrientation == "rotated" && ar != 1.0 {
+            return 1.0 / ar
+        }
+        return ar
     }
 
     var printerModelTag: String? {
@@ -271,6 +291,10 @@ class ViewModel: ObservableObject {
     private var autoRefreshTimer: Timer?
 
     init() {
+        guard let f = InstantLinkFFI() else {
+            fatalError("Failed to load InstantLink native library. The app bundle may be corrupted.")
+        }
+        ffi = f
         loadCoreVersion()
         autoRefreshTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             guard let self = self, self.isConnected else { return }
@@ -464,6 +488,7 @@ class ViewModel: ObservableObject {
     func switchPrinter(to name: String) {
         guard name != selectedPrinter else { return }
         selectedPrinter = name
+        filmOrientation = "default"
         // Disconnect existing connection before connecting to new printer
         Task {
             if ffi.isConnected() {
@@ -554,8 +579,9 @@ class ViewModel: ObservableObject {
             discoverCameras()
             startCameraSession()
         case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { granted in
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 DispatchQueue.main.async {
+                    guard let self = self else { return }
                     if granted {
                         self.discoverCameras()
                         self.startCameraSession()
@@ -605,6 +631,7 @@ class ViewModel: ObservableObject {
     }
 
     func stopCameraSession() {
+        cancelTimer()
         captureSession?.stopRunning()
         captureSession = nil
         photoOutput = nil
@@ -632,8 +659,38 @@ class ViewModel: ObservableObject {
     }
 
     func retakePhoto() {
+        cancelTimer()
         capturedImage = nil
         cameraState = .viewfinder
+    }
+
+    func captureWithTimer() {
+        if timerCountdown != nil {
+            cancelTimer()
+            return
+        }
+        if timerMode == 0 {
+            capturePhoto()
+            return
+        }
+        timerCountdown = timerMode
+        timerTask = Task { @MainActor in
+            while let remaining = timerCountdown, remaining > 0 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if Task.isCancelled { break }
+                timerCountdown = remaining - 1
+            }
+            if !Task.isCancelled, timerCountdown == 0 {
+                capturePhoto()
+            }
+            timerCountdown = nil
+        }
+    }
+
+    func cancelTimer() {
+        timerTask?.cancel()
+        timerTask = nil
+        timerCountdown = nil
     }
 
     func commitCapture() {
@@ -641,7 +698,7 @@ class ViewModel: ObservableObject {
               let tiffData = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiffData) else { return }
 
-        // Center-crop to printer aspect ratio (matching what the preview shows)
+        // Center-crop to native printer aspect ratio (orientation rotation happens in prepareImageForPrint)
         var outputBitmap = bitmap
         if let ar = printerAspectRatio {
             let srcW = CGFloat(bitmap.pixelsWide)
@@ -675,7 +732,12 @@ class ViewModel: ObservableObject {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("jpg")
-        try? jpegData.write(to: tempURL)
+        do {
+            try jpegData.write(to: tempURL)
+        } catch {
+            showStatus(L("Failed to save captured image: \(error.localizedDescription)"))
+            return
+        }
 
         // Set selectedImage to the cropped image so the file-mode preview matches
         selectedImage = NSImage(data: jpegData) ?? image
@@ -736,190 +798,84 @@ class ViewModel: ObservableObject {
     // MARK: - Date Stamp Style Presets
 
     struct DateStampPreset {
-        let color: (CGFloat, CGFloat, CGFloat)  // RGB 0-1
+        let displayName: String
+        let fontFamily: String
+        let sizePercent: CGFloat
+        let tracking: CGFloat
+        let separator: String
+        let color: (CGFloat, CGFloat, CGFloat)
         let glowColor: (CGFloat, CGFloat, CGFloat)
+        let glowRadius: CGFloat
+        let defaultLightBleed: Bool
     }
+
+    static let presetOrder: [String] = ["classic", "modern", "dotMatrix", "labPrint", "machinePrint"]
 
     static let dateStampPresets: [String: DateStampPreset] = [
         "classic": DateStampPreset(
-            color: (0.961, 0.541, 0.122),      // #F58A1F amber-orange
-            glowColor: (0.961, 0.541, 0.122)
+            displayName: "Quartz Date", fontFamily: "DSEG7ClassicMini-Regular",
+            sizePercent: 0.026, tracking: 0.05, separator: ".",
+            color: (0.961, 0.541, 0.122), glowColor: (0.961, 0.541, 0.122),
+            glowRadius: 0.15, defaultLightBleed: true
+        ),
+        "modern": DateStampPreset(
+            displayName: "Modern", fontFamily: "DSEG7ModernMini-Regular",
+            sizePercent: 0.026, tracking: 0.05, separator: ".",
+            color: (0.180, 0.871, 0.412), glowColor: (0.180, 0.871, 0.412),
+            glowRadius: 0.12, defaultLightBleed: true
         ),
         "dotMatrix": DateStampPreset(
-            color: (1.0, 0.435, 0.165),         // #FF6F2A redder orange
-            glowColor: (1.0, 0.435, 0.165)
+            displayName: "Data Back", fontFamily: "MatrixSansScreen",
+            sizePercent: 0.024, tracking: 0.08, separator: ".",
+            color: (1.0, 0.435, 0.165), glowColor: (1.0, 0.435, 0.165),
+            glowRadius: 0.10, defaultLightBleed: true
         ),
-        "bw": DateStampPreset(
-            color: (0.953, 0.933, 0.890),       // #F3EEE3 warm off-white
-            glowColor: (0.953, 0.933, 0.890)
+        "labPrint": DateStampPreset(
+            displayName: "Lab Print", fontFamily: "MatrixSansPrint",
+            sizePercent: 0.022, tracking: 0.06, separator: "-",
+            color: (0.953, 0.933, 0.890), glowColor: (0.953, 0.933, 0.890),
+            glowRadius: 0.0, defaultLightBleed: false
+        ),
+        "machinePrint": DateStampPreset(
+            displayName: "Machine", fontFamily: "IBMPlexMono-Medium",
+            sizePercent: 0.020, tracking: 0.03, separator: "-",
+            color: (0.953, 0.933, 0.890), glowColor: (0.953, 0.933, 0.890),
+            glowRadius: 0.0, defaultLightBleed: false
         ),
     ]
 
-    // MARK: - 7-Segment Digit Renderer
+    // MARK: - Bundled Font Registration
 
-    // Segment map: which segments (a-g) are on for each digit 0-9
-    static let segmentMap: [[Bool]] = [
-        // a     b     c     d     e     f     g
-        [true,  true,  true,  true,  true,  true,  false], // 0
-        [false, true,  true,  false, false, false, false], // 1
-        [true,  true,  false, true,  true,  false, true],  // 2
-        [true,  true,  true,  true,  false, false, true],  // 3
-        [false, true,  true,  false, false, true,  true],  // 4
-        [true,  false, true,  true,  false, true,  true],  // 5
-        [true,  false, true,  true,  true,  true,  true],  // 6
-        [true,  true,  true,  false, false, false, false], // 7
-        [true,  true,  true,  true,  true,  true,  true],  // 8
-        [true,  true,  true,  true,  false, true,  true],  // 9
-    ]
-
-    /// Draw a single 7-segment digit into a CGContext at the given origin.
-    /// `cellH` = total digit cell height. Segments are computed relative to this.
-    static func drawSevenSegmentDigit(
-        _ digit: Int, in ctx: CGContext,
-        x: CGFloat, y: CGFloat, cellH: CGFloat
-    ) {
-        let segW = cellH * 0.15          // segment thickness
-        let gap = segW * 0.08            // gap between segments
-        let cellW = cellH * 0.55         // digit cell width
-        let halfH = (cellH - segW) / 2.0
-
-        // Segment geometry: each segment is a filled trapezoid
-        // Origin (x,y) is bottom-left of digit cell in CG coords
-        let segments = segmentMap[digit]
-
-        // Helper: draw a horizontal segment
-        func hSeg(_ sx: CGFloat, _ sy: CGFloat, _ length: CGFloat) {
-            let t = segW * 0.3  // taper
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: sx + t, y: sy + segW))
-            path.addLine(to: CGPoint(x: sx + length - t, y: sy + segW))
-            path.addLine(to: CGPoint(x: sx + length, y: sy + segW / 2))
-            path.addLine(to: CGPoint(x: sx + length - t, y: sy))
-            path.addLine(to: CGPoint(x: sx + t, y: sy))
-            path.addLine(to: CGPoint(x: sx, y: sy + segW / 2))
-            path.closeSubpath()
-            ctx.addPath(path)
-            ctx.fillPath()
-        }
-
-        // Helper: draw a vertical segment
-        func vSeg(_ sx: CGFloat, _ sy: CGFloat, _ length: CGFloat) {
-            let t = segW * 0.3
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: sx, y: sy + t))
-            path.addLine(to: CGPoint(x: sx, y: sy + length - t))
-            path.addLine(to: CGPoint(x: sx + segW / 2, y: sy + length))
-            path.addLine(to: CGPoint(x: sx + segW, y: sy + length - t))
-            path.addLine(to: CGPoint(x: sx + segW, y: sy + t))
-            path.addLine(to: CGPoint(x: sx + segW / 2, y: sy))
-            path.closeSubpath()
-            ctx.addPath(path)
-            ctx.fillPath()
-        }
-
-        // a: top horizontal
-        if segments[0] {
-            hSeg(x + gap, y + cellH - segW, cellW - gap * 2)
-        }
-        // b: top-right vertical
-        if segments[1] {
-            vSeg(x + cellW - segW, y + halfH + gap, halfH - gap)
-        }
-        // c: bottom-right vertical
-        if segments[2] {
-            vSeg(x + cellW - segW, y + segW + gap, halfH - gap)
-        }
-        // d: bottom horizontal
-        if segments[3] {
-            hSeg(x + gap, y, cellW - gap * 2)
-        }
-        // e: bottom-left vertical
-        if segments[4] {
-            vSeg(x, y + segW + gap, halfH - gap)
-        }
-        // f: top-left vertical
-        if segments[5] {
-            vSeg(x, y + halfH + gap, halfH - gap)
-        }
-        // g: middle horizontal
-        if segments[6] {
-            hSeg(x + gap, y + halfH, cellW - gap * 2)
+    static func registerBundledFonts() {
+        guard let resourcePath = Bundle.main.resourcePath else { return }
+        let fontsDir = (resourcePath as NSString).appendingPathComponent("Fonts")
+        guard let fontFiles = try? FileManager.default.contentsOfDirectory(atPath: fontsDir) else { return }
+        for file in fontFiles where file.hasSuffix(".ttf") {
+            let fontURL = URL(fileURLWithPath: (fontsDir as NSString).appendingPathComponent(file)) as CFURL
+            CTFontManagerRegisterFontsForURL(fontURL, .process, nil)
         }
     }
 
-    /// Format the date into digit groups based on format setting.
-    /// Returns an array of 2-digit strings, e.g. ["26", "03", "08"]
-    func dateDigitGroups(from date: Date) -> [String] {
+    // MARK: - Date Stamp Text Formatting
+
+    func dateStampText(from date: Date) -> String {
         let cal = Calendar.current
         let y = cal.component(.year, from: date) % 100
         let m = cal.component(.month, from: date)
         let d = cal.component(.day, from: date)
-        let yy = String(format: "%02d", y)
-        let mm = String(format: "%02d", m)
-        let dd = String(format: "%02d", d)
-
+        let preset = Self.dateStampPresets[dateStampStyle] ?? Self.dateStampPresets["classic"]!
+        let s = preset.separator
+        let (yy, mm, dd) = (String(format: "%02d", y), String(format: "%02d", m), String(format: "%02d", d))
         switch dateStampFormat {
-        case "mdy": return [mm, dd, yy]
-        case "dmy": return [dd, mm, yy]
-        default:    return [yy, mm, dd]  // ymd
+        case "mdy": return "\(mm)\(s)\(dd)\(s)\(yy)"
+        case "dmy": return "\(dd)\(s)\(mm)\(s)\(yy)"
+        default:    return "\(yy)\(s)\(mm)\(s)\(dd)"
         }
     }
 
-    func timeDigitGroups(from date: Date) -> [String] {
+    func timeStampText(from date: Date) -> String {
         let cal = Calendar.current
-        let h = cal.component(.hour, from: date)
-        let m = cal.component(.minute, from: date)
-        return [String(format: "%02d", h), String(format: "%02d", m)]
-    }
-
-    /// Draw a row of digit groups into a CGContext.
-    /// Returns the total width of the rendered row.
-    @discardableResult
-    static func drawDigitRow(
-        groups: [String], in ctx: CGContext,
-        x: CGFloat, y: CGFloat, cellH: CGFloat
-    ) -> CGFloat {
-        let cellW = cellH * 0.55
-        let interDigit = cellW * 0.60
-        let groupGap = cellW * 1.20
-
-        var curX = x
-        for (gi, group) in groups.enumerated() {
-            for (di, ch) in group.enumerated() {
-                if let digit = ch.wholeNumberValue {
-                    drawSevenSegmentDigit(digit, in: ctx, x: curX, y: y, cellH: cellH)
-                }
-                curX += cellW
-                if di < group.count - 1 {
-                    curX += interDigit
-                }
-            }
-            if gi < groups.count - 1 {
-                curX += groupGap
-            }
-        }
-        return curX - x
-    }
-
-    /// Measure the total width of a digit row without drawing.
-    static func measureDigitRow(groups: [String], cellH: CGFloat) -> CGFloat {
-        let cellW = cellH * 0.55
-        let interDigit = cellW * 0.60
-        let groupGap = cellW * 1.20
-
-        var w: CGFloat = 0
-        for (gi, group) in groups.enumerated() {
-            for (di, _) in group.enumerated() {
-                w += cellW
-                if di < group.count - 1 {
-                    w += interDigit
-                }
-            }
-            if gi < groups.count - 1 {
-                w += groupGap
-            }
-        }
-        return w
+        return String(format: "%02d:%02d", cal.component(.hour, from: date), cal.component(.minute, from: date))
     }
 
     // MARK: - Date Stamp Rendering
@@ -942,23 +898,46 @@ class ViewModel: ObservableObject {
         context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
 
         let date = imageDate ?? Date()
-        let cellH = CGFloat(height) * 0.026
-        let padding = cellH * 0.8
-        let rowGap = cellH * 0.3
-
         let preset = Self.dateStampPresets[dateStampStyle]
             ?? Self.dateStampPresets["classic"]!
+        let fontSize = CGFloat(height) * preset.sizePercent
+        let padding = fontSize * 0.8
+        let rowGap = fontSize * 0.3
+        let kern = fontSize * preset.tracking
+
         let (r, g, b) = preset.color
         let (gr, gg, gb) = preset.glowColor
 
-        let dateGroups = dateDigitGroups(from: date)
-        let timeGroups = timeDigitGroups(from: date)
+        let ctFont = CTFontCreateWithName(preset.fontFamily as CFString, fontSize, nil)
+        let textColor = CGColor(srgbRed: r, green: g, blue: b, alpha: 1.0)
 
-        let dateWidth = Self.measureDigitRow(groups: dateGroups, cellH: cellH)
-        let timeWidth = showTimeRow
-            ? Self.measureDigitRow(groups: timeGroups, cellH: cellH) : 0
-        let maxWidth = max(dateWidth, timeWidth)
-        let totalHeight = cellH + (showTimeRow ? cellH + rowGap : 0)
+        let dateText = dateStampText(from: date)
+        let timeText = timeStampText(from: date)
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: ctFont,
+            .foregroundColor: textColor,
+            .kern: kern,
+        ]
+
+        let dateLine = CTLineCreateWithAttributedString(NSAttributedString(string: dateText, attributes: attrs))
+        var dateAscent: CGFloat = 0, dateDescent: CGFloat = 0, dateLeading: CGFloat = 0
+        let dateWidth = CGFloat(CTLineGetTypographicBounds(dateLine, &dateAscent, &dateDescent, &dateLeading))
+        let dateLineHeight = dateAscent + dateDescent
+
+        var timeLineWidth: CGFloat = 0
+        var timeLineObj: CTLine?
+        var timeLineHeight: CGFloat = 0
+        if showTimeRow {
+            let tLine = CTLineCreateWithAttributedString(NSAttributedString(string: timeText, attributes: attrs))
+            var tAscent: CGFloat = 0, tDescent: CGFloat = 0, tLeading: CGFloat = 0
+            timeLineWidth = CGFloat(CTLineGetTypographicBounds(tLine, &tAscent, &tDescent, &tLeading))
+            timeLineHeight = tAscent + tDescent
+            timeLineObj = tLine
+        }
+
+        let maxWidth = max(dateWidth, timeLineWidth)
+        let totalHeight = dateLineHeight + (showTimeRow ? timeLineHeight + rowGap : 0)
 
         // Compute origin (Core Graphics: origin at bottom-left)
         let blockX: CGFloat
@@ -979,44 +958,33 @@ class ViewModel: ObservableObject {
         }
 
         // Drawing closure for glow + sharp pass
-        func drawDigits() {
+        func drawText() {
             // Date row (top row)
-            let dateY = blockY + (showTimeRow ? cellH + rowGap : 0)
-            Self.drawDigitRow(groups: dateGroups, in: context,
-                              x: blockX, y: dateY, cellH: cellH)
+            let dateY = blockY + (showTimeRow ? timeLineHeight + rowGap : 0)
+            context.textPosition = CGPoint(x: blockX, y: dateY)
+            CTLineDraw(dateLine, context)
             // Time row (below date)
-            if showTimeRow {
-                Self.drawDigitRow(groups: timeGroups, in: context,
-                                  x: blockX, y: blockY, cellH: cellH)
+            if showTimeRow, let tLine = timeLineObj {
+                context.textPosition = CGPoint(x: blockX, y: blockY)
+                CTLineDraw(tLine, context)
             }
         }
 
-        if lightBleedEnabled {
+        if lightBleedEnabled && preset.glowRadius > 0 {
             // Glow pass: draw with shadow
             context.saveGState()
             context.setShadow(
                 offset: .zero,
-                blur: cellH * 0.15,
-                color: CGColor(
-                    srgbRed: gr, green: gg, blue: gb, alpha: 0.6
-                )
+                blur: fontSize * preset.glowRadius,
+                color: CGColor(srgbRed: gr, green: gg, blue: gb, alpha: 0.6)
             )
-            context.setFillColor(CGColor(
-                srgbRed: r, green: g, blue: b, alpha: 1.0
-            ))
-            drawDigits()
+            drawText()
             context.restoreGState()
 
             // Sharp overdraw
-            context.setFillColor(CGColor(
-                srgbRed: r, green: g, blue: b, alpha: 1.0
-            ))
-            drawDigits()
+            drawText()
         } else {
-            context.setFillColor(CGColor(
-                srgbRed: r, green: g, blue: b, alpha: 1.0
-            ))
-            drawDigits()
+            drawText()
         }
 
         return context.makeImage()
@@ -1084,6 +1052,14 @@ class ViewModel: ObservableObject {
         if dateStampEnabled, let stamped = stampImage(currentCG) {
             currentCG = stamped
             processed = true
+        }
+
+        // If film orientation is rotated, rotate 90° to fit native pixel layout
+        if filmOrientation == "rotated", let ar = printerAspectRatio, ar != 1.0 {
+            if let rotated = rotateCGImage(currentCG, degrees: 90) {
+                currentCG = rotated
+                processed = true
+            }
         }
 
         if processed {
@@ -1287,7 +1263,7 @@ class ViewModel: ObservableObject {
     }
 
     private func installUpdate(dmgPath: String) {
-        DispatchQueue.main.async { self.updateProgress = 1.0 }
+        DispatchQueue.main.async { [weak self] in self?.updateProgress = 1.0 }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -1425,6 +1401,88 @@ class CameraPhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     }
 }
 
+// MARK: - Film Frame View
+
+struct FilmFrameView<Content: View>: View {
+    let filmModel: String?   // "Mini", "Sqre", "Wide", or nil
+    let isRotated: Bool
+    let content: () -> Content
+
+    // Proportions relative to image area height
+    private var topBorder: CGFloat { 0.129 }
+    private var bottomBorder: CGFloat { 0.258 }
+    private var sideBorder: CGFloat { 0.087 }
+
+    init(filmModel: String?, isRotated: Bool, @ViewBuilder content: @escaping () -> Content) {
+        self.filmModel = filmModel
+        self.isRotated = isRotated
+        self.content = content
+    }
+
+    private var imageAR: CGFloat {
+        switch filmModel {
+        case "Mini": return 46.0 / 62.0
+        case "Wide": return 99.0 / 62.0
+        default:     return 1.0
+        }
+    }
+
+    private func layout(availW: CGFloat, availH: CGFloat) -> (cardW: CGFloat, cardH: CGFloat, imgW: CGFloat, imgH: CGFloat, offsetY: CGFloat) {
+        let tb = topBorder
+        let bb = bottomBorder
+        let sb = sideBorder
+        let iar = imageAR
+
+        let cardH_ratio = tb + 1.0 + bb
+        let cardW_ratio = iar + 2.0 * sb
+        let cardAR = cardW_ratio / cardH_ratio
+        let effectiveCardAR = isRotated ? (1.0 / cardAR) : cardAR
+
+        let fitW: CGFloat
+        let fitH: CGFloat
+        if availH > 0 && availW / availH > effectiveCardAR {
+            fitH = availH
+            fitW = availH * effectiveCardAR
+        } else {
+            fitW = availW
+            fitH = availW > 0 && effectiveCardAR > 0 ? availW / effectiveCardAR : availH
+        }
+
+        let divisor = isRotated ? cardW_ratio : cardH_ratio
+        let imageAreaH = divisor > 0 ? fitH / divisor : fitH
+        let imageAreaW = imageAreaH * iar
+
+        let imgW = isRotated ? imageAreaH : imageAreaW
+        let imgH = isRotated ? imageAreaW : imageAreaH
+
+        let offsetY = isRotated ? CGFloat(0) : (tb - bb) / cardH_ratio * fitH / 2
+
+        return (fitW, fitH, imgW, imgH, offsetY)
+    }
+
+    var body: some View {
+        if filmModel != nil {
+            GeometryReader { geo in
+                let l = layout(availW: geo.size.width, availH: geo.size.height)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.white)
+                        .frame(width: l.cardW, height: l.cardH)
+                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+
+                    content()
+                        .frame(width: l.imgW, height: l.imgH)
+                        .clipped()
+                        .offset(x: 0, y: l.offsetY)
+                }
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+            }
+        } else {
+            content()
+        }
+    }
+}
+
 // MARK: - Camera Preview View (NSViewRepresentable)
 
 class CameraPreviewNSView: NSView {
@@ -1472,6 +1530,7 @@ struct CameraPreviewView: NSViewRepresentable {
 
 struct CameraView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @State private var showFlash = false
 
     var body: some View {
         ZStack {
@@ -1484,19 +1543,29 @@ struct CameraView: View {
             if viewModel.cameraState == .viewfinder {
                 if let session = viewModel.captureSession {
                     let isFront = viewModel.selectedCamera?.position == .front
-                    if let ar = viewModel.printerAspectRatio {
-                        CameraPreviewView(session: session, isMirrored: isFront)
-                            .aspectRatio(ar, contentMode: .fit)
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .padding(4)
-                    } else {
-                        CameraPreviewView(session: session, isMirrored: isFront)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .padding(4)
+                    FilmFrameView(filmModel: viewModel.printerModelTag,
+                                  isRotated: viewModel.filmOrientation == "rotated") {
+                        if let ar = viewModel.orientedAspectRatio {
+                            CameraPreviewView(session: session, isMirrored: isFront)
+                                .aspectRatio(ar, contentMode: .fill)
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                                .clipped()
+                        } else {
+                            CameraPreviewView(session: session, isMirrored: isFront)
+                        }
+                    }
+                    .padding(4)
+
+                    // Countdown overlay
+                    if let count = viewModel.timerCountdown, count > 0 {
+                        Text("\(count)")
+                            .font(.system(size: 72, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.5), radius: 8)
+                            .transition(.scale.combined(with: .opacity))
+                            .animation(.easeInOut(duration: 0.3), value: count)
                     }
                 } else {
                     VStack(spacing: 8) {
@@ -1509,28 +1578,37 @@ struct CameraView: View {
                     }
                 }
             } else if let image = viewModel.capturedImage {
-                if let ar = viewModel.printerAspectRatio {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .aspectRatio(ar, contentMode: .fit)
-                        .overlay(alignment: stampAlignmentFor(viewModel)) {
-                            DateStampOverlayView()
-                        }
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .padding(4)
-                } else {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .padding(4)
+                FilmFrameView(filmModel: viewModel.printerModelTag,
+                              isRotated: viewModel.filmOrientation == "rotated") {
+                    if let ar = viewModel.orientedAspectRatio {
+                        Image(nsImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .aspectRatio(ar, contentMode: .fit)
+                            .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                DateStampOverlayView()
+                            }
+                            .clipped()
+                    } else {
+                        Image(nsImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    }
+                }
+                .padding(4)
+            }
+        }
+        .overlay(showFlash ? Color.white.opacity(0.8) : Color.clear)
+        .frame(minHeight: 120, maxHeight: .infinity)
+        .onChange(of: viewModel.cameraState) { newState in
+            if newState == .preview {
+                showFlash = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    withAnimation(.easeOut(duration: 0.2)) { showFlash = false }
                 }
             }
         }
-        .frame(minHeight: 120, maxHeight: .infinity)
     }
 }
 
@@ -1558,12 +1636,42 @@ struct CameraActionsView: View {
                     .labelsHidden()
                 }
 
+                HStack(spacing: 8) {
+                    Picker(L("Timer"), selection: $viewModel.timerMode) {
+                        Text(L("Off")).tag(0)
+                        Text("2s").tag(2)
+                        Text("10s").tag(10)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 140)
+
+                    if viewModel.printerAspectRatio != nil {
+                        Button {
+                            viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
+                        } label: {
+                            Image(systemName: viewModel.filmOrientation == "default"
+                                ? "rectangle.portrait" : "rectangle.landscape.rotate")
+                                .font(.callout)
+                        }
+                        .help(L("Film Orientation"))
+                    }
+                }
+
                 Button {
-                    viewModel.capturePhoto()
+                    if viewModel.timerCountdown != nil {
+                        viewModel.cancelTimer()
+                    } else {
+                        viewModel.captureWithTimer()
+                    }
                 } label: {
                     HStack {
-                        Image(systemName: "camera.shutter.button")
-                        Text(L("Capture"))
+                        if viewModel.timerCountdown != nil {
+                            Image(systemName: "xmark")
+                            Text(L("Cancel"))
+                        } else {
+                            Image(systemName: "camera.shutter.button")
+                            Text(L("Capture"))
+                        }
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -1735,6 +1843,7 @@ struct MainView: View {
                         if newMode == .camera {
                             viewModel.requestCameraAccessAndStart()
                         } else {
+                            viewModel.cancelTimer()
                             viewModel.stopCameraSession()
                             viewModel.cameraState = .viewfinder
                             viewModel.capturedImage = nil
@@ -1894,9 +2003,11 @@ struct MainView: View {
         }
         .sheet(isPresented: $viewModel.showProfileSheet) {
             PrinterProfileSheet(isPostPairing: true)
+                .environmentObject(viewModel)
         }
         .sheet(isPresented: $viewModel.showProfileEditor) {
             PrinterProfileSheet(isPostPairing: false)
+                .environmentObject(viewModel)
         }
         .sheet(isPresented: $viewModel.showSettings) {
             SettingsView()
@@ -1936,7 +2047,11 @@ struct MainView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
-            viewModel.captureSession?.stopRunning()
+            if let session = viewModel.captureSession {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    session.stopRunning()
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             if viewModel.captureMode == .camera, let session = viewModel.captureSession, !session.isRunning {
@@ -1983,117 +2098,58 @@ struct DateStampOverlayView: View {
 
     var body: some View {
         if viewModel.dateStampEnabled {
-            SevenSegmentStampView(viewModel: viewModel, digitHeight: digitHeight)
+            FontStampView(viewModel: viewModel, digitHeight: digitHeight)
                 .padding(4)
         }
     }
 }
 
-/// SwiftUI Canvas-based 7-segment stamp renderer for previews.
-struct SevenSegmentStampView: View {
+struct FontStampView: View {
     @ObservedObject var viewModel: ViewModel
     var digitHeight: CGFloat = 11
 
     var body: some View {
         let date = viewModel.imageDate ?? Date()
-        let dateGroups = viewModel.dateDigitGroups(from: date)
-        let timeGroups = viewModel.timeDigitGroups(from: date)
-        let cellH = digitHeight
-        let rowGap = cellH * 0.3
-
-        let dateWidth = ViewModel.measureDigitRow(groups: dateGroups, cellH: cellH)
-        let timeWidth = viewModel.showTimeRow
-            ? ViewModel.measureDigitRow(groups: timeGroups, cellH: cellH) : 0
-        let maxWidth = max(dateWidth, timeWidth)
-        let totalHeight = cellH + (viewModel.showTimeRow ? cellH + rowGap : 0)
-
         let preset = ViewModel.dateStampPresets[viewModel.dateStampStyle]
             ?? ViewModel.dateStampPresets["classic"]!
         let (r, g, b) = preset.color
         let stampColor = Color(red: r, green: g, blue: b)
 
-        Canvas { ctx, _ in
-            // Draw using CGContext via resolved image
-            // Use GraphicsContext path drawing instead
-            func drawDigitRow(groups: [String], x: CGFloat, y: CGFloat) {
-                let cellW = cellH * 0.55
-                let interDigit = cellW * 0.60
-                let groupGap = cellW * 1.20
-                let segW = cellH * 0.15
-                let gap = segW * 0.08
-                let halfH = (cellH - segW) / 2.0
-
-                var curX = x
-                for (gi, group) in groups.enumerated() {
-                    for (di, ch) in group.enumerated() {
-                        if let digit = ch.wholeNumberValue {
-                            let segments = ViewModel.segmentMap[digit]
-                            let ox = curX
-                            // Note: SwiftUI Canvas has origin at top-left, flip y
-                            let oy = y
-
-                            func hSeg(_ sx: CGFloat, _ sy: CGFloat, _ length: CGFloat) {
-                                let t = segW * 0.3
-                                var path = Path()
-                                path.move(to: CGPoint(x: sx + t, y: sy))
-                                path.addLine(to: CGPoint(x: sx + length - t, y: sy))
-                                path.addLine(to: CGPoint(x: sx + length, y: sy + segW / 2))
-                                path.addLine(to: CGPoint(x: sx + length - t, y: sy + segW))
-                                path.addLine(to: CGPoint(x: sx + t, y: sy + segW))
-                                path.addLine(to: CGPoint(x: sx, y: sy + segW / 2))
-                                path.closeSubpath()
-                                ctx.fill(path, with: .color(stampColor))
-                            }
-
-                            func vSeg(_ sx: CGFloat, _ sy: CGFloat, _ length: CGFloat) {
-                                let t = segW * 0.3
-                                var path = Path()
-                                path.move(to: CGPoint(x: sx, y: sy + t))
-                                path.addLine(to: CGPoint(x: sx + segW / 2, y: sy))
-                                path.addLine(to: CGPoint(x: sx + segW, y: sy + t))
-                                path.addLine(to: CGPoint(x: sx + segW, y: sy + length - t))
-                                path.addLine(to: CGPoint(x: sx + segW / 2, y: sy + length))
-                                path.addLine(to: CGPoint(x: sx, y: sy + length - t))
-                                path.closeSubpath()
-                                ctx.fill(path, with: .color(stampColor))
-                            }
-
-                            // a: top horizontal
-                            if segments[0] { hSeg(ox + gap, oy, cellW - gap * 2) }
-                            // b: top-right vertical
-                            if segments[1] { vSeg(ox + cellW - segW, oy + segW + gap, halfH - gap) }
-                            // c: bottom-right vertical
-                            if segments[2] { vSeg(ox + cellW - segW, oy + halfH + gap, halfH - gap) }
-                            // d: bottom horizontal
-                            if segments[3] { hSeg(ox + gap, oy + cellH - segW, cellW - gap * 2) }
-                            // e: bottom-left vertical
-                            if segments[4] { vSeg(ox, oy + halfH + gap, halfH - gap) }
-                            // f: top-left vertical
-                            if segments[5] { vSeg(ox, oy + segW + gap, halfH - gap) }
-                            // g: middle horizontal
-                            if segments[6] { hSeg(ox + gap, oy + halfH, cellW - gap * 2) }
-                        }
-                        curX += cellW
-                        if di < group.count - 1 {
-                            curX += interDigit
-                        }
-                    }
-                    if gi < groups.count - 1 {
-                        curX += groupGap
-                    }
-                }
-            }
-
-            drawDigitRow(groups: dateGroups, x: 0, y: 0)
+        VStack(alignment: .leading, spacing: digitHeight * 0.15) {
+            Text(viewModel.dateStampText(from: date))
+                .font(.custom(preset.fontFamily, size: digitHeight))
+                .tracking(digitHeight * preset.tracking)
+                .foregroundColor(stampColor)
             if viewModel.showTimeRow {
-                drawDigitRow(groups: timeGroups, x: 0, y: cellH + rowGap)
+                Text(viewModel.timeStampText(from: date))
+                    .font(.custom(preset.fontFamily, size: digitHeight))
+                    .tracking(digitHeight * preset.tracking)
+                    .foregroundColor(stampColor)
             }
         }
-        .frame(width: maxWidth, height: totalHeight)
         .shadow(
-            color: viewModel.lightBleedEnabled ? stampColor.opacity(0.8) : .clear,
-            radius: viewModel.lightBleedEnabled ? 2 : 0
+            color: viewModel.lightBleedEnabled && preset.glowRadius > 0
+                ? stampColor.opacity(0.8) : .clear,
+            radius: viewModel.lightBleedEnabled ? digitHeight * preset.glowRadius * 0.5 : 0
         )
+    }
+}
+
+struct PresetCard: View {
+    let preset: ViewModel.DateStampPreset
+    let isSelected: Bool
+    var body: some View {
+        Text(L(preset.displayName))
+            .font(.system(size: 9, weight: .medium))
+            .foregroundColor(isSelected ? Color(red: preset.color.0, green: preset.color.1, blue: preset.color.2) : .secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 4).fill(
+                isSelected ? Color(red: preset.color.0, green: preset.color.1, blue: preset.color.2).opacity(0.15) : Color.clear
+            ))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(
+                isSelected ? Color(red: preset.color.0, green: preset.color.1, blue: preset.color.2).opacity(0.5) : Color.gray.opacity(0.3), lineWidth: 1
+            ))
     }
 }
 
@@ -2150,96 +2206,94 @@ struct MainPreviewView: View {
                 }
             } else if let image = viewModel.selectedImage {
                 ZStack(alignment: .topTrailing) {
-                    if viewModel.fitMode == "crop", let ar = viewModel.printerAspectRatio {
-                        Color.clear
-                            .aspectRatio(ar, contentMode: .fit)
-                            .background(
-                                GeometryReader { geo in
-                                    Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
+                    FilmFrameView(filmModel: viewModel.printerModelTag,
+                                  isRotated: viewModel.filmOrientation == "rotated") {
+                        if viewModel.fitMode == "crop", let ar = viewModel.orientedAspectRatio {
+                            Color.clear
+                                .aspectRatio(ar, contentMode: .fit)
+                                .background(
+                                    GeometryReader { geo in
+                                        Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
+                                    }
+                                )
+                                .onPreferenceChange(CropFrameSizeKey.self) { size in
+                                    localFrameSize = size
+                                    viewModel.cropFrameSize = size
                                 }
-                            )
-                            .onPreferenceChange(CropFrameSizeKey.self) { size in
-                                localFrameSize = size
-                                viewModel.cropFrameSize = size
-                            }
-                            .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .scaleEffect(effectiveZoom)
-                                    .offset(effectiveOffset(imageSize: image.size))
-                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                            )
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .contentShape(Rectangle())
-                            .gesture(
-                                DragGesture()
-                                    .updating($dragDelta) { value, state, _ in
-                                        state = value.translation
-                                    }
-                                    .onEnded { value in
-                                        let raw = CGSize(
-                                            width: viewModel.cropOffset.width + value.translation.width,
-                                            height: viewModel.cropOffset.height + value.translation.height
-                                        )
-                                        viewModel.cropOffset = clampedOffset(
-                                            raw: raw,
-                                            imageSize: image.size,
-                                            frameSize: localFrameSize,
-                                            zoom: viewModel.cropZoom
-                                        )
-                                    }
-                            )
-                            .simultaneousGesture(
-                                MagnificationGesture()
-                                    .updating($magnifyDelta) { value, state, _ in
-                                        state = value
-                                    }
-                                    .onEnded { value in
-                                        let newZoom = min(max(viewModel.cropZoom * value, 1.0), 5.0)
-                                        viewModel.cropZoom = newZoom
-                                        viewModel.cropOffset = clampedOffset(
-                                            raw: viewModel.cropOffset,
-                                            imageSize: image.size,
-                                            frameSize: localFrameSize,
-                                            zoom: newZoom
-                                        )
-                                    }
-                            )
-                            .onTapGesture(count: 2) { openEditor() }
-                            .padding(4)
-                    } else if viewModel.fitMode == "contain", let ar = viewModel.printerAspectRatio {
-                        Color.white
-                            .aspectRatio(ar, contentMode: .fit)
-                            .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                            )
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .clipped()
-                            .cornerRadius(6)
-                            .onTapGesture(count: 2) { openEditor() }
-                            .padding(4)
-                    } else {
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .cornerRadius(6)
-                            .onTapGesture(count: 2) { openEditor() }
-                            .padding(4)
+                                .overlay(
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .scaleEffect(effectiveZoom)
+                                        .offset(effectiveOffset(imageSize: image.size))
+                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                )
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                                .clipped()
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture()
+                                        .updating($dragDelta) { value, state, _ in
+                                            state = value.translation
+                                        }
+                                        .onEnded { value in
+                                            let raw = CGSize(
+                                                width: viewModel.cropOffset.width + value.translation.width,
+                                                height: viewModel.cropOffset.height + value.translation.height
+                                            )
+                                            viewModel.cropOffset = clampedOffset(
+                                                raw: raw,
+                                                imageSize: image.size,
+                                                frameSize: localFrameSize,
+                                                zoom: viewModel.cropZoom
+                                            )
+                                        }
+                                )
+                                .simultaneousGesture(
+                                    MagnificationGesture()
+                                        .updating($magnifyDelta) { value, state, _ in
+                                            state = value
+                                        }
+                                        .onEnded { value in
+                                            let newZoom = min(max(viewModel.cropZoom * value, 1.0), 5.0)
+                                            viewModel.cropZoom = newZoom
+                                            viewModel.cropOffset = clampedOffset(
+                                                raw: viewModel.cropOffset,
+                                                imageSize: image.size,
+                                                frameSize: localFrameSize,
+                                                zoom: newZoom
+                                            )
+                                        }
+                                )
+                                .onTapGesture(count: 2) { openEditor() }
+                        } else if viewModel.fitMode == "contain", let ar = viewModel.orientedAspectRatio {
+                            Color.white
+                                .aspectRatio(ar, contentMode: .fit)
+                                .overlay(
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                )
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                                .clipped()
+                                .onTapGesture(count: 2) { openEditor() }
+                        } else {
+                            Image(nsImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                                .onTapGesture(count: 2) { openEditor() }
+                        }
                     }
+                    .padding(4)
 
                     Button { viewModel.clearImage() } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -2422,93 +2476,91 @@ struct EditorPreviewView: View {
 
             if let image = viewModel.selectedImage {
                 ZStack(alignment: .topTrailing) {
-                    if viewModel.fitMode == "crop", let ar = viewModel.printerAspectRatio {
-                        Color.clear
-                            .aspectRatio(ar, contentMode: .fit)
-                            .background(
-                                GeometryReader { geo in
-                                    Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
+                    FilmFrameView(filmModel: viewModel.printerModelTag,
+                                  isRotated: viewModel.filmOrientation == "rotated") {
+                        if viewModel.fitMode == "crop", let ar = viewModel.orientedAspectRatio {
+                            Color.clear
+                                .aspectRatio(ar, contentMode: .fit)
+                                .background(
+                                    GeometryReader { geo in
+                                        Color.clear.preference(key: CropFrameSizeKey.self, value: geo.size)
+                                    }
+                                )
+                                .onPreferenceChange(CropFrameSizeKey.self) { size in
+                                    localFrameSize = size
+                                    viewModel.cropFrameSize = size
                                 }
-                            )
-                            .onPreferenceChange(CropFrameSizeKey.self) { size in
-                                localFrameSize = size
-                                viewModel.cropFrameSize = size
-                            }
-                            .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .scaleEffect(effectiveZoom)
-                                    .offset(effectiveOffset(imageSize: image.size))
-                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                            )
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .contentShape(Rectangle())
-                            .gesture(
-                                DragGesture()
-                                    .updating($dragDelta) { value, state, _ in
-                                        state = value.translation
-                                    }
-                                    .onEnded { value in
-                                        let raw = CGSize(
-                                            width: viewModel.cropOffset.width + value.translation.width,
-                                            height: viewModel.cropOffset.height + value.translation.height
-                                        )
-                                        viewModel.cropOffset = clampedOffset(
-                                            raw: raw,
-                                            imageSize: image.size,
-                                            frameSize: localFrameSize,
-                                            zoom: viewModel.cropZoom
-                                        )
-                                    }
-                            )
-                            .simultaneousGesture(
-                                MagnificationGesture()
-                                    .updating($magnifyDelta) { value, state, _ in
-                                        state = value
-                                    }
-                                    .onEnded { value in
-                                        let newZoom = min(max(viewModel.cropZoom * value, 1.0), 5.0)
-                                        viewModel.cropZoom = newZoom
-                                        viewModel.cropOffset = clampedOffset(
-                                            raw: viewModel.cropOffset,
-                                            imageSize: image.size,
-                                            frameSize: localFrameSize,
-                                            zoom: newZoom
-                                        )
-                                    }
-                            )
-                            .padding(4)
-                    } else if viewModel.fitMode == "contain", let ar = viewModel.printerAspectRatio {
-                        Color.white
-                            .aspectRatio(ar, contentMode: .fit)
-                            .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                            )
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .clipped()
-                            .cornerRadius(6)
-                            .padding(4)
-                    } else {
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                            .overlay(alignment: stampAlignmentFor(viewModel)) {
-                                DateStampOverlayView()
-                            }
-                            .cornerRadius(6)
-                            .padding(4)
+                                .overlay(
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .scaleEffect(effectiveZoom)
+                                        .offset(effectiveOffset(imageSize: image.size))
+                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                )
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                                .clipped()
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture()
+                                        .updating($dragDelta) { value, state, _ in
+                                            state = value.translation
+                                        }
+                                        .onEnded { value in
+                                            let raw = CGSize(
+                                                width: viewModel.cropOffset.width + value.translation.width,
+                                                height: viewModel.cropOffset.height + value.translation.height
+                                            )
+                                            viewModel.cropOffset = clampedOffset(
+                                                raw: raw,
+                                                imageSize: image.size,
+                                                frameSize: localFrameSize,
+                                                zoom: viewModel.cropZoom
+                                            )
+                                        }
+                                )
+                                .simultaneousGesture(
+                                    MagnificationGesture()
+                                        .updating($magnifyDelta) { value, state, _ in
+                                            state = value
+                                        }
+                                        .onEnded { value in
+                                            let newZoom = min(max(viewModel.cropZoom * value, 1.0), 5.0)
+                                            viewModel.cropZoom = newZoom
+                                            viewModel.cropOffset = clampedOffset(
+                                                raw: viewModel.cropOffset,
+                                                imageSize: image.size,
+                                                frameSize: localFrameSize,
+                                                zoom: newZoom
+                                            )
+                                        }
+                                )
+                        } else if viewModel.fitMode == "contain", let ar = viewModel.orientedAspectRatio {
+                            Color.white
+                                .aspectRatio(ar, contentMode: .fit)
+                                .overlay(
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                )
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                                .clipped()
+                        } else {
+                            Image(nsImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                .overlay(alignment: stampAlignmentFor(viewModel)) {
+                                    DateStampOverlayView()
+                                }
+                        }
                     }
+                    .padding(4)
 
                     Button { viewModel.clearImage() } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -2683,61 +2735,49 @@ struct EditorSidebarView: View {
                         .font(.callout)
 
                     if viewModel.dateStampEnabled {
-                        // Stamp preview (7-segment)
+                        // Live preview
                         RoundedRectangle(cornerRadius: 6)
                             .fill(Color(white: 0.15))
-                            .frame(height: 44)
-                            .overlay(
-                                SevenSegmentStampView(
-                                    viewModel: viewModel,
-                                    digitHeight: 13
-                                )
-                            )
+                            .frame(height: 48)
+                            .overlay(FontStampView(viewModel: viewModel, digitHeight: 13))
 
-                        Toggle(L("Show time"), isOn: $viewModel.showTimeRow)
-                            .font(.callout)
-
-                        Toggle(L("Light bleed"), isOn: $viewModel.lightBleedEnabled)
-                            .font(.callout)
-
-                        HStack {
-                            Text(L("Style:"))
-                                .font(.callout)
-                                .frame(width: 50, alignment: .leading)
-                            Picker("", selection: $viewModel.dateStampStyle) {
-                                Text(L("Classic")).tag("classic")
-                                Text(L("Dot Matrix")).tag("dotMatrix")
-                                Text(L("B&W")).tag("bw")
+                        // Preset cards — horizontal scrolling strip
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(ViewModel.presetOrder, id: \.self) { key in
+                                    PresetCard(preset: ViewModel.dateStampPresets[key]!,
+                                               isSelected: viewModel.dateStampStyle == key)
+                                    .onTapGesture {
+                                        viewModel.dateStampStyle = key
+                                        viewModel.lightBleedEnabled = ViewModel.dateStampPresets[key]!.defaultLightBleed
+                                    }
+                                }
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
                         }
 
-                        HStack {
-                            Text(L("Format:"))
-                                .font(.callout)
-                                .frame(width: 50, alignment: .leading)
-                            Picker("", selection: $viewModel.dateStampFormat) {
-                                Text("YY MM DD").tag("ymd")
-                                Text("MM DD YY").tag("mdy")
-                                Text("DD MM YY").tag("dmy")
+                        // Format + Position — compact menu pickers on one row
+                        HStack(spacing: 8) {
+                            Picker(L("Format"), selection: $viewModel.dateStampFormat) {
+                                Text("YY.MM.DD").tag("ymd")
+                                Text("MM.DD.YY").tag("mdy")
+                                Text("DD.MM.YY").tag("dmy")
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
+                            .pickerStyle(.menu).font(.callout)
+
+                            Picker(L("Position"), selection: $viewModel.dateStampPosition) {
+                                Text("\u{2198} BR").tag("bottomRight")
+                                Text("\u{2199} BL").tag("bottomLeft")
+                                Text("\u{2197} TR").tag("topRight")
+                                Text("\u{2196} TL").tag("topLeft")
+                            }
+                            .pickerStyle(.menu).font(.callout)
                         }
 
+                        // Toggles on one row
                         HStack {
-                            Text(L("Position:"))
-                                .font(.callout)
-                                .frame(width: 55, alignment: .leading)
-                            Picker("", selection: $viewModel.dateStampPosition) {
-                                Text("\u{2198}").tag("bottomRight")
-                                Text("\u{2199}").tag("bottomLeft")
-                                Text("\u{2197}").tag("topRight")
-                                Text("\u{2196}").tag("topLeft")
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
+                            Toggle(L("Time"), isOn: $viewModel.showTimeRow).font(.callout)
+                            Spacer()
+                            Toggle(L("Glow"), isOn: $viewModel.lightBleedEnabled).font(.callout)
                         }
                     }
                 }

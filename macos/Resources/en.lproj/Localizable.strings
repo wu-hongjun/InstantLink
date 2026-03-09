@@ -73,8 +73,11 @@
 "Stretch" = "Stretch";
 "Standard" = "Standard";
 "Rotated" = "Rotated";
+"Horizontal" = "Horizontal";
+"Vertical" = "Vertical";
 "Use Current Timestamp as Default" = "Use Current Timestamp as Default";
 "Reset Defaults" = "Reset Defaults";
+"Reset Zoom" = "Reset Zoom";
 
 /* Editor — Rotation */
 "Rotate Left" = "Rotate Left";

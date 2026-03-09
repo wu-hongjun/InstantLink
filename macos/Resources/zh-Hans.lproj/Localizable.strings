@@ -73,8 +73,11 @@
 "Stretch" = "拉伸";
 "Standard" = "标准";
 "Rotated" = "旋转";
+"Horizontal" = "横向";
+"Vertical" = "纵向";
 "Use Current Timestamp as Default" = "将当前时间戳设为默认";
 "Reset Defaults" = "重置默认设置";
+"Reset Zoom" = "重置缩放";
 
 /* Editor — Rotation */
 "Rotate Left" = "向左旋转";

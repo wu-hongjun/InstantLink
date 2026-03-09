@@ -41,8 +41,8 @@ struct ImageEditorView: View {
                         .foregroundColor(.secondary)
                     Button(L("Open File")) { viewModel.selectImage() }
                         .buttonStyle(.bordered)
+                        .buttonBorderShape(.roundedRectangle)
                         .controlSize(.small)
-                        .frame(minHeight: 36)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -252,7 +252,7 @@ struct EditorSidebarView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
 
-                    QuickZoomControlsView()
+                    QuickZoomControlsView(resetTitle: L("Reset Zoom"))
                 }
 
                 Divider()

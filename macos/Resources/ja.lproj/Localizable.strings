@@ -73,8 +73,11 @@
 "Stretch" = "引き伸ばし";
 "Standard" = "標準";
 "Rotated" = "回転";
+"Horizontal" = "横向き";
+"Vertical" = "縦向き";
 "Use Current Timestamp as Default" = "現在のタイムスタンプをデフォルトにする";
 "Reset Defaults" = "デフォルトに戻す";
+"Reset Zoom" = "ズームをリセット";
 
 /* Editor — Rotation */
 "Rotate Left" = "左に回転";

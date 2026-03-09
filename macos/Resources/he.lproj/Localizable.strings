@@ -74,8 +74,11 @@
 "Stretch" = "מתיחה";
 "Standard" = "רגיל";
 "Rotated" = "מסובב";
+"Horizontal" = "אופקי";
+"Vertical" = "אנכי";
 "Use Current Timestamp as Default" = "השתמש בחותמת הזמן הנוכחית כברירת מחדל";
 "Reset Defaults" = "אפס ברירות מחדל";
+"Reset Zoom" = "אפס זום";
 
 /* Editor — Rotation */
 "Rotate Left" = "סובב שמאלה";

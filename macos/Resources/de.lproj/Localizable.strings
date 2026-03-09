@@ -73,8 +73,11 @@
 "Stretch" = "Strecken";
 "Standard" = "Standard";
 "Rotated" = "Gedreht";
+"Horizontal" = "Horizontal";
+"Vertical" = "Vertikal";
 "Use Current Timestamp as Default" = "Aktuellen Zeitstempel als Standard verwenden";
 "Reset Defaults" = "Standardwerte zurücksetzen";
+"Reset Zoom" = "Zoom zurücksetzen";
 
 /* Editor — Rotation */
 "Rotate Left" = "Links drehen";

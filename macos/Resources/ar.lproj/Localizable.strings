@@ -73,8 +73,11 @@
 "Stretch" = "تمديد";
 "Standard" = "قياسي";
 "Rotated" = "مُدار";
+"Horizontal" = "أفقي";
+"Vertical" = "عمودي";
 "Use Current Timestamp as Default" = "استخدام الطابع الزمني الحالي كافتراضي";
 "Reset Defaults" = "إعادة تعيين الإعدادات الافتراضية";
+"Reset Zoom" = "إعادة تعيين التكبير";
 
 /* Editor — Rotation */
 "Rotate Left" = "تدوير لليسار";

@@ -160,8 +160,8 @@ struct MainPreviewView: View {
                         .foregroundColor(.secondary)
                     Button(L("Open File")) { viewModel.selectImage() }
                         .buttonStyle(.bordered)
+                        .buttonBorderShape(.roundedRectangle)
                         .controlSize(.small)
-                        .frame(minHeight: 36)
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
@@ -412,38 +412,7 @@ struct MainActionsView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                QuickPrintAdjustmentsView()
-                    .frame(maxWidth: .infinity)
-
-                HStack(spacing: 10) {
-                    Button {
-                        viewModel.selectImage()
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text(L("Open File"))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Button {
-                        openEditor()
-                    } label: {
-                        HStack {
-                            Image(systemName: "slider.horizontal.3")
-                            Text(L("Edit Image"))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(viewModel.selectedImage == nil)
-                }
-                .frame(maxWidth: .infinity)
-            }
+            QuickPrintToolbarView(openEditor: openEditor)
 
             if viewModel.queue.count > 1 {
                 VStack(alignment: .leading, spacing: 6) {
@@ -509,49 +478,100 @@ struct MainActionsView: View {
     }
 }
 
-struct QuickPrintAdjustmentsView: View {
+struct QuickPrintToolbarView: View {
     @EnvironmentObject var viewModel: ViewModel
+    var openEditor: () -> Void
+
+    private var isHorizontalOrientation: Bool {
+        (viewModel.orientedAspectRatio ?? 1.0) > 1.0
+    }
+
+    private var orientationTitle: String {
+        isHorizontalOrientation ? L("Horizontal") : L("Vertical")
+    }
+
+    private var orientationSymbolName: String {
+        isHorizontalOrientation ? "rectangle" : "rectangle.portrait"
+    }
 
     var body: some View {
-        HStack(spacing: 8) {
-            QuickZoomControlsView(showsChrome: false)
-                .layoutPriority(1)
+        HStack(spacing: 10) {
+            QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                viewModel.rotateClockwise()
-            } label: {
-                Image(systemName: "rotate.right")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            toolbarDivider
+
+            quickToolbarButton(
+                title: L("Rotate"),
+                systemImage: "rotate.right",
+                action: { viewModel.rotateClockwise() }
+            )
             .disabled(viewModel.selectedImage == nil)
             .help(L("Rotate Right"))
             .accessibilityLabel(Text(L("Rotate Right")))
 
-            if viewModel.printerAspectRatio != nil {
-                Button {
-                    viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: viewModel.filmOrientation == "default" ? "rectangle.portrait" : "rectangle")
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 8, weight: .semibold))
+            if let aspectRatio = viewModel.printerAspectRatio, aspectRatio != 1.0 {
+                quickToolbarButton(
+                    title: orientationTitle,
+                    systemImage: orientationSymbolName,
+                    action: {
+                        viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
                     }
-                    .font(.callout)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                )
                 .tint(viewModel.filmOrientation == "rotated" ? .accentColor : .secondary)
                 .disabled(viewModel.selectedImage == nil)
                 .help(L("Film Orientation"))
                 .accessibilityLabel(Text(L("Film Orientation")))
             }
+
+            toolbarDivider
+
+            quickToolbarButton(
+                title: L("Open File"),
+                systemImage: "plus",
+                action: { viewModel.selectImage() }
+            )
+            .frame(maxWidth: .infinity)
+
+            quickToolbarButton(
+                title: L("Edit Image"),
+                systemImage: "slider.horizontal.3",
+                action: openEditor
+            )
+            .frame(maxWidth: .infinity)
+            .disabled(viewModel.selectedImage == nil)
         }
+        .padding(8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private var toolbarDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.16))
+            .frame(width: 1, height: 20)
+    }
+
+    private func quickToolbarButton(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.roundedRectangle)
+        .controlSize(.small)
     }
 }
 
 struct QuickZoomControlsView: View {
     @EnvironmentObject var viewModel: ViewModel
+    let resetTitle: String
     var showsChrome: Bool = true
 
     var body: some View {
@@ -565,7 +585,7 @@ struct QuickZoomControlsView: View {
             .help(L("Zoom Out"))
             .accessibilityLabel(Text(L("Zoom Out")))
 
-            Button(L("Reset")) {
+            Button(resetTitle) {
                 viewModel.resetCropAdjustments()
             }
             .disabled(!viewModel.canResetCropAdjustments)

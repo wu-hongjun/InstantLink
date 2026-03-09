@@ -74,8 +74,11 @@
 "Stretch" = "Étirer";
 "Standard" = "Standard";
 "Rotated" = "Pivoté";
+"Horizontal" = "Horizontal";
+"Vertical" = "Vertical";
 "Use Current Timestamp as Default" = "Utiliser l’horodatage actuel par défaut";
 "Reset Defaults" = "Réinitialiser les réglages par défaut";
+"Reset Zoom" = "Réinitialiser le zoom";
 
 /* Editor — Rotation */
 "Rotate Left" = "Rotation à gauche";

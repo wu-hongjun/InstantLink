@@ -74,8 +74,11 @@
 "Stretch" = "Esticar";
 "Standard" = "Padrão";
 "Rotated" = "Girado";
+"Horizontal" = "Horizontal";
+"Vertical" = "Vertical";
 "Use Current Timestamp as Default" = "Usar o carimbo de data/hora atual como padrão";
 "Reset Defaults" = "Restaurar padrões";
+"Reset Zoom" = "Redefinir zoom";
 
 /* Editor — Rotation */
 "Rotate Left" = "Girar à esquerda";

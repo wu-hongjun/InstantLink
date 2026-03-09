@@ -1061,6 +1061,7 @@
 <p>The <code>.app</code> bundle is created at <code>target/release/InstantLink.app</code>. The script:</p>
 <ol>
 <li>Copies the CLI binary into the bundle (renamed <code>instantlink-cli</code>)</li>
+<li>Bundles the FFI dylib (<code>libinstantlink_ffi.dylib</code>) into <code>Frameworks/</code></li>
 <li>Compiles the SwiftUI launcher with <code>swiftc</code></li>
 <li>Generates <code>Info.plist</code> with version and BLE permission</li>
 <li>Ad-hoc codesigns the bundle</li>

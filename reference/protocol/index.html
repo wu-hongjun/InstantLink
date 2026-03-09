@@ -744,10 +744,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
+  <a href="#other" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Events
+        Other
       
     </span>
   </a>
@@ -767,6 +767,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Print Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#print-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Print Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1071,10 +1088,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
+  <a href="#other" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Events
+        Other
       
     </span>
   </a>
@@ -1094,6 +1111,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Print Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#print-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Print Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1180,12 +1214,12 @@
 <tr>
 <td>Header</td>
 <td>2 bytes</td>
-<td>Always <code>0x41 0x62</code></td>
+<td>Request: <code>0x41 0x62</code>, Response: <code>0x61 0x42</code></td>
 </tr>
 <tr>
 <td>Length</td>
 <td>2 bytes</td>
-<td>Big-endian, covers opcode + payload + checksum</td>
+<td>Big-endian, total packet size (header + length + opcode + payload + checksum)</td>
 </tr>
 <tr>
 <td>Opcode</td>
@@ -1204,6 +1238,7 @@
 </tr>
 </tbody>
 </table>
+<p>Minimum packet size is 7 bytes (header + length + opcode + checksum, no payload).</p>
 <h2 id="checksum">Checksum<a class="headerlink" href="#checksum" title="Permanent link">&para;</a></h2>
 <p>The checksum is computed over all bytes preceding it (header + length + opcode + payload):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">fn</span><span class="w"> </span><span class="nf">checksum</span><span class="p">(</span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">u8</span><span class="w"> </span><span class="p">{</span>
@@ -1212,57 +1247,67 @@
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="mtu-fragmentation">MTU Fragmentation<a class="headerlink" href="#mtu-fragmentation" title="Permanent link">&para;</a></h2>
-<p>BLE packets larger than 182 bytes are split into sub-packets for transmission. The receiver reassembles them using the length field.</p>
+<p>BLE packets larger than 182 bytes are split into sub-packets for transmission. The receiver reassembles them using the length field in the first sub-packet. The <code>PacketAssembler</code> buffers incoming fragments until a complete packet is received.</p>
 <h2 id="opcodes">Opcodes<a class="headerlink" href="#opcodes" title="Permanent link">&para;</a></h2>
 <h3 id="query-commands">Query Commands<a class="headerlink" href="#query-commands" title="Permanent link">&para;</a></h3>
+<p>All status queries use a single opcode (<code>0x0002</code> SUPPORT_FUNCTION_INFO) with an InfoType byte in the payload to select which information to retrieve.</p>
 <table>
 <thead>
 <tr>
 <th>Opcode</th>
 <th>Name</th>
 <th>Payload</th>
-<th>Response</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>0x1000</code></td>
+<td><code>0x0001</code></td>
 <td>Device Info</td>
 <td>(none)</td>
-<td>Device info blob</td>
+<td>Query device information</td>
 </tr>
 <tr>
-<td><code>0x1001</code></td>
+<td><code>0x0002</code></td>
 <td>Support Function Info</td>
-<td>(none)</td>
-<td>Firmware/capability blob</td>
-</tr>
-<tr>
-<td><code>0x1002</code></td>
-<td>Image Support Info</td>
-<td>(none)</td>
-<td>Width(2B), Height(2B), ...</td>
-</tr>
-<tr>
-<td><code>0x1003</code></td>
-<td>Battery Status</td>
-<td>(none)</td>
-<td>Level(1B, 0-100)</td>
-</tr>
-<tr>
-<td><code>0x1004</code></td>
-<td>History Info</td>
-<td>(none)</td>
-<td>Print count(4B, big-endian)</td>
-</tr>
-<tr>
-<td><code>0x1006</code></td>
-<td>Remaining Info</td>
-<td>(none)</td>
-<td>Film remaining(1B)</td>
+<td>InfoType(1B)</td>
+<td>Multiplexed query — InfoType selects the data</td>
 </tr>
 </tbody>
 </table>
+<p><strong>InfoType values</strong> (payload byte for opcode <code>0x0002</code>):</p>
+<table>
+<thead>
+<tr>
+<th>InfoType</th>
+<th>Name</th>
+<th>Response Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0x00</code></td>
+<td>Image Support Info</td>
+<td>Width(2B), Height(2B) — used for model detection</td>
+</tr>
+<tr>
+<td><code>0x01</code></td>
+<td>Battery Status</td>
+<td>State(1B), Level(1B, 0–100)</td>
+</tr>
+<tr>
+<td><code>0x02</code></td>
+<td>Printer Function Info</td>
+<td>Byte: bits 0–3 = film remaining, bit 7 = charging</td>
+</tr>
+<tr>
+<td><code>0x03</code></td>
+<td>Print History</td>
+<td>Print count(2B, big-endian)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response format</strong> for <code>0x0002</code>: <code>[return_code(1B)] [info_type(1B)] [data...]</code></p>
 <h3 id="image-transfer">Image Transfer<a class="headerlink" href="#image-transfer" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1275,37 +1320,38 @@
 </thead>
 <tbody>
 <tr>
-<td><code>0x2000</code></td>
+<td><code>0x1000</code></td>
 <td>Download Start</td>
-<td>Image size(4B, big-endian)</td>
+<td>PictureType(1B) + PrintOption(1B) + PrintOption2(1B) + Zero(1B) + ImageSize(4B, big-endian)</td>
 <td>ACK status(1B)</td>
 </tr>
 <tr>
-<td><code>0x2001</code></td>
+<td><code>0x1001</code></td>
 <td>Data</td>
-<td>Offset(4B) + chunk data</td>
+<td>ChunkIndex(4B, big-endian) + chunk data</td>
 <td>ACK status(1B)</td>
 </tr>
 <tr>
-<td><code>0x2002</code></td>
+<td><code>0x1002</code></td>
 <td>Download End</td>
 <td>(none)</td>
 <td>ACK status(1B)</td>
 </tr>
 <tr>
-<td><code>0x2003</code></td>
+<td><code>0x1003</code></td>
 <td>Download Cancel</td>
 <td>(none)</td>
 <td>ACK status(1B)</td>
 </tr>
 <tr>
-<td><code>0x4000</code></td>
+<td><code>0x1080</code></td>
 <td>Print Image</td>
 <td>(none)</td>
 <td>Print status(1B)</td>
 </tr>
 </tbody>
 </table>
+<p>ACK status <code>0</code> indicates success; any other value means the operation was rejected.</p>
 <h3 id="led-settings">LED &amp; Settings<a class="headerlink" href="#led-settings" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1323,12 +1369,12 @@
 </tr>
 <tr>
 <td><code>0x3010</code></td>
-<td>Print Mode Settings</td>
-<td>Mode(1B)</td>
+<td>Additional Printer Info</td>
+<td>Mode-specific data</td>
 </tr>
 </tbody>
 </table>
-<h3 id="events">Events<a class="headerlink" href="#events" title="Permanent link">&para;</a></h3>
+<h3 id="other">Other<a class="headerlink" href="#other" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1339,12 +1385,7 @@
 </thead>
 <tbody>
 <tr>
-<td><code>0x1005</code></td>
-<td>Shutter Button</td>
-<td>Fired when physical button pressed</td>
-</tr>
-<tr>
-<td><code>0x3004</code></td>
+<td><code>0x3000</code></td>
 <td>XYZ Axis Info</td>
 <td>Accelerometer data</td>
 </tr>
@@ -1355,14 +1396,20 @@
 <ol>
 <li><strong>Connect</strong> to the printer via BLE</li>
 <li><strong>Discover services</strong> and subscribe to notifications on the notify characteristic</li>
-<li><strong>Query <code>IMAGE_SUPPORT_INFO</code></strong> (<code>0x1002</code>) to auto-detect the printer model from response dimensions</li>
-<li><strong>Prepare the image</strong>: resize to model dimensions, JPEG compress, split into chunks</li>
-<li><strong>Send <code>DOWNLOAD_START</code></strong> (<code>0x2000</code>) with the JPEG data size; wait for ACK</li>
-<li><strong>Send <code>DATA</code> chunks</strong> (<code>0x2001</code>) with offset and chunk data; wait for ACK after each chunk</li>
-<li><strong>Send <code>DOWNLOAD_END</code></strong> (<code>0x2002</code>); wait for ACK</li>
-<li><strong>Send <code>PRINT_IMAGE</code></strong> (<code>0x4000</code>); wait for print status response</li>
+<li><strong>Query Image Support Info</strong> (opcode <code>0x0002</code>, InfoType <code>0x00</code>) to auto-detect the printer model from response dimensions</li>
+<li><strong>Prepare the image</strong>: resize to model dimensions, JPEG compress, split into chunks (last chunk zero-padded to full chunk size)</li>
+<li><strong>Send Download Start</strong> (<code>0x1000</code>) with picture type, print option, and JPEG data size; wait for ACK</li>
+<li><strong>Send Data chunks</strong> (<code>0x1001</code>) with sequential chunk index (0, 1, 2…) and chunk data; wait for ACK after each chunk</li>
+<li><strong>Send Download End</strong> (<code>0x1002</code>); wait for ACK</li>
+<li><strong>Send Print Image</strong> (<code>0x1080</code>); wait for print status response (0 = success)</li>
 <li><strong>Disconnect</strong></li>
 </ol>
+<h3 id="print-options">Print Options<a class="headerlink" href="#print-options" title="Permanent link">&para;</a></h3>
+<p>The Download Start command includes a <code>print_option</code> byte:</p>
+<ul>
+<li><code>0x00</code> — Rich mode (vivid colors)</li>
+<li><code>0x01</code> — Natural mode (classic film look)</li>
+</ul>
 <h2 id="model-specific-parameters">Model-Specific Parameters<a class="headerlink" href="#model-specific-parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1398,7 +1445,7 @@
 </tr>
 </tbody>
 </table>
-<p>Model is auto-detected from the <code>IMAGE_SUPPORT_INFO</code> response dimensions.</p>
+<p>Model is auto-detected from the Image Support Info response dimensions.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a> — Python implementation</li>

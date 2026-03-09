@@ -568,6 +568,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#color-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#jpeg-quality" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -961,6 +972,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#color-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#jpeg-quality" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1061,34 +1083,43 @@
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Stretch to exact dimensions</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--fit<span class="w"> </span>stretch
 </code></pre></div>
+<h3 id="color-mode">Color Mode<a class="headerlink" href="#color-mode" title="Permanent link">&para;</a></h3>
+<p>Choose between vivid and classic film colors:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Rich mode (default) — vivid colors</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--color-mode<span class="w"> </span>rich
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Natural mode — classic film look</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--color-mode<span class="w"> </span>natural
+</code></pre></div>
 <h3 id="jpeg-quality">JPEG Quality<a class="headerlink" href="#jpeg-quality" title="Permanent link">&para;</a></h3>
 <p>Control output quality (affects file size):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--quality<span class="w"> </span><span class="m">90</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--quality<span class="w"> </span><span class="m">90</span>
 </code></pre></div>
 <p>Quality automatically reduces if the image exceeds 105KB.</p>
 <h2 id="4-led-control">4. LED Control<a class="headerlink" href="#4-led-control" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Set LED to a color</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>instantlink<span class="w"> </span>led<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="s2">&quot;#FF6600&quot;</span><span class="w"> </span>--pattern<span class="w"> </span>breathe
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Turn LED off</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>instantlink<span class="w"> </span>led<span class="w"> </span>off
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Set LED to a color</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>instantlink<span class="w"> </span>led<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="s2">&quot;#FF6600&quot;</span><span class="w"> </span>--pattern<span class="w"> </span>breathe
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Turn LED off</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>instantlink<span class="w"> </span>led<span class="w"> </span>off
 </code></pre></div>
 <h2 id="5-json-output">5. JSON Output<a class="headerlink" href="#5-json-output" title="Permanent link">&para;</a></h2>
 <p>All commands support <code>--json</code> for machine-readable output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>instantlink<span class="w"> </span>status<span class="w"> </span>--json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>instantlink<span class="w"> </span>status<span class="w"> </span>--json
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;connected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Instax Mini Link&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nt">&quot;battery&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">&quot;film_remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nt">&quot;print_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;connected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Instax Mini Link&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">&quot;battery&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">&quot;is_charging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="nt">&quot;film_remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span><span class="nt">&quot;print_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="multiple-printers">Multiple Printers<a class="headerlink" href="#multiple-printers" title="Permanent link">&para;</a></h2>
 <p>Target a specific printer by name:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--device<span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--device<span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span>
 </code></pre></div>
 
 

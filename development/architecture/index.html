@@ -1091,6 +1091,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>instantlink-cli ──→ instantlink-core
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>instantlink-ffi ──→ instantlink-core
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>macOS app ─────→ instantlink-cli (via Process)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>              └──→ instantlink-ffi (via dlopen, bundled dylib)
 </code></pre></div>
 <h2 id="instantlink-core">instantlink-core<a class="headerlink" href="#instantlink-core" title="Permanent link">&para;</a></h2>
 <p>The core library handles all BLE communication and image processing. It is fully async (tokio + btleplug).</p>
@@ -1113,7 +1114,7 @@
 <p><strong>Async throughout</strong>: btleplug requires tokio, so the entire core is async. The <code>PrinterDevice</code> trait uses <code>async_trait</code>.</p>
 <p><strong>Model auto-detection</strong>: After connecting, we query <code>IMAGE_SUPPORT_INFO</code> and match the returned width/height to a <code>PrinterModel</code>. This determines image dimensions and chunk sizes.</p>
 <p><strong>ACK-based flow</strong>: Each data chunk requires an ACK from the printer before sending the next. This is handled in <code>BlePrinterDevice::send_image_data</code>.</p>
-<p><strong>Automatic quality reduction</strong>: If the JPEG exceeds 105KB, quality is reduced in steps of 5 until it fits.</p>
+<p><strong>Automatic quality reduction</strong>: If the JPEG exceeds 105KB, a binary search finds the highest quality that fits within the limit.</p>
 <p><strong>Transport trait</strong>: <code>transport::Transport</code> is a trait, enabling mock implementations for testing without hardware. A <code>MockTransport</code> (in <code>device.rs</code> <code>#[cfg(test)]</code> block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.</p>
 <h2 id="instantlink-cli">instantlink-cli<a class="headerlink" href="#instantlink-cli" title="Permanent link">&para;</a></h2>
 <p>Thin CLI layer using clap for argument parsing and indicatif for progress bars. All printer operations delegate to <code>instantlink_core::printer</code>.</p>

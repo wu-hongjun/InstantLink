@@ -1183,12 +1183,12 @@
 <p>Protocol, command encoding/decoding, and image processing are fully tested without hardware:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--workspace
 </code></pre></div>
-<p>Currently 44 unit tests covering:</p>
+<p>Currently 68 unit tests covering:</p>
 <ul>
-<li>Packet checksum, build, parse, fragmentation, reassembly (14 tests)</li>
-<li>Command encoding and response decoding (14 tests)</li>
-<li>Image resize, JPEG encoding, chunking (10 tests)</li>
-<li>Fit mode parsing, edge cases (6 tests)</li>
+<li>Packet checksum, build, parse, fragmentation, reassembly (18 tests)</li>
+<li>Command encoding and response decoding (16 tests)</li>
+<li>Image resize, JPEG encoding, chunking (12 tests)</li>
+<li>Device layer: model detection, status queries, print flow, LED, error paths (22 tests)</li>
 </ul>
 <h3 id="hardware-tests">Hardware Tests<a class="headerlink" href="#hardware-tests" title="Permanent link">&para;</a></h3>
 <p>BLE transport and end-to-end printing require a real Instax Link printer:</p>

@@ -1001,13 +1001,14 @@
 <ul>
 <li>Print any image (JPEG, PNG, etc.) to Instax Link printers</li>
 <li>Auto-resize with crop, contain, or stretch fit modes</li>
-<li>Auto JPEG quality reduction to fit printer limits</li>
-<li>Battery level, film count, and print history queries</li>
+<li>Rich and Natural color modes (vivid vs classic film look)</li>
+<li>Auto JPEG quality reduction to fit printer limits (105KB)</li>
+<li>Battery level, film count, charging state, and print history queries</li>
 <li>LED color control with solid, blink, and breathe patterns</li>
 <li>BLE scanner to discover nearby printers</li>
 <li>JSON output mode for integration with other tools</li>
 <li>Native macOS app with menu bar and drag-and-drop printing</li>
-<li>C FFI for building native UIs</li>
+<li>C FFI (16 functions) for building native UIs</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <p>InstantLink mirrors the architecture of <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>, with the core library providing async BLE communication via btleplug, a CLI that calls core directly, and an FFI layer for the SwiftUI macOS app.</p>

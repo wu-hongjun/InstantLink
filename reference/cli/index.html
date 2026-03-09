@@ -1083,29 +1083,65 @@
 <h3 id="instantlink-scan"><code>instantlink scan</code><a class="headerlink" href="#instantlink-scan" title="Permanent link">&para;</a></h3>
 <p>Scan for nearby Instax Link printers via BLE.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>instantlink<span class="w"> </span>scan
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>instantlink<span class="w"> </span>scan<span class="w"> </span>--json
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>instantlink<span class="w"> </span>scan<span class="w"> </span>--duration<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>instantlink<span class="w"> </span>scan<span class="w"> </span>--json
 </code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--duration &lt;SECS&gt;</code></td>
+<td><code>5</code></td>
+<td>BLE scan duration in seconds</td>
+</tr>
+</tbody>
+</table>
 <p><strong>JSON output:</strong> Array of printer name strings.</p>
 <hr />
 <h3 id="instantlink-info"><code>instantlink info</code><a class="headerlink" href="#instantlink-info" title="Permanent link">&para;</a></h3>
-<p>Show printer info: battery, film count, model, print history.</p>
+<p>Show printer info: battery, film count, model, charging state, print history.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>instantlink<span class="w"> </span>info
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>instantlink<span class="w"> </span>info<span class="w"> </span>--device<span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>instantlink<span class="w"> </span>info<span class="w"> </span>--duration<span class="w"> </span><span class="m">10</span>
 </code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--duration &lt;SECS&gt;</code></td>
+<td><code>5</code></td>
+<td>BLE scan duration in seconds</td>
+</tr>
+</tbody>
+</table>
 <p><strong>JSON output:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span><span class="p">,</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Instax Mini Link&quot;</span><span class="p">,</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;battery&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;film_remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;print_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;is_charging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;film_remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;print_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">}</span>
 </code></pre></div>
 <hr />
 <h3 id="instantlink-print-image"><code>instantlink print &lt;IMAGE&gt;</code><a class="headerlink" href="#instantlink-print-image" title="Permanent link">&para;</a></h3>
 <p>Print an image file to the connected printer.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.png<span class="w"> </span>--quality<span class="w"> </span><span class="m">90</span><span class="w"> </span>--fit<span class="w"> </span>contain
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--color-mode<span class="w"> </span>natural
 </code></pre></div>
 <table>
 <thead>
@@ -1125,6 +1161,11 @@
 <td><code>--fit &lt;mode&gt;</code></td>
 <td><code>crop</code></td>
 <td>Fit mode: <code>crop</code>, <code>contain</code>, or <code>stretch</code></td>
+</tr>
+<tr>
+<td><code>--color-mode &lt;mode&gt;</code></td>
+<td><code>rich</code></td>
+<td>Color mode: <code>rich</code> (vivid) or <code>natural</code> (classic film look)</td>
 </tr>
 </tbody>
 </table>
@@ -1169,7 +1210,22 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>instantlink<span class="w"> </span>status
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>instantlink<span class="w"> </span>status<span class="w"> </span>--json
 </code></pre></div>
-<p>If no printer is connected, reports <code>connected: false</code>.</p>
+<p><strong>JSON output (connected):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;connected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INSTAX-12345678&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Instax Mini Link&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">&quot;battery&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">&quot;is_charging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nt">&quot;film_remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">&quot;print_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>JSON output (disconnected):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;connected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="p">}</span>
+</code></pre></div>
 
 
 

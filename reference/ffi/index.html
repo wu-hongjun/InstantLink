@@ -728,10 +728,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#queries" class="md-nav__link">
+  <a href="#scanning" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Queries
+        Scanning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Queries
       
     </span>
   </a>
@@ -994,10 +1005,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#queries" class="md-nav__link">
+  <a href="#scanning" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Queries
+        Scanning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Queries
       
     </span>
   </a>
@@ -1145,55 +1167,88 @@
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1">// Connect to the first available printer. Returns 0 on success.</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_connect</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">// Connect to a specific printer by name. Pass 0 for duration_secs to use the default.</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_connect_named</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="n">duration_secs</span><span class="p">);</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1">// Disconnect from the current printer.</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_disconnect</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1">// Check if a printer is currently connected. Returns 1 if yes, 0 if no.</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_is_connected</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">// Connect to a specific printer by name with configurable scan duration.</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1">// Pass 0 for duration_secs to use the default (5 seconds).</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_connect_named</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="n">duration_secs</span><span class="p">);</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1">// Disconnect from the current printer.</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_disconnect</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1">// Check if a printer is currently connected. Returns 1 if yes, 0 if no.</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_is_connected</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </code></pre></div>
-<h3 id="queries">Queries<a class="headerlink" href="#queries" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Get battery level (0-100). Returns negative error code on failure.</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_battery</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// Get remaining film count. Returns negative error code on failure.</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_film_remaining</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<h3 id="scanning">Scanning<a class="headerlink" href="#scanning" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Scan for nearby Instax printers.</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1">// Writes a JSON array of printer name strings into out_json.</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">// Returns the number of bytes written (excluding NUL), or a negative error code.</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// Pass 0 for duration_secs to use the default scan duration.</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_scan</span><span class="p">(</span><span class="kt">int32_t</span><span class="w"> </span><span class="n">duration_secs</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">out_json</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="n">out_len</span><span class="p">);</span>
+</code></pre></div>
+<h3 id="status-queries">Status Queries<a class="headerlink" href="#status-queries" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Get battery level (0-100). Returns negative error code on failure.</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_battery</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1">// Get remaining film count. Returns negative error code on failure.</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_film_remaining</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1">// Get film remaining and charging state in one call.</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1">// On success, writes film count to *out_film and charging flag (0 or 1)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1">// to *out_charging, and returns 0.</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_film_and_charging</span><span class="p">(</span><span class="kt">int32_t</span><span class="w"> </span><span class="o">*</span><span class="n">out_film</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="o">*</span><span class="n">out_charging</span><span class="p">);</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1">// Get total print count. Returns negative error code on failure.</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_print_count</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="c1">// Get all status fields in one call. More efficient than calling individual</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="c1">// getters — performs a single mutex lock and one block_on call.</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="c1">// All output pointers must be valid and non-null.</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_status</span><span class="p">(</span><span class="kt">int32_t</span><span class="w"> </span><span class="o">*</span><span class="n">out_battery</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="o">*</span><span class="n">out_film</span><span class="p">,</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">                           </span><span class="kt">int32_t</span><span class="w"> </span><span class="o">*</span><span class="n">out_charging</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="o">*</span><span class="n">out_print_count</span><span class="p">);</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="c1">// Get the connected device&#39;s BLE name.</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="c1">// Returns number of bytes written (excluding NUL), or negative error.</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_device_name</span><span class="p">(</span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">out</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="n">out_len</span><span class="p">);</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="c1">// Get the connected device&#39;s model string (e.g. &quot;Instax Mini Link&quot;).</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="c1">// Returns number of bytes written (excluding NUL), or negative error.</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_device_model</span><span class="p">(</span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">out</span><span class="p">,</span><span class="w"> </span><span class="kt">int32_t</span><span class="w"> </span><span class="n">out_len</span><span class="p">);</span>
 </code></pre></div>
 <h3 id="printing">Printing<a class="headerlink" href="#printing" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Print an image file.</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">// fit_mode: 0=crop, 1=contain, 2=stretch</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">// print_option: 0=Rich (vivid), 1=Natural (classic)</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_print</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">quality</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">fit_mode</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">print_option</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Print an image file.</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">// quality: JPEG quality 1-100</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1">// fit_mode: 0=crop, 1=contain, 2=stretch</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1">// print_option: 0=Rich (vivid), 1=Natural (classic)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_print</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">quality</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">                          </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">fit_mode</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">print_option</span><span class="p">);</span>
 </code></pre></div>
 <h3 id="led-control">LED Control<a class="headerlink" href="#led-control" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Set LED color and pattern.</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">// pattern: 0=solid, 1=blink, 2=breathe</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_set_led</span><span class="p">(</span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">g</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">pattern</span><span class="p">);</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1">// Turn off the LED.</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_led_off</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Set LED color and pattern.</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1">// pattern: 0=solid, 1=blink, 2=breathe</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_set_led</span><span class="p">(</span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">g</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">pattern</span><span class="p">);</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">// Turn off the LED.</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_led_off</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="swift-usage">Swift Usage<a class="headerlink" href="#swift-usage" title="Permanent link">&para;</a></h2>
-<p>The macOS app uses <code>InstantLinkCLI.swift</code> (a Process wrapper around the CLI binary) rather than calling FFI directly. However, the FFI can be used from Swift:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">import</span><span class="w"> </span><span class="nc">Foundation</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">// Link against libinstantlink_ffi.a</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">instantlink_init</span><span class="p">()</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="kd">let</span><span class="w"> </span><span class="nv">result</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">instantlink_connect</span><span class="p">()</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">if</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">battery</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">instantlink_battery</span><span class="p">()</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="bp">print</span><span class="p">(</span><span class="s">&quot;Battery: </span><span class="si">\(</span><span class="n">battery</span><span class="si">)</span><span class="s">%&quot;</span><span class="p">)</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="n">instantlink_print</span><span class="p">(</span><span class="s">&quot;/path/to/photo.jpg&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">97</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="n">instantlink_disconnect</span><span class="p">()</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">}</span>
+<p>The macOS app uses <code>InstantLinkCLI.swift</code> (a Process wrapper around the CLI binary) rather than calling FFI directly. However, the FFI can be used from Swift via <code>dlopen</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">import</span><span class="w"> </span><span class="nc">Foundation</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1">// Link against libinstantlink_ffi.a or load via dlopen</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">instantlink_init</span><span class="p">()</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="kd">let</span><span class="w"> </span><span class="nv">result</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">instantlink_connect</span><span class="p">()</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="k">if</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">battery</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">instantlink_battery</span><span class="p">()</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="bp">print</span><span class="p">(</span><span class="s">&quot;Battery: </span><span class="si">\(</span><span class="n">battery</span><span class="si">)</span><span class="s">%&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="n">instantlink_print</span><span class="p">(</span><span class="s">&quot;/path/to/photo.jpg&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">97</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="n">instantlink_disconnect</span><span class="p">()</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="p">}</span>
 </code></pre></div>
+<p>See <code>InstantLinkFFI.swift</code> for a complete <code>dlopen</code>-based wrapper that resolves all 16 symbols at runtime.</p>
 <h2 id="thread-safety">Thread Safety<a class="headerlink" href="#thread-safety" title="Permanent link">&para;</a></h2>
-<p>The FFI layer maintains a global tokio runtime and a <code>Mutex</code>-protected device handle. All functions are safe to call from any thread. The <code>Mutex</code> serializes access to the printer.</p>
+<p>The FFI layer maintains a global tokio runtime (<code>OnceLock&lt;Runtime&gt;</code>) and a <code>Mutex</code>-protected device handle. All functions are safe to call from any thread. The <code>Mutex</code> serializes access to the printer. All functions use <code>catch_unwind</code> to prevent Rust panics from crossing the FFI boundary.</p>
 
 
 

@@ -1007,11 +1007,11 @@
 <li>LED color control with solid, blink, and breathe patterns</li>
 <li>BLE scanner to discover nearby printers</li>
 <li>JSON output mode for integration with other tools</li>
-<li>Native macOS app with menu bar and drag-and-drop printing</li>
-<li>C FFI (16 functions) for building native UIs</li>
+<li>Native macOS app with image editor, camera capture, self-timer, film orientation toggle, film border preview, printer profiles, and auto-updates</li>
+<li>C FFI (17 functions) for building native UIs</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<p>InstantLink mirrors the architecture of <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>, with the core library providing async BLE communication via btleplug, a CLI that calls core directly, and an FFI layer for the SwiftUI macOS app.</p>
+<p>InstantLink mirrors the architecture of <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>, with the core library providing async BLE communication via btleplug, a CLI that calls core directly, and an FFI layer that the SwiftUI macOS app loads via <code>dlopen</code>/<code>dlsym</code>.</p>
 <p>Unlike StatusLight, there is no daemon crate. Instax printing is a one-shot operation (connect, print, disconnect) rather than a continuous service.</p>
 
 

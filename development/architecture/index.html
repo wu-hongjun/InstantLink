@@ -858,10 +858,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-process-instead-of-ffi" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Process Instead of FFI?
+        Key Features
       
     </span>
   </a>
@@ -1039,10 +1039,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-process-instead-of-ffi" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Process Instead of FFI?
+        Key Features
       
     </span>
   </a>
@@ -1090,8 +1090,7 @@
 <h2 id="crate-dependency-graph">Crate Dependency Graph<a class="headerlink" href="#crate-dependency-graph" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>instantlink-cli ──→ instantlink-core
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>instantlink-ffi ──→ instantlink-core
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>macOS app ─────→ instantlink-cli (via Process)
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>              └──→ instantlink-ffi (via dlopen, bundled dylib)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>macOS app ─────→ instantlink-ffi (via dlopen, bundled dylib)
 </code></pre></div>
 <h2 id="instantlink-core">instantlink-core<a class="headerlink" href="#instantlink-core" title="Permanent link">&para;</a></h2>
 <p>The core library handles all BLE communication and image processing. It is fully async (tokio + btleplug).</p>
@@ -1118,18 +1117,20 @@
 <p><strong>Transport trait</strong>: <code>transport::Transport</code> is a trait, enabling mock implementations for testing without hardware. A <code>MockTransport</code> (in <code>device.rs</code> <code>#[cfg(test)]</code> block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.</p>
 <h2 id="instantlink-cli">instantlink-cli<a class="headerlink" href="#instantlink-cli" title="Permanent link">&para;</a></h2>
 <p>Thin CLI layer using clap for argument parsing and indicatif for progress bars. All printer operations delegate to <code>instantlink_core::printer</code>.</p>
-<p>Supports <code>--json</code> output on all commands for machine consumption (used by the macOS app).</p>
+<p>Supports <code>--json</code> output on all commands for machine consumption.</p>
 <h2 id="instantlink-ffi">instantlink-ffi<a class="headerlink" href="#instantlink-ffi" title="Permanent link">&para;</a></h2>
 <p>C FFI bindings using cbindgen. Manages a global tokio runtime (<code>OnceLock&lt;Runtime&gt;</code>) and a <code>Mutex</code>-protected device handle. All functions use <code>catch_unwind</code> to prevent Rust panics from crossing the FFI boundary.</p>
 <h2 id="macos-app">macOS App<a class="headerlink" href="#macos-app" title="Permanent link">&para;</a></h2>
-<p>SwiftUI app with menu bar extra and full window. Uses <code>InstantLinkCLI.swift</code> to call the bundled CLI binary via <code>Process</code> (same pattern as StatusLight). Communication is via <code>--json</code> output parsing.</p>
-<h3 id="why-process-instead-of-ffi">Why Process Instead of FFI?<a class="headerlink" href="#why-process-instead-of-ffi" title="Permanent link">&para;</a></h3>
-<p>Following StatusLight's pattern, the macOS app wraps the CLI binary rather than linking the FFI directly. This provides:</p>
+<p>Native SwiftUI app with menu bar extra and full window. Single-file architecture (<code>InstantLinkApp.swift</code>) containing all views and the ViewModel. Communicates with printers via FFI — <code>InstantLinkFFI.swift</code> uses <code>dlopen</code>/<code>dlsym</code> to load the bundled <code>libinstantlink_ffi.dylib</code> and resolves all 17 symbols at runtime.</p>
+<h3 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Simpler deployment (single binary to bundle)</li>
-<li>Process isolation (crashes don't take down the app)</li>
-<li>Same interface as the CLI (JSON output)</li>
-<li>Easier debugging (can test CLI commands independently)</li>
+<li><strong>Image editor</strong>: Crop, contain, stretch fit modes; rotation; date stamps with multiple styles</li>
+<li><strong>Camera capture</strong>: Built-in camera with self-timer (off/2s/10s) and capture flash</li>
+<li><strong>Film orientation</strong>: Portrait/landscape toggle that inverts the aspect ratio for preview and applies 90° rotation at print time</li>
+<li><strong>Film border preview</strong>: <code>FilmFrameView</code> renders the physical Instax film card shape (white card with thick bottom border) around image previews</li>
+<li><strong>Printer profiles</strong>: Multi-printer management with custom names, colors, and saved BLE identifiers</li>
+<li><strong>Auto-update</strong>: Checks GitHub releases and downloads/installs updates in-app</li>
+<li><strong>Localization</strong>: 12 languages via <code>.lproj/Localizable.strings</code> bundles</li>
 </ul>
 <h2 id="no-daemon">No Daemon<a class="headerlink" href="#no-daemon" title="Permanent link">&para;</a></h2>
 <p>Unlike StatusLight, InstantLink has no daemon crate. Instax printing is inherently one-shot: connect, transfer image, print, disconnect. There's no need for a persistent background service.</p>

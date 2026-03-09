@@ -2497,7 +2497,7 @@ struct MainView: View {
                         .layoutPriority(-1)
                 }
 
-                if viewModel.captureMode == .file && viewModel.queue.count > 1 {
+                if viewModel.captureMode == .file {
                     QueueStripView()
                         .padding(.horizontal, 14)
                         .padding(.top, 8)
@@ -3102,7 +3102,7 @@ struct MainActionsView: View {
     var body: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                QuickZoomControlsView()
+                QuickPrintAdjustmentsView()
                     .frame(maxWidth: .infinity)
 
                 Button {
@@ -3175,43 +3175,77 @@ struct MainActionsView: View {
     }
 }
 
-struct QuickZoomControlsView: View {
+struct QuickPrintAdjustmentsView: View {
     @EnvironmentObject var viewModel: ViewModel
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(L("Zoom"))
-                .font(.callout)
-                .foregroundColor(.secondary)
+            QuickZoomControlsView()
+                .layoutPriority(1)
 
-            Spacer(minLength: 0)
-
-            ControlGroup {
-                Button {
-                    viewModel.quickZoomOut()
-                } label: {
-                    Image(systemName: "minus")
-                }
-                .disabled(!viewModel.canQuickZoomOut)
-                .help(L("Zoom Out"))
-                .accessibilityLabel(Text(L("Zoom Out")))
-
-                Button(L("Reset")) {
-                    viewModel.resetCropAdjustments()
-                }
-                .disabled(!viewModel.canResetCropAdjustments)
-
-                Button {
-                    viewModel.quickZoomIn()
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .disabled(!viewModel.canQuickZoomIn)
-                .help(L("Zoom In"))
-                .accessibilityLabel(Text(L("Zoom In")))
+            Button {
+                viewModel.rotateClockwise()
+            } label: {
+                Image(systemName: "rotate.right")
             }
+            .buttonStyle(.bordered)
             .controlSize(.small)
+            .disabled(viewModel.selectedImage == nil)
+            .help(L("Rotate Right"))
+            .accessibilityLabel(Text(L("Rotate Right")))
+
+            if viewModel.printerAspectRatio != nil {
+                Button {
+                    viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.filmOrientation == "default"
+                            ? "rectangle.portrait" : "rectangle")
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 8, weight: .semibold))
+                    }
+                    .font(.callout)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(viewModel.filmOrientation == "rotated" ? .accentColor : .secondary)
+                .disabled(viewModel.selectedImage == nil)
+                .help(L("Film Orientation"))
+                .accessibilityLabel(Text(L("Film Orientation")))
+            }
         }
+    }
+}
+
+struct QuickZoomControlsView: View {
+    @EnvironmentObject var viewModel: ViewModel
+
+    var body: some View {
+        ControlGroup {
+            Button {
+                viewModel.quickZoomOut()
+            } label: {
+                Image(systemName: "minus")
+            }
+            .disabled(!viewModel.canQuickZoomOut)
+            .help(L("Zoom Out"))
+            .accessibilityLabel(Text(L("Zoom Out")))
+
+            Button(L("Reset")) {
+                viewModel.resetCropAdjustments()
+            }
+            .disabled(!viewModel.canResetCropAdjustments)
+
+            Button {
+                viewModel.quickZoomIn()
+            } label: {
+                Image(systemName: "plus")
+            }
+            .disabled(!viewModel.canQuickZoomIn)
+            .help(L("Zoom In"))
+            .accessibilityLabel(Text(L("Zoom In")))
+        }
+        .controlSize(.small)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, minHeight: 36)
         .background(

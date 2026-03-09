@@ -45,7 +45,8 @@ void instantlink_init(void);
 // Connect to the first available printer. Returns 0 on success.
 int32_t instantlink_connect(void);
 
-// Connect to a specific printer by name. Pass 0 for duration_secs to use the default.
+// Connect to a specific printer by name with configurable scan duration.
+// Pass 0 for duration_secs to use the default (5 seconds).
 int32_t instantlink_connect_named(const char *name, int32_t duration_secs);
 
 // Disconnect from the current printer.
@@ -55,7 +56,17 @@ int32_t instantlink_disconnect(void);
 int32_t instantlink_is_connected(void);
 ```
 
-### Queries
+### Scanning
+
+```c
+// Scan for nearby Instax printers.
+// Writes a JSON array of printer name strings into out_json.
+// Returns the number of bytes written (excluding NUL), or a negative error code.
+// Pass 0 for duration_secs to use the default scan duration.
+int32_t instantlink_scan(int32_t duration_secs, char *out_json, int32_t out_len);
+```
+
+### Status Queries
 
 ```c
 // Get battery level (0-100). Returns negative error code on failure.
@@ -63,15 +74,39 @@ int32_t instantlink_battery(void);
 
 // Get remaining film count. Returns negative error code on failure.
 int32_t instantlink_film_remaining(void);
+
+// Get film remaining and charging state in one call.
+// On success, writes film count to *out_film and charging flag (0 or 1)
+// to *out_charging, and returns 0.
+int32_t instantlink_film_and_charging(int32_t *out_film, int32_t *out_charging);
+
+// Get total print count. Returns negative error code on failure.
+int32_t instantlink_print_count(void);
+
+// Get all status fields in one call. More efficient than calling individual
+// getters — performs a single mutex lock and one block_on call.
+// All output pointers must be valid and non-null.
+int32_t instantlink_status(int32_t *out_battery, int32_t *out_film,
+                           int32_t *out_charging, int32_t *out_print_count);
+
+// Get the connected device's BLE name.
+// Returns number of bytes written (excluding NUL), or negative error.
+int32_t instantlink_device_name(char *out, int32_t out_len);
+
+// Get the connected device's model string (e.g. "Instax Mini Link").
+// Returns number of bytes written (excluding NUL), or negative error.
+int32_t instantlink_device_model(char *out, int32_t out_len);
 ```
 
 ### Printing
 
 ```c
 // Print an image file.
+// quality: JPEG quality 1-100
 // fit_mode: 0=crop, 1=contain, 2=stretch
 // print_option: 0=Rich (vivid), 1=Natural (classic)
-int32_t instantlink_print(const char *path, uint8_t quality, uint8_t fit_mode, uint8_t print_option);
+int32_t instantlink_print(const char *path, uint8_t quality,
+                          uint8_t fit_mode, uint8_t print_option);
 ```
 
 ### LED Control
@@ -87,12 +122,12 @@ int32_t instantlink_led_off(void);
 
 ## Swift Usage
 
-The macOS app uses `InstantLinkCLI.swift` (a Process wrapper around the CLI binary) rather than calling FFI directly. However, the FFI can be used from Swift:
+The macOS app uses `InstantLinkCLI.swift` (a Process wrapper around the CLI binary) rather than calling FFI directly. However, the FFI can be used from Swift via `dlopen`:
 
 ```swift
 import Foundation
 
-// Link against libinstantlink_ffi.a
+// Link against libinstantlink_ffi.a or load via dlopen
 
 instantlink_init()
 
@@ -106,6 +141,8 @@ if result == 0 {
 }
 ```
 
+See `InstantLinkFFI.swift` for a complete `dlopen`-based wrapper that resolves all 16 symbols at runtime.
+
 ## Thread Safety
 
-The FFI layer maintains a global tokio runtime and a `Mutex`-protected device handle. All functions are safe to call from any thread. The `Mutex` serializes access to the printer.
+The FFI layer maintains a global tokio runtime (`OnceLock<Runtime>`) and a `Mutex`-protected device handle. All functions are safe to call from any thread. The `Mutex` serializes access to the printer. All functions use `catch_unwind` to prevent Rust panics from crossing the FFI boundary.

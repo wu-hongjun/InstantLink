@@ -72,12 +72,12 @@ Protocol, command encoding/decoding, and image processing are fully tested witho
 cargo test --workspace
 ```
 
-Currently 44 unit tests covering:
+Currently 68 unit tests covering:
 
-- Packet checksum, build, parse, fragmentation, reassembly (14 tests)
-- Command encoding and response decoding (14 tests)
-- Image resize, JPEG encoding, chunking (10 tests)
-- Fit mode parsing, edge cases (6 tests)
+- Packet checksum, build, parse, fragmentation, reassembly (18 tests)
+- Command encoding and response decoding (16 tests)
+- Image resize, JPEG encoding, chunking (12 tests)
+- Device layer: model detection, status queries, print flow, LED, error paths (22 tests)
 
 ### Hardware Tests
 

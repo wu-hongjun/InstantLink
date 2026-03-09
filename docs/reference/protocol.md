@@ -20,11 +20,13 @@ All communication uses the same packet structure:
 
 | Field | Size | Description |
 |-------|------|-------------|
-| Header | 2 bytes | Always `0x41 0x62` |
-| Length | 2 bytes | Big-endian, covers opcode + payload + checksum |
+| Header | 2 bytes | Request: `0x41 0x62`, Response: `0x61 0x42` |
+| Length | 2 bytes | Big-endian, total packet size (header + length + opcode + payload + checksum) |
 | Opcode | 2 bytes | Command identifier (big-endian) |
 | Payload | variable | Command-specific data |
 | Checksum | 1 byte | `(255 - (sum_of_preceding_bytes & 255)) & 255` |
+
+Minimum packet size is 7 bytes (header + length + opcode + checksum, no payload).
 
 ## Checksum
 
@@ -39,44 +41,54 @@ fn checksum(data: &[u8]) -> u8 {
 
 ## MTU Fragmentation
 
-BLE packets larger than 182 bytes are split into sub-packets for transmission. The receiver reassembles them using the length field.
+BLE packets larger than 182 bytes are split into sub-packets for transmission. The receiver reassembles them using the length field in the first sub-packet. The `PacketAssembler` buffers incoming fragments until a complete packet is received.
 
 ## Opcodes
 
 ### Query Commands
 
-| Opcode | Name | Payload | Response |
-|--------|------|---------|----------|
-| `0x1000` | Device Info | (none) | Device info blob |
-| `0x1001` | Support Function Info | (none) | Firmware/capability blob |
-| `0x1002` | Image Support Info | (none) | Width(2B), Height(2B), ... |
-| `0x1003` | Battery Status | (none) | Level(1B, 0-100) |
-| `0x1004` | History Info | (none) | Print count(4B, big-endian) |
-| `0x1006` | Remaining Info | (none) | Film remaining(1B) |
+All status queries use a single opcode (`0x0002` SUPPORT_FUNCTION_INFO) with an InfoType byte in the payload to select which information to retrieve.
+
+| Opcode | Name | Payload | Description |
+|--------|------|---------|-------------|
+| `0x0001` | Device Info | (none) | Query device information |
+| `0x0002` | Support Function Info | InfoType(1B) | Multiplexed query — InfoType selects the data |
+
+**InfoType values** (payload byte for opcode `0x0002`):
+
+| InfoType | Name | Response Data |
+|----------|------|---------------|
+| `0x00` | Image Support Info | Width(2B), Height(2B) — used for model detection |
+| `0x01` | Battery Status | State(1B), Level(1B, 0–100) |
+| `0x02` | Printer Function Info | Byte: bits 0–3 = film remaining, bit 7 = charging |
+| `0x03` | Print History | Print count(2B, big-endian) |
+
+**Response format** for `0x0002`: `[return_code(1B)] [info_type(1B)] [data...]`
 
 ### Image Transfer
 
 | Opcode | Name | Payload | Response |
 |--------|------|---------|----------|
-| `0x2000` | Download Start | Image size(4B, big-endian) | ACK status(1B) |
-| `0x2001` | Data | Offset(4B) + chunk data | ACK status(1B) |
-| `0x2002` | Download End | (none) | ACK status(1B) |
-| `0x2003` | Download Cancel | (none) | ACK status(1B) |
-| `0x4000` | Print Image | (none) | Print status(1B) |
+| `0x1000` | Download Start | PictureType(1B) + PrintOption(1B) + PrintOption2(1B) + Zero(1B) + ImageSize(4B, big-endian) | ACK status(1B) |
+| `0x1001` | Data | ChunkIndex(4B, big-endian) + chunk data | ACK status(1B) |
+| `0x1002` | Download End | (none) | ACK status(1B) |
+| `0x1003` | Download Cancel | (none) | ACK status(1B) |
+| `0x1080` | Print Image | (none) | Print status(1B) |
+
+ACK status `0` indicates success; any other value means the operation was rejected.
 
 ### LED & Settings
 
 | Opcode | Name | Payload |
 |--------|------|---------|
 | `0x3001` | LED Pattern Settings | Pattern(1B), R(1B), G(1B), B(1B) |
-| `0x3010` | Print Mode Settings | Mode(1B) |
+| `0x3010` | Additional Printer Info | Mode-specific data |
 
-### Events
+### Other
 
 | Opcode | Name | Description |
 |--------|------|-------------|
-| `0x1005` | Shutter Button | Fired when physical button pressed |
-| `0x3004` | XYZ Axis Info | Accelerometer data |
+| `0x3000` | XYZ Axis Info | Accelerometer data |
 
 ## Print Flow
 
@@ -84,13 +96,20 @@ The complete print sequence:
 
 1. **Connect** to the printer via BLE
 2. **Discover services** and subscribe to notifications on the notify characteristic
-3. **Query `IMAGE_SUPPORT_INFO`** (`0x1002`) to auto-detect the printer model from response dimensions
-4. **Prepare the image**: resize to model dimensions, JPEG compress, split into chunks
-5. **Send `DOWNLOAD_START`** (`0x2000`) with the JPEG data size; wait for ACK
-6. **Send `DATA` chunks** (`0x2001`) with offset and chunk data; wait for ACK after each chunk
-7. **Send `DOWNLOAD_END`** (`0x2002`); wait for ACK
-8. **Send `PRINT_IMAGE`** (`0x4000`); wait for print status response
+3. **Query Image Support Info** (opcode `0x0002`, InfoType `0x00`) to auto-detect the printer model from response dimensions
+4. **Prepare the image**: resize to model dimensions, JPEG compress, split into chunks (last chunk zero-padded to full chunk size)
+5. **Send Download Start** (`0x1000`) with picture type, print option, and JPEG data size; wait for ACK
+6. **Send Data chunks** (`0x1001`) with sequential chunk index (0, 1, 2…) and chunk data; wait for ACK after each chunk
+7. **Send Download End** (`0x1002`); wait for ACK
+8. **Send Print Image** (`0x1080`); wait for print status response (0 = success)
 9. **Disconnect**
+
+### Print Options
+
+The Download Start command includes a `print_option` byte:
+
+- `0x00` — Rich mode (vivid colors)
+- `0x01` — Natural mode (classic film look)
 
 ## Model-Specific Parameters
 
@@ -100,7 +119,7 @@ The complete print sequence:
 | Square Link | 800 | 800 | 1808 B | ~105 KB |
 | Wide Link | 1260 | 840 | 900 B | ~105 KB |
 
-Model is auto-detected from the `IMAGE_SUPPORT_INFO` response dimensions.
+Model is auto-detected from the Image Support Info response dimensions.
 
 ## References
 

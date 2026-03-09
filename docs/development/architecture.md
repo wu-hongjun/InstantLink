@@ -8,6 +8,7 @@ InstantLink follows a layered architecture mirroring [StatusLight](https://githu
 instantlink-cli ──→ instantlink-core
 instantlink-ffi ──→ instantlink-core
 macOS app ─────→ instantlink-cli (via Process)
+              └──→ instantlink-ffi (via dlopen, bundled dylib)
 ```
 
 ## instantlink-core
@@ -40,7 +41,7 @@ image.rs       ← Load, resize, JPEG encode, chunk
 
 **ACK-based flow**: Each data chunk requires an ACK from the printer before sending the next. This is handled in `BlePrinterDevice::send_image_data`.
 
-**Automatic quality reduction**: If the JPEG exceeds 105KB, quality is reduced in steps of 5 until it fits.
+**Automatic quality reduction**: If the JPEG exceeds 105KB, a binary search finds the highest quality that fits within the limit.
 
 **Transport trait**: `transport::Transport` is a trait, enabling mock implementations for testing without hardware. A `MockTransport` (in `device.rs` `#[cfg(test)]` block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.
 

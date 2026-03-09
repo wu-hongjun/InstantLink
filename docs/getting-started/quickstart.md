@@ -49,6 +49,18 @@ instantlink print photo.jpg --fit contain
 instantlink print photo.jpg --fit stretch
 ```
 
+### Color Mode
+
+Choose between vivid and classic film colors:
+
+```bash
+# Rich mode (default) — vivid colors
+instantlink print photo.jpg --color-mode rich
+
+# Natural mode — classic film look
+instantlink print photo.jpg --color-mode natural
+```
+
 ### JPEG Quality
 
 Control output quality (affects file size):
@@ -83,6 +95,7 @@ instantlink status --json
   "name": "INSTAX-12345678",
   "model": "Instax Mini Link",
   "battery": 85,
+  "is_charging": false,
   "film_remaining": 8,
   "print_count": 42
 }

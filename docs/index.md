@@ -24,13 +24,14 @@ The Instax Link BLE protocol has been fully reverse-engineered by the open-sourc
 
 - Print any image (JPEG, PNG, etc.) to Instax Link printers
 - Auto-resize with crop, contain, or stretch fit modes
-- Auto JPEG quality reduction to fit printer limits
-- Battery level, film count, and print history queries
+- Rich and Natural color modes (vivid vs classic film look)
+- Auto JPEG quality reduction to fit printer limits (105KB)
+- Battery level, film count, charging state, and print history queries
 - LED color control with solid, blink, and breathe patterns
 - BLE scanner to discover nearby printers
 - JSON output mode for integration with other tools
 - Native macOS app with menu bar and drag-and-drop printing
-- C FFI for building native UIs
+- C FFI (16 functions) for building native UIs
 
 ## Architecture
 

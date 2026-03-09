@@ -44,6 +44,9 @@ instantlink print photo.jpg
 # Print with specific fit mode and quality
 instantlink print photo.jpg --fit contain --quality 90
 
+# Print with natural color mode (classic film look)
+instantlink print photo.jpg --color-mode natural
+
 # Control the LED
 instantlink led set "#FF6600" --pattern breathe
 instantlink led off
@@ -65,13 +68,14 @@ The printer model is auto-detected after connecting.
 
 - Print any image (JPEG, PNG, etc.) to Instax Link printers via BLE
 - Auto-resize with crop, contain, or stretch fit modes
+- Rich and Natural color modes (vivid vs classic film look)
 - Automatic JPEG quality reduction to fit printer limits (105KB)
-- Battery level, film count, and print history queries
+- Battery level, film count, charging state, and print history queries
 - LED color control with solid, blink, and breathe patterns
 - BLE scanner to discover nearby printers
 - JSON output mode for integration with other tools
 - Native macOS app with menu bar and drag-and-drop printing
-- C FFI for building native UIs
+- C FFI (16 functions) for building native UIs
 
 ## Project Structure
 

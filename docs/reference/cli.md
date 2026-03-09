@@ -17,8 +17,13 @@ Scan for nearby Instax Link printers via BLE.
 
 ```bash
 instantlink scan
+instantlink scan --duration 10
 instantlink scan --json
 ```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--duration <SECS>` | `5` | BLE scan duration in seconds |
 
 **JSON output:** Array of printer name strings.
 
@@ -26,12 +31,17 @@ instantlink scan --json
 
 ### `instantlink info`
 
-Show printer info: battery, film count, model, print history.
+Show printer info: battery, film count, model, charging state, print history.
 
 ```bash
 instantlink info
 instantlink info --device "INSTAX-12345678"
+instantlink info --duration 10
 ```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--duration <SECS>` | `5` | BLE scan duration in seconds |
 
 **JSON output:**
 
@@ -40,6 +50,7 @@ instantlink info --device "INSTAX-12345678"
   "name": "INSTAX-12345678",
   "model": "Instax Mini Link",
   "battery": 85,
+  "is_charging": false,
   "film_remaining": 8,
   "print_count": 42
 }
@@ -54,12 +65,14 @@ Print an image file to the connected printer.
 ```bash
 instantlink print photo.jpg
 instantlink print photo.png --quality 90 --fit contain
+instantlink print photo.jpg --color-mode natural
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--quality <1-100>` | `97` | JPEG compression quality |
 | `--fit <mode>` | `crop` | Fit mode: `crop`, `contain`, or `stretch` |
+| `--color-mode <mode>` | `rich` | Color mode: `rich` (vivid) or `natural` (classic film look) |
 
 **Fit modes:**
 
@@ -107,4 +120,24 @@ instantlink status
 instantlink status --json
 ```
 
-If no printer is connected, reports `connected: false`.
+**JSON output (connected):**
+
+```json
+{
+  "connected": true,
+  "name": "INSTAX-12345678",
+  "model": "Instax Mini Link",
+  "battery": 85,
+  "is_charging": false,
+  "film_remaining": 8,
+  "print_count": 42
+}
+```
+
+**JSON output (disconnected):**
+
+```json
+{
+  "connected": false
+}
+```

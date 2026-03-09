@@ -48,10 +48,11 @@ bash scripts/build-app.sh 0.1.0
 The `.app` bundle is created at `target/release/InstantLink.app`. The script:
 
 1. Copies the CLI binary into the bundle (renamed `instantlink-cli`)
-2. Compiles the SwiftUI launcher with `swiftc`
-3. Generates `Info.plist` with version and BLE permission
-4. Ad-hoc codesigns the bundle
-5. Optionally creates a `.dmg` (if `create-dmg` is installed: `brew install create-dmg`)
+2. Bundles the FFI dylib (`libinstantlink_ffi.dylib`) into `Frameworks/`
+3. Compiles the SwiftUI launcher with `swiftc`
+4. Generates `Info.plist` with version and BLE permission
+5. Ad-hoc codesigns the bundle
+6. Optionally creates a `.dmg` (if `create-dmg` is installed: `brew install create-dmg`)
 
 !!! note "Bluetooth Permissions"
     The app includes `NSBluetoothAlwaysUsageDescription` in its `Info.plist` for BLE access. When running the CLI directly (outside the app bundle), macOS will prompt for Bluetooth permission on first use.

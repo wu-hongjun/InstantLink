@@ -48,7 +48,7 @@ Recommended target structure:
 
 ### 2. Remove or formalize `InstantLinkCLI.swift`
 
-If the app is no longer using CLI process execution as a runtime path, delete `InstantLinkCLI.swift` and stop compiling it. If it must remain as fallback, make that fallback explicit and tested.
+Completed in March 2026: `InstantLinkCLI.swift` was removed and `scripts/build-app.sh` no longer compiles a Swift CLI fallback layer. The macOS app now uses the FFI dylib as its only printer/device runtime path, while the bundled CLI binary remains only for metadata/version lookups.
 
 ### 3. Consolidate printer profile editors
 

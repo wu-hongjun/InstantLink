@@ -7,7 +7,8 @@ InstantLink uses a layered Rust core with thin CLI and FFI frontends, plus a nat
 ```text
 instantlink-cli ──→ instantlink-core
 instantlink-ffi ──→ instantlink-core
-macOS app ───────→ instantlink-ffi (via dlopen, bundled dylib)
+macOS app ───────→ instantlink-ffi (device operations, via dlopen, bundled dylib)
+macOS app ───────→ bundled instantlink-cli (version metadata only)
 ```
 
 ## `instantlink-core`
@@ -64,8 +65,9 @@ The macOS app lives in `macos/InstantLink/` and is no longer a single-file app.
 - `InstantLinkApp.swift` contains the app entry point, view model, and most SwiftUI views
 - `OverlayModels.swift` defines the overlay data model and typed payloads
 - `InstantLinkFFI.swift` loads `libinstantlink_ffi.dylib` and resolves 19 symbols at runtime
-- `InstantLinkCLI.swift` still exists for CLI-backed tasks where appropriate
 - `.lproj/Localizable.strings` bundles provide 12-language localization
+
+The app no longer compiles a Swift CLI wrapper or keeps a CLI fallback path for printer operations. Runtime printer/device work goes through `InstantLinkFFI.swift` into the bundled `libinstantlink_ffi.dylib`. The bundled `instantlink-cli` binary remains in the app only for lightweight metadata lookups such as version display.
 
 ### macOS Editing Model
 
@@ -78,4 +80,4 @@ The macOS app keeps per-photo edits in queue item state rather than one shared e
 
 ## No Daemon
 
-InstantLink does not need a background daemon. Printing is a short-lived connect-transfer-print-disconnect workflow, and the macOS app talks to the printer directly through the bundled FFI dylib.
+InstantLink does not need a background daemon. Printing is a short-lived connect-transfer-print-disconnect workflow, and the macOS app talks to the printer directly through the bundled FFI dylib for runtime operations.

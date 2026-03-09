@@ -100,7 +100,7 @@ Implemented the BLE packet protocol and all command opcodes.
 
 **macOS App:**
 
-- `InstantLinkCLI.swift` — Process wrapper with 15s watchdog, scan/info/print/LED/status
+- `InstantLinkCLI.swift` — Initial Process wrapper with 15s watchdog, scan/info/print/LED/status; removed in March 2026 once the macOS runtime became FFI-only
 - `InstantLinkApp.swift` — SwiftUI with menu bar extra, full window, drag-and-drop print zone
 - `build-app.sh` — Builds CLI + copies into app bundle
 

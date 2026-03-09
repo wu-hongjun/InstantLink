@@ -32,7 +32,7 @@ Rewrote to match StatusLight's approach:
 
 ### CLI Binary Naming
 
-The CLI binary is renamed `instantlink-cli` inside the bundle to avoid a case-insensitive filesystem collision with the SwiftUI launcher binary (`InstantLink`). `InstantLinkCLI.swift` updated to look for `instantlink-cli`.
+The CLI binary is renamed `instantlink-cli` inside the bundle to avoid a case-insensitive filesystem collision with the SwiftUI launcher binary (`InstantLink`). The current app no longer compiles `InstantLinkCLI.swift`; runtime printer operations use the FFI dylib directly, while the bundled CLI remains available for metadata lookups.
 
 ### Release Workflow
 

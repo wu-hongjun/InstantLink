@@ -2726,13 +2726,13 @@ struct CameraView: View {
          (viewModel.cameraState == .preview && viewModel.capturedImage != nil))
     }
 
+    private var panelChromeColor: Color {
+        showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.18)
+    }
+
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(style: StrokeStyle(lineWidth: 2), antialiased: true)
-                .foregroundColor(showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.5))
+            AppPanelBackground(chromeColor: panelChromeColor)
 
             if viewModel.cameraState == .viewfinder {
                 if let session = viewModel.captureSession {
@@ -2799,6 +2799,7 @@ struct CameraView: View {
         }
         .overlay(showFlash ? Color.white.opacity(0.8) : Color.clear)
         .frame(minHeight: 120, maxHeight: .infinity)
+        .animation(.easeInOut(duration: 0.22), value: viewModel.cameraState)
         .onChange(of: viewModel.cameraState) { newState in
             if newState == .preview {
                 showFlash = true
@@ -2989,6 +2990,7 @@ struct MainView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.red.opacity(0.15))
+                .transition(.move(edge: .top).combined(with: .opacity))
             } else if viewModel.isUpdating {
                 HStack(spacing: 6) {
                     if viewModel.updateProgress >= 1.0 {
@@ -3013,6 +3015,7 @@ struct MainView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.blue.opacity(0.1))
+                .transition(.move(edge: .top).combined(with: .opacity))
             } else if let version = viewModel.updateAvailable {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.up.circle.fill")
@@ -3031,6 +3034,7 @@ struct MainView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.blue.opacity(0.1))
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             if let message = viewModel.statusMessage {
@@ -3052,127 +3056,14 @@ struct MainView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(statusBannerBackground)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             if viewModel.isConnected {
                 // Status bar
-                HStack(spacing: 12) {
-                    Button {
-                        if let bleId = viewModel.printerName,
-                           let profile = viewModel.printerProfiles[bleId] {
-                            viewModel.editingProfile = profile
-                            viewModel.showProfileEditor = true
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(.green)
-                                .frame(width: 8, height: 8)
-                            Text(viewModel.currentPrinterDisplayName ?? L("Connected"))
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            if let tag = viewModel.printerModelTag {
-                                Text(tag)
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .background(Capsule().fill(.secondary))
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        viewModel.showPrinterPicker = true
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .frame(width: 16, height: 16)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-
-                    Picker("", selection: Binding(
-                        get: { viewModel.captureMode },
-                        set: { viewModel.requestCaptureModeChange(to: $0) }
-                    )) {
-                        Image(systemName: "photo.on.rectangle").tag(CaptureMode.file)
-                        Image(systemName: "camera").tag(CaptureMode.camera)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 60)
-                    .onChange(of: viewModel.captureMode) { newMode in
-                        if newMode == .camera {
-                            viewModel.requestCameraAccessAndStart()
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isQueueStripVisible = false
-                            }
-                        } else {
-                            viewModel.cancelTimer()
-                            viewModel.stopCameraSession()
-                            viewModel.cameraState = .viewfinder
-                            viewModel.capturedImage = nil
-                            syncQueueStripVisibility(for: viewModel.queue.count, force: true)
-                        }
-                    }
-
-                    if viewModel.captureMode == .file && !viewModel.queue.isEmpty {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isQueueStripVisible.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: isQueueStripVisible ? "square.stack.3d.up.fill" : "square.stack.3d.up")
-                                    .font(.caption)
-                                Text("\(viewModel.queue.count)")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .monospacedDigit()
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule()
-                                    .fill(isQueueStripVisible ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.12))
-                            )
-                            .foregroundColor(isQueueStripVisible ? .accentColor : .secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Button {
-                        Task { await viewModel.refreshStatus() }
-                    } label: {
-                        StatusItem(
-                            icon: viewModel.isCharging ? "battery.100.bolt" : "battery.100",
-                            value: viewModel.isCharging ? L("Charging") : L("battery_percent", viewModel.battery)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.isRefreshing)
-
-                    Button {
-                        Task { await viewModel.refreshStatus() }
-                    } label: {
-                        StatusItem(icon: "film", value: L("film_remaining", viewModel.filmRemaining))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.isRefreshing)
-
-                    Button {
-                        viewModel.showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
+                ViewThatFits(in: .horizontal) {
+                    groupedConnectedHeader
+                    compactConnectedHeader
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -3184,11 +3075,13 @@ struct MainView: View {
                         .padding(.horizontal, 14)
                         .padding(.top, 16)
                         .layoutPriority(-1)
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
                 } else {
                     CameraView()
                         .padding(.horizontal, 14)
                         .padding(.top, 16)
                         .layoutPriority(-1)
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
                 }
 
                 if viewModel.captureMode == .file && isQueueStripVisible {
@@ -3204,10 +3097,12 @@ struct MainView: View {
                     MainActionsView(openEditor: { viewModel.showImageEditor = true })
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     CameraActionsView()
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
             } else {
@@ -3405,6 +3300,179 @@ struct MainView: View {
         }
     }
 
+    private var groupedConnectedHeader: some View {
+        HStack(spacing: 10) {
+            HeaderCapsule {
+                printerIdentityControl
+                HeaderDivider()
+                printerPickerControl
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 0)
+
+            HeaderCapsule {
+                captureModeControl
+                if viewModel.captureMode == .file && !viewModel.queue.isEmpty {
+                    HeaderDivider()
+                    queueToggleControl
+                }
+            }
+
+            HeaderCapsule {
+                batteryStatusControl
+                HeaderDivider()
+                filmStatusControl
+            }
+
+            HeaderCapsule {
+                settingsControl
+            }
+        }
+    }
+
+    private var compactConnectedHeader: some View {
+        HStack(spacing: 12) {
+            printerIdentityControl
+            printerPickerControl
+
+            Spacer()
+
+            captureModeControl
+
+            if viewModel.captureMode == .file && !viewModel.queue.isEmpty {
+                queueToggleControl
+            }
+
+            batteryStatusControl
+            filmStatusControl
+            settingsControl
+        }
+    }
+
+    private var printerIdentityControl: some View {
+        Button {
+            if let bleId = viewModel.printerName,
+               let profile = viewModel.printerProfiles[bleId] {
+                viewModel.editingProfile = profile
+                viewModel.showProfileEditor = true
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(.green)
+                    .frame(width: 8, height: 8)
+                Text(viewModel.currentPrinterDisplayName ?? L("Connected"))
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                if let tag = viewModel.printerModelTag {
+                    Text(tag)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(.secondary))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var printerPickerControl: some View {
+        Button {
+            viewModel.showPrinterPicker = true
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundColor(.secondary)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var captureModeControl: some View {
+        Picker("", selection: Binding(
+            get: { viewModel.captureMode },
+            set: { viewModel.requestCaptureModeChange(to: $0) }
+        )) {
+            Image(systemName: "photo.on.rectangle").tag(CaptureMode.file)
+            Image(systemName: "camera").tag(CaptureMode.camera)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(width: 60)
+        .onChange(of: viewModel.captureMode) { newMode in
+            if newMode == .camera {
+                viewModel.requestCameraAccessAndStart()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isQueueStripVisible = false
+                }
+            } else {
+                viewModel.cancelTimer()
+                viewModel.stopCameraSession()
+                viewModel.cameraState = .viewfinder
+                viewModel.capturedImage = nil
+                syncQueueStripVisibility(for: viewModel.queue.count, force: true)
+            }
+        }
+    }
+
+    private var queueToggleControl: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isQueueStripVisible.toggle()
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: isQueueStripVisible ? "square.stack.3d.up.fill" : "square.stack.3d.up")
+                    .font(.caption)
+                Text("\(viewModel.queue.count)")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+            }
+            .foregroundColor(isQueueStripVisible ? .accentColor : .secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var batteryStatusControl: some View {
+        Button {
+            Task { await viewModel.refreshStatus() }
+        } label: {
+            StatusItem(
+                icon: viewModel.isCharging ? "battery.100.bolt" : "battery.100",
+                value: viewModel.isCharging ? L("Charging") : L("battery_percent", viewModel.battery)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.isRefreshing)
+    }
+
+    private var filmStatusControl: some View {
+        Button {
+            Task { await viewModel.refreshStatus() }
+        } label: {
+            StatusItem(icon: "film", value: L("film_remaining", viewModel.filmRemaining))
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.isRefreshing)
+    }
+
+    private var settingsControl: some View {
+        Button {
+            viewModel.showSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var statusBannerIcon: String {
         switch viewModel.statusMessageTone {
         case .info: return "info.circle"
@@ -3439,6 +3507,53 @@ struct StatusItem: View {
                 .font(.caption)
                 .fontWeight(.medium)
         }
+    }
+}
+
+struct HeaderDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.18))
+            .frame(width: 1, height: 14)
+    }
+}
+
+struct AppPanelBackground: View {
+    let chromeColor: Color
+    var dashed: Bool = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        style: StrokeStyle(lineWidth: 1.5, dash: dashed ? [6] : [])
+                    )
+                    .foregroundColor(chromeColor)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+    }
+}
+
+struct HeaderCapsule<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack(spacing: 8) {
+            content()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
     }
 }
 
@@ -3788,23 +3903,16 @@ struct MainPreviewView: View {
         viewModel.selectedImage != nil && viewModel.printerModelTag != nil
     }
 
+    private var panelChromeColor: Color {
+        if viewModel.selectedImage == nil {
+            return isTargeted ? .accentColor.opacity(0.55) : .secondary.opacity(0.22)
+        }
+        return showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.18)
+    }
+
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(
-                    style: StrokeStyle(
-                        lineWidth: 2,
-                        dash: viewModel.selectedImage == nil ? [6] : []
-                    ),
-                    antialiased: true
-                )
-                .foregroundColor(
-                    viewModel.selectedImage == nil
-                        ? (isTargeted ? .accentColor : .secondary.opacity(0.5))
-                        : (showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.5))
-                )
+            AppPanelBackground(chromeColor: panelChromeColor, dashed: viewModel.selectedImage == nil)
 
             if viewModel.isPrinting {
                 VStack(spacing: 8) {
@@ -3828,6 +3936,7 @@ struct MainPreviewView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
             } else if let image = viewModel.selectedImage {
                 ZStack(alignment: .topTrailing) {
                     FilmFrameView(filmModel: viewModel.printerModelTag,
@@ -3921,13 +4030,16 @@ struct MainPreviewView: View {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.secondary.opacity(0.92))
+                            .padding(4)
+                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .buttonStyle(.plain)
                     .help(L("Remove"))
                     .accessibilityLabel(Text(L("Remove")))
                     .padding(8)
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.985)))
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "photo.on.rectangle.angled")
@@ -3939,9 +4051,12 @@ struct MainPreviewView: View {
                     Button(L("Open File")) { viewModel.selectImage() }
                         .controlSize(.small)
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
         .frame(minHeight: 120, maxHeight: .infinity)
+        .animation(.easeInOut(duration: 0.22), value: viewModel.isPrinting)
+        .animation(.easeInOut(duration: 0.22), value: viewModel.selectedImage != nil)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
             guard !providers.isEmpty else { return false }
             for provider in providers {
@@ -4036,10 +4151,18 @@ struct QueueStripView: View {
                             .background(RoundedRectangle(cornerRadius: 4).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3])).foregroundColor(.secondary.opacity(0.4)))
                     }
                     .buttonStyle(.plain)
+                    .frame(width: addButtonWidth + 8, height: thumbnailHeight + 8)
                 }
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
             }
+            .padding(4)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
             .onChange(of: viewModel.selectedQueueIndex) { _ in
                 if viewModel.queue.indices.contains(viewModel.selectedQueueIndex) {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -4077,6 +4200,7 @@ struct QueueDropDelegate: DropDelegate {
 
 struct QueueThumbnailView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @State private var isHovered = false
     let item: QueueItem
     let isSelected: Bool
     var isDragging: Bool = false
@@ -4107,10 +4231,8 @@ struct QueueThumbnailView: View {
                         RoundedRectangle(cornerRadius: 4)
                             .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
                     )
-                    .shadow(color: isSelected ? Color.accentColor.opacity(0.3) : .clear, radius: 3)
-                    .scaleEffect(isSelected ? 1.05 : 1.0)
+                    .shadow(color: isSelected ? Color.accentColor.opacity(0.18) : .clear, radius: 4, y: 2)
                     .opacity(isDragging ? 0.5 : 1.0)
-                    .animation(.easeInOut(duration: 0.15), value: isSelected)
             }
             .buttonStyle(.plain)
 
@@ -4126,10 +4248,27 @@ struct QueueThumbnailView: View {
             }
             .buttonStyle(.plain)
             .padding(3)
+            .opacity(isHovered || isSelected ? 1 : 0)
+            .allowsHitTesting(isHovered || isSelected)
             .help(L("Remove"))
             .accessibilityLabel(Text(L("Remove")))
         }
-        .frame(width: thumbnailWidth, height: thumbnailHeight)
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : (isHovered ? Color.white.opacity(0.08) : Color.clear))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.white.opacity(isHovered ? 0.16 : 0), lineWidth: 1)
+        )
+        .frame(width: thumbnailWidth + 8, height: thumbnailHeight + 8)
+        .onHover { hovered in
+            withAnimation(.easeOut(duration: 0.16)) {
+                isHovered = hovered
+            }
+        }
+        .animation(.easeInOut(duration: 0.16), value: isSelected)
     }
 }
 
@@ -4334,13 +4473,13 @@ struct QuickZoomControlsView: View {
         .background {
             if showsChrome {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(.ultraThinMaterial)
             }
         }
         .overlay {
             if showsChrome {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.secondary.opacity(0.18))
+                    .strokeBorder(Color.white.opacity(0.18))
             }
         }
     }
@@ -4410,23 +4549,16 @@ struct EditorPreviewView: View {
         viewModel.selectedImage != nil && viewModel.printerModelTag != nil
     }
 
+    private var panelChromeColor: Color {
+        if viewModel.selectedImage == nil {
+            return isTargeted ? .accentColor.opacity(0.55) : .secondary.opacity(0.22)
+        }
+        return showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.18)
+    }
+
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(
-                    style: StrokeStyle(
-                        lineWidth: 2,
-                        dash: viewModel.selectedImage == nil ? [6] : []
-                    ),
-                    antialiased: true
-                )
-                .foregroundColor(
-                    viewModel.selectedImage == nil
-                        ? (isTargeted ? .accentColor : .secondary.opacity(0.5))
-                        : (showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.5))
-                )
+            AppPanelBackground(chromeColor: panelChromeColor, dashed: viewModel.selectedImage == nil)
 
             if let image = viewModel.selectedImage {
                 FilmFrameView(filmModel: viewModel.printerModelTag,
@@ -4515,6 +4647,7 @@ struct EditorPreviewView: View {
             }
         }
         .frame(minHeight: 250, idealHeight: 350)
+        .animation(.easeInOut(duration: 0.22), value: viewModel.selectedImage != nil)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
             guard !providers.isEmpty else { return false }
             for provider in providers {
@@ -4806,6 +4939,7 @@ struct NewPhotoDefaultsPopover: View {
 
 struct OverlayListRowView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @State private var isHovered = false
     let overlay: OverlayItem
 
     var body: some View {
@@ -4830,6 +4964,7 @@ struct OverlayListRowView: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
+            .opacity(actionOpacity)
 
             Button {
                 viewModel.deleteOverlay(id: overlay.id)
@@ -4838,21 +4973,43 @@ struct OverlayListRowView: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
+            .opacity(actionOpacity)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(
+                    isSelected
+                        ? Color.accentColor.opacity(0.14)
+                        : (isHovered ? Color.white.opacity(0.08) : Color.secondary.opacity(0.05))
+                )
         )
-        .contentShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(
+                    isSelected ? Color.accentColor.opacity(0.38) : Color.white.opacity(isHovered ? 0.14 : 0),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: isSelected ? Color.accentColor.opacity(0.12) : .clear, radius: 8, y: 4)
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onTapGesture {
             viewModel.selectOverlay(overlay.id)
+        }
+        .onHover { hovered in
+            withAnimation(.easeOut(duration: 0.16)) {
+                isHovered = hovered
+            }
         }
     }
 
     private var isSelected: Bool {
         viewModel.selectedOverlayID == overlay.id
+    }
+
+    private var actionOpacity: Double {
+        (isHovered || isSelected) ? 1 : 0.55
     }
 
     private var symbolName: String {
@@ -4880,8 +5037,12 @@ struct InspectorSectionCard<Content: View>: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.secondary.opacity(0.06))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
         )
     }
 }

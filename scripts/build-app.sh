@@ -102,7 +102,6 @@ swiftc \
   "$REPO_ROOT/macos/InstantLink/OverlayModels.swift" \
   "$REPO_ROOT/macos/InstantLink/Localization.swift" \
   "$REPO_ROOT/macos/InstantLink/InstantLinkFFI.swift" \
-  "$REPO_ROOT/macos/InstantLink/InstantLinkCLI.swift" \
   -framework SwiftUI \
   -framework AppKit \
   -framework UniformTypeIdentifiers \

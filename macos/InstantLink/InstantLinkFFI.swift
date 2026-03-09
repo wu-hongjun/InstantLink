@@ -37,6 +37,10 @@ class InstantLinkFFI {
     private let _set_led: @convention(c) (UInt8, UInt8, UInt8, UInt8) -> Int32
     private let _led_off: @convention(c) () -> Int32
 
+    // Device commands
+    private let _shutdown: @convention(c) () -> Int32
+    private let _reset: @convention(c) () -> Int32
+
     // MARK: - Init
 
     init?() {
@@ -68,7 +72,9 @@ class InstantLinkFFI {
               let pPrint = dlsym(h, "instantlink_print"),
               let pPrintWithProgress = dlsym(h, "instantlink_print_with_progress"),
               let pSetLed = dlsym(h, "instantlink_set_led"),
-              let pLedOff = dlsym(h, "instantlink_led_off")
+              let pLedOff = dlsym(h, "instantlink_led_off"),
+              let pShutdown = dlsym(h, "instantlink_shutdown"),
+              let pReset = dlsym(h, "instantlink_reset")
         else {
             print("[FFI] Failed to resolve one or more symbols")
             dlclose(h)
@@ -92,6 +98,8 @@ class InstantLinkFFI {
         _print_with_progress = unsafeBitCast(pPrintWithProgress, to: (@convention(c) (UnsafePointer<CChar>, UInt8, UInt8, UInt8, (@convention(c) (UInt32, UInt32) -> Void)?) -> Int32).self)
         _set_led = unsafeBitCast(pSetLed, to: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> Int32).self)
         _led_off = unsafeBitCast(pLedOff, to: (@convention(c) () -> Int32).self)
+        _shutdown = unsafeBitCast(pShutdown, to: (@convention(c) () -> Int32).self)
+        _reset = unsafeBitCast(pReset, to: (@convention(c) () -> Int32).self)
 
         // Initialize the runtime
         _init()
@@ -286,6 +294,18 @@ class InstantLinkFFI {
     /// Turn off the LED.
     func ledOff() async -> Bool {
         await blocking { self._led_off() == 0 }
+    }
+
+    // MARK: - Device Commands
+
+    /// Shut down (power off) the printer.
+    func shutdown() async -> Bool {
+        await blocking { self._shutdown() == 0 }
+    }
+
+    /// Reset the printer.
+    func reset() async -> Bool {
+        await blocking { self._reset() == 0 }
     }
 
     // MARK: - Helper

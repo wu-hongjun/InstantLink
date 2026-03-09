@@ -24,6 +24,11 @@ pub const WRITE_CHAR_UUID: Uuid = Uuid::from_u128(0x70954783_2d83_473d_9e5f_81e1
 /// Instax BLE notify characteristic UUID.
 pub const NOTIFY_CHAR_UUID: Uuid = Uuid::from_u128(0x70954784_2d83_473d_9e5f_81e1d02d5273);
 
+/// Standard BLE Device Information Service UUID.
+pub const DIS_SERVICE_UUID: Uuid = Uuid::from_u128(0x0000180a_0000_1000_8000_00805f9b34fb);
+/// Standard BLE DIS Model Number characteristic UUID.
+pub const DIS_MODEL_NUMBER_UUID: Uuid = Uuid::from_u128(0x00002a24_0000_1000_8000_00805f9b34fb);
+
 /// Default scan duration.
 pub const DEFAULT_SCAN_DURATION: Duration = Duration::from_secs(5);
 /// Default command timeout.
@@ -46,6 +51,12 @@ pub trait Transport: Send + Sync {
 
     /// Disconnect from the printer.
     async fn disconnect(&self) -> Result<()>;
+
+    /// Optional DIS Model Number hint for printer model detection.
+    /// Returns `None` if DIS was not available or not read.
+    fn model_number_hint(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// Get the default BLE adapter.
@@ -110,6 +121,8 @@ pub struct BleTransport {
     write_char: Characteristic,
     rx: tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>,
     assembler: tokio::sync::Mutex<PacketAssembler>,
+    /// DIS Model Number string, if available.
+    dis_model_number: Option<String>,
 }
 
 impl BleTransport {
@@ -138,6 +151,12 @@ impl BleTransport {
             .find(|c| c.uuid == NOTIFY_CHAR_UUID)
             .cloned()
             .ok_or_else(|| PrinterError::Ble("notify characteristic not found".into()))?;
+
+        // Try to read DIS Model Number characteristic for Link 3 detection
+        let dis_model_number = Self::read_dis_model_number(&peripheral, &chars).await;
+        if let Some(ref model) = dis_model_number {
+            log::debug!("DIS Model Number: {}", model);
+        }
 
         // Subscribe to notifications BEFORE spawning the listener task
         // so that a failed subscribe() doesn't leak a spawned task.
@@ -176,7 +195,30 @@ impl BleTransport {
             write_char,
             rx: tokio::sync::Mutex::new(rx),
             assembler: tokio::sync::Mutex::new(PacketAssembler::new()),
+            dis_model_number,
         })
+    }
+
+    /// Try to read the DIS Model Number characteristic from the peripheral.
+    async fn read_dis_model_number(
+        peripheral: &Peripheral,
+        chars: &std::collections::BTreeSet<Characteristic>,
+    ) -> Option<String> {
+        let dis_char = chars.iter().find(|c| c.uuid == DIS_MODEL_NUMBER_UUID)?;
+        match peripheral.read(dis_char).await {
+            Ok(data) => {
+                let s = String::from_utf8_lossy(&data).trim().to_string();
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s)
+                }
+            }
+            Err(e) => {
+                log::debug!("Failed to read DIS Model Number: {e}");
+                None
+            }
+        }
     }
 }
 
@@ -221,5 +263,9 @@ impl Transport for BleTransport {
             .await
             .map_err(|e| PrinterError::Ble(format!("disconnect failed: {e}")))?;
         Ok(())
+    }
+
+    fn model_number_hint(&self) -> Option<&str> {
+        self.dis_model_number.as_deref()
     }
 }

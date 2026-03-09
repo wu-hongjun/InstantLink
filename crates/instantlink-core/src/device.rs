@@ -5,6 +5,7 @@
 //! implementation with ACK-based print flow.
 
 use std::path::Path;
+use std::time::Duration;
 
 use async_trait::async_trait;
 
@@ -93,6 +94,12 @@ pub trait PrinterDevice: Send + Sync {
         self.set_led(0, 0, 0, 0).await
     }
 
+    /// Shut down the printer (power off).
+    async fn shutdown(&self) -> Result<()>;
+
+    /// Reset the printer.
+    async fn reset(&self) -> Result<()>;
+
     /// Disconnect from the printer.
     async fn disconnect(&self) -> Result<()>;
 }
@@ -107,8 +114,11 @@ pub struct BlePrinterDevice {
 impl BlePrinterDevice {
     /// Create a new BLE Instax device with a connected transport.
     ///
-    /// Auto-detects the printer model by querying IMAGE_SUPPORT_INFO.
+    /// Auto-detects the printer model by querying IMAGE_SUPPORT_INFO,
+    /// using the optional DIS model number hint for Link 3 detection.
     pub async fn new(transport: Box<dyn Transport>, name: String) -> Result<Self> {
+        let dis_model = transport.model_number_hint().map(|s| s.to_string());
+
         // Query image support info to detect model
         let cmd = Command::ImageSupportInfo;
         let packet = transport
@@ -117,7 +127,9 @@ impl BlePrinterDevice {
         let response = Response::decode(&packet);
 
         let model = match response {
-            Response::ImageSupportInfo { width, height, .. } => detect_model(width, height)?,
+            Response::ImageSupportInfo { width, height, .. } => {
+                detect_model(width, height, dis_model.as_deref())?
+            }
             _ => {
                 return Err(PrinterError::UnexpectedResponse(
                     "expected ImageSupportInfo response".into(),
@@ -143,6 +155,28 @@ impl BlePrinterDevice {
         Ok(Response::decode(&packet))
     }
 
+    /// Check if a status code indicates success for this printer model.
+    fn is_success(&self, status: u8) -> bool {
+        let spec = self.model.spec();
+        status == 0 || status == spec.success_code
+    }
+
+    /// Check a response status code and return an appropriate error if not success.
+    fn check_status(&self, status: u8, context: &str) -> Result<()> {
+        if self.is_success(status) {
+            return Ok(());
+        }
+        match status {
+            178 => Err(PrinterError::NoFilm),
+            179 => Err(PrinterError::CoverOpen),
+            180 => Err(PrinterError::LowBattery { percent: 0 }),
+            181 => Err(PrinterError::PrinterBusy),
+            _ => Err(PrinterError::PrintRejected(format!(
+                "{context} rejected with status {status}"
+            ))),
+        }
+    }
+
     /// Send JPEG data to the printer with ACK-based flow control.
     async fn send_image_data(
         &self,
@@ -152,6 +186,7 @@ impl BlePrinterDevice {
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()> {
         let total = chunks.len();
+        let delay_ms = self.model.spec().packet_delay_ms;
 
         // DOWNLOAD_START
         let start_resp = self
@@ -161,11 +196,9 @@ impl BlePrinterDevice {
             })
             .await?;
         match start_resp {
-            Response::DownloadAck { status: 0 } => {}
+            Response::DownloadAck { status } if self.is_success(status) => {}
             Response::DownloadAck { status } => {
-                return Err(PrinterError::PrintRejected(format!(
-                    "download start rejected with status {status}"
-                )));
+                return self.check_status(status, "download start");
             }
             other => {
                 log::error!("DownloadStart got unexpected response: {other:?}");
@@ -184,11 +217,9 @@ impl BlePrinterDevice {
                 })
                 .await?;
             match data_resp {
-                Response::DownloadAck { status: 0 } => {}
+                Response::DownloadAck { status } if self.is_success(status) => {}
                 Response::DownloadAck { status } => {
-                    return Err(PrinterError::PrintRejected(format!(
-                        "data chunk {i} rejected with status {status}"
-                    )));
+                    return self.check_status(status, &format!("data chunk {i}"));
                 }
                 _ => {
                     return Err(PrinterError::UnexpectedResponse(
@@ -200,16 +231,19 @@ impl BlePrinterDevice {
             if let Some(cb) = progress {
                 cb(i + 1, total);
             }
+
+            // Inter-packet delay (required for Link 3, Square, Wide)
+            if delay_ms > 0 {
+                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            }
         }
 
         // DOWNLOAD_END
         let end_resp = self.command(&Command::DownloadEnd).await?;
         match end_resp {
-            Response::DownloadAck { status: 0 } => {}
+            Response::DownloadAck { status } if self.is_success(status) => {}
             Response::DownloadAck { status } => {
-                return Err(PrinterError::PrintRejected(format!(
-                    "download end rejected with status {status}"
-                )));
+                return self.check_status(status, "download end");
             }
             _ => {
                 return Err(PrinterError::UnexpectedResponse(
@@ -333,12 +367,17 @@ impl PrinterDevice for BlePrinterDevice {
         self.send_image_data(&jpeg_data, &chunks, print_option, progress)
             .await?;
 
+        // Pre-execute delay (critical for Link 3 and Square)
+        let pre_delay = self.model.spec().pre_execute_delay_ms;
+        if pre_delay > 0 {
+            log::debug!("Waiting {}ms before print execute", pre_delay);
+            tokio::time::sleep(Duration::from_millis(pre_delay)).await;
+        }
+
         // Trigger print
         match self.command(&Command::PrintImage).await? {
-            Response::PrintStatus { status: 0 } => Ok(()),
-            Response::PrintStatus { status } => Err(PrinterError::PrintRejected(format!(
-                "print failed with status {status}"
-            ))),
+            Response::PrintStatus { status } if self.is_success(status) => Ok(()),
+            Response::PrintStatus { status } => self.check_status(status, "print"),
             _ => Err(PrinterError::UnexpectedResponse(
                 "expected PrintStatus".into(),
             )),
@@ -357,11 +396,16 @@ impl PrinterDevice for BlePrinterDevice {
         self.send_image_data(&jpeg_data, &chunks, print_option, progress)
             .await?;
 
+        // Pre-execute delay (critical for Link 3 and Square)
+        let pre_delay = self.model.spec().pre_execute_delay_ms;
+        if pre_delay > 0 {
+            log::debug!("Waiting {}ms before print execute", pre_delay);
+            tokio::time::sleep(Duration::from_millis(pre_delay)).await;
+        }
+
         match self.command(&Command::PrintImage).await? {
-            Response::PrintStatus { status: 0 } => Ok(()),
-            Response::PrintStatus { status } => Err(PrinterError::PrintRejected(format!(
-                "print failed with status {status}"
-            ))),
+            Response::PrintStatus { status } if self.is_success(status) => Ok(()),
+            Response::PrintStatus { status } => self.check_status(status, "print"),
             _ => Err(PrinterError::UnexpectedResponse(
                 "expected PrintStatus".into(),
             )),
@@ -381,22 +425,41 @@ impl PrinterDevice for BlePrinterDevice {
         }
     }
 
+    async fn shutdown(&self) -> Result<()> {
+        self.transport.send(&Command::Shutdown.encode()).await?;
+        // Printer powers off; no response expected
+        Ok(())
+    }
+
+    async fn reset(&self) -> Result<()> {
+        self.transport.send(&Command::Reset.encode()).await?;
+        // Printer resets; no response expected
+        Ok(())
+    }
+
     async fn disconnect(&self) -> Result<()> {
         self.transport.disconnect().await
     }
 }
 
-/// Detect the printer model from image support dimensions.
-fn detect_model(width: u16, height: u16) -> Result<PrinterModel> {
-    for model in PrinterModel::all() {
-        let spec = model.spec();
-        if spec.width == width as u32 && spec.height == height as u32 {
-            return Ok(*model);
+/// Detect the printer model from image support dimensions and optional DIS model string.
+fn detect_model(width: u16, height: u16, dis_model: Option<&str>) -> Result<PrinterModel> {
+    // Check DIS model string first for Link 3 detection
+    if let Some(model_str) = dis_model {
+        if model_str.contains("FI033") {
+            return Ok(PrinterModel::MiniLink3);
         }
     }
-    Err(PrinterError::UnexpectedResponse(format!(
-        "unknown printer dimensions: {width}x{height}"
-    )))
+
+    // Fall back to dimension matching (skip MiniLink3 since it shares Mini's dimensions)
+    match (width as u32, height as u32) {
+        (600, 800) => Ok(PrinterModel::Mini),
+        (800, 800) => Ok(PrinterModel::Square),
+        (1260, 840) => Ok(PrinterModel::Wide),
+        _ => Err(PrinterError::UnexpectedResponse(format!(
+            "unknown printer dimensions: {width}x{height}"
+        ))),
+    }
 }
 
 #[cfg(test)]
@@ -421,11 +484,19 @@ mod tests {
 
     struct MockTransport {
         state: Arc<Mutex<MockState>>,
+        dis_model: Option<String>,
     }
 
     impl MockTransport {
         fn new(
             responses: Vec<Result<protocol::Packet>>,
+        ) -> (Box<dyn Transport>, Arc<Mutex<MockState>>) {
+            Self::new_with_dis(responses, None)
+        }
+
+        fn new_with_dis(
+            responses: Vec<Result<protocol::Packet>>,
+            dis_model: Option<String>,
         ) -> (Box<dyn Transport>, Arc<Mutex<MockState>>) {
             let state = Arc::new(Mutex::new(MockState {
                 responses: responses.into(),
@@ -433,6 +504,7 @@ mod tests {
             }));
             let transport = Box::new(MockTransport {
                 state: Arc::clone(&state),
+                dis_model,
             });
             (transport, state)
         }
@@ -456,6 +528,10 @@ mod tests {
 
         async fn disconnect(&self) -> Result<()> {
             Ok(())
+        }
+
+        fn model_number_hint(&self) -> Option<&str> {
+            self.dis_model.as_deref()
         }
     }
 
@@ -515,9 +591,17 @@ mod tests {
         model: PrinterModel,
         extra_responses: Vec<Result<protocol::Packet>>,
     ) -> (BlePrinterDevice, Arc<Mutex<MockState>>) {
+        make_device_with_dis(model, extra_responses, None).await
+    }
+
+    async fn make_device_with_dis(
+        model: PrinterModel,
+        extra_responses: Vec<Result<protocol::Packet>>,
+        dis_model: Option<String>,
+    ) -> (BlePrinterDevice, Arc<Mutex<MockState>>) {
         let mut responses = vec![image_support_info_packet(model)];
         responses.extend(extra_responses);
-        let (transport, state) = MockTransport::new(responses);
+        let (transport, state) = MockTransport::new_with_dis(responses, dis_model);
         let device = BlePrinterDevice::new(transport, "TestPrinter".into())
             .await
             .expect("device creation should succeed");
@@ -545,6 +629,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn detect_model_link3_via_dis() {
+        // Link 3 reports same dimensions as Mini (600x800) but DIS contains "FI033"
+        let (device, _) =
+            make_device_with_dis(PrinterModel::Mini, vec![], Some("FI033".into())).await;
+        assert_eq!(device.model(), PrinterModel::MiniLink3);
+    }
+
+    #[tokio::test]
+    async fn detect_model_mini_without_dis() {
+        // Without DIS, 600x800 should fall back to Mini (not Link 3)
+        let (device, _) = make_device_with_dis(PrinterModel::Mini, vec![], None).await;
+        assert_eq!(device.model(), PrinterModel::Mini);
+    }
+
+    #[tokio::test]
     async fn detect_model_unknown() {
         // Unknown dimensions: 999x999
         let mut data = Vec::new();
@@ -565,6 +664,61 @@ mod tests {
             panic!("expected error");
         };
         assert!(err.to_string().contains("expected ImageSupportInfo"));
+    }
+
+    // ── Success Code Handling ─────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn is_print_success_mini() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        assert!(device.is_success(0));
+        assert!(!device.is_success(12));
+    }
+
+    #[tokio::test]
+    async fn is_print_success_square() {
+        let (device, _) = make_device(PrinterModel::Square, vec![]).await;
+        assert!(device.is_success(0));
+        assert!(device.is_success(12)); // Square-specific success
+        assert!(!device.is_success(15));
+    }
+
+    #[tokio::test]
+    async fn is_print_success_wide() {
+        let (device, _) = make_device(PrinterModel::Wide, vec![]).await;
+        assert!(device.is_success(0));
+        assert!(device.is_success(15)); // Wide-specific success
+        assert!(!device.is_success(12));
+    }
+
+    // ── Error Code Mapping ────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn check_status_no_film() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        let err = device.check_status(178, "test").unwrap_err();
+        assert!(matches!(err, PrinterError::NoFilm));
+    }
+
+    #[tokio::test]
+    async fn check_status_cover_open() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        let err = device.check_status(179, "test").unwrap_err();
+        assert!(matches!(err, PrinterError::CoverOpen));
+    }
+
+    #[tokio::test]
+    async fn check_status_low_battery() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        let err = device.check_status(180, "test").unwrap_err();
+        assert!(matches!(err, PrinterError::LowBattery { .. }));
+    }
+
+    #[tokio::test]
+    async fn check_status_busy() {
+        let (device, _) = make_device(PrinterModel::Mini, vec![]).await;
+        let err = device.check_status(181, "test").unwrap_err();
+        assert!(matches!(err, PrinterError::PrinterBusy));
     }
 
     // ── Status Queries ─────────────────────────────────────────────────────
@@ -699,6 +853,26 @@ mod tests {
         assert_eq!(index2, 2);
     }
 
+    #[tokio::test]
+    async fn send_image_data_with_model_success_code() {
+        // Square returns success code 12 in ACKs
+        let jpeg_data = vec![0u8; 100];
+        let chunks = vec![jpeg_data.clone()];
+        let (device, _) = make_device(
+            PrinterModel::Square,
+            vec![
+                download_ack_packet(OP_DOWNLOAD_START, 12),
+                download_ack_packet(OP_DATA, 12),
+                download_ack_packet(OP_DOWNLOAD_END, 12),
+            ],
+        )
+        .await;
+        device
+            .send_image_data(&jpeg_data, &chunks, 0, None)
+            .await
+            .unwrap();
+    }
+
     // ── Error Paths ────────────────────────────────────────────────────────
 
     #[tokio::test]
@@ -757,6 +931,20 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("download end rejected"));
+    }
+
+    #[tokio::test]
+    async fn download_no_film_error() {
+        // Status 178 = no film
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![download_ack_packet(OP_DOWNLOAD_START, 178)],
+        )
+        .await;
+        let result = device
+            .send_image_data(&[0u8; 100], &[vec![0u8; 100]], 0, None)
+            .await;
+        assert!(matches!(result.unwrap_err(), PrinterError::NoFilm));
     }
 
     #[tokio::test]

@@ -25,9 +25,6 @@ pub const MTU_SIZE: usize = 182;
 /// Minimum packet size: header(2) + length(2) + opcode(2) + checksum(1) = 7.
 pub const MIN_PACKET_SIZE: usize = 7;
 
-/// Maximum JPEG image size in bytes (approximately 105KB).
-pub const MAX_IMAGE_SIZE: usize = 105_000;
-
 /// Compute the Instax checksum over a byte slice.
 ///
 /// Formula: `(255 - (sum & 255)) & 255`

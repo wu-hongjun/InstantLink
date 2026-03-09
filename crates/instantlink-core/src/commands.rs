@@ -31,6 +31,11 @@ pub const OP_LED_PATTERN_SETTINGS: u16 = 0x3001;
 /// Additional printer info / print mode settings.
 pub const OP_ADDITIONAL_PRINTER_INFO: u16 = 0x3010;
 
+/// Power off the printer.
+pub const OP_SHUT_DOWN: u16 = 0x0100;
+/// Reset the printer.
+pub const OP_RESET: u16 = 0x0101;
+
 // ── InfoType constants (payload byte for SUPPORT_FUNCTION_INFO) ───────────────
 
 /// Image support info (for model detection): width, height, chunk size.
@@ -73,6 +78,10 @@ pub enum Command {
         blue: u8,
         pattern: u8,
     },
+    /// Power off the printer.
+    Shutdown,
+    /// Reset the printer.
+    Reset,
 }
 
 impl Command {
@@ -124,6 +133,8 @@ impl Command {
                     &[*pattern, 0x01, 0x01, 0xFF, *blue, *green, *red],
                 )
             }
+            Command::Shutdown => protocol::build_packet(OP_SHUT_DOWN, &[]),
+            Command::Reset => protocol::build_packet(OP_RESET, &[]),
         }
     }
 }
@@ -435,6 +446,22 @@ mod tests {
             }
             other => panic!("expected Unknown, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn encode_shutdown() {
+        let pkt = Command::Shutdown.encode();
+        let parsed = protocol::parse_packet(&pkt).unwrap();
+        assert_eq!(parsed.opcode, OP_SHUT_DOWN);
+        assert!(parsed.payload.is_empty());
+    }
+
+    #[test]
+    fn encode_reset() {
+        let pkt = Command::Reset.encode();
+        let parsed = protocol::parse_packet(&pkt).unwrap();
+        assert_eq!(parsed.opcode, OP_RESET);
+        assert!(parsed.payload.is_empty());
     }
 
     #[test]

@@ -159,4 +159,16 @@ int32_t instantlink_led_off(void);
  */
 int32_t instantlink_is_connected(void);
 
+/**
+ * Shut down (power off) the connected printer.
+ * Returns 0 on success, negative error code on failure.
+ */
+int32_t instantlink_shutdown(void);
+
+/**
+ * Reset the connected printer.
+ * Returns 0 on success, negative error code on failure.
+ */
+int32_t instantlink_reset(void);
+
 #endif  /* INSTANTLINK_FFI_H */

@@ -11,6 +11,8 @@
 //! - `-7` — print rejected
 //! - `-8` — no film remaining
 //! - `-9` — battery too low
+//! - `-10` — printer cover is open
+//! - `-11` — printer is busy
 
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -47,6 +49,8 @@ fn error_code(e: &PrinterError) -> i32 {
         PrinterError::PrintRejected(_) | PrinterError::UnexpectedResponse(_) => -7,
         PrinterError::NoFilm => -8,
         PrinterError::LowBattery { .. } => -9,
+        PrinterError::CoverOpen => -10,
+        PrinterError::PrinterBusy => -11,
         PrinterError::Protocol(_) => -3,
         PrinterError::Io(_) => -3,
     }
@@ -572,6 +576,52 @@ pub extern "C" fn instantlink_is_connected() -> i32 {
         let lock = get_device_lock();
         if let Ok(guard) = lock.lock() {
             i32::from(guard.is_some())
+        } else {
+            -3
+        }
+    })
+    .unwrap_or(-3)
+}
+
+/// Shut down (power off) the connected printer.
+/// Returns 0 on success, negative error code on failure.
+#[no_mangle]
+pub extern "C" fn instantlink_shutdown() -> i32 {
+    std::panic::catch_unwind(|| {
+        let lock = get_device_lock();
+        if let Ok(guard) = lock.lock() {
+            if let Some(ref device) = *guard {
+                let rt = get_runtime();
+                match rt.block_on(device.shutdown()) {
+                    Ok(()) => 0,
+                    Err(e) => error_code(&e),
+                }
+            } else {
+                -1
+            }
+        } else {
+            -3
+        }
+    })
+    .unwrap_or(-3)
+}
+
+/// Reset the connected printer.
+/// Returns 0 on success, negative error code on failure.
+#[no_mangle]
+pub extern "C" fn instantlink_reset() -> i32 {
+    std::panic::catch_unwind(|| {
+        let lock = get_device_lock();
+        if let Ok(guard) = lock.lock() {
+            if let Some(ref device) = *guard {
+                let rt = get_runtime();
+                match rt.block_on(device.reset()) {
+                    Ok(()) => 0,
+                    Err(e) => error_code(&e),
+                }
+            } else {
+                -1
+            }
         } else {
             -3
         }

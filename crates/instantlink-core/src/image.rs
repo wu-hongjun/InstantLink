@@ -8,7 +8,6 @@ use image::{DynamicImage, GenericImageView};
 
 use crate::error::{PrinterError, Result};
 use crate::models::PrinterModel;
-use crate::protocol::MAX_IMAGE_SIZE;
 
 /// How to fit the image to the printer's aspect ratio.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,10 +66,10 @@ pub fn resize_image(img: &DynamicImage, model: PrinterModel, fit: FitMode) -> Dy
     }
 }
 
-/// Encode an image as JPEG, finding the highest quality that fits within `MAX_IMAGE_SIZE`.
+/// Encode an image as JPEG, finding the highest quality that fits within `max_size`.
 ///
-/// Uses binary search to maximize quality while staying under the protocol limit.
-pub fn encode_jpeg(img: &DynamicImage, initial_quality: u8) -> Result<Vec<u8>> {
+/// Uses binary search to maximize quality while staying under the limit.
+pub fn encode_jpeg(img: &DynamicImage, initial_quality: u8, max_size: usize) -> Result<Vec<u8>> {
     let rgb = img.to_rgb8();
 
     let encode_at = |q: u8| -> std::result::Result<Vec<u8>, PrinterError> {
@@ -84,7 +83,7 @@ pub fn encode_jpeg(img: &DynamicImage, initial_quality: u8) -> Result<Vec<u8>> {
     // Try the requested quality first — often fits for smaller images.
     let capped = initial_quality.min(100);
     let data = encode_at(capped)?;
-    if data.len() <= MAX_IMAGE_SIZE {
+    if data.len() <= max_size {
         log::debug!("JPEG encoded: {} bytes at quality {}", data.len(), capped);
         return Ok(data);
     }
@@ -102,7 +101,7 @@ pub fn encode_jpeg(img: &DynamicImage, initial_quality: u8) -> Result<Vec<u8>> {
         if min_quality_size.is_none() || mid <= low {
             min_quality_size = Some(attempt.len());
         }
-        if attempt.len() <= MAX_IMAGE_SIZE {
+        if attempt.len() <= max_size {
             best_quality = mid;
             best_data = Some(attempt);
             low = mid + 1;
@@ -128,7 +127,7 @@ pub fn encode_jpeg(img: &DynamicImage, initial_quality: u8) -> Result<Vec<u8>> {
             let size = min_quality_size.unwrap_or_else(|| encode_at(1).map_or(0, |d| d.len()));
             Err(PrinterError::ImageTooLarge {
                 size,
-                max: MAX_IMAGE_SIZE,
+                max: max_size,
             })
         }
     }
@@ -150,16 +149,20 @@ pub fn chunk_image_data(data: &[u8], model: PrinterModel) -> Vec<Vec<u8>> {
     chunks
 }
 
-/// Complete image preparation pipeline: load → resize → encode → chunk.
+/// Complete image preparation pipeline: load → resize → flip (if needed) → encode → chunk.
 pub fn prepare_image(
     path: &Path,
     model: PrinterModel,
     fit: FitMode,
     quality: u8,
 ) -> Result<(Vec<u8>, Vec<Vec<u8>>)> {
+    let spec = model.spec();
     let img = load_image(path)?;
-    let resized = resize_image(&img, model, fit);
-    let jpeg_data = encode_jpeg(&resized, quality)?;
+    let mut resized = resize_image(&img, model, fit);
+    if spec.flip_vertical {
+        resized = resized.flipv();
+    }
+    let jpeg_data = encode_jpeg(&resized, quality, spec.max_image_size)?;
     let chunks = chunk_image_data(&jpeg_data, model);
     Ok((jpeg_data, chunks))
 }
@@ -177,9 +180,13 @@ pub fn prepare_image_from_bytes(
     fit: FitMode,
     quality: u8,
 ) -> Result<(Vec<u8>, Vec<Vec<u8>>)> {
+    let spec = model.spec();
     let img = load_image_from_bytes(data)?;
-    let resized = resize_image(&img, model, fit);
-    let jpeg_data = encode_jpeg(&resized, quality)?;
+    let mut resized = resize_image(&img, model, fit);
+    if spec.flip_vertical {
+        resized = resized.flipv();
+    }
+    let jpeg_data = encode_jpeg(&resized, quality, spec.max_image_size)?;
     let chunks = chunk_image_data(&jpeg_data, model);
     Ok((jpeg_data, chunks))
 }
@@ -240,7 +247,8 @@ mod tests {
     #[test]
     fn encode_jpeg_produces_data() {
         let img = create_test_image(600, 800);
-        let data = encode_jpeg(&img, 97).unwrap();
+        let max_size = PrinterModel::Mini.spec().max_image_size;
+        let data = encode_jpeg(&img, 97, max_size).unwrap();
         assert!(!data.is_empty());
         // JPEG magic bytes
         assert_eq!(data[0], 0xFF);
@@ -250,8 +258,17 @@ mod tests {
     #[test]
     fn encode_jpeg_fits_within_max() {
         let img = create_test_image(600, 800);
-        let data = encode_jpeg(&img, 97).unwrap();
-        assert!(data.len() <= MAX_IMAGE_SIZE);
+        let max_size = PrinterModel::Mini.spec().max_image_size;
+        let data = encode_jpeg(&img, 97, max_size).unwrap();
+        assert!(data.len() <= max_size);
+    }
+
+    #[test]
+    fn encode_jpeg_link3_size_limit() {
+        let img = create_test_image(600, 800);
+        let max_size = PrinterModel::MiniLink3.spec().max_image_size;
+        let data = encode_jpeg(&img, 97, max_size).unwrap();
+        assert!(data.len() <= max_size);
     }
 
     #[test]
@@ -299,5 +316,36 @@ mod tests {
     fn load_from_bytes_invalid() {
         let result = load_image_from_bytes(&[0, 1, 2, 3]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn model_specs_correct() {
+        // Verify all 4 model specs
+        let mini = PrinterModel::Mini.spec();
+        assert_eq!(mini.max_image_size, 105_000);
+        assert_eq!(mini.packet_delay_ms, 0);
+        assert_eq!(mini.success_code, 0);
+        assert!(!mini.flip_vertical);
+
+        let link3 = PrinterModel::MiniLink3.spec();
+        assert_eq!(link3.max_image_size, 55_000);
+        assert_eq!(link3.packet_delay_ms, 75);
+        assert_eq!(link3.success_code, 16);
+        assert!(link3.flip_vertical);
+
+        let square = PrinterModel::Square.spec();
+        assert_eq!(square.max_image_size, 105_000);
+        assert_eq!(square.success_code, 12);
+
+        let wide = PrinterModel::Wide.spec();
+        assert_eq!(wide.max_image_size, 225_000);
+        assert_eq!(wide.success_code, 15);
+    }
+
+    #[test]
+    fn all_models_includes_link3() {
+        let all = PrinterModel::all();
+        assert_eq!(all.len(), 4);
+        assert!(all.contains(&PrinterModel::MiniLink3));
     }
 }

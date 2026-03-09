@@ -43,6 +43,14 @@ pub enum PrinterError {
     #[error("no film remaining")]
     NoFilm,
 
+    /// Printer cover is open.
+    #[error("printer cover is open")]
+    CoverOpen,
+
+    /// Printer is busy.
+    #[error("printer is busy")]
+    PrinterBusy,
+
     /// Battery too low to print.
     #[error("battery too low ({percent}%)")]
     LowBattery { percent: u8 },

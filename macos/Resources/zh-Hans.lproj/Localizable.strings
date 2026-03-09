@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Show Window" = "显示窗口";
+"Find Printer" = "查找打印机";
+"Refresh Status" = "刷新状态";
+"Quit" = "退出";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "选择要打印的图片";
+
+/* Pairing Flow */
+"Connect to your printer" = "连接打印机";
+"No printer found" = "未找到打印机";
+"Make sure your printer is turned on" = "确保打印机已开机";
+"Press the button to enable Bluetooth" = "按下按钮启用蓝牙";
+"Keep the printer nearby" = "将打印机放在附近";
+"Turn on your Instax printer" = "打开你的 Instax 打印机";
+
+/* Buttons */
+"Cancel" = "取消";
+"Try Again" = "重试";
+"Open File" = "打开文件";
+"Save" = "保存";
+"Reset Crop" = "重置裁剪";
+"Scan for Printers" = "扫描打印机";
+"Edit Image" = "编辑图片";
+"Print" = "打印";
+
+/* Status Display */
+"Connected" = "已连接";
+"Charging" = "充电中";
+"Refresh status" = "刷新状态";
+
+/* Dynamic Status Messages */
+"Scanning..." = "正在扫描...";
+"Printing..." = "正在打印...";
+"Printed!" = "打印完成！";
+"Print failed" = "打印失败";
+"No printers found" = "未找到打印机";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "剩余 %d 张";
+"connecting_to" = "正在连接 %@...";
+"found_one_printer" = "找到 1 台打印机";
+"found_n_printers" = "找到 %d 台打印机";
+
+/* Image Editor */
+"Image Editor" = "图片编辑器";
+"No image selected" = "未选择图片";
+"Drop image or click Open File" = "拖放图片或点击打开文件";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "适应模式";
+"Rotate" = "旋转";
+"Date Stamp" = "日期印记";
+
+/* Editor — Fit Mode Options */
+"Crop" = "裁剪";
+"Contain" = "适应";
+"Stretch" = "拉伸";
+
+/* Editor — Rotation */
+"Rotate Left" = "向左旋转";
+"Rotate Right" = "向右旋转";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "启用";
+"Show time" = "显示时间";
+"Light bleed" = "光晕效果";
+"Style:" = "样式：";
+"Classic" = "经典";
+"Dot Matrix" = "点阵";
+"B&W" = "黑白";
+"Format:" = "格式：";
+"Position:" = "位置：";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "打印机已连接";
+"Edit Printer" = "编辑打印机";
+"Serial Number:" = "序列号：";
+"Verify this matches the serial number on the bottom of your device" = "请确认此序列号与设备底部的序列号一致";
+"BLE Name:" = "蓝牙名称：";
+"Model:" = "型号：";
+"Color:" = "颜色：";
+"None" = "无";
+"Name:" = "名称：";
+"Custom display name" = "自定义显示名称";
+
+/* Printer Colors */
+"White" = "白色";
+"Pink" = "粉色";
+"Blue" = "蓝色";
+"Green" = "绿色";
+"Gray" = "灰色";
+"Black" = "黑色";
+"Beige" = "米色";

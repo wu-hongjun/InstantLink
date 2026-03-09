@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Show Window" = "Mostrar ventana";
+"Find Printer" = "Buscar impresora";
+"Refresh Status" = "Actualizar estado";
+"Quit" = "Salir";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "Selecciona una imagen para imprimir";
+
+/* Pairing Flow */
+"Connect to your printer" = "Conecta tu impresora";
+"No printer found" = "No se encontró impresora";
+"Make sure your printer is turned on" = "Asegúrate de que la impresora esté encendida";
+"Press the button to enable Bluetooth" = "Pulsa el botón para activar Bluetooth";
+"Keep the printer nearby" = "Mantén la impresora cerca";
+"Turn on your Instax printer" = "Enciende tu impresora Instax";
+
+/* Buttons */
+"Cancel" = "Cancelar";
+"Try Again" = "Reintentar";
+"Open File" = "Abrir archivo";
+"Save" = "Guardar";
+"Reset Crop" = "Restablecer recorte";
+"Scan for Printers" = "Buscar impresoras";
+"Edit Image" = "Editar imagen";
+"Print" = "Imprimir";
+
+/* Status Display */
+"Connected" = "Conectada";
+"Charging" = "Cargando";
+"Refresh status" = "Actualizar estado";
+
+/* Dynamic Status Messages */
+"Scanning..." = "Buscando...";
+"Printing..." = "Imprimiendo...";
+"Printed!" = "¡Impreso!";
+"Print failed" = "Error de impresión";
+"No printers found" = "No se encontraron impresoras";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "%d restantes";
+"connecting_to" = "Conectando a %@...";
+"found_one_printer" = "1 impresora encontrada";
+"found_n_printers" = "%d impresoras encontradas";
+
+/* Image Editor */
+"Image Editor" = "Editor de imagen";
+"No image selected" = "Sin imagen seleccionada";
+"Drop image or click Open File" = "Arrastra una imagen o haz clic en Abrir archivo";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "Modo de ajuste";
+"Rotate" = "Rotar";
+"Date Stamp" = "Sello de fecha";
+
+/* Editor — Fit Mode Options */
+"Crop" = "Recortar";
+"Contain" = "Contener";
+"Stretch" = "Estirar";
+
+/* Editor — Rotation */
+"Rotate Left" = "Rotar a la izquierda";
+"Rotate Right" = "Rotar a la derecha";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "Activado";
+"Show time" = "Mostrar hora";
+"Light bleed" = "Efecto de luz";
+"Style:" = "Estilo:";
+"Classic" = "Clásico";
+"Dot Matrix" = "Matriz de puntos";
+"B&W" = "B/N";
+"Format:" = "Formato:";
+"Position:" = "Posición:";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "Impresora conectada";
+"Edit Printer" = "Editar impresora";
+"Serial Number:" = "Número de serie:";
+"Verify this matches the serial number on the bottom of your device" = "Verifica que coincida con el número de serie en la parte inferior del dispositivo";
+"BLE Name:" = "Nombre BLE:";
+"Model:" = "Modelo:";
+"Color:" = "Color:";
+"None" = "Ninguno";
+"Name:" = "Nombre:";
+"Custom display name" = "Nombre personalizado";
+
+/* Printer Colors */
+"White" = "Blanco";
+"Pink" = "Rosa";
+"Blue" = "Azul";
+"Green" = "Verde";
+"Gray" = "Gris";
+"Black" = "Negro";
+"Beige" = "Beige";

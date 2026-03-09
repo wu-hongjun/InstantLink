@@ -38,5 +38,24 @@
 
   <key>NSBluetoothAlwaysUsageDescription</key>
   <string>InstantLink needs Bluetooth to communicate with your Instax Link printer.</string>
+
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>zh-Hans</string>
+    <string>zh-Hant</string>
+    <string>ja</string>
+    <string>ko</string>
+    <string>es</string>
+    <string>fr</string>
+    <string>it</string>
+    <string>de</string>
+    <string>pt-BR</string>
+    <string>ar</string>
+    <string>he</string>
+  </array>
 </dict>
 </plist>

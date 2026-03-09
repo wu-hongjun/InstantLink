@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Show Window" = "إظهار النافذة";
+"Find Printer" = "البحث عن طابعة";
+"Refresh Status" = "تحديث الحالة";
+"Quit" = "إنهاء";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "اختر صورة للطباعة";
+
+/* Pairing Flow */
+"Connect to your printer" = "اتصل بالطابعة";
+"No printer found" = "لم يتم العثور على طابعة";
+"Make sure your printer is turned on" = "تأكد من أن الطابعة قيد التشغيل";
+"Press the button to enable Bluetooth" = "اضغط الزر لتفعيل البلوتوث";
+"Keep the printer nearby" = "أبقِ الطابعة قريبة";
+"Turn on your Instax printer" = "شغّل طابعة Instax الخاصة بك";
+
+/* Buttons */
+"Cancel" = "إلغاء";
+"Try Again" = "إعادة المحاولة";
+"Open File" = "فتح ملف";
+"Save" = "حفظ";
+"Reset Crop" = "إعادة تعيين القص";
+"Scan for Printers" = "البحث عن طابعات";
+"Edit Image" = "تعديل الصورة";
+"Print" = "طباعة";
+
+/* Status Display */
+"Connected" = "متصلة";
+"Charging" = "جارٍ الشحن";
+"Refresh status" = "تحديث الحالة";
+
+/* Dynamic Status Messages */
+"Scanning..." = "جارٍ البحث...";
+"Printing..." = "جارٍ الطباعة...";
+"Printed!" = "تمت الطباعة!";
+"Print failed" = "فشلت الطباعة";
+"No printers found" = "لم يتم العثور على طابعات";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "%d متبقية";
+"connecting_to" = "جارٍ الاتصال بـ %@...";
+"found_one_printer" = "تم العثور على طابعة واحدة";
+"found_n_printers" = "تم العثور على %d طابعات";
+
+/* Image Editor */
+"Image Editor" = "محرر الصور";
+"No image selected" = "لم يتم اختيار صورة";
+"Drop image or click Open File" = "اسحب صورة أو انقر فتح ملف";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "وضع الملاءمة";
+"Rotate" = "تدوير";
+"Date Stamp" = "ختم التاريخ";
+
+/* Editor — Fit Mode Options */
+"Crop" = "قص";
+"Contain" = "احتواء";
+"Stretch" = "تمديد";
+
+/* Editor — Rotation */
+"Rotate Left" = "تدوير لليسار";
+"Rotate Right" = "تدوير لليمين";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "مفعّل";
+"Show time" = "إظهار الوقت";
+"Light bleed" = "تأثير ضوئي";
+"Style:" = "النمط:";
+"Classic" = "كلاسيكي";
+"Dot Matrix" = "مصفوفة نقطية";
+"B&W" = "أبيض وأسود";
+"Format:" = "التنسيق:";
+"Position:" = "الموضع:";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "الطابعة متصلة";
+"Edit Printer" = "تعديل الطابعة";
+"Serial Number:" = "الرقم التسلسلي:";
+"Verify this matches the serial number on the bottom of your device" = "تحقق من تطابق هذا الرقم مع الرقم التسلسلي الموجود أسفل جهازك";
+"BLE Name:" = "اسم BLE:";
+"Model:" = "الطراز:";
+"Color:" = "اللون:";
+"None" = "بلا";
+"Name:" = "الاسم:";
+"Custom display name" = "اسم عرض مخصص";
+
+/* Printer Colors */
+"White" = "أبيض";
+"Pink" = "وردي";
+"Blue" = "أزرق";
+"Green" = "أخضر";
+"Gray" = "رمادي";
+"Black" = "أسود";
+"Beige" = "بيج";

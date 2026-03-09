@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Show Window" = "윈도우 보기";
+"Find Printer" = "프린터 찾기";
+"Refresh Status" = "상태 새로고침";
+"Quit" = "종료";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "인쇄할 이미지 선택";
+
+/* Pairing Flow */
+"Connect to your printer" = "프린터에 연결";
+"No printer found" = "프린터를 찾을 수 없음";
+"Make sure your printer is turned on" = "프린터 전원이 켜져 있는지 확인하세요";
+"Press the button to enable Bluetooth" = "버튼을 눌러 Bluetooth를 활성화하세요";
+"Keep the printer nearby" = "프린터를 가까이 두세요";
+"Turn on your Instax printer" = "Instax 프린터의 전원을 켜세요";
+
+/* Buttons */
+"Cancel" = "취소";
+"Try Again" = "다시 시도";
+"Open File" = "파일 열기";
+"Save" = "저장";
+"Reset Crop" = "자르기 초기화";
+"Scan for Printers" = "프린터 스캔";
+"Edit Image" = "이미지 편집";
+"Print" = "인쇄";
+
+/* Status Display */
+"Connected" = "연결됨";
+"Charging" = "충전 중";
+"Refresh status" = "상태 새로고침";
+
+/* Dynamic Status Messages */
+"Scanning..." = "스캔 중...";
+"Printing..." = "인쇄 중...";
+"Printed!" = "인쇄 완료!";
+"Print failed" = "인쇄 실패";
+"No printers found" = "프린터를 찾을 수 없음";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "%d장 남음";
+"connecting_to" = "%@에 연결 중...";
+"found_one_printer" = "프린터 1대 발견";
+"found_n_printers" = "프린터 %d대 발견";
+
+/* Image Editor */
+"Image Editor" = "이미지 편집기";
+"No image selected" = "선택된 이미지 없음";
+"Drop image or click Open File" = "이미지를 드롭하거나 파일 열기를 클릭하세요";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "맞춤 모드";
+"Rotate" = "회전";
+"Date Stamp" = "날짜 스탬프";
+
+/* Editor — Fit Mode Options */
+"Crop" = "자르기";
+"Contain" = "맞춤";
+"Stretch" = "늘리기";
+
+/* Editor — Rotation */
+"Rotate Left" = "왼쪽으로 회전";
+"Rotate Right" = "오른쪽으로 회전";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "사용";
+"Show time" = "시간 표시";
+"Light bleed" = "빛 번짐";
+"Style:" = "스타일:";
+"Classic" = "클래식";
+"Dot Matrix" = "도트 매트릭스";
+"B&W" = "흑백";
+"Format:" = "형식:";
+"Position:" = "위치:";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "프린터 연결됨";
+"Edit Printer" = "프린터 편집";
+"Serial Number:" = "일련번호:";
+"Verify this matches the serial number on the bottom of your device" = "기기 하단의 일련번호와 일치하는지 확인하세요";
+"BLE Name:" = "BLE 이름:";
+"Model:" = "모델:";
+"Color:" = "색상:";
+"None" = "없음";
+"Name:" = "이름:";
+"Custom display name" = "사용자 지정 표시 이름";
+
+/* Printer Colors */
+"White" = "화이트";
+"Pink" = "핑크";
+"Blue" = "블루";
+"Green" = "그린";
+"Gray" = "그레이";
+"Black" = "블랙";
+"Beige" = "베이지";

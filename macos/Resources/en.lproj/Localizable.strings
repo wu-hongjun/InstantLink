@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Show Window" = "Show Window";
+"Find Printer" = "Find Printer";
+"Refresh Status" = "Refresh Status";
+"Quit" = "Quit";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "Select an image to print";
+
+/* Pairing Flow */
+"Connect to your printer" = "Connect to your printer";
+"No printer found" = "No printer found";
+"Make sure your printer is turned on" = "Make sure your printer is turned on";
+"Press the button to enable Bluetooth" = "Press the button to enable Bluetooth";
+"Keep the printer nearby" = "Keep the printer nearby";
+"Turn on your Instax printer" = "Turn on your Instax printer";
+
+/* Buttons */
+"Cancel" = "Cancel";
+"Try Again" = "Try Again";
+"Open File" = "Open File";
+"Save" = "Save";
+"Reset Crop" = "Reset Crop";
+"Scan for Printers" = "Scan for Printers";
+"Edit Image" = "Edit Image";
+"Print" = "Print";
+
+/* Status Display */
+"Connected" = "Connected";
+"Charging" = "Charging";
+"Refresh status" = "Refresh status";
+
+/* Dynamic Status Messages */
+"Scanning..." = "Scanning...";
+"Printing..." = "Printing...";
+"Printed!" = "Printed!";
+"Print failed" = "Print failed";
+"No printers found" = "No printers found";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "%d left";
+"connecting_to" = "Connecting to %@...";
+"found_one_printer" = "Found 1 printer";
+"found_n_printers" = "Found %d printers";
+
+/* Image Editor */
+"Image Editor" = "Image Editor";
+"No image selected" = "No image selected";
+"Drop image or click Open File" = "Drop image or click Open File";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "Fit Mode";
+"Rotate" = "Rotate";
+"Date Stamp" = "Date Stamp";
+
+/* Editor — Fit Mode Options */
+"Crop" = "Crop";
+"Contain" = "Contain";
+"Stretch" = "Stretch";
+
+/* Editor — Rotation */
+"Rotate Left" = "Rotate Left";
+"Rotate Right" = "Rotate Right";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "Enabled";
+"Show time" = "Show time";
+"Light bleed" = "Light bleed";
+"Style:" = "Style:";
+"Classic" = "Classic";
+"Dot Matrix" = "Dot Matrix";
+"B&W" = "B&W";
+"Format:" = "Format:";
+"Position:" = "Position:";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "Printer Connected";
+"Edit Printer" = "Edit Printer";
+"Serial Number:" = "Serial Number:";
+"Verify this matches the serial number on the bottom of your device" = "Verify this matches the serial number on the bottom of your device";
+"BLE Name:" = "BLE Name:";
+"Model:" = "Model:";
+"Color:" = "Color:";
+"None" = "None";
+"Name:" = "Name:";
+"Custom display name" = "Custom display name";
+
+/* Printer Colors */
+"White" = "White";
+"Pink" = "Pink";
+"Blue" = "Blue";
+"Green" = "Green";
+"Gray" = "Gray";
+"Black" = "Black";
+"Beige" = "Beige";

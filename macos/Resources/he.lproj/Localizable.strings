@@ -1,0 +1,100 @@
+
+/* Menu Bar */
+"Show Window" = "הצג חלון";
+"Find Printer" = "חפש מדפסת";
+"Refresh Status" = "רענן סטטוס";
+"Quit" = "יציאה";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "בחר תמונה להדפסה";
+
+/* Pairing Flow */
+"Connect to your printer" = "התחבר למדפסת";
+"No printer found" = "לא נמצאה מדפסת";
+"Make sure your printer is turned on" = "ודא שהמדפסת דלוקה";
+"Press the button to enable Bluetooth" = "לחץ על הכפתור כדי להפעיל Bluetooth";
+"Keep the printer nearby" = "השאר את המדפסת בקרבת מקום";
+"Turn on your Instax printer" = "הפעל את מדפסת Instax שלך";
+
+/* Buttons */
+"Cancel" = "ביטול";
+"Try Again" = "נסה שוב";
+"Open File" = "פתח קובץ";
+"Save" = "שמור";
+"Reset Crop" = "אפס חיתוך";
+"Scan for Printers" = "חפש מדפסות";
+"Edit Image" = "ערוך תמונה";
+"Print" = "הדפס";
+
+/* Status Display */
+"Connected" = "מחוברת";
+"Charging" = "בטעינה";
+"Refresh status" = "רענן סטטוס";
+
+/* Dynamic Status Messages */
+"Scanning..." = "מחפש...";
+"Printing..." = "מדפיס...";
+"Printed!" = "הודפס!";
+"Print failed" = "ההדפסה נכשלה";
+"No printers found" = "לא נמצאו מדפסות";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "נותרו %d";
+"connecting_to" = "מתחבר ל-%@...";
+"found_one_printer" = "נמצאה מדפסת אחת";
+"found_n_printers" = "נמצאו %d מדפסות";
+
+/* Image Editor */
+"Image Editor" = "עורך תמונות";
+"No image selected" = "לא נבחרה תמונה";
+"Drop image or click Open File" = "גרור תמונה או לחץ פתח קובץ";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "מצב התאמה";
+"Rotate" = "סיבוב";
+"Date Stamp" = "חותמת תאריך";
+
+/* Editor — Fit Mode Options */
+"Crop" = "חיתוך";
+"Contain" = "התאמה";
+"Stretch" = "מתיחה";
+
+/* Editor — Rotation */
+"Rotate Left" = "סובב שמאלה";
+"Rotate Right" = "סובב ימינה";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "מופעל";
+"Show time" = "הצג שעה";
+"Light bleed" = "אפקט אור";
+"Style:" = "סגנון:";
+"Classic" = "קלאסי";
+"Dot Matrix" = "מטריצת נקודות";
+"B&W" = "שחור-לבן";
+"Format:" = "תבנית:";
+"Position:" = "מיקום:";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "המדפסת מחוברת";
+"Edit Printer" = "ערוך מדפסת";
+"Serial Number:" = "מספר סידורי:";
+"Verify this matches the serial number on the bottom of your device" = "ודא שמספר זה תואם למספר הסידורי בתחתית המכשיר";
+"BLE Name:" = "שם BLE:";
+"Model:" = "דגם:";
+"Color:" = "צבע:";
+"None" = "ללא";
+"Name:" = "שם:";
+"Custom display name" = "שם תצוגה מותאם";
+
+/* Printer Colors */
+"White" = "לבן";
+"Pink" = "ורוד";
+"Blue" = "כחול";
+"Green" = "ירוק";
+"Gray" = "אפור";
+"Black" = "שחור";
+"Beige" = "בז׳";

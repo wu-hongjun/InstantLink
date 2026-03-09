@@ -13,7 +13,7 @@ struct InstantLinkApp: App {
                 .environmentObject(viewModel)
         }
 
-        Window("Image Editor", id: "image-editor") {
+        Window(L("Image Editor"), id: "image-editor") {
             ImageEditorView()
                 .environmentObject(viewModel)
         }
@@ -40,16 +40,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "printer.fill", accessibilityDescription: "InstantLink")
+            button.image = NSImage(systemSymbolName: "printer.fill", accessibilityDescription: L("InstantLink"))
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Show Window", action: #selector(showWindow), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: L("Show Window"), action: #selector(showWindow), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Find Printer", action: #selector(findPrinter), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Refresh Status", action: #selector(refreshStatus), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: L("Find Printer"), action: #selector(findPrinter), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: L("Refresh Status"), action: #selector(refreshStatus), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem?.menu = menu
     }
 
@@ -217,7 +217,7 @@ class ViewModel: ObservableObject {
     // Pairing mode
     @Published var isPairing = false
     @Published var pairingAttempt = 0
-    @Published var pairingStatus: String = "Scanning..."
+    @Published var pairingStatus: String = L("Scanning...")
     private var pairingTask: Task<Void, Never>?
 
     private var autoRefreshTimer: Timer?
@@ -242,7 +242,7 @@ class ViewModel: ObservableObject {
 
         isPairing = true
         pairingAttempt = 0
-        pairingStatus = "Scanning..."
+        pairingStatus = L("Scanning...")
         statusMessage = nil
 
         pairingTask = Task { [weak self] in
@@ -251,7 +251,7 @@ class ViewModel: ObservableObject {
             while !Task.isCancelled {
                 await MainActor.run {
                     self.pairingAttempt += 1
-                    self.pairingStatus = "Scanning..."
+                    self.pairingStatus = L("Scanning...")
                 }
 
                 // Phase 1: lightweight scan to discover printers
@@ -271,7 +271,7 @@ class ViewModel: ObservableObject {
                 if let target = target {
                     // Phase 2: connect via FFI (persistent connection)
                     await MainActor.run {
-                        self.pairingStatus = "Connecting to \(target)..."
+                        self.pairingStatus = L("connecting_to", target)
                     }
 
                     // Disconnect any existing connection first
@@ -397,10 +397,14 @@ class ViewModel: ObservableObject {
             hasSearchedOnce = true
 
             if printers.isEmpty {
-                showStatus("No printers found")
+                showStatus(L("No printers found"))
                 return
             }
-            showStatus("Found \(printers.count) printer\(printers.count == 1 ? "" : "s")")
+            if printers.count == 1 {
+                showStatus(L("found_one_printer"))
+            } else {
+                showStatus(L("found_n_printers", printers.count))
+            }
             if selectedPrinter == nil || !printers.contains(selectedPrinter!) {
                 selectedPrinter = printers.first
             }
@@ -432,7 +436,7 @@ class ViewModel: ObservableObject {
         panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff, .webP]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.message = "Select an image to print"
+        panel.message = L("Select an image to print")
         if panel.runModal() == .OK, let url = panel.url {
             loadImage(from: url)
         }
@@ -912,7 +916,7 @@ class ViewModel: ObservableObject {
         await refreshStatus()
         await MainActor.run {
             isPrinting = false
-            showStatus(success ? "Printed!" : "Print failed")
+            showStatus(success ? L("Printed!") : L("Print failed"))
         }
     }
 
@@ -940,7 +944,7 @@ struct MainView: View {
                     Circle()
                         .fill(.green)
                         .frame(width: 8, height: 8)
-                    Text(viewModel.currentPrinterDisplayName ?? "Connected")
+                    Text(viewModel.currentPrinterDisplayName ?? L("Connected"))
                         .font(.caption)
                         .fontWeight(.medium)
                     Button {
@@ -959,9 +963,9 @@ struct MainView: View {
 
                     StatusItem(
                         icon: viewModel.isCharging ? "battery.100.bolt" : "battery.100",
-                        value: viewModel.isCharging ? "Charging" : "\(viewModel.battery)%"
+                        value: viewModel.isCharging ? L("Charging") : L("battery_percent", viewModel.battery)
                     )
-                    StatusItem(icon: "film", value: "\(viewModel.filmRemaining) left")
+                    StatusItem(icon: "film", value: L("film_remaining", viewModel.filmRemaining))
 
                     Button {
                         Task { await viewModel.refreshStatus() }
@@ -979,7 +983,7 @@ struct MainView: View {
                     .buttonStyle(.plain)
                     .foregroundColor(.secondary)
                     .disabled(viewModel.isRefreshing)
-                    .help("Refresh status")
+                    .help(L("Refresh status"))
 
                     if let msg = viewModel.statusMessage {
                         Text(msg)
@@ -1015,14 +1019,14 @@ struct MainView: View {
                             .font(.callout)
                             .foregroundColor(.secondary)
                         VStack(alignment: .leading, spacing: 4) {
-                            Label("Make sure your printer is turned on", systemImage: "1.circle")
-                            Label("Press the button to enable Bluetooth", systemImage: "2.circle")
-                            Label("Keep the printer nearby", systemImage: "3.circle")
+                            Label(L("Make sure your printer is turned on"), systemImage: "1.circle")
+                            Label(L("Press the button to enable Bluetooth"), systemImage: "2.circle")
+                            Label(L("Keep the printer nearby"), systemImage: "3.circle")
                         }
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
-                        Button("Cancel") {
+                        Button(L("Cancel")) {
                             viewModel.stopPairing()
                         }
                         .controlSize(.large)
@@ -1031,17 +1035,17 @@ struct MainView: View {
                         Image(systemName: "printer.dotmatrix")
                             .font(.system(size: 40))
                             .foregroundColor(.secondary)
-                        Text("No printer found")
+                        Text(L("No printer found"))
                             .font(.headline)
                         VStack(alignment: .leading, spacing: 4) {
-                            Label("Make sure your printer is turned on", systemImage: "1.circle")
-                            Label("Press the button to enable Bluetooth", systemImage: "2.circle")
-                            Label("Keep the printer nearby", systemImage: "3.circle")
+                            Label(L("Make sure your printer is turned on"), systemImage: "1.circle")
+                            Label(L("Press the button to enable Bluetooth"), systemImage: "2.circle")
+                            Label(L("Keep the printer nearby"), systemImage: "3.circle")
                         }
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
-                        Button("Try Again") {
+                        Button(L("Try Again")) {
                             viewModel.startPairing()
                         }
                         .controlSize(.large)
@@ -1050,16 +1054,16 @@ struct MainView: View {
                         Image(systemName: "printer.dotmatrix")
                             .font(.system(size: 40))
                             .foregroundColor(.secondary)
-                        Text("Connect to your printer")
+                        Text(L("Connect to your printer"))
                             .font(.headline)
                         VStack(alignment: .leading, spacing: 4) {
-                            Label("Turn on your Instax printer", systemImage: "1.circle")
-                            Label("Press the button to enable Bluetooth", systemImage: "2.circle")
+                            Label(L("Turn on your Instax printer"), systemImage: "1.circle")
+                            Label(L("Press the button to enable Bluetooth"), systemImage: "2.circle")
                         }
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
-                        Button("Find Printer") {
+                        Button(L("Find Printer")) {
                             viewModel.startPairing()
                         }
                         .buttonStyle(.borderedProminent)
@@ -1312,7 +1316,7 @@ struct MainPreviewView: View {
             if viewModel.isPrinting {
                 VStack(spacing: 8) {
                     ProgressView().controlSize(.regular)
-                    Text("Printing...")
+                    Text(L("Printing..."))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1423,10 +1427,10 @@ struct MainPreviewView: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.largeTitle)
                         .foregroundColor(.secondary)
-                    Text("Drop image or click Open File")
+                    Text(L("Drop image or click Open File"))
                         .font(.callout)
                         .foregroundColor(.secondary)
-                    Button("Open File") { viewModel.selectImage() }
+                    Button(L("Open File")) { viewModel.selectImage() }
                         .controlSize(.small)
                 }
             }
@@ -1499,7 +1503,7 @@ struct MainActionsView: View {
             } label: {
                 HStack {
                     Image(systemName: "slider.horizontal.3")
-                    Text("Edit Image")
+                    Text(L("Edit Image"))
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -1517,7 +1521,7 @@ struct MainActionsView: View {
                     } else {
                         Image(systemName: "printer.fill")
                     }
-                    Text(viewModel.isPrinting ? "Printing..." : "Print")
+                    Text(viewModel.isPrinting ? L("Printing...") : L("Print"))
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -1549,10 +1553,10 @@ struct ImageEditorView: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary)
-                    Text("No image selected")
+                    Text(L("No image selected"))
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Button("Open File") { viewModel.selectImage() }
+                    Button(L("Open File")) { viewModel.selectImage() }
                         .controlSize(.large)
                     Spacer()
                 }
@@ -1799,17 +1803,17 @@ struct EditorSidebarView: View {
         ScrollView {
             VStack(spacing: 0) {
                 // Fit Mode
-                AccordionSection("Fit Mode", icon: "crop") {
+                AccordionSection(L("Fit Mode"), icon: "crop") {
                     Picker("", selection: $viewModel.fitMode) {
-                        Text("Crop").tag("crop")
-                        Text("Contain").tag("contain")
-                        Text("Stretch").tag("stretch")
+                        Text(L("Crop")).tag("crop")
+                        Text(L("Contain")).tag("contain")
+                        Text(L("Stretch")).tag("stretch")
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
 
                     if viewModel.fitMode == "crop" {
-                        Button("Reset Crop") {
+                        Button(L("Reset Crop")) {
                             viewModel.resetCropAdjustments()
                         }
                         .controlSize(.small)
@@ -1821,19 +1825,19 @@ struct EditorSidebarView: View {
                 Divider()
 
                 // Rotate
-                AccordionSection("Rotate", icon: "rotate.right") {
+                AccordionSection(L("Rotate"), icon: "rotate.right") {
                     HStack(spacing: 12) {
                         Button {
                             viewModel.rotateCounterClockwise()
                         } label: {
-                            Label("Rotate Left", systemImage: "rotate.left")
+                            Label(L("Rotate Left"), systemImage: "rotate.left")
                         }
                         .controlSize(.small)
 
                         Button {
                             viewModel.rotateClockwise()
                         } label: {
-                            Label("Rotate Right", systemImage: "rotate.right")
+                            Label(L("Rotate Right"), systemImage: "rotate.right")
                         }
                         .controlSize(.small)
 
@@ -1844,8 +1848,8 @@ struct EditorSidebarView: View {
                 Divider()
 
                 // Date Stamp
-                AccordionSection("Date Stamp", icon: "calendar", expanded: false) {
-                    Toggle("Enabled", isOn: $viewModel.dateStampEnabled)
+                AccordionSection(L("Date Stamp"), icon: "calendar", expanded: false) {
+                    Toggle(L("Enabled"), isOn: $viewModel.dateStampEnabled)
                         .font(.callout)
 
                     if viewModel.dateStampEnabled {
@@ -1860,27 +1864,27 @@ struct EditorSidebarView: View {
                                 )
                             )
 
-                        Toggle("Show time", isOn: $viewModel.showTimeRow)
+                        Toggle(L("Show time"), isOn: $viewModel.showTimeRow)
                             .font(.callout)
 
-                        Toggle("Light bleed", isOn: $viewModel.lightBleedEnabled)
+                        Toggle(L("Light bleed"), isOn: $viewModel.lightBleedEnabled)
                             .font(.callout)
 
                         HStack {
-                            Text("Style:")
+                            Text(L("Style:"))
                                 .font(.callout)
                                 .frame(width: 50, alignment: .leading)
                             Picker("", selection: $viewModel.dateStampStyle) {
-                                Text("Classic").tag("classic")
-                                Text("Dot Matrix").tag("dotMatrix")
-                                Text("B&W").tag("bw")
+                                Text(L("Classic")).tag("classic")
+                                Text(L("Dot Matrix")).tag("dotMatrix")
+                                Text(L("B&W")).tag("bw")
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
                         }
 
                         HStack {
-                            Text("Format:")
+                            Text(L("Format:"))
                                 .font(.callout)
                                 .frame(width: 50, alignment: .leading)
                             Picker("", selection: $viewModel.dateStampFormat) {
@@ -1893,7 +1897,7 @@ struct EditorSidebarView: View {
                         }
 
                         HStack {
-                            Text("Position:")
+                            Text(L("Position:"))
                                 .font(.callout)
                                 .frame(width: 55, alignment: .leading)
                             Picker("", selection: $viewModel.dateStampPosition) {
@@ -1929,7 +1933,7 @@ struct PrinterProfileSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(isPostPairing ? "Printer Connected" : "Edit Printer")
+            Text(isPostPairing ? L("Printer Connected") : L("Edit Printer"))
                 .font(.headline)
 
             if let profile = viewModel.editingProfile {
@@ -1937,20 +1941,20 @@ struct PrinterProfileSheet: View {
                     if let serial = profile.serialNumber {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack {
-                                Text("Serial Number:")
+                                Text(L("Serial Number:"))
                                     .foregroundColor(.secondary)
                                 Text(serial)
                                     .fontWeight(.medium)
                                     .textSelection(.enabled)
                             }
-                            Text("Verify this matches the serial number on the bottom of your device")
+                            Text(L("Verify this matches the serial number on the bottom of your device"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
 
                     HStack {
-                        Text("BLE Name:")
+                        Text(L("BLE Name:"))
                             .foregroundColor(.secondary)
                         Text(profile.bleIdentifier)
                             .font(.caption)
@@ -1962,7 +1966,7 @@ struct PrinterProfileSheet: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("Model:")
+                        Text(L("Model:"))
                             .frame(width: 50, alignment: .leading)
                         Picker("", selection: $selectedModel) {
                             ForEach(PrinterProfile.availableModels, id: \.self) { model in
@@ -1973,21 +1977,21 @@ struct PrinterProfileSheet: View {
                     }
 
                     HStack {
-                        Text("Color:")
+                        Text(L("Color:"))
                             .frame(width: 50, alignment: .leading)
                         Picker("", selection: $selectedColor) {
-                            Text("None").tag("")
+                            Text(L("None")).tag("")
                             ForEach(PrinterProfile.availableColors, id: \.self) { color in
-                                Text(color).tag(color)
+                                Text(L(color)).tag(color)
                             }
                         }
                         .labelsHidden()
                     }
 
                     HStack {
-                        Text("Name:")
+                        Text(L("Name:"))
                             .frame(width: 50, alignment: .leading)
-                        TextField("Custom display name", text: $customName)
+                        TextField(L("Custom display name"), text: $customName)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -2000,7 +2004,7 @@ struct PrinterProfileSheet: View {
             } label: {
                 HStack {
                     Image(systemName: "antenna.radiowaves.left.and.right")
-                    Text("Scan for Printers")
+                    Text(L("Scan for Printers"))
                 }
             }
             .disabled(viewModel.isSearching)
@@ -2009,9 +2013,9 @@ struct PrinterProfileSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cancel") { dismiss() }
+                Button(L("Cancel")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Save") { saveAndDismiss() }
+                Button(L("Save")) { saveAndDismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
             }

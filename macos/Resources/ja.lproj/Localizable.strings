@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Show Window" = "ウィンドウを表示";
+"Find Printer" = "プリンターを検索";
+"Refresh Status" = "ステータスを更新";
+"Quit" = "終了";
+
+/* Accessibility */
+"InstantLink" = "InstantLink";
+
+/* File Dialog */
+"Select an image to print" = "印刷する画像を選択";
+
+/* Pairing Flow */
+"Connect to your printer" = "プリンターに接続";
+"No printer found" = "プリンターが見つかりません";
+"Make sure your printer is turned on" = "プリンターの電源が入っていることを確認してください";
+"Press the button to enable Bluetooth" = "ボタンを押して Bluetooth を有効にしてください";
+"Keep the printer nearby" = "プリンターを近くに置いてください";
+"Turn on your Instax printer" = "Instax プリンターの電源を入れてください";
+
+/* Buttons */
+"Cancel" = "キャンセル";
+"Try Again" = "再試行";
+"Open File" = "ファイルを開く";
+"Save" = "保存";
+"Reset Crop" = "切り抜きをリセット";
+"Scan for Printers" = "プリンターをスキャン";
+"Edit Image" = "画像を編集";
+"Print" = "印刷";
+
+/* Status Display */
+"Connected" = "接続済み";
+"Charging" = "充電中";
+"Refresh status" = "ステータスを更新";
+
+/* Dynamic Status Messages */
+"Scanning..." = "スキャン中...";
+"Printing..." = "印刷中...";
+"Printed!" = "印刷完了！";
+"Print failed" = "印刷失敗";
+"No printers found" = "プリンターが見つかりません";
+
+/* Format Strings */
+"battery_percent" = "%d%%";
+"film_remaining" = "残り %d 枚";
+"connecting_to" = "%@ に接続中...";
+"found_one_printer" = "1 台のプリンターが見つかりました";
+"found_n_printers" = "%d 台のプリンターが見つかりました";
+
+/* Image Editor */
+"Image Editor" = "画像エディター";
+"No image selected" = "画像が選択されていません";
+"Drop image or click Open File" = "画像をドロップするかファイルを開くをクリック";
+
+/* Editor Sidebar — Section Titles */
+"Fit Mode" = "フィットモード";
+"Rotate" = "回転";
+"Date Stamp" = "日付スタンプ";
+
+/* Editor — Fit Mode Options */
+"Crop" = "切り抜き";
+"Contain" = "収める";
+"Stretch" = "引き伸ばし";
+
+/* Editor — Rotation */
+"Rotate Left" = "左に回転";
+"Rotate Right" = "右に回転";
+
+/* Editor — Date Stamp Options */
+"Enabled" = "有効";
+"Show time" = "時刻を表示";
+"Light bleed" = "光漏れ";
+"Style:" = "スタイル：";
+"Classic" = "クラシック";
+"Dot Matrix" = "ドットマトリクス";
+"B&W" = "モノクロ";
+"Format:" = "フォーマット：";
+"Position:" = "位置：";
+
+/* Printer Profile Sheet */
+"Printer Connected" = "プリンター接続済み";
+"Edit Printer" = "プリンターを編集";
+"Serial Number:" = "シリアル番号：";
+"Verify this matches the serial number on the bottom of your device" = "デバイス底面のシリアル番号と一致することを確認してください";
+"BLE Name:" = "BLE 名：";
+"Model:" = "モデル：";
+"Color:" = "カラー：";
+"None" = "なし";
+"Name:" = "名前：";
+"Custom display name" = "カスタム表示名";
+
+/* Printer Colors */
+"White" = "ホワイト";
+"Pink" = "ピンク";
+"Blue" = "ブルー";
+"Green" = "グリーン";
+"Gray" = "グレー";
+"Black" = "ブラック";
+"Beige" = "ベージュ";

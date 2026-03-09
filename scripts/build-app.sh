@@ -65,6 +65,13 @@ if [[ -f "$ICON_SRC" ]]; then
   cp "$ICON_SRC" "$RESOURCES_DIR/AppIcon.icns"
 fi
 
+# Copy localization files
+for LPROJ in "$REPO_ROOT/macos/Resources"/*.lproj; do
+  if [[ -d "$LPROJ" ]]; then
+    cp -R "$LPROJ" "$RESOURCES_DIR/"
+  fi
+done
+
 # --- Compile SwiftUI launcher (Contents/MacOS/InstantLink) -----------------
 echo "==> Compiling SwiftUI launcher..."
 swiftc \
@@ -72,6 +79,7 @@ swiftc \
   -O \
   -o "$MACOS_DIR/InstantLink" \
   "$REPO_ROOT/macos/InstantLink/InstantLinkApp.swift" \
+  "$REPO_ROOT/macos/InstantLink/Localization.swift" \
   "$REPO_ROOT/macos/InstantLink/InstantLinkFFI.swift" \
   "$REPO_ROOT/macos/InstantLink/InstantLinkCLI.swift" \
   -framework SwiftUI \

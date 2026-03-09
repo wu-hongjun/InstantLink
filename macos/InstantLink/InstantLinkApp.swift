@@ -221,6 +221,22 @@ class ViewModel: ObservableObject {
         }
     }
 
+    var printerModelTag: String? {
+        let model: String?
+        if let bleId = printerName, let profile = printerProfiles[bleId] {
+            model = profile.effectiveModel
+        } else {
+            model = printerModel
+        }
+        switch model {
+        case "Instax Square Link":  return "Sqre"
+        case "Instax Mini Link",
+             "Instax Mini Link 2":  return "Mini"
+        case "Instax Wide Link":    return "Wide"
+        default: return nil
+        }
+    }
+
     // UI state
     @Published var isPrinting = false
     @Published var printProgress: (sent: Int, total: Int)?
@@ -623,16 +639,46 @@ class ViewModel: ObservableObject {
     func commitCapture() {
         guard let image = capturedImage,
               let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData),
-              let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.9])
-        else { return }
+              let bitmap = NSBitmapImageRep(data: tiffData) else { return }
+
+        // Center-crop to printer aspect ratio (matching what the preview shows)
+        var outputBitmap = bitmap
+        if let ar = printerAspectRatio {
+            let srcW = CGFloat(bitmap.pixelsWide)
+            let srcH = CGFloat(bitmap.pixelsHigh)
+            let srcAR = srcW / srcH
+
+            let cropW: CGFloat
+            let cropH: CGFloat
+            if srcAR > ar {
+                // Source is wider — crop sides
+                cropH = srcH
+                cropW = srcH * ar
+            } else {
+                // Source is taller — crop top/bottom
+                cropW = srcW
+                cropH = srcW / ar
+            }
+            let cropX = (srcW - cropW) / 2
+            let cropY = (srcH - cropH) / 2
+            let cropRect = CGRect(x: cropX, y: cropY, width: cropW, height: cropH)
+
+            if let cgImage = bitmap.cgImage?.cropping(to: cropRect) {
+                outputBitmap = NSBitmapImageRep(cgImage: cgImage)
+            }
+        }
+
+        guard let jpegData = outputBitmap.representation(
+            using: .jpeg, properties: [.compressionFactor: 0.9]
+        ) else { return }
 
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("jpg")
         try? jpegData.write(to: tempURL)
 
-        selectedImage = image
+        // Set selectedImage to the cropped image so the file-mode preview matches
+        selectedImage = NSImage(data: jpegData) ?? image
         selectedImagePath = tempURL.path
         imageDate = Date()
         resetCropAdjustments()
@@ -1081,12 +1127,12 @@ class ViewModel: ObservableObject {
             try? FileManager.default.removeItem(atPath: temp)
         }
 
-        await refreshStatus()
         await MainActor.run {
             isPrinting = false
             printProgress = nil
             showStatus(success ? L("Printed!") : L("Print failed"))
         }
+        await refreshStatus()
     }
 
     // MARK: - Core Version
@@ -1653,6 +1699,14 @@ struct MainView: View {
                             Text(viewModel.currentPrinterDisplayName ?? L("Connected"))
                                 .font(.caption)
                                 .fontWeight(.medium)
+                            if let tag = viewModel.printerModelTag {
+                                Text(tag)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(Capsule().fill(.secondary))
+                            }
                         }
                     }
                     .buttonStyle(.plain)

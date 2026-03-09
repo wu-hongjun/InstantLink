@@ -1958,13 +1958,19 @@ struct CameraView: View {
     @EnvironmentObject var viewModel: ViewModel
     @State private var showFlash = false
 
+    private var showsSimulatedFilmFrame: Bool {
+        viewModel.printerModelTag != nil &&
+        ((viewModel.cameraState == .viewfinder && viewModel.captureSession != nil) ||
+         (viewModel.cameraState == .preview && viewModel.capturedImage != nil))
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(nsColor: .controlBackgroundColor))
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(style: StrokeStyle(lineWidth: 2), antialiased: true)
-                .foregroundColor(.secondary.opacity(0.5))
+                .foregroundColor(showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.5))
 
             if viewModel.cameraState == .viewfinder {
                 if let session = viewModel.captureSession {
@@ -2634,6 +2640,10 @@ struct MainPreviewView: View {
     @State private var localFrameSize: CGSize = .zero
     var openEditor: () -> Void
 
+    private var showsSimulatedFilmFrame: Bool {
+        viewModel.selectedImage != nil && viewModel.printerModelTag != nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
@@ -2646,7 +2656,11 @@ struct MainPreviewView: View {
                     ),
                     antialiased: true
                 )
-                .foregroundColor(isTargeted ? .accentColor : .secondary.opacity(0.5))
+                .foregroundColor(
+                    viewModel.selectedImage == nil
+                        ? (isTargeted ? .accentColor : .secondary.opacity(0.5))
+                        : (showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.5))
+                )
 
             if viewModel.isPrinting {
                 VStack(spacing: 8) {
@@ -3075,6 +3089,10 @@ struct EditorPreviewView: View {
     @GestureState private var magnifyDelta: CGFloat = 1.0
     @State private var localFrameSize: CGSize = .zero
 
+    private var showsSimulatedFilmFrame: Bool {
+        viewModel.selectedImage != nil && viewModel.printerModelTag != nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
@@ -3087,7 +3105,11 @@ struct EditorPreviewView: View {
                     ),
                     antialiased: true
                 )
-                .foregroundColor(isTargeted ? .accentColor : .secondary.opacity(0.5))
+                .foregroundColor(
+                    viewModel.selectedImage == nil
+                        ? (isTargeted ? .accentColor : .secondary.opacity(0.5))
+                        : (showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.5))
+                )
 
             if let image = viewModel.selectedImage {
                 FilmFrameView(filmModel: viewModel.printerModelTag,

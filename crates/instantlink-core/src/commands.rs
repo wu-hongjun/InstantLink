@@ -115,7 +115,15 @@ impl Command {
                 green,
                 blue,
                 pattern,
-            } => protocol::build_packet(OP_LED_PATTERN_SETTINGS, &[*pattern, *red, *green, *blue]),
+            } => {
+                // Full LED format: [when, frame_count, speed, repeat, B, G, R]
+                // Colors are BGR order per javl/InstaxBLE reference
+                // repeat=255 keeps the color on indefinitely
+                protocol::build_packet(
+                    OP_LED_PATTERN_SETTINGS,
+                    &[*pattern, 0x01, 0x01, 0xFF, *blue, *green, *red],
+                )
+            }
         }
     }
 }
@@ -331,7 +339,8 @@ mod tests {
         let pkt = cmd.encode();
         let parsed = protocol::parse_packet(&pkt).unwrap();
         assert_eq!(parsed.opcode, OP_LED_PATTERN_SETTINGS);
-        assert_eq!(parsed.payload, vec![1, 255, 128, 0]);
+        // [when=1, count=1, speed=1, repeat=255, B=0, G=128, R=255]
+        assert_eq!(parsed.payload, vec![1, 0x01, 0x01, 0xFF, 0, 128, 255]);
     }
 
     #[test]

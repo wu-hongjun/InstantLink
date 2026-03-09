@@ -97,3 +97,45 @@
 "Gray" = "رمادي";
 "Black" = "أسود";
 "Beige" = "بيج";
+
+/* Settings Window */
+"Settings" = "الإعدادات";
+"Language" = "اللغة";
+"System Default" = "الافتراضي للنظام";
+"language_restart_note" = "يتطلب تغيير اللغة إعادة تشغيل التطبيق.";
+"Default Print Settings" = "إعدادات الطباعة الافتراضية";
+"default_fit_mode_description" = "وضع الملاءمة الافتراضي عند فتح صور جديدة.";
+"Saved Printers" = "الطابعات المحفوظة";
+"No saved printers" = "لا توجد طابعات محفوظة";
+"Delete" = "حذف";
+"delete_printer_confirm" = "هل أنت متأكد أنك تريد حذف هذه الطابعة؟";
+"GitHub" = "GitHub";
+
+/* Updates */
+"Check for Updates" = "التحقق من التحديثات";
+"update_available_version" = "تحديث متاح: v%@";
+"Update Now" = "تحديث الآن";
+"Downloading update..." = "جارٍ تنزيل التحديث...";
+"Installing update..." = "جارٍ تثبيت التحديث...";
+"Up to date" = "محدّث";
+"update_failed" = "فشل التحديث: %@";
+"Dismiss" = "إغلاق";
+
+/* Print Progress */
+"Preparing..." = "جارٍ التحضير...";
+"transfer_progress" = "جارٍ الإرسال %d/%d";
+"App:" = "التطبيق:";
+"Core:" = "النواة:";
+
+/* Printer Picker */
+"Switch Printer" = "تبديل الطابعة";
+"Nearby Printers" = "طابعات قريبة";
+"No Printer" = "لا توجد طابعة";
+"Tap to connect" = "انقر للاتصال";
+"No new printers found" = "لم يتم العثور على طابعات جديدة";
+
+/* Camera Mode */
+"Capture" = "التقاط";
+"Retake" = "إعادة التقاط";
+"No camera available" = "لا توجد كاميرا متاحة";
+"Camera access denied" = "تم رفض الوصول إلى الكاميرا";

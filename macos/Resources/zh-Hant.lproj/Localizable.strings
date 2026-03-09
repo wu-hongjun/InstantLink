@@ -97,3 +97,45 @@
 "Gray" = "灰色";
 "Black" = "黑色";
 "Beige" = "米色";
+
+/* Settings Window */
+"Settings" = "設定";
+"Language" = "語言";
+"System Default" = "系統預設";
+"language_restart_note" = "更改語言需要重新啟動應用程式。";
+"Default Print Settings" = "預設列印設定";
+"default_fit_mode_description" = "開啟新圖片時使用的預設適應模式。";
+"Saved Printers" = "已儲存的印表機";
+"No saved printers" = "沒有已儲存的印表機";
+"Delete" = "刪除";
+"delete_printer_confirm" = "確定要刪除此印表機嗎？";
+"GitHub" = "GitHub";
+
+/* Updates */
+"Check for Updates" = "檢查更新";
+"update_available_version" = "有可用更新：v%@";
+"Update Now" = "立即更新";
+"Downloading update..." = "正在下載更新...";
+"Installing update..." = "正在安裝更新...";
+"Up to date" = "已是最新版本";
+"update_failed" = "更新失敗：%@";
+"Dismiss" = "關閉";
+
+/* Print Progress */
+"Preparing..." = "準備中...";
+"transfer_progress" = "正在傳送 %d/%d";
+"App:" = "應用程式：";
+"Core:" = "核心：";
+
+/* Printer Picker */
+"Switch Printer" = "切換印表機";
+"Nearby Printers" = "附近的印表機";
+"No Printer" = "無印表機";
+"Tap to connect" = "點擊連線";
+"No new printers found" = "未發現新印表機";
+
+/* Camera Mode */
+"Capture" = "拍照";
+"Retake" = "重拍";
+"No camera available" = "沒有可用的相機";
+"Camera access denied" = "相機存取被拒絕";

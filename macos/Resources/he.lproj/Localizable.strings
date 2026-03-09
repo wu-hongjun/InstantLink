@@ -98,3 +98,45 @@
 "Gray" = "אפור";
 "Black" = "שחור";
 "Beige" = "בז׳";
+
+/* Settings Window */
+"Settings" = "הגדרות";
+"Language" = "שפה";
+"System Default" = "ברירת מחדל של המערכת";
+"language_restart_note" = "שינוי השפה מחייב הפעלה מחדש של האפליקציה.";
+"Default Print Settings" = "הגדרות הדפסה ברירת מחדל";
+"default_fit_mode_description" = "מצב ההתאמה שמשמש כברירת מחדל בפתיחת תמונות חדשות.";
+"Saved Printers" = "מדפסות שמורות";
+"No saved printers" = "אין מדפסות שמורות";
+"Delete" = "מחק";
+"delete_printer_confirm" = "האם אתה בטוח שברצונך למחוק מדפסת זו?";
+"GitHub" = "GitHub";
+
+/* Updates */
+"Check for Updates" = "בדוק עדכונים";
+"update_available_version" = "עדכון זמין: v%@";
+"Update Now" = "עדכן עכשיו";
+"Downloading update..." = "מוריד עדכון...";
+"Installing update..." = "מתקין עדכון...";
+"Up to date" = "מעודכן";
+"update_failed" = "העדכון נכשל: %@";
+"Dismiss" = "סגור";
+
+/* Print Progress */
+"Preparing..." = "מכין...";
+"transfer_progress" = "שולח %d/%d";
+"App:" = "אפליקציה:";
+"Core:" = "ליבה:";
+
+/* Printer Picker */
+"Switch Printer" = "החלף מדפסת";
+"Nearby Printers" = "מדפסות בקרבת מקום";
+"No Printer" = "אין מדפסת";
+"Tap to connect" = "לחץ לחיבור";
+"No new printers found" = "לא נמצאו מדפסות חדשות";
+
+/* Camera Mode */
+"Capture" = "צלם";
+"Retake" = "צלם שוב";
+"No camera available" = "אין מצלמה זמינה";
+"Camera access denied" = "הגישה למצלמה נדחתה";

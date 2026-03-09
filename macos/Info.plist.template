@@ -39,6 +39,9 @@
   <key>NSBluetoothAlwaysUsageDescription</key>
   <string>InstantLink needs Bluetooth to communicate with your Instax Link printer.</string>
 
+  <key>NSCameraUsageDescription</key>
+  <string>InstantLink needs camera access to take photos for printing.</string>
+
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
 

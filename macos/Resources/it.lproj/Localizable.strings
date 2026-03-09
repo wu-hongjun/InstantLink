@@ -98,3 +98,45 @@
 "Gray" = "Grigio";
 "Black" = "Nero";
 "Beige" = "Beige";
+
+/* Settings Window */
+"Settings" = "Impostazioni";
+"Language" = "Lingua";
+"System Default" = "Predefinito di sistema";
+"language_restart_note" = "La modifica della lingua richiede il riavvio dell'app.";
+"Default Print Settings" = "Impostazioni di stampa predefinite";
+"default_fit_mode_description" = "La modalità di adattamento predefinita all'apertura di nuove immagini.";
+"Saved Printers" = "Stampanti salvate";
+"No saved printers" = "Nessuna stampante salvata";
+"Delete" = "Elimina";
+"delete_printer_confirm" = "Sei sicuro di voler eliminare questa stampante?";
+"GitHub" = "GitHub";
+
+/* Updates */
+"Check for Updates" = "Controlla aggiornamenti";
+"update_available_version" = "Aggiornamento disponibile: v%@";
+"Update Now" = "Aggiorna ora";
+"Downloading update..." = "Download aggiornamento...";
+"Installing update..." = "Installazione aggiornamento...";
+"Up to date" = "Aggiornato";
+"update_failed" = "Aggiornamento fallito: %@";
+"Dismiss" = "Chiudi";
+
+/* Print Progress */
+"Preparing..." = "Preparazione...";
+"transfer_progress" = "Invio %d/%d";
+"App:" = "App:";
+"Core:" = "Core:";
+
+/* Printer Picker */
+"Switch Printer" = "Cambia stampante";
+"Nearby Printers" = "Stampanti vicine";
+"No Printer" = "Nessuna stampante";
+"Tap to connect" = "Clicca per connettere";
+"No new printers found" = "Nessuna nuova stampante trovata";
+
+/* Camera Mode */
+"Capture" = "Scatta";
+"Retake" = "Riscatta";
+"No camera available" = "Nessuna fotocamera disponibile";
+"Camera access denied" = "Accesso alla fotocamera negato";

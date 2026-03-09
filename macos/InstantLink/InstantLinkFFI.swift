@@ -31,6 +31,7 @@ class InstantLinkFFI {
 
     // Printing
     private let _print: @convention(c) (UnsafePointer<CChar>, UInt8, UInt8, UInt8) -> Int32
+    private let _print_with_progress: @convention(c) (UnsafePointer<CChar>, UInt8, UInt8, UInt8, (@convention(c) (UInt32, UInt32) -> Void)?) -> Int32
 
     // LED
     private let _set_led: @convention(c) (UInt8, UInt8, UInt8, UInt8) -> Int32
@@ -65,6 +66,7 @@ class InstantLinkFFI {
               let pDeviceModel = dlsym(h, "instantlink_device_model"),
               let pScan = dlsym(h, "instantlink_scan"),
               let pPrint = dlsym(h, "instantlink_print"),
+              let pPrintWithProgress = dlsym(h, "instantlink_print_with_progress"),
               let pSetLed = dlsym(h, "instantlink_set_led"),
               let pLedOff = dlsym(h, "instantlink_led_off")
         else {
@@ -87,6 +89,7 @@ class InstantLinkFFI {
         _device_model = unsafeBitCast(pDeviceModel, to: (@convention(c) (UnsafeMutablePointer<CChar>, Int32) -> Int32).self)
         _scan = unsafeBitCast(pScan, to: (@convention(c) (Int32, UnsafeMutablePointer<CChar>, Int32) -> Int32).self)
         _print = unsafeBitCast(pPrint, to: (@convention(c) (UnsafePointer<CChar>, UInt8, UInt8, UInt8) -> Int32).self)
+        _print_with_progress = unsafeBitCast(pPrintWithProgress, to: (@convention(c) (UnsafePointer<CChar>, UInt8, UInt8, UInt8, (@convention(c) (UInt32, UInt32) -> Void)?) -> Int32).self)
         _set_led = unsafeBitCast(pSetLed, to: (@convention(c) (UInt8, UInt8, UInt8, UInt8) -> Int32).self)
         _led_off = unsafeBitCast(pLedOff, to: (@convention(c) () -> Int32).self)
 
@@ -239,6 +242,40 @@ class InstantLinkFFI {
         }
     }
 
+    /// Print an image file with progress callback.
+    ///
+    /// `progress` is called with (chunksSent, totalChunks) from a background thread.
+    func printImage(path: String, quality: Int = 100, fit: String = "crop", printOption: Int = 0,
+                    progress: @escaping @Sendable (UInt32, UInt32) -> Void) async -> Bool {
+        let fitMode: UInt8
+        switch fit {
+        case "contain": fitMode = 1
+        case "stretch": fitMode = 2
+        default: fitMode = 0
+        }
+
+        // Store progress closure in a box so we can pass a C callback
+        let box = ProgressBox(callback: progress)
+        let boxPtr = Unmanaged.passRetained(box)
+
+        // Set the global progress box for the C callback to use
+        ProgressBox.current = boxPtr
+
+        let cb: @convention(c) (UInt32, UInt32) -> Void = { sent, total in
+            ProgressBox.current?.takeUnretainedValue().callback(sent, total)
+        }
+
+        let success = await blocking {
+            path.withCString { cPath in
+                self._print_with_progress(cPath, UInt8(quality), fitMode, UInt8(printOption), cb) == 0
+            }
+        }
+
+        boxPtr.release()
+        ProgressBox.current = nil
+        return success
+    }
+
     // MARK: - LED Control
 
     /// Set LED color and pattern.
@@ -261,5 +298,14 @@ class InstantLinkFFI {
                 continuation.resume(returning: result)
             }
         }
+    }
+}
+
+/// Thread-safe box to bridge a Swift closure into a C callback context.
+private final class ProgressBox: @unchecked Sendable {
+    static var current: Unmanaged<ProgressBox>?
+    let callback: @Sendable (UInt32, UInt32) -> Void
+    init(callback: @escaping @Sendable (UInt32, UInt32) -> Void) {
+        self.callback = callback
     }
 }

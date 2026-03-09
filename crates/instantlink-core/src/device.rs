@@ -633,7 +633,8 @@ mod tests {
         // sent[0] is ImageSupportInfo query, sent[1] is LED command
         let led_packet = protocol::parse_packet(&sent[1]).unwrap();
         assert_eq!(led_packet.opcode, OP_LED_PATTERN_SETTINGS);
-        assert_eq!(led_packet.payload, vec![0, 0, 0, 0]);
+        // [when=0, count=1, speed=1, repeat=255, B=0, G=0, R=0]
+        assert_eq!(led_packet.payload, vec![0, 1, 1, 255, 0, 0, 0]);
     }
 
     // ── Print Flow ─────────────────────────────────────────────────────────

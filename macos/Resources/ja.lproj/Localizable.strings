@@ -97,3 +97,45 @@
 "Gray" = "グレー";
 "Black" = "ブラック";
 "Beige" = "ベージュ";
+
+/* Settings Window */
+"Settings" = "設定";
+"Language" = "言語";
+"System Default" = "システムデフォルト";
+"language_restart_note" = "言語の変更にはアプリの再起動が必要です。";
+"Default Print Settings" = "デフォルト印刷設定";
+"default_fit_mode_description" = "新しい画像を開くときのデフォルトのフィットモード。";
+"Saved Printers" = "保存済みプリンター";
+"No saved printers" = "保存済みプリンターなし";
+"Delete" = "削除";
+"delete_printer_confirm" = "このプリンターを削除してもよろしいですか？";
+"GitHub" = "GitHub";
+
+/* Updates */
+"Check for Updates" = "アップデートを確認";
+"update_available_version" = "アップデートあり：v%@";
+"Update Now" = "今すぐアップデート";
+"Downloading update..." = "アップデートをダウンロード中...";
+"Installing update..." = "アップデートをインストール中...";
+"Up to date" = "最新の状態です";
+"update_failed" = "アップデート失敗：%@";
+"Dismiss" = "閉じる";
+
+/* Print Progress */
+"Preparing..." = "準備中...";
+"transfer_progress" = "送信中 %d/%d";
+"App:" = "アプリ：";
+"Core:" = "コア：";
+
+/* Printer Picker */
+"Switch Printer" = "プリンターを切替";
+"Nearby Printers" = "近くのプリンター";
+"No Printer" = "プリンターなし";
+"Tap to connect" = "クリックして接続";
+"No new printers found" = "新しいプリンターが見つかりません";
+
+/* Camera Mode */
+"Capture" = "撮影";
+"Retake" = "撮り直し";
+"No camera available" = "カメラがありません";
+"Camera access denied" = "カメラへのアクセスが拒否されました";

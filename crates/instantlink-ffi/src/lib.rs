@@ -457,6 +457,63 @@ pub unsafe extern "C" fn instantlink_print(
     .unwrap_or(-3)
 }
 
+/// Print an image file with progress callback. Returns 0 on success.
+///
+/// The callback receives (chunks_sent, total_chunks) after each chunk is ACK'd.
+///
+/// # Safety
+///
+/// `path` must be a valid, non-null, null-terminated UTF-8 C string.
+/// `progress_cb` may be null (no progress reporting).
+#[no_mangle]
+pub unsafe extern "C" fn instantlink_print_with_progress(
+    path: *const c_char,
+    quality: u8,
+    fit_mode: u8,
+    print_option: u8,
+    progress_cb: Option<extern "C" fn(u32, u32)>,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let s = match cstr_to_str(path) {
+            Ok(s) => s,
+            Err(code) => return code,
+        };
+
+        let fit = match fit_mode {
+            1 => instantlink_core::FitMode::Contain,
+            2 => instantlink_core::FitMode::Stretch,
+            _ => instantlink_core::FitMode::Crop,
+        };
+
+        let lock = get_device_lock();
+        if let Ok(guard) = lock.lock() {
+            if let Some(ref device) = *guard {
+                let rt = get_runtime();
+                let path = std::path::Path::new(s);
+                let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> =
+                    progress_cb.map(|cb| {
+                        Box::new(move |sent: usize, total: usize| {
+                            cb(sent as u32, total as u32);
+                        }) as Box<dyn Fn(usize, usize) + Send + Sync>
+                    });
+                let progress_ref = progress
+                    .as_ref()
+                    .map(|b| b.as_ref() as &(dyn Fn(usize, usize) + Send + Sync));
+                match rt.block_on(device.print_file(path, fit, quality, print_option, progress_ref))
+                {
+                    Ok(()) => 0,
+                    Err(e) => error_code(&e),
+                }
+            } else {
+                -1
+            }
+        } else {
+            -3
+        }
+    }))
+    .unwrap_or(-3)
+}
+
 /// Set LED color and pattern.
 #[no_mangle]
 pub extern "C" fn instantlink_set_led(r: u8, g: u8, b: u8, pattern: u8) -> i32 {

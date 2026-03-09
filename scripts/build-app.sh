@@ -85,6 +85,7 @@ swiftc \
   -framework SwiftUI \
   -framework AppKit \
   -framework UniformTypeIdentifiers \
+  -framework AVFoundation \
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
   -parse-as-library
 

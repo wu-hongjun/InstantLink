@@ -128,6 +128,22 @@ int32_t instantlink_print(const char *path,
                           uint8_t print_option);
 
 /**
+ * Print an image file with progress callback. Returns 0 on success.
+ *
+ * The callback receives (chunks_sent, total_chunks) after each chunk is ACK'd.
+ *
+ * # Safety
+ *
+ * `path` must be a valid, non-null, null-terminated UTF-8 C string.
+ * `progress_cb` may be null (no progress reporting).
+ */
+int32_t instantlink_print_with_progress(const char *path,
+                                        uint8_t quality,
+                                        uint8_t fit_mode,
+                                        uint8_t print_option,
+                                        void (*progress_cb)(uint32_t, uint32_t));
+
+/**
  * Set LED color and pattern.
  */
 int32_t instantlink_set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t pattern);

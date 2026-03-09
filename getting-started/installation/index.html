@@ -540,10 +540,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#build" class="md-nav__link">
+  <a href="#build-the-workspace" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Build
+        Build the Workspace
       
     </span>
   </a>
@@ -551,10 +551,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#install-cli" class="md-nav__link">
+  <a href="#install-the-cli" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install CLI
+        Install the CLI
       
     </span>
   </a>
@@ -567,10 +567,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#macos-app" class="md-nav__link">
+  <a href="#build-the-macos-app" class="md-nav__link">
     <span class="md-ellipsis">
       
-        macOS App
+        Build the macOS App
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-the-ffi-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build the FFI Header
       
     </span>
   </a>
@@ -961,10 +972,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#build" class="md-nav__link">
+  <a href="#build-the-workspace" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Build
+        Build the Workspace
       
     </span>
   </a>
@@ -972,10 +983,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#install-cli" class="md-nav__link">
+  <a href="#install-the-cli" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install CLI
+        Install the CLI
       
     </span>
   </a>
@@ -988,10 +999,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#macos-app" class="md-nav__link">
+  <a href="#build-the-macos-app" class="md-nav__link">
     <span class="md-ellipsis">
       
-        macOS App
+        Build the macOS App
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-the-ffi-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build the FFI Header
       
     </span>
   </a>
@@ -1031,49 +1053,50 @@
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
 <h2 id="from-releases">From Releases<a class="headerlink" href="#from-releases" title="Permanent link">&para;</a></h2>
-<p>Pre-built <code>.dmg</code> releases are available for <strong>macOS Apple Silicon</strong> (ARM64) on the <a href="https://github.com/wu-hongjun/InstantLink/releases">Releases</a> page. Download, mount, and drag the app to Applications.</p>
+<p>Prebuilt artifacts are published on the <a href="https://github.com/wu-hongjun/InstantLink/releases">Releases</a> page for each tagged version:</p>
+<ul>
+<li><code>InstantLink-vX.Y.Z-aarch64-apple-darwin.dmg</code> for the macOS app</li>
+<li><code>InstantLink-CLI-vX.Y.Z.zip</code> for the standalone CLI</li>
+<li><code>InstantLink-FFI-vX.Y.Z.zip</code> for FFI consumers</li>
+</ul>
+<p>The app release targets <strong>macOS Apple Silicon</strong>. Download the <code>.dmg</code>, mount it, and drag <code>InstantLink.app</code> into <code>/Applications</code>.</p>
 <h2 id="from-source">From Source<a class="headerlink" href="#from-source" title="Permanent link">&para;</a></h2>
 <h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="https://rustup.rs/">Rust</a> (stable, 2021 edition)</li>
-<li>macOS (for BLE via CoreBluetooth) or Linux (with BlueZ)</li>
+<li><a href="https://rustup.rs/">Rust</a> stable with edition <code>2024</code></li>
+<li>macOS for the SwiftUI app and BLE via CoreBluetooth</li>
+<li>Linux is supported for CLI development and BLE via BlueZ</li>
 </ul>
-<h3 id="build">Build<a class="headerlink" href="#build" title="Permanent link">&para;</a></h3>
+<h3 id="build-the-workspace">Build the Workspace<a class="headerlink" href="#build-the-workspace" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wu-hongjun/InstantLink.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>InstantLink
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cargo<span class="w"> </span>build<span class="w"> </span>--workspace<span class="w"> </span>--release
 </code></pre></div>
 <p>The CLI binary will be at <code>target/release/instantlink</code>.</p>
-<h3 id="install-cli">Install CLI<a class="headerlink" href="#install-cli" title="Permanent link">&para;</a></h3>
+<h3 id="install-the-cli">Install the CLI<a class="headerlink" href="#install-the-cli" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cargo<span class="w"> </span>install<span class="w"> </span>--path<span class="w"> </span>crates/instantlink-cli
 </code></pre></div>
-<p>Or copy manually:</p>
+<p>Or copy the release binary manually:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cp<span class="w"> </span>target/release/instantlink<span class="w"> </span>/usr/local/bin/
 </code></pre></div>
-<h2 id="macos-app">macOS App<a class="headerlink" href="#macos-app" title="Permanent link">&para;</a></h2>
-<p>The macOS app bundles the CLI binary and provides a native SwiftUI menu bar interface with drag-and-drop printing.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Build the Rust workspace first</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>cargo<span class="w"> </span>build<span class="w"> </span>--workspace<span class="w"> </span>--release
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Build the app bundle (requires macOS)</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>bash<span class="w"> </span>scripts/build-app.sh<span class="w"> </span><span class="m">0</span>.1.0
+<h2 id="build-the-macos-app">Build the macOS App<a class="headerlink" href="#build-the-macos-app" title="Permanent link">&para;</a></h2>
+<p>The app bundle embeds the CLI binary and the FFI dylib.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>scripts/build-app.sh<span class="w"> </span><span class="m">0</span>.1.2
 </code></pre></div>
-<p>The <code>.app</code> bundle is created at <code>target/release/InstantLink.app</code>. The script:</p>
-<ol>
-<li>Copies the CLI binary into the bundle (renamed <code>instantlink-cli</code>)</li>
-<li>Bundles the FFI dylib (<code>libinstantlink_ffi.dylib</code>) into <code>Frameworks/</code></li>
-<li>Compiles the SwiftUI launcher with <code>swiftc</code></li>
-<li>Generates <code>Info.plist</code> with version and BLE permission</li>
-<li>Ad-hoc codesigns the bundle</li>
-<li>Optionally creates a <code>.dmg</code> (if <code>create-dmg</code> is installed: <code>brew install create-dmg</code>)</li>
-</ol>
+<p><code>scripts/build-app.sh</code> requires a semver version argument. It builds the Rust workspace, compiles the SwiftUI launcher, bundles localizations and fonts, codesigns the app, and creates a <code>.dmg</code> when <code>create-dmg</code> is installed (<code>brew install create-dmg</code>).</p>
+<p>The resulting bundle is written to <code>target/release/InstantLink.app</code>.</p>
+<h2 id="build-the-ffi-header">Build the FFI Header<a class="headerlink" href="#build-the-ffi-header" title="Permanent link">&para;</a></h2>
+<p>The checked-in header at <code>crates/instantlink-ffi/include/instantlink.h</code> is only refreshed when <code>INSTANTLINK_UPDATE_HEADER</code> is set:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">INSTANTLINK_UPDATE_HEADER</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>cargo<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>-p<span class="w"> </span>instantlink-ffi
+</code></pre></div>
+<p>Without that environment variable, cbindgen writes the generated header into Cargo's <code>OUT_DIR</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Bluetooth Permissions</p>
-<p>The app includes <code>NSBluetoothAlwaysUsageDescription</code> in its <code>Info.plist</code> for BLE access. When running the CLI directly (outside the app bundle), macOS will prompt for Bluetooth permission on first use.</p>
+<p><code>InstantLink.app</code> includes <code>NSBluetoothAlwaysUsageDescription</code>. When running the CLI directly outside the app bundle, macOS will prompt for Bluetooth permission on first use.</p>
 </div>
 <h2 id="verify-installation">Verify Installation<a class="headerlink" href="#verify-installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>instantlink<span class="w"> </span>--version
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>instantlink<span class="w"> </span>scan
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>instantlink<span class="w"> </span>--version
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>instantlink<span class="w"> </span>scan
 </code></pre></div>
 
 

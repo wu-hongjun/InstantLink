@@ -934,6 +934,7 @@
 
 <h1 id="plan-001-full-stack-scaffold">Plan 001: Full-Stack Scaffold<a class="headerlink" href="#plan-001-full-stack-scaffold" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Completed</p>
+<p>Historical implementation plan from the initial scaffold. Current source-of-truth behavior lives in the reference and development docs, which reflect later additions such as Rust 2024, Mini Link 3 support, the expanded FFI surface, and the macOS overlay editor.</p>
 <h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
 <p>Scaffold the entire InstantLink project from scratch: workspace, all crates, stub modules, full implementations, and macOS app. Verify compilation, clippy, formatting, and tests.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
@@ -970,7 +971,7 @@
 <li><code>FitMode</code> enum: Crop, Contain (white bars), Stretch</li>
 <li><code>load_image()</code> from file path, <code>load_image_from_bytes()</code> from raw data</li>
 <li><code>resize_image()</code> with model-aware dimensions using Lanczos3 filter</li>
-<li><code>encode_jpeg()</code> with automatic quality reduction (steps of 5) to fit 105KB</li>
+<li><code>encode_jpeg()</code> with automatic quality reduction to fit the target printer's size limit</li>
 <li><code>chunk_image_data()</code> using model-specific chunk sizes</li>
 <li><code>prepare_image()</code> pipeline: load → resize → encode → chunk</li>
 <li>10 unit tests</li>
@@ -978,7 +979,7 @@
 <h3 id="phase-4-models-transport-device-completed">Phase 4: Models + Transport + Device (Completed)<a class="headerlink" href="#phase-4-models-transport-device-completed" title="Permanent link">&para;</a></h3>
 <p><strong><code>models.rs</code>:</strong></p>
 <ul>
-<li><code>PrinterModel</code> enum (Mini, Square, Wide) with <code>ModelSpec</code> (dimensions, chunk size, name)</li>
+<li><code>PrinterModel</code> enum with model specs (dimensions, chunk size, name, image-size limits)</li>
 </ul>
 <p><strong><code>transport.rs</code>:</strong></p>
 <ul>
@@ -1002,7 +1003,7 @@
 <p><strong>CLI (<code>main.rs</code> + <code>output.rs</code>):</strong></p>
 <ul>
 <li>Commands: <code>scan</code>, <code>info</code>, <code>print</code>, <code>led set/off</code>, <code>status</code></li>
-<li>Global <code>--device</code> and <code>--json</code> flags</li>
+<li>Global <code>--device</code> flag and JSON output where supported by the CLI</li>
 <li>Progress bars via indicatif</li>
 <li>JSON output for all commands</li>
 </ul>
@@ -1044,7 +1045,7 @@
 </tr>
 <tr>
 <td><code>cargo test --workspace</code></td>
-<td>Pass (44 tests)</td>
+<td>Passed at scaffold completion; current totals have since grown</td>
 </tr>
 </tbody>
 </table>
@@ -1052,7 +1053,7 @@
 <ol>
 <li><strong>Async-first</strong>: btleplug requires tokio, so core is fully async</li>
 <li><strong>No daemon</strong>: One-shot printing doesn't need a persistent service</li>
-<li><strong>Process wrapper over FFI</strong>: macOS app calls CLI via Process (matches StatusLight)</li>
+<li><strong>Process wrapper over FFI</strong>: the initial plan followed the StatusLight process-wrapper pattern; the shipped macOS app now uses the FFI dylib directly for printer control</li>
 <li><strong>Model auto-detection</strong>: Query <code>IMAGE_SUPPORT_INFO</code> after connect, match dimensions</li>
 <li><strong>ACK-per-chunk</strong>: Wait for printer ACK after each data chunk (reliable transfer)</li>
 </ol>

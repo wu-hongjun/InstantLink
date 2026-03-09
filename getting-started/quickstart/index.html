@@ -1073,7 +1073,7 @@
 <h2 id="3-print-an-image">3. Print an Image<a class="headerlink" href="#3-print-an-image" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg
 </code></pre></div>
-<p>The image is automatically resized to fit your printer model. Use <code>--fit</code> to control how:</p>
+<p>The image is automatically resized to your printer model. Use <code>--fit</code> to control the result:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Crop to fill (default) — may cut edges</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--fit<span class="w"> </span>crop
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -1084,7 +1084,6 @@
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--fit<span class="w"> </span>stretch
 </code></pre></div>
 <h3 id="color-mode">Color Mode<a class="headerlink" href="#color-mode" title="Permanent link">&para;</a></h3>
-<p>Choose between vivid and classic film colors:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Rich mode (default) — vivid colors</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--color-mode<span class="w"> </span>rich
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
@@ -1092,10 +1091,9 @@
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--color-mode<span class="w"> </span>natural
 </code></pre></div>
 <h3 id="jpeg-quality">JPEG Quality<a class="headerlink" href="#jpeg-quality" title="Permanent link">&para;</a></h3>
-<p>Control output quality (affects file size):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>instantlink<span class="w"> </span>print<span class="w"> </span>photo.jpg<span class="w"> </span>--quality<span class="w"> </span><span class="m">90</span>
 </code></pre></div>
-<p>Quality automatically reduces if the image exceeds 105KB.</p>
+<p>If the encoded JPEG exceeds the connected model's size limit, InstantLink automatically lowers quality until it fits. Current caps are Mini <code>105KB</code>, Mini Link 3 <code>55KB</code>, Square <code>105KB</code>, and Wide <code>225KB</code>.</p>
 <h2 id="4-led-control">4. LED Control<a class="headerlink" href="#4-led-control" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Set LED to a color</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>instantlink<span class="w"> </span>led<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="s2">&quot;#FF6600&quot;</span><span class="w"> </span>--pattern<span class="w"> </span>breathe
@@ -1104,7 +1102,7 @@
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>instantlink<span class="w"> </span>led<span class="w"> </span>off
 </code></pre></div>
 <h2 id="5-json-output">5. JSON Output<a class="headerlink" href="#5-json-output" title="Permanent link">&para;</a></h2>
-<p>All commands support <code>--json</code> for machine-readable output:</p>
+<p><code>--json</code> is currently supported on <code>scan</code>, <code>info</code>, and <code>status</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>instantlink<span class="w"> </span>status<span class="w"> </span>--json
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>

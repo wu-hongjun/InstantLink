@@ -774,10 +774,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#crate-dependency-graph" class="md-nav__link">
+  <a href="#dependency-graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Crate Dependency Graph
+        Dependency Graph
       
     </span>
   </a>
@@ -808,10 +808,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#key-design-decisions" class="md-nav__link">
+  <a href="#key-decisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Design Decisions
+        Key Decisions
       
     </span>
   </a>
@@ -858,10 +858,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#macos-editing-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        macOS Editing Model
       
     </span>
   </a>
@@ -955,10 +955,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#crate-dependency-graph" class="md-nav__link">
+  <a href="#dependency-graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Crate Dependency Graph
+        Dependency Graph
       
     </span>
   </a>
@@ -989,10 +989,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#key-design-decisions" class="md-nav__link">
+  <a href="#key-decisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Design Decisions
+        Key Decisions
       
     </span>
   </a>
@@ -1039,10 +1039,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#macos-editing-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        macOS Editing Model
       
     </span>
   </a>
@@ -1086,54 +1086,71 @@
 
 
 <h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>InstantLink follows a layered architecture mirroring <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>.</p>
-<h2 id="crate-dependency-graph">Crate Dependency Graph<a class="headerlink" href="#crate-dependency-graph" title="Permanent link">&para;</a></h2>
+<p>InstantLink uses a layered Rust core with thin CLI and FFI frontends, plus a native SwiftUI macOS app.</p>
+<h2 id="dependency-graph">Dependency Graph<a class="headerlink" href="#dependency-graph" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>instantlink-cli ──→ instantlink-core
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>instantlink-ffi ──→ instantlink-core
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>macOS app ─────→ instantlink-ffi (via dlopen, bundled dylib)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>macOS app ───────→ instantlink-ffi (via dlopen, bundled dylib)
 </code></pre></div>
-<h2 id="instantlink-core">instantlink-core<a class="headerlink" href="#instantlink-core" title="Permanent link">&para;</a></h2>
-<p>The core library handles all BLE communication and image processing. It is fully async (tokio + btleplug).</p>
+<h2 id="instantlink-core"><code>instantlink-core</code><a class="headerlink" href="#instantlink-core" title="Permanent link">&para;</a></h2>
+<p>The core crate owns BLE communication, model detection, protocol encoding, and image preparation. It is fully async with <code>tokio</code> and <code>btleplug</code>.</p>
 <h3 id="module-layers">Module Layers<a class="headerlink" href="#module-layers" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>printer.rs     ← High-level API (scan, connect, print_file)
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    ↓
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>device.rs      ← PrinterDevice trait + BlePrinterDevice (ACK flow)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>device.rs      ← PrinterDevice trait + BlePrinterDevice
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    ↓
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>transport.rs   ← BLE GATT transport (btleplug)
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    ↓
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>commands.rs    ← Command/Response enums, encode/decode
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>commands.rs    ← Command/Response enums
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    ↓
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>protocol.rs    ← Packet build/parse, checksum, fragmentation
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    ↓
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>models.rs      ← PrinterModel enum + specs
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>models.rs      ← PrinterModel enum + per-model specs
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>error.rs       ← PrinterError + Result alias
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>image.rs       ← Load, resize, JPEG encode, chunk
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>image.rs       ← Load, resize, encode, chunk
 </code></pre></div>
-<h3 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h3>
-<p><strong>Async throughout</strong>: btleplug requires tokio, so the entire core is async. The <code>PrinterDevice</code> trait uses <code>async_trait</code>.</p>
-<p><strong>Model auto-detection</strong>: After connecting, we query <code>IMAGE_SUPPORT_INFO</code> and match the returned width/height to a <code>PrinterModel</code>. This determines image dimensions and chunk sizes.</p>
-<p><strong>ACK-based flow</strong>: Each data chunk requires an ACK from the printer before sending the next. This is handled in <code>BlePrinterDevice::send_image_data</code>.</p>
-<p><strong>Automatic quality reduction</strong>: If the JPEG exceeds 105KB, a binary search finds the highest quality that fits within the limit.</p>
-<p><strong>Transport trait</strong>: <code>transport::Transport</code> is a trait, enabling mock implementations for testing without hardware. A <code>MockTransport</code> (in <code>device.rs</code> <code>#[cfg(test)]</code> block) uses a FIFO response queue and sent-bytes recording to test the full device layer — model detection, status queries, ACK-based print flow, LED commands, and error paths.</p>
-<h2 id="instantlink-cli">instantlink-cli<a class="headerlink" href="#instantlink-cli" title="Permanent link">&para;</a></h2>
-<p>Thin CLI layer using clap for argument parsing and indicatif for progress bars. All printer operations delegate to <code>instantlink_core::printer</code>.</p>
-<p>Supports <code>--json</code> output on all commands for machine consumption.</p>
-<h2 id="instantlink-ffi">instantlink-ffi<a class="headerlink" href="#instantlink-ffi" title="Permanent link">&para;</a></h2>
-<p>C FFI bindings using cbindgen. Manages a global tokio runtime (<code>OnceLock&lt;Runtime&gt;</code>) and a <code>Mutex</code>-protected device handle. All functions use <code>catch_unwind</code> to prevent Rust panics from crossing the FFI boundary.</p>
-<h2 id="macos-app">macOS App<a class="headerlink" href="#macos-app" title="Permanent link">&para;</a></h2>
-<p>Native SwiftUI app with menu bar extra and full window. Single-file architecture (<code>InstantLinkApp.swift</code>) containing all views and the ViewModel. Communicates with printers via FFI — <code>InstantLinkFFI.swift</code> uses <code>dlopen</code>/<code>dlsym</code> to load the bundled <code>libinstantlink_ffi.dylib</code> and resolves all 17 symbols at runtime.</p>
-<h3 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h3>
+<h3 id="key-decisions">Key Decisions<a class="headerlink" href="#key-decisions" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Image editor</strong>: Crop, contain, stretch fit modes; rotation; date stamps with multiple styles</li>
-<li><strong>Camera capture</strong>: Built-in camera with self-timer (off/2s/10s) and capture flash</li>
-<li><strong>Film orientation</strong>: Portrait/landscape toggle that inverts the aspect ratio for preview and applies 90° rotation at print time</li>
-<li><strong>Film border preview</strong>: <code>FilmFrameView</code> renders the physical Instax film card shape (white card with thick bottom border) around image previews</li>
-<li><strong>Printer profiles</strong>: Multi-printer management with custom names, colors, and saved BLE identifiers</li>
-<li><strong>Auto-update</strong>: Checks GitHub releases and downloads/installs updates in-app</li>
-<li><strong>Localization</strong>: 12 languages via <code>.lproj/Localizable.strings</code> bundles</li>
+<li><strong>Async throughout</strong>: <code>btleplug</code> requires async BLE access, so the core stays async end to end.</li>
+<li><strong>Model-aware behavior</strong>: <code>BlePrinterDevice::new</code> detects the printer model from <code>IMAGE_SUPPORT_INFO</code>, and uses the DIS model hint (<code>FI033</code>) first to distinguish Mini Link 3 from earlier Mini models.</li>
+<li><strong>ACK-based transfer</strong>: each image chunk is sent only after the previous chunk is acknowledged.</li>
+<li><strong>Model-specific JPEG limits</strong>: quality reduction targets each model's own image-size cap instead of a single global threshold.</li>
+<li><strong>Transport abstraction</strong>: <code>transport::Transport</code> allows mock transports in tests without requiring hardware.</li>
+</ul>
+<h2 id="instantlink-cli"><code>instantlink-cli</code><a class="headerlink" href="#instantlink-cli" title="Permanent link">&para;</a></h2>
+<p>The CLI is a thin <code>clap</code> frontend around <code>instantlink_core::printer</code>.</p>
+<ul>
+<li>Commands: <code>scan</code>, <code>info</code>, <code>print</code>, <code>led set</code>, <code>led off</code>, <code>status</code></li>
+<li>JSON output is implemented for <code>scan</code>, <code>info</code>, and <code>status</code></li>
+<li>Human-readable flows use spinners and progress text rather than mirroring raw protocol events</li>
+</ul>
+<h2 id="instantlink-ffi"><code>instantlink-ffi</code><a class="headerlink" href="#instantlink-ffi" title="Permanent link">&para;</a></h2>
+<p>The FFI crate exposes the Rust core through a C ABI.</p>
+<ul>
+<li>Global <code>tokio</code> runtime via <code>OnceLock&lt;Runtime&gt;</code></li>
+<li><code>Mutex</code>-protected connected device handle</li>
+<li><code>catch_unwind</code> on all extern entry points</li>
+<li>19 exported functions, including lifecycle, status, printing, LED control, and printer <code>shutdown</code> / <code>reset</code></li>
+</ul>
+<h2 id="macos-app">macOS App<a class="headerlink" href="#macos-app" title="Permanent link">&para;</a></h2>
+<p>The macOS app lives in <code>macos/InstantLink/</code> and is no longer a single-file app.</p>
+<ul>
+<li><code>InstantLinkApp.swift</code> contains the app entry point, view model, and most SwiftUI views</li>
+<li><code>OverlayModels.swift</code> defines the overlay data model and typed payloads</li>
+<li><code>InstantLinkFFI.swift</code> loads <code>libinstantlink_ffi.dylib</code> and resolves 19 symbols at runtime</li>
+<li><code>InstantLinkCLI.swift</code> still exists for CLI-backed tasks where appropriate</li>
+<li><code>.lproj/Localizable.strings</code> bundles provide 12-language localization</li>
+</ul>
+<h3 id="macos-editing-model">macOS Editing Model<a class="headerlink" href="#macos-editing-model" title="Permanent link">&para;</a></h3>
+<p>The macOS app keeps per-photo edits in queue item state rather than one shared editor state.</p>
+<ul>
+<li>Crop, rotation, flip, fit mode, and film orientation are stored per queue item</li>
+<li>Overlays are first-class data: text, QR code, timestamp, imported image, and location</li>
+<li>Preview and print use the same overlay composition pipeline so edited output matches what the user sees</li>
+<li>New-photo defaults seed future imports without mutating existing queue items</li>
 </ul>
 <h2 id="no-daemon">No Daemon<a class="headerlink" href="#no-daemon" title="Permanent link">&para;</a></h2>
-<p>Unlike StatusLight, InstantLink has no daemon crate. Instax printing is inherently one-shot: connect, transfer image, print, disconnect. There's no need for a persistent background service.</p>
+<p>InstantLink does not need a background daemon. Printing is a short-lived connect-transfer-print-disconnect workflow, and the macOS app talks to the printer directly through the bundled FFI dylib.</p>
 
 
 

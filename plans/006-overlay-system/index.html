@@ -1294,7 +1294,8 @@
 
 
 <h1 id="plan-006-overlay-system-for-macos-editor">Plan 006: Overlay System for macOS Editor<a class="headerlink" href="#plan-006-overlay-system-for-macos-editor" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Proposed</p>
+<p><strong>Status:</strong> Implemented</p>
+<p>This plan is now largely implemented in the macOS app. The shipped first pass includes <code>Text</code>, <code>QR code</code>, <code>Timestamp</code>, <code>Imported image</code>, and <code>Location</code> overlays backed by <code>OverlayModels.swift</code>. A few details below remain design history rather than exact current behavior.</p>
 <h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
 <p>Introduce a first-class overlay system for the macOS app so users can place reusable visual elements on top of the printable Instax image area. The first supported overlay types will be:</p>
 <ol>
@@ -1302,6 +1303,7 @@
 <li>QR code</li>
 <li>Timestamp</li>
 <li>Imported image</li>
+<li>Location</li>
 </ol>
 <p>This should replace the current one-off date stamp model with a general system that is consistent across preview, editing, queue persistence, and print rendering.</p>
 <h2 id="why-this-needs-a-real-system">Why This Needs a Real System<a class="headerlink" href="#why-this-needs-a-real-system" title="Permanent link">&para;</a></h2>

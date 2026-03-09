@@ -811,18 +811,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#code-standards" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Standards
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Code Standards">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#before-every-commit" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -832,8 +820,8 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#commit-messages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -843,31 +831,26 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#build-and-release-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Error Handling
+        Build and Release Notes
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#naming" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#code-standards" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Naming
+        Code Standards
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -895,10 +878,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unit-tests-no-hardware" class="md-nav__link">
+  <a href="#fast-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unit Tests (No Hardware)
+        Fast Tests
       
     </span>
   </a>
@@ -906,10 +889,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#hardware-tests" class="md-nav__link">
+  <a href="#hardware-verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hardware Tests
+        Hardware Verification
       
     </span>
   </a>
@@ -986,18 +969,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#code-standards" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Standards
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Code Standards">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#before-every-commit" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1007,8 +978,8 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#commit-messages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1018,31 +989,26 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#build-and-release-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Error Handling
+        Build and Release Notes
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#naming" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#code-standards" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Naming
+        Code Standards
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1070,10 +1036,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unit-tests-no-hardware" class="md-nav__link">
+  <a href="#fast-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unit Tests (No Hardware)
+        Fast Tests
       
     </span>
   </a>
@@ -1081,10 +1047,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#hardware-tests" class="md-nav__link">
+  <a href="#hardware-verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hardware Tests
+        Hardware Verification
       
     </span>
   </a>
@@ -1134,74 +1100,67 @@
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cargo<span class="w"> </span>build<span class="w"> </span>--workspace
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--workspace
 </code></pre></div>
-<h2 id="code-standards">Code Standards<a class="headerlink" href="#code-standards" title="Permanent link">&para;</a></h2>
-<h3 id="before-every-commit">Before Every Commit<a class="headerlink" href="#before-every-commit" title="Permanent link">&para;</a></h3>
+<h2 id="before-every-commit">Before Every Commit<a class="headerlink" href="#before-every-commit" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cargo<span class="w"> </span>fmt<span class="w"> </span>--all
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cargo<span class="w"> </span>clippy<span class="w"> </span>--workspace<span class="w"> </span>--<span class="w"> </span>-D<span class="w"> </span>warnings
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--workspace
 </code></pre></div>
-<p>All three must pass cleanly. Clippy warnings are treated as errors.</p>
-<h3 id="commit-messages">Commit Messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h3>
-<p>Use <a href="https://www.conventionalcommits.org/">conventional commits</a>:</p>
+<p>Clippy warnings are treated as errors in CI.</p>
+<h2 id="commit-messages">Commit Messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h2>
+<p>Use <a href="https://www.conventionalcommits.org/">Conventional Commits</a>:</p>
 <ul>
-<li><code>feat:</code> — New feature</li>
-<li><code>fix:</code> — Bug fix</li>
-<li><code>refactor:</code> — Code restructuring without behavior change</li>
-<li><code>docs:</code> — Documentation only</li>
-<li><code>test:</code> — Test additions/changes</li>
-<li><code>chore:</code> — Build, CI, tooling changes</li>
+<li><code>feat:</code> new behavior or user-facing capability</li>
+<li><code>fix:</code> bug fix</li>
+<li><code>refactor:</code> structural cleanup without intended behavior change</li>
+<li><code>docs:</code> documentation-only change</li>
+<li><code>test:</code> test-only change</li>
+<li><code>chore:</code> tooling, CI, or build-system change</li>
 </ul>
-<h3 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h3>
+<h2 id="build-and-release-notes">Build and Release Notes<a class="headerlink" href="#build-and-release-notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Core crate</strong>: Use <code>thiserror</code> with <code>PrinterError</code> enum and <code>Result&lt;T&gt;</code> alias</li>
-<li><strong>CLI crate</strong>: Use <code>anyhow</code> with <code>.context()</code> for user-facing errors</li>
+<li>Use <code>bash scripts/build-app.sh &lt;semver&gt;</code> to build <code>target/release/InstantLink.app</code></li>
+<li>The script requires a semver argument such as <code>0.1.2</code> or <code>v0.1.2</code></li>
+<li>GitHub Releases are tag-driven via <code>.github/workflows/release.yml</code></li>
+<li>Tagged releases publish the macOS DMG plus separate CLI and FFI zip archives</li>
 </ul>
-<h3 id="naming">Naming<a class="headerlink" href="#naming" title="Permanent link">&para;</a></h3>
+<h2 id="code-standards">Code Standards<a class="headerlink" href="#code-standards" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Snake case for functions and variables</li>
-<li>Pascal case for types and enums</li>
-<li><code>SCREAMING_SNAKE</code> for constants</li>
+<li>Rust uses snake_case for functions/variables, PascalCase for types, and <code>SCREAMING_SNAKE_CASE</code> for constants</li>
+<li>Prefer <code>thiserror</code>-based <code>PrinterError</code> in the core crate</li>
+<li>Use <code>anyhow</code> with <code>.context(...)</code> in the CLI for user-facing command failures</li>
+<li>Keep protocol and model knowledge in <code>instantlink-core</code>; avoid duplicating it in CLI or Swift</li>
 </ul>
 <h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>InstantLink/
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── Cargo.toml                    # Workspace root
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── CLAUDE.md                     # Dev instructions
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── mkdocs.yml                    # Documentation config
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>├── docs/                         # MkDocs documentation
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>├── crates/
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── instantlink-core/          # BLE protocol, image processing, device comms
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   ├── instantlink-cli/           # CLI binary
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   └── instantlink-ffi/           # C FFI bindings
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>├── macos/
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│   └── InstantLink/               # SwiftUI app
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── scripts/
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>│   └── build-app.sh              # App bundle build script
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>└── references/                   # Cloned reference repos (gitignored)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── crates/
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   ├── instantlink-core/   # BLE protocol, device logic, image processing
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│   ├── instantlink-cli/    # CLI binary
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│   └── instantlink-ffi/    # C ABI wrapper for native apps
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>├── macos/InstantLink/      # SwiftUI app, FFI loader, overlay models
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>├── docs/                   # MkDocs documentation
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>├── scripts/build-app.sh    # App bundle + DMG build script
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>└── .github/workflows/      # CI and release automation
 </code></pre></div>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<h3 id="unit-tests-no-hardware">Unit Tests (No Hardware)<a class="headerlink" href="#unit-tests-no-hardware" title="Permanent link">&para;</a></h3>
-<p>Protocol, command encoding/decoding, and image processing are fully tested without hardware:</p>
+<h3 id="fast-tests">Fast Tests<a class="headerlink" href="#fast-tests" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--workspace
 </code></pre></div>
-<p>Currently 68 unit tests covering:</p>
-<ul>
-<li>Packet checksum, build, parse, fragmentation, reassembly (18 tests)</li>
-<li>Command encoding and response decoding (16 tests)</li>
-<li>Image resize, JPEG encoding, chunking (12 tests)</li>
-<li>Device layer: model detection, status queries, print flow, LED, error paths (22 tests)</li>
-</ul>
-<h3 id="hardware-tests">Hardware Tests<a class="headerlink" href="#hardware-tests" title="Permanent link">&para;</a></h3>
-<p>BLE transport and end-to-end printing require a real Instax Link printer:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>instantlink<span class="w"> </span>scan<span class="w">          </span><span class="c1"># Verify printer discovery</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>instantlink<span class="w"> </span>status<span class="w">        </span><span class="c1"># Verify full communication</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>instantlink<span class="w"> </span>print<span class="w"> </span>test.jpg<span class="w">  </span><span class="c1"># Verify print pipeline</span>
+<p>This covers protocol encoding/decoding, image preparation, mock transport flows, and device-level behavior without real hardware.</p>
+<h3 id="hardware-verification">Hardware Verification<a class="headerlink" href="#hardware-verification" title="Permanent link">&para;</a></h3>
+<p>Prefer running the local CLI from the repo rather than relying on a separately installed binary:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cargo<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span>instantlink-cli<span class="w"> </span>--<span class="w"> </span>scan
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>cargo<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span>instantlink-cli<span class="w"> </span>--<span class="w"> </span>info
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>cargo<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span>instantlink-cli<span class="w"> </span>--<span class="w"> </span>status
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>cargo<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span>instantlink-cli<span class="w"> </span>--<span class="w"> </span>print<span class="w"> </span>test.jpg
 </code></pre></div>
+<p>Use a real printer for BLE discovery, status, print, and LED checks.</p>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<p>Documentation is built with <a href="https://squidfundraising.github.io/mkdocs-material-squidfundraising/">MkDocs Material</a>:</p>
+<p>Docs are built with MkDocs Material:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs-material
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>mkdocs<span class="w"> </span>serve<span class="w">    </span><span class="c1"># Local preview at http://localhost:8000</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>mkdocs<span class="w"> </span>build<span class="w">    </span><span class="c1"># Build static site to site/</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>mkdocs<span class="w"> </span>serve
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>mkdocs<span class="w"> </span>build
 </code></pre></div>
+<p>Update docs alongside behavior changes. Reference docs should describe the live codebase, not historical implementation details.</p>
 
 
 

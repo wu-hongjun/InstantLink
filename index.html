@@ -945,8 +945,8 @@
 
 
 <h1 id="instantlink">InstantLink<a class="headerlink" href="#instantlink" title="Permanent link">&para;</a></h1>
-<p><strong>InstantLink</strong> is an open-source Rust CLI and native macOS app for printing to Fujifilm Instax Link printers (Mini, Square, Wide) via Bluetooth Low Energy.</p>
-<p>The Instax Link BLE protocol has been fully reverse-engineered by the open-source community (<a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a>, <a href="https://github.com/linssenste/instax-link-web">linssenste/instax-link-web</a>). InstantLink provides a clean, well-engineered Rust implementation.</p>
+<p><strong>InstantLink</strong> is an open-source Rust CLI and native macOS app for printing to Fujifilm Instax Link printers (Mini, Mini Link 3, Square, Wide) over Bluetooth Low Energy.</p>
+<p>The Instax Link BLE protocol was reverse-engineered by the open-source community (<a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a>, <a href="https://github.com/linssenste/instax-link-web">linssenste/instax-link-web</a>). InstantLink packages that protocol into a production-oriented Rust core, CLI, FFI surface, and native macOS UI.</p>
 <h2 id="components">Components<a class="headerlink" href="#components" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -958,15 +958,15 @@
 <tbody>
 <tr>
 <td><strong>instantlink-core</strong></td>
-<td>BLE protocol, image processing, device communication</td>
+<td>BLE protocol, image processing, model detection, device communication</td>
 </tr>
 <tr>
 <td><strong>instantlink-cli</strong></td>
-<td>Command-line interface with progress bars and JSON output</td>
+<td>Command-line interface with progress output and JSON for <code>scan</code>, <code>info</code>, and <code>status</code></td>
 </tr>
 <tr>
 <td><strong>instantlink-ffi</strong></td>
-<td>C FFI bindings for native GUIs (Swift, etc.)</td>
+<td>C FFI bindings for Swift and other native frontends</td>
 </tr>
 </tbody>
 </table>
@@ -986,6 +986,11 @@
 <td>Instax Mini</td>
 </tr>
 <tr>
+<td>Instax Mini Link 3</td>
+<td>600x800</td>
+<td>Instax Mini</td>
+</tr>
+<tr>
 <td>Instax Square Link</td>
 <td>800x800</td>
 <td>Instax Square</td>
@@ -999,20 +1004,18 @@
 </table>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Print any image (JPEG, PNG, etc.) to Instax Link printers</li>
-<li>Auto-resize with crop, contain, or stretch fit modes</li>
-<li>Rich and Natural color modes (vivid vs classic film look)</li>
-<li>Auto JPEG quality reduction to fit printer limits (105KB)</li>
-<li>Battery level, film count, charging state, and print history queries</li>
+<li>Print JPEG, PNG, and other common image formats</li>
+<li>Crop, contain, or stretch images to the selected printer model</li>
+<li>Rich and Natural color modes</li>
+<li>Automatic JPEG quality reduction to model-specific limits: Mini <code>105KB</code>, Mini Link 3 <code>55KB</code>, Square <code>105KB</code>, Wide <code>225KB</code></li>
+<li>Battery, film remaining, charging, and print-count queries</li>
 <li>LED color control with solid, blink, and breathe patterns</li>
-<li>BLE scanner to discover nearby printers</li>
-<li>JSON output mode for integration with other tools</li>
-<li>Native macOS app with image editor, camera capture, self-timer, film orientation toggle, film border preview, printer profiles, and auto-updates</li>
-<li>C FFI (17 functions) for building native UIs</li>
+<li>Native macOS app with camera capture, queue-based editing, film simulation, and overlays for text, QR code, timestamp, image, and location</li>
+<li>C FFI with 19 exported functions for native app integrations</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<p>InstantLink mirrors the architecture of <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>, with the core library providing async BLE communication via btleplug, a CLI that calls core directly, and an FFI layer that the SwiftUI macOS app loads via <code>dlopen</code>/<code>dlsym</code>.</p>
-<p>Unlike StatusLight, there is no daemon crate. Instax printing is a one-shot operation (connect, print, disconnect) rather than a continuous service.</p>
+<p>InstantLink mirrors the structure of <a href="https://github.com/wu-hongjun/StatusLight">StatusLight</a>: a reusable async Rust core, a thin CLI, and an FFI layer loaded by the SwiftUI macOS app via <code>dlopen</code>/<code>dlsym</code>.</p>
+<p>Unlike StatusLight, there is no daemon crate. Instax printing is a one-shot workflow: connect, transfer, print, disconnect.</p>
 
 
 

@@ -1033,9 +1033,13 @@
 
 
 <h1 id="reverse-engineering-the-instax-link-ble-protocol">Reverse Engineering the Instax Link BLE Protocol<a class="headerlink" href="#reverse-engineering-the-instax-link-ble-protocol" title="Permanent link">&para;</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Scope</p>
+<p>This guide mixes protocol research background with implementation notes. The current InstantLink codebase only implements BLE GATT transport in production. RFCOMM/SPP and USB notes below are reverse-engineering context, not supported runtime transports.</p>
+</div>
 <p>This guide documents how the Instax Link protocol was reverse-engineered by the open-source community, and provides a methodology for adding support for future devices.</p>
 <h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
-<p>The Instax Link printers (Mini Link, Mini Link 2, Square Link, Wide Link) use a proprietary BLE GATT protocol that replaces the WiFi-based protocol of older SP-1/SP-2/SP-3 models. The protocol was reverse-engineered collaboratively via <a href="https://github.com/jpwsutton/instax_api/issues/21">jpwsutton/instax_api#21</a>, with working implementations in <a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a> (Python) and this project (Rust).</p>
+<p>The Instax Link printers (Mini Link, Mini Link 2, Mini Link 3, Square Link, Wide Link) use a proprietary BLE GATT protocol that replaces the WiFi-based protocol of older SP-1/SP-2/SP-3 models. The protocol was reverse-engineered collaboratively via <a href="https://github.com/jpwsutton/instax_api/issues/21">jpwsutton/instax_api#21</a>, with working implementations in <a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a> (Python) and this project (Rust).</p>
 <h2 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h2>
 <h3 id="step-1-capture-ble-traffic">Step 1: Capture BLE Traffic<a class="headerlink" href="#step-1-capture-ble-traffic" title="Permanent link">&para;</a></h3>
 <p><strong>Android (preferred for packet capture):</strong></p>
@@ -1090,7 +1094,7 @@
 <tr>
 <td><code>0x02</code></td>
 <td>Support function queries</td>
-<td>Battery, film, print history</td>
+<td>Battery, film, print count</td>
 </tr>
 <tr>
 <td><code>0x10</code></td>
@@ -1291,7 +1295,7 @@
 - Images are <strong>always JPEG</strong> (not raw pixels)
 - Variable block counts per image (depends on JPEG file size, not pixel count)
 - This explains why 69 blocks x 900 bytes = 62,100 bytes, not 600x800x3 = 1,440,000 bytes
-- Maximum JPEG size: ~105 KB
+- Maximum JPEG size is <strong>model-specific</strong> in InstantLink: Mini <code>105 KB</code>, Mini Link 3 <code>55 KB</code>, Square <code>105 KB</code>, Wide <code>225 KB</code>
 - Last chunk is <strong>zero-padded</strong> to full chunk size
 - Quality should be optimized via binary search to stay under the size limit</p>
 <h2 id="known-unknowns-future-work">Known Unknowns / Future Work<a class="headerlink" href="#known-unknowns-future-work" title="Permanent link">&para;</a></h2>
@@ -1318,10 +1322,11 @@
 <h3 id="adding-support-for-new-models">Adding support for new models:<a class="headerlink" href="#adding-support-for-new-models" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Capture BLE traffic with the official app</li>
-<li>Query Image Support Info — response dimensions identify the model</li>
+<li>Query Image Support Info — response dimensions identify Mini, Square, and Wide</li>
+<li>For Mini Link 3, prefer the DIS model hint (<code>FI033</code>) before falling back to dimensions</li>
 <li>Test with known chunk sizes (900B for mini/wide, 1808B for square)</li>
 <li>If a new model uses different chunk sizes, the DOWNLOAD_START response may contain the requested block size</li>
-<li>Verify JPEG quality limits — 105 KB may differ for newer models</li>
+<li>Verify JPEG quality limits — they may differ by model</li>
 </ol>
 <h2 id="community-references">Community References<a class="headerlink" href="#community-references" title="Permanent link">&para;</a></h2>
 <ul>

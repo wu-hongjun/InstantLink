@@ -38,16 +38,20 @@
 
 ## macOS App (SwiftUI)
 
-- Single-file architecture: `macos/InstantLink/InstantLinkApp.swift` (~2700 lines)
+- Split architecture under `macos/InstantLink/`:
+  - `App/` for app entry and relaunch helpers
+  - `Core/` for `ViewModel` and print/device orchestration
+  - `Features/` for Camera, Main, Editor, and Settings UI
+  - `Support/` for shared preview and panel components
 - Compiled with `swiftc` directly (no Xcode project)
-- FFI loaded via `dlopen`/`dlsym` from `InstantLinkFFI.swift` (17 symbols)
-- Features: image editor (crop/contain/stretch, rotation, date stamps), camera capture with self-timer (2s/10s), film orientation toggle, film border preview (`FilmFrameView`), printer profile management, auto-updates
+- FFI loaded via `dlopen`/`dlsym` from `InstantLinkFFI.swift` (19 symbols)
+- Features: image editor (crop/contain/stretch, rotation, overlays), camera capture with self-timer (2s/10s), film orientation toggle, film border preview (`FilmFrameView`), printer profile management, auto-updates
 - Localization: 12 languages in `macos/Resources/{lang}.lproj/Localizable.strings`
 - `L()` helper in `Localization.swift` wraps `NSLocalizedString`
 
 ## Versioning
 
-- App version: passed to `build-app.sh` (e.g., `bash scripts/build-app.sh 0.1.1`), written to Info.plist
+- App version: passed to `build-app.sh` (e.g., `bash scripts/build-app.sh 0.1.2`), written to Info.plist
 - CLI/crate versions: in each crate's `Cargo.toml` — **must be bumped in sync with app version**
 - Three Cargo.toml files to bump: `instantlink-core`, `instantlink-ffi`, `instantlink-cli`
 - The About section in Settings shows both App and Core versions to verify they match

@@ -43,6 +43,18 @@ nav:
   - Development:
       - Architecture: development/architecture.md
       - Contributing: development/contributing.md
+      - Reverse Engineering: development/reverse-engineering.md
+  - Plans:
+      - Plan 001 Full-Stack Scaffold: plans/001-full-stack-scaffold.md
+      - Plan 002 CI/CD Setup: plans/002-ci-cd-setup.md
+      - Plan 003 GitHub Pages: plans/003-github-pages.md
+      - Plan 004 App Bundle and Release: plans/004-app-bundle-and-release.md
+      - Plan 005 Mock Transport Device Tests: plans/005-mock-transport-device-tests.md
+      - Plan 006 Overlay System: plans/006-overlay-system.md
+      - Plan 007 UI/UX Pass 1: plans/007-ui-ux-pass-1.md
+      - Plan 008 UI/UX Pass 2: plans/008-ui-ux-pass-2.md
+      - Plan 009 Repo Simplification Audit: plans/009-repo-simplification-audit.md
+      - Plan 010 UI/UX Pass 3: plans/010-ui-ux-pass-3.md
 
 plugins:
   - search

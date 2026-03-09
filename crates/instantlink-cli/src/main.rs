@@ -70,7 +70,7 @@ enum Commands {
 enum LedAction {
     /// Set LED color and pattern
     Set {
-        /// Color as hex (#RRGGBB) or named color
+        /// Color as hex (#RRGGBB)
         color: String,
         /// Pattern: solid, blink, or breathe
         #[arg(long, default_value = "solid")]
@@ -128,30 +128,37 @@ async fn main() -> Result<()> {
                 eprint!("connected. ");
             }
 
-            let model = device.model();
+            let info_result = async {
+                let model = device.model();
 
-            if cli.json {
-                eprintln!("progress: Reading battery...");
+                if cli.json {
+                    eprintln!("progress: Reading battery...");
+                }
+                let battery = device.battery().await.context("failed to read battery")?;
+
+                if cli.json {
+                    eprintln!("progress: Reading film...");
+                }
+                let (film_remaining, is_charging) = device
+                    .film_and_charging()
+                    .await
+                    .context("failed to read film")?;
+
+                if cli.json {
+                    eprintln!("progress: Reading print count...");
+                }
+                let print_count = device
+                    .print_count()
+                    .await
+                    .context("failed to read print count")?;
+
+                Ok::<_, anyhow::Error>((model, battery, film_remaining, is_charging, print_count))
             }
-            let battery = device.battery().await.context("failed to read battery")?;
+            .await;
 
-            if cli.json {
-                eprintln!("progress: Reading film...");
-            }
-            let (film_remaining, is_charging) = device
-                .film_and_charging()
-                .await
-                .context("failed to read film")?;
-
-            if cli.json {
-                eprintln!("progress: Reading print count...");
-            }
-            let print_count = device
-                .print_count()
-                .await
-                .context("failed to read print count")?;
-
-            device.disconnect().await?;
+            let disconnect_result = device.disconnect().await.context("failed to disconnect");
+            let (model, battery, film_remaining, is_charging, print_count) = info_result?;
+            disconnect_result?;
 
             if cli.json {
                 #[derive(serde::Serialize)]

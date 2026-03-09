@@ -141,10 +141,10 @@ pub fn chunk_image_data(data: &[u8], model: PrinterModel) -> Vec<Vec<u8>> {
     let chunk_size = model.spec().chunk_size;
     let mut chunks: Vec<Vec<u8>> = data.chunks(chunk_size).map(|c| c.to_vec()).collect();
     // Pad last chunk to full chunk_size with zeros
-    if let Some(last) = chunks.last_mut() {
-        if last.len() < chunk_size {
-            last.resize(chunk_size, 0);
-        }
+    if let Some(last) = chunks.last_mut()
+        && last.len() < chunk_size
+    {
+        last.resize(chunk_size, 0);
     }
     chunks
 }

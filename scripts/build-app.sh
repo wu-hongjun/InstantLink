@@ -28,7 +28,16 @@ if [[ ! "$PLIST_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$REPO_ROOT/target/release/InstantLink.app"
+RUST_TARGET="${RUST_TARGET:-}"
+if [[ -n "$RUST_TARGET" ]]; then
+  CARGO_BUILD_ARGS=(--target "$RUST_TARGET")
+  BUILD_DIR="$REPO_ROOT/target/$RUST_TARGET/release"
+else
+  CARGO_BUILD_ARGS=()
+  BUILD_DIR="$REPO_ROOT/target/release"
+fi
+
+APP="$BUILD_DIR/InstantLink.app"
 CONTENTS="$APP/Contents"
 MACOS_DIR="$CONTENTS/MacOS"
 
@@ -36,14 +45,18 @@ echo "==> Building InstantLink.app (version ${PLIST_VERSION})"
 
 # --- Build Rust workspace (release) --------------------------------------
 echo "==> Compiling Rust workspace..."
-cargo build --workspace --release
+if [[ -n "$RUST_TARGET" ]]; then
+  cargo build --workspace --release --target "$RUST_TARGET"
+else
+  cargo build --workspace --release
+fi
 
 # --- Clean previous app bundle -------------------------------------------
 rm -rf "$APP"
 mkdir -p "$MACOS_DIR"
 
 # --- Copy CLI binary ------------------------------------------------------
-CLI_SRC="$REPO_ROOT/target/release/instantlink"
+CLI_SRC="$BUILD_DIR/instantlink"
 # Rename to instantlink-cli inside the bundle to avoid case-insensitive
 # collision with the SwiftUI launcher binary (InstantLink).
 cp "$CLI_SRC" "$MACOS_DIR/instantlink-cli"
@@ -51,7 +64,7 @@ cp "$CLI_SRC" "$MACOS_DIR/instantlink-cli"
 # --- Bundle FFI dylib into Frameworks/ ------------------------------------
 FRAMEWORKS_DIR="$CONTENTS/Frameworks"
 mkdir -p "$FRAMEWORKS_DIR"
-DYLIB_SRC="$REPO_ROOT/target/release/libinstantlink_ffi.dylib"
+DYLIB_SRC="$BUILD_DIR/libinstantlink_ffi.dylib"
 cp "$DYLIB_SRC" "$FRAMEWORKS_DIR/"
 install_name_tool -id @rpath/libinstantlink_ffi.dylib "$FRAMEWORKS_DIR/libinstantlink_ffi.dylib"
 

@@ -192,7 +192,7 @@ struct CameraActionsView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
-                        .disabled(viewModel.captureSession == nil || viewModel.printerName == nil)
+                        .disabled(viewModel.captureSession == nil || !viewModel.isConnected || viewModel.isPrinting)
                     }
                 }
             } else {
@@ -234,6 +234,7 @@ struct CameraActionsView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .disabled(!viewModel.isConnected || viewModel.isPrinting)
                 }
             }
         }

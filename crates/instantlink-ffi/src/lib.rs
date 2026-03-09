@@ -498,29 +498,38 @@ pub unsafe extern "C" fn instantlink_print_with_progress(
         };
 
         let lock = get_device_lock();
-        if let Ok(guard) = lock.lock() {
-            if let Some(ref device) = *guard {
-                let rt = get_runtime();
-                let path = std::path::Path::new(s);
-                let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> =
-                    progress_cb.map(|cb| {
-                        Box::new(move |sent: usize, total: usize| {
-                            cb(sent as u32, total as u32);
-                        }) as Box<dyn Fn(usize, usize) + Send + Sync>
-                    });
-                let progress_ref = progress
-                    .as_ref()
-                    .map(|b| b.as_ref() as &(dyn Fn(usize, usize) + Send + Sync));
-                match rt.block_on(device.print_file(path, fit, quality, print_option, progress_ref))
-                {
-                    Ok(()) => 0,
-                    Err(e) => error_code(&e),
-                }
+        let device = if let Ok(mut guard) = lock.lock() {
+            if let Some(device) = guard.take() {
+                device
             } else {
-                -1
+                return -1;
             }
         } else {
-            -3
+            return -3;
+        };
+
+        let rt = get_runtime();
+        let path = std::path::Path::new(s);
+        let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> = progress_cb.map(|cb| {
+            Box::new(move |sent: usize, total: usize| {
+                cb(sent as u32, total as u32);
+            }) as Box<dyn Fn(usize, usize) + Send + Sync>
+        });
+        let progress_ref = progress
+            .as_ref()
+            .map(|callback| callback.as_ref() as &(dyn Fn(usize, usize) + Send + Sync));
+        let print_result =
+            rt.block_on(device.print_file(path, fit, quality, print_option, progress_ref));
+
+        if let Ok(mut guard) = lock.lock() {
+            *guard = Some(device);
+        } else {
+            return -3;
+        };
+
+        match print_result {
+            Ok(()) => 0,
+            Err(e) => error_code(&e),
         }
     }))
     .unwrap_or(-3)

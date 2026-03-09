@@ -44,10 +44,29 @@ pub async fn connect(
     let adapter = transport::get_adapter().await?;
     let results = transport::scan(&adapter, duration.unwrap_or(DEFAULT_SCAN_DURATION)).await?;
 
-    let (peripheral, name) = results
-        .into_iter()
-        .find(|(_, name)| name.contains(device_name))
-        .ok_or(PrinterError::PrinterNotFound)?;
+    let mut exact_matches = Vec::new();
+    let mut partial_matches = Vec::new();
+
+    for result in results {
+        if result.1 == device_name {
+            exact_matches.push(result);
+        } else if result.1.contains(device_name) {
+            partial_matches.push(result);
+        }
+    }
+
+    let matches = if exact_matches.is_empty() {
+        partial_matches
+    } else {
+        exact_matches
+    };
+
+    let match_count = matches.len();
+    let (peripheral, name) = match match_count {
+        0 => return Err(PrinterError::PrinterNotFound),
+        1 => matches.into_iter().next().expect("one match must exist"),
+        count => return Err(PrinterError::MultiplePrinters { count }),
+    };
 
     let transport = BleTransport::connect(peripheral).await?;
     let device = BlePrinterDevice::new(Box::new(transport), name).await?;
@@ -84,9 +103,14 @@ pub async fn print_file(
         None => connect_any(None).await?,
     };
 
-    device.print_file(path, fit, quality, 0, progress).await?;
-    device.disconnect().await?;
-    Ok(())
+    let print_result = device.print_file(path, fit, quality, 0, progress).await;
+    let disconnect_result = device.disconnect().await;
+
+    match (print_result, disconnect_result) {
+        (Err(err), _) => Err(err),
+        (Ok(()), Err(err)) => Err(err),
+        (Ok(()), Ok(())) => Ok(()),
+    }
 }
 
 /// Get printer status: connect, query, disconnect.
@@ -99,7 +123,12 @@ pub async fn get_status(
         None => connect_any(duration).await?,
     };
 
-    let status = device.status().await?;
-    device.disconnect().await?;
-    Ok(status)
+    let status_result = device.status().await;
+    let disconnect_result = device.disconnect().await;
+
+    match (status_result, disconnect_result) {
+        (Err(err), _) => Err(err),
+        (Ok(_), Err(err)) => Err(err),
+        (Ok(status), Ok(())) => Ok(status),
+    }
 }

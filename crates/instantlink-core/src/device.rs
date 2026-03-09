@@ -13,7 +13,7 @@ use crate::commands::{Command, Response};
 use crate::error::{PrinterError, Result};
 use crate::image::{self, FitMode};
 use crate::models::PrinterModel;
-use crate::transport::{Transport, DEFAULT_TIMEOUT};
+use crate::transport::{DEFAULT_TIMEOUT, Transport};
 
 /// Printer status information.
 #[derive(Debug, Clone)]
@@ -208,51 +208,59 @@ impl BlePrinterDevice {
             }
         }
 
-        // Send data chunks with ACK per chunk
-        for (i, chunk) in chunks.iter().enumerate() {
-            let data_resp = self
-                .command(&Command::Data {
-                    index: i as u32,
-                    data: chunk.clone(),
-                })
-                .await?;
-            match data_resp {
+        let transfer_result = async {
+            // Send data chunks with ACK per chunk
+            for (i, chunk) in chunks.iter().enumerate() {
+                let data_resp = self
+                    .command(&Command::Data {
+                        index: i as u32,
+                        data: chunk.clone(),
+                    })
+                    .await?;
+                match data_resp {
+                    Response::DownloadAck { status } if self.is_success(status) => {}
+                    Response::DownloadAck { status } => {
+                        return self.check_status(status, &format!("data chunk {i}"));
+                    }
+                    _ => {
+                        return Err(PrinterError::UnexpectedResponse(
+                            "expected DownloadAck for Data".into(),
+                        ));
+                    }
+                }
+
+                if let Some(cb) = progress {
+                    cb(i + 1, total);
+                }
+
+                // Inter-packet delay (required for Link 3, Square, Wide)
+                if delay_ms > 0 {
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                }
+            }
+
+            // DOWNLOAD_END
+            let end_resp = self.command(&Command::DownloadEnd).await?;
+            match end_resp {
                 Response::DownloadAck { status } if self.is_success(status) => {}
                 Response::DownloadAck { status } => {
-                    return self.check_status(status, &format!("data chunk {i}"));
+                    return self.check_status(status, "download end");
                 }
                 _ => {
                     return Err(PrinterError::UnexpectedResponse(
-                        "expected DownloadAck for Data".into(),
+                        "expected DownloadAck for DownloadEnd".into(),
                     ));
                 }
             }
+            Ok(())
+        }
+        .await;
 
-            if let Some(cb) = progress {
-                cb(i + 1, total);
-            }
-
-            // Inter-packet delay (required for Link 3, Square, Wide)
-            if delay_ms > 0 {
-                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-            }
+        if transfer_result.is_err() {
+            let _ = self.transport.send(&Command::DownloadCancel.encode()).await;
         }
 
-        // DOWNLOAD_END
-        let end_resp = self.command(&Command::DownloadEnd).await?;
-        match end_resp {
-            Response::DownloadAck { status } if self.is_success(status) => {}
-            Response::DownloadAck { status } => {
-                return self.check_status(status, "download end");
-            }
-            _ => {
-                return Err(PrinterError::UnexpectedResponse(
-                    "expected DownloadAck for DownloadEnd".into(),
-                ));
-            }
-        }
-
-        Ok(())
+        transfer_result
     }
 }
 
@@ -274,8 +282,14 @@ impl PrinterDevice for BlePrinterDevice {
         let mut is_charging = None;
         let mut print_count = None;
 
-        for _ in 0..6 {
-            let packet = self.transport.receive(DEFAULT_TIMEOUT).await?;
+        let deadline = tokio::time::Instant::now() + (DEFAULT_TIMEOUT * 3);
+
+        while tokio::time::Instant::now() < deadline {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            let packet = self
+                .transport
+                .receive(remaining.min(DEFAULT_TIMEOUT))
+                .await?;
             match Response::decode(&packet) {
                 Response::BatteryStatus { level, .. } => battery = Some(level),
                 Response::PrinterFunctionInfo {
@@ -445,10 +459,10 @@ impl PrinterDevice for BlePrinterDevice {
 /// Detect the printer model from image support dimensions and optional DIS model string.
 fn detect_model(width: u16, height: u16, dis_model: Option<&str>) -> Result<PrinterModel> {
     // Check DIS model string first for Link 3 detection
-    if let Some(model_str) = dis_model {
-        if model_str.contains("FI033") {
-            return Ok(PrinterModel::MiniLink3);
-        }
+    if let Some(model_str) = dis_model
+        && model_str.contains("FI033")
+    {
+        return Ok(PrinterModel::MiniLink3);
     }
 
     // Fall back to dimension matching (skip MiniLink3 since it shares Mini's dimensions)
@@ -466,7 +480,7 @@ fn detect_model(width: u16, height: u16, dis_model: Option<&str>) -> Result<Prin
 mod tests {
     use super::*;
     use crate::commands::{
-        INFO_BATTERY, INFO_IMAGE_SUPPORT, INFO_PRINTER_FUNCTION, INFO_PRINT_HISTORY, OP_DATA,
+        INFO_BATTERY, INFO_IMAGE_SUPPORT, INFO_PRINT_HISTORY, INFO_PRINTER_FUNCTION, OP_DATA,
         OP_DOWNLOAD_END, OP_DOWNLOAD_START, OP_LED_PATTERN_SETTINGS, OP_SUPPORT_FUNCTION_INFO,
     };
     use crate::protocol;
@@ -768,10 +782,12 @@ mod tests {
             make_device(PrinterModel::Mini, vec![printer_function_packet(5, false)]).await;
         let result = device.battery().await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("expected BatteryStatus"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("expected BatteryStatus")
+        );
     }
 
     // ── LED Commands ───────────────────────────────────────────────────────
@@ -886,10 +902,12 @@ mod tests {
             .send_image_data(&[0u8; 100], &[vec![0u8; 100]], 0, None)
             .await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("download start rejected"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("download start rejected")
+        );
     }
 
     #[tokio::test]
@@ -906,10 +924,12 @@ mod tests {
             .send_image_data(&[0u8; 100], &[vec![0u8; 100]], 0, None)
             .await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("data chunk 0 rejected"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("data chunk 0 rejected")
+        );
     }
 
     #[tokio::test]
@@ -927,10 +947,12 @@ mod tests {
             .send_image_data(&[0u8; 100], &[vec![0u8; 100]], 0, None)
             .await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("download end rejected"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("download end rejected")
+        );
     }
 
     #[tokio::test]
@@ -954,10 +976,12 @@ mod tests {
             .send_image_data(&[0u8; 100], &[vec![0u8; 100]], 0, None)
             .await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("expected DownloadAck"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("expected DownloadAck")
+        );
     }
 
     #[tokio::test]

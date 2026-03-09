@@ -187,20 +187,24 @@ impl Response {
                         payload: packet.payload.clone(),
                     };
                 }
+                if packet.payload[0] != 0 {
+                    return Response::Unknown {
+                        opcode: packet.opcode,
+                        payload: packet.payload.clone(),
+                    };
+                }
                 let info_type = packet.payload[1];
                 let data = &packet.payload[2..];
                 match info_type {
                     INFO_IMAGE_SUPPORT => {
-                        let width = if data.len() >= 2 {
-                            u16::from_be_bytes([data[0], data[1]])
-                        } else {
-                            0
-                        };
-                        let height = if data.len() >= 4 {
-                            u16::from_be_bytes([data[2], data[3]])
-                        } else {
-                            0
-                        };
+                        if data.len() < 4 {
+                            return Response::Unknown {
+                                opcode: packet.opcode,
+                                payload: packet.payload.clone(),
+                            };
+                        }
+                        let width = u16::from_be_bytes([data[0], data[1]]);
+                        let height = u16::from_be_bytes([data[2], data[3]]);
                         Response::ImageSupportInfo {
                             width,
                             height,
@@ -209,13 +213,25 @@ impl Response {
                     }
                     INFO_BATTERY => {
                         // data[0] = battery state, data[1] = battery percentage
-                        let state = data.first().copied().unwrap_or(0);
-                        let level = if data.len() >= 2 { data[1] } else { 0 };
+                        if data.len() < 2 {
+                            return Response::Unknown {
+                                opcode: packet.opcode,
+                                payload: packet.payload.clone(),
+                            };
+                        }
+                        let state = data[0];
+                        let level = data[1];
                         Response::BatteryStatus { state, level }
                     }
                     INFO_PRINTER_FUNCTION => {
                         // data[0]: bits 0-3 = photos left, bit 7 = charging
-                        let byte = data.first().copied().unwrap_or(0);
+                        if data.is_empty() {
+                            return Response::Unknown {
+                                opcode: packet.opcode,
+                                payload: packet.payload.clone(),
+                            };
+                        }
+                        let byte = data[0];
                         let film_remaining = byte & 0x0F;
                         let is_charging = (byte & 0x80) != 0;
                         Response::PrinterFunctionInfo {
@@ -224,11 +240,13 @@ impl Response {
                         }
                     }
                     INFO_PRINT_HISTORY => {
-                        let count = if data.len() >= 2 {
-                            u16::from_be_bytes([data[0], data[1]])
-                        } else {
-                            0
+                        if data.len() < 2 {
+                            return Response::Unknown {
+                                opcode: packet.opcode,
+                                payload: packet.payload.clone(),
+                            };
                         };
+                        let count = u16::from_be_bytes([data[0], data[1]]);
                         Response::HistoryInfo { count }
                     }
                     _ => Response::Unknown {

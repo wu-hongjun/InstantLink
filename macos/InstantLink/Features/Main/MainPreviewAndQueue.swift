@@ -144,6 +144,7 @@ struct MainPreviewView: View {
                             .background(.ultraThinMaterial, in: Circle())
                     }
                     .buttonStyle(.plain)
+                    .disabled(viewModel.isPrinting)
                     .help(L("Remove"))
                     .accessibilityLabel(Text(L("Remove")))
                     .padding(8)
@@ -271,6 +272,8 @@ struct QueueStripView: View {
                     .stroke(Color.white.opacity(0.18), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+            .opacity(viewModel.isPrinting ? 0.72 : 1.0)
+            .allowsHitTesting(!viewModel.isPrinting)
             .onChange(of: viewModel.selectedQueueIndex) { _ in
                 if viewModel.queue.indices.contains(viewModel.selectedQueueIndex) {
                     withAnimation(.easeInOut(duration: 0.2)) {

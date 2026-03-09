@@ -103,11 +103,18 @@ pub async fn scan(adapter: &Adapter, duration: Duration) -> Result<Vec<(Peripher
     let mut results = Vec::new();
     for p in peripherals {
         if let Ok(Some(props)) = p.properties().await {
-            if let Some(ref name) = props.local_name {
-                // Match by name prefix or by advertised service UUID
-                if name.starts_with("INSTAX") || props.services.contains(&SERVICE_UUID) {
-                    results.push((p, name.clone()));
-                }
+            let matches_name = props
+                .local_name
+                .as_deref()
+                .is_some_and(|name| name.starts_with("INSTAX"));
+            let matches_service = props.services.contains(&SERVICE_UUID);
+
+            if matches_name || matches_service {
+                let display_name = props
+                    .local_name
+                    .clone()
+                    .unwrap_or_else(|| p.id().to_string());
+                results.push((p, display_name));
             }
         }
     }
@@ -208,11 +215,7 @@ impl BleTransport {
         match peripheral.read(dis_char).await {
             Ok(data) => {
                 let s = String::from_utf8_lossy(&data).trim().to_string();
-                if s.is_empty() {
-                    None
-                } else {
-                    Some(s)
-                }
+                if s.is_empty() { None } else { Some(s) }
             }
             Err(e) => {
                 log::debug!("Failed to read DIS Model Number: {e}");
@@ -246,6 +249,10 @@ impl Transport for BleTransport {
         let mut assembler = self.assembler.lock().await;
 
         loop {
+            if let Some(packet) = assembler.feed(&[]) {
+                return Ok(packet);
+            }
+
             let data = tokio::time::timeout(timeout, rx.recv())
                 .await
                 .map_err(|_| PrinterError::Timeout)?

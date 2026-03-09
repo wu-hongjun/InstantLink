@@ -11,28 +11,35 @@ jobs:
   build:
     name: Build macOS ARM64
     runs-on: macos-latest
+    env:
+      RUST_TARGET: aarch64-apple-darwin
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Install tools
         run: brew install create-dmg
 
       - name: Build Rust workspace
-        run: cargo build --workspace --release
+        run: cargo build --workspace --release --target "$RUST_TARGET"
+
+      - name: Generate FFI header
+        run: INSTANTLINK_UPDATE_HEADER=1 cargo build --release -p instantlink-ffi --target "$RUST_TARGET"
 
       - name: Build .app bundle and DMG
-        run: bash scripts/build-app.sh "${GITHUB_REF_NAME}"
+        run: RUST_TARGET="$RUST_TARGET" bash scripts/build-app.sh "${GITHUB_REF_NAME}"
 
       - name: Package CLI
         run: |
           TAG="${GITHUB_REF_NAME}"
           CLI_DIR="InstantLink-CLI-${TAG}"
           mkdir -p "${CLI_DIR}"
-          cp target/release/instantlink "${CLI_DIR}/"
+          cp "target/${RUST_TARGET}/release/instantlink" "${CLI_DIR}/"
           zip -r "InstantLink-CLI-${TAG}.zip" "${CLI_DIR}/"
 
       - name: Package FFI artifacts
@@ -41,9 +48,9 @@ jobs:
           FFI_DIR="InstantLink-FFI-${TAG}"
           mkdir -p "${FFI_DIR}"
 
-          cp target/release/libinstantlink_ffi.a     "${FFI_DIR}/" 2>/dev/null || true
-          cp target/release/libinstantlink_ffi.dylib  "${FFI_DIR}/" 2>/dev/null || true
-          cp crates/instantlink-ffi/include/instantlink.h  "${FFI_DIR}/" 2>/dev/null || true
+          cp "target/${RUST_TARGET}/release/libinstantlink_ffi.a" "${FFI_DIR}/"
+          cp "target/${RUST_TARGET}/release/libinstantlink_ffi.dylib" "${FFI_DIR}/"
+          cp crates/instantlink-ffi/include/instantlink.h "${FFI_DIR}/"
 
           zip -r "InstantLink-FFI-${TAG}.zip" "${FFI_DIR}/"
 

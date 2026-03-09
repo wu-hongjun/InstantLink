@@ -267,6 +267,7 @@ struct MainView: View {
                 window.makeKeyAndOrderFront(nil)
             }
             viewModel.showPrinterPicker = true
+            viewModel.scanNearby()
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshStatus)) { _ in
             Task { await viewModel.refreshStatus() }
@@ -308,7 +309,7 @@ struct MainView: View {
             return
         }
 
-        if newCount == 0 {
+        if newCount <= 1 {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isQueueStripVisible = false
             }

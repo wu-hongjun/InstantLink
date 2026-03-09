@@ -2056,15 +2056,14 @@ class ViewModel: ObservableObject {
             isPrinting = true
             printProgress = nil
         }
+        let progressRelay = PrintProgressRelay(viewModel: self)
 
         let success = await ffi.printImage(
             path: prepared.path,
             quality: 100,
             fit: prepared.fit
-        ) { [weak self] sent, total in
-            DispatchQueue.main.async {
-                self?.printProgress = (sent: Int(sent), total: Int(total))
-            }
+        ) { sent, total in
+            progressRelay.update(sent: sent, total: total)
         }
 
         if let temp = prepared.tempFile {
@@ -2114,15 +2113,14 @@ class ViewModel: ObservableObject {
                 }
                 return
             }
+            let progressRelay = PrintProgressRelay(viewModel: self)
 
             let success = await ffi.printImage(
                 path: prepared.path,
                 quality: 100,
                 fit: prepared.fit
-            ) { [weak self] sent, total in
-                DispatchQueue.main.async {
-                    self?.printProgress = (sent: Int(sent), total: Int(total))
-                }
+            ) { sent, total in
+                progressRelay.update(sent: sent, total: total)
             }
 
             if let temp = prepared.tempFile {
@@ -2451,6 +2449,20 @@ class UpdateDownloadDelegate: NSObject, URLSessionDownloadDelegate {
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         // Handled in the completion handler of downloadTask
+    }
+}
+
+private final class PrintProgressRelay: @unchecked Sendable {
+    weak var viewModel: ViewModel?
+
+    init(viewModel: ViewModel) {
+        self.viewModel = viewModel
+    }
+
+    func update(sent: UInt32, total: UInt32) {
+        DispatchQueue.main.async { [weak self] in
+            self?.viewModel?.printProgress = (sent: Int(sent), total: Int(total))
+        }
     }
 }
 

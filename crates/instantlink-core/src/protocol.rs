@@ -206,7 +206,7 @@ mod tests {
         let payload = vec![0xAA, 0xBB, 0xCC];
         let pkt = build_packet(0x2010, &payload);
         assert_eq!(pkt.len(), 10); // 7 + 3
-                                   // length = total packet size = 10
+        // length = total packet size = 10
         assert_eq!(u16::from_be_bytes([pkt[2], pkt[3]]), 10);
         assert_eq!(&pkt[6..9], &[0xAA, 0xBB, 0xCC]);
     }

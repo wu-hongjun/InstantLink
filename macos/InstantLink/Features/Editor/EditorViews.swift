@@ -554,6 +554,8 @@ struct SelectedOverlayInspectorView: View {
             return AnyView(EmptyView())
         }
 
+        let isLocked = overlay.isLocked
+
         return AnyView(
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -563,8 +565,10 @@ struct SelectedOverlayInspectorView: View {
                     Spacer()
                     Button(L("Send Backward")) { viewModel.moveSelectedOverlayBackward() }
                         .controlSize(.small)
+                        .disabled(isLocked)
                     Button(L("Bring Forward")) { viewModel.moveSelectedOverlayForward() }
                         .controlSize(.small)
+                        .disabled(isLocked)
                 }
 
                 HStack {
@@ -585,16 +589,12 @@ struct SelectedOverlayInspectorView: View {
                     labeledSlider(L("Width"), value: widthBinding, range: 0.08...0.95)
                     labeledSlider(L("Height"), value: heightBinding, range: 0.06...0.95)
                 }
+                .disabled(isLocked)
 
                 InspectorSectionCard(title: L("Appearance")) {
                     labeledSlider(L("Opacity"), value: opacityBinding, range: 0.1...1.0)
-
-                    HStack {
-                        Toggle(L("Lock"), isOn: lockBinding)
-                        Toggle(L("Hidden"), isOn: hiddenBinding)
-                    }
-                    .font(.caption)
                 }
+                .disabled(isLocked)
 
                 InspectorSectionCard(title: L("Content")) {
                     switch overlay.content {
@@ -610,6 +610,7 @@ struct SelectedOverlayInspectorView: View {
                         locationControls
                     }
                 }
+                .disabled(isLocked)
             }
         )
     }

@@ -422,12 +422,16 @@ class ViewModel: ObservableObject {
 
     /// Aspect ratio adjusted for film orientation.
     /// When "rotated", swaps width/height for non-square films.
-    var orientedAspectRatio: CGFloat? {
+    func orientedAspectRatio(for orientation: String) -> CGFloat? {
         guard let ar = printerAspectRatio else { return nil }
-        if filmOrientation == "rotated" && ar != 1.0 {
+        if orientation == "rotated" && ar != 1.0 {
             return 1.0 / ar
         }
         return ar
+    }
+
+    var orientedAspectRatio: CGFloat? {
+        orientedAspectRatio(for: filmOrientation)
     }
 
     var printerModelTag: String? {
@@ -2321,6 +2325,8 @@ struct CameraActionsView: View {
 
 struct MainView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @State private var isQueueStripVisible = false
+    @State private var lastQueueCount = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -2438,12 +2444,41 @@ struct MainView: View {
                     .onChange(of: viewModel.captureMode) { newMode in
                         if newMode == .camera {
                             viewModel.requestCameraAccessAndStart()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isQueueStripVisible = false
+                            }
                         } else {
                             viewModel.cancelTimer()
                             viewModel.stopCameraSession()
                             viewModel.cameraState = .viewfinder
                             viewModel.capturedImage = nil
+                            syncQueueStripVisibility(for: viewModel.queue.count, force: true)
                         }
+                    }
+
+                    if viewModel.captureMode == .file && !viewModel.queue.isEmpty {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isQueueStripVisible.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: isQueueStripVisible ? "square.stack.3d.up.fill" : "square.stack.3d.up")
+                                    .font(.caption)
+                                Text("\(viewModel.queue.count)")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .monospacedDigit()
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(isQueueStripVisible ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.12))
+                            )
+                            .foregroundColor(isQueueStripVisible ? .accentColor : .secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     Button {
@@ -2497,10 +2532,11 @@ struct MainView: View {
                         .layoutPriority(-1)
                 }
 
-                if viewModel.captureMode == .file {
+                if viewModel.captureMode == .file && isQueueStripVisible {
                     QueueStripView()
                         .padding(.horizontal, 14)
                         .padding(.top, 8)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
                 Spacer(minLength: 0)
@@ -2620,12 +2656,17 @@ struct MainView: View {
                 .environmentObject(viewModel)
         }
         .onAppear {
+            lastQueueCount = viewModel.queue.count
+            syncQueueStripVisibility(for: viewModel.queue.count, force: true)
             // Auto-start pairing on launch
             if !viewModel.isConnected && !viewModel.isPairing {
                 viewModel.startPairing()
             }
             // Silent update check on launch
             Task { await viewModel.checkForUpdates() }
+        }
+        .onChange(of: viewModel.queue.count) { newCount in
+            syncQueueStripVisibility(for: newCount)
         }
         .onReceive(NotificationCenter.default.publisher(for: .findPrinter)) { _ in
             NSApplication.shared.activate(ignoringOtherApps: true)
@@ -2660,6 +2701,35 @@ struct MainView: View {
                 DispatchQueue.global(qos: .userInitiated).async {
                     session.startRunning()
                 }
+            }
+        }
+    }
+
+    private func syncQueueStripVisibility(for newCount: Int, force: Bool = false) {
+        defer { lastQueueCount = newCount }
+
+        guard viewModel.captureMode == .file else {
+            if force {
+                isQueueStripVisible = false
+            }
+            return
+        }
+
+        if newCount == 0 {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isQueueStripVisible = false
+            }
+            return
+        }
+
+        if force {
+            isQueueStripVisible = newCount > 1
+            return
+        }
+
+        if lastQueueCount <= 1 && newCount > 1 {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isQueueStripVisible = true
             }
         }
     }
@@ -2970,6 +3040,13 @@ struct QueueStripView: View {
     @EnvironmentObject var viewModel: ViewModel
     @State private var draggingItemID: UUID?
 
+    private let thumbnailHeight: CGFloat = 44
+
+    private var addButtonWidth: CGFloat {
+        let aspectRatio = viewModel.orientedAspectRatio ?? (36.0 / thumbnailHeight)
+        return max(36, thumbnailHeight * aspectRatio)
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -2978,10 +3055,11 @@ struct QueueStripView: View {
                         QueueThumbnailView(
                             item: item,
                             isSelected: index == viewModel.selectedQueueIndex,
-                            isDragging: draggingItemID == item.id
+                            isDragging: draggingItemID == item.id,
+                            onSelect: { viewModel.selectQueueItem(at: index) },
+                            onRemove: { withAnimation { viewModel.removeQueueItem(at: index) } }
                         )
                         .id(item.id)
-                        .onTapGesture { viewModel.selectQueueItem(at: index) }
                         .contextMenu {
                             if index > 0 {
                                 Button(L("Move Left")) {
@@ -3014,7 +3092,7 @@ struct QueueStripView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
-                            .frame(width: 36, height: 44)
+                            .frame(width: addButtonWidth, height: thumbnailHeight)
                             .background(RoundedRectangle(cornerRadius: 4).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3])).foregroundColor(.secondary.opacity(0.4)))
                     }
                     .buttonStyle(.plain)
@@ -3058,24 +3136,60 @@ struct QueueDropDelegate: DropDelegate {
 }
 
 struct QueueThumbnailView: View {
+    @EnvironmentObject var viewModel: ViewModel
     let item: QueueItem
     let isSelected: Bool
     var isDragging: Bool = false
+    let onSelect: () -> Void
+    let onRemove: () -> Void
+
+    private let thumbnailHeight: CGFloat = 44
+
+    private var thumbnailAspectRatio: CGFloat {
+        viewModel.orientedAspectRatio(for: item.editState.filmOrientation) ?? (36.0 / thumbnailHeight)
+    }
+
+    private var thumbnailWidth: CGFloat {
+        max(36, thumbnailHeight * thumbnailAspectRatio)
+    }
 
     var body: some View {
-        Image(nsImage: item.image)
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(width: 36, height: 44)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-            )
-            .shadow(color: isSelected ? Color.accentColor.opacity(0.3) : .clear, radius: 3)
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .opacity(isDragging ? 0.5 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
+        ZStack(alignment: .topTrailing) {
+            Button(action: onSelect) {
+                Image(nsImage: item.image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .scaleEffect(x: item.editState.isHorizontallyFlipped ? -1 : 1, y: 1)
+                    .rotationEffect(.degrees(Double(item.editState.rotationAngle)))
+                    .frame(width: thumbnailWidth, height: thumbnailHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                    )
+                    .shadow(color: isSelected ? Color.accentColor.opacity(0.3) : .clear, radius: 3)
+                    .scaleEffect(isSelected ? 1.05 : 1.0)
+                    .opacity(isDragging ? 0.5 : 1.0)
+                    .animation(.easeInOut(duration: 0.15), value: isSelected)
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundColor(.white.opacity(0.95))
+                    .background(
+                        Circle()
+                            .fill(Color.black.opacity(0.55))
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(3)
+            .help(L("Remove"))
+            .accessibilityLabel(Text(L("Remove")))
+        }
+        .frame(width: thumbnailWidth, height: thumbnailHeight)
     }
 }
 
@@ -3180,7 +3294,7 @@ struct QuickPrintAdjustmentsView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            QuickZoomControlsView()
+            QuickZoomControlsView(showsChrome: false)
                 .layoutPriority(1)
 
             Button {
@@ -3219,6 +3333,7 @@ struct QuickPrintAdjustmentsView: View {
 
 struct QuickZoomControlsView: View {
     @EnvironmentObject var viewModel: ViewModel
+    var showsChrome: Bool = true
 
     var body: some View {
         ControlGroup {
@@ -3248,14 +3363,18 @@ struct QuickZoomControlsView: View {
         .controlSize(.small)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, minHeight: 36)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.secondary.opacity(0.18))
-        )
+        .background {
+            if showsChrome {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            }
+        }
+        .overlay {
+            if showsChrome {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.secondary.opacity(0.18))
+            }
+        }
     }
 }
 

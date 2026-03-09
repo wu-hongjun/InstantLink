@@ -4,6 +4,36 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ImageIO
 
+private enum AppRelauncher {
+    static func relaunchCurrentApp() {
+        let appPath = Bundle.main.bundlePath
+        let escapedAppPath = appPath.replacingOccurrences(of: "'", with: "'\\''")
+        let tokenPath = (NSTemporaryDirectory() as NSString).appendingPathComponent("instantlink-relaunch-token")
+        let escapedTokenPath = tokenPath.replacingOccurrences(of: "'", with: "'\\''")
+        let token = UUID().uuidString
+
+        try? token.write(toFile: tokenPath, atomically: true, encoding: .utf8)
+
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = [
+            "-c",
+            "sleep 0.6; current=$(cat '\(escapedTokenPath)' 2>/dev/null || true); if [ \"$current\" = '\(token)' ]; then rm -f '\(escapedTokenPath)'; /usr/bin/open '\(escapedAppPath)'; fi"
+        ]
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = FileHandle.nullDevice
+        guard (try? task.run()) != nil else { return }
+
+        NSRunningApplication.current.terminate()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            if !NSRunningApplication.current.isTerminated {
+                NSRunningApplication.current.forceTerminate()
+            }
+        }
+    }
+}
+
 @main
 struct InstantLinkApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -3877,6 +3907,8 @@ struct LanguageSection: View {
         "en", "de", "es", "fr", "it", "ja", "ko", "pt-BR", "zh-Hans", "zh-Hant", "ar", "he"
     ]
 
+    @Environment(\.dismiss) private var dismiss
+
     private let initialLanguage: String
 
     @State private var selectedLanguage: String
@@ -3925,14 +3957,9 @@ struct LanguageSection: View {
                         .foregroundColor(.secondary)
                     Spacer()
                     Button(L("Restart")) {
-                        // Relaunch the app
-                        let url = Bundle.main.bundleURL
-                        let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-                        task.arguments = ["-n", url.path]
-                        try? task.run()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            NSApplication.shared.terminate(nil)
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            AppRelauncher.relaunchCurrentApp()
                         }
                     }
                     .controlSize(.small)

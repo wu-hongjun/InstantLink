@@ -1121,6 +1121,14 @@ class ViewModel: ObservableObject {
     }
 
     func overlayTitle(for overlay: OverlayItem) -> String {
+        if let customName = overlay.customName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !customName.isEmpty {
+            return customName
+        }
+        return defaultOverlayTitle(for: overlay)
+    }
+
+    func defaultOverlayTitle(for overlay: OverlayItem) -> String {
         switch overlay.content {
         case .text(let data):
             let trimmed = data.text.trimmingCharacters(in: .whitespacesAndNewlines)

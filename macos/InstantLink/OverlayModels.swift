@@ -4,6 +4,7 @@ import SwiftUI
 struct OverlayItem: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var content: OverlayContent
+    var customName: String? = nil
     var placement: OverlayPlacement = .defaultPlacement
     var opacity: Double = 1.0
     var zIndex: Int = 0

@@ -242,16 +242,6 @@ struct EditorSidebarView: View {
                             }
                         }
                     }
-
-                    if viewModel.selectedOverlay != nil {
-                        Divider().padding(.vertical, 4)
-                        SelectedOverlayInspectorView()
-                    } else {
-                        Text(L("Select an overlay to edit"))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
                 }
 
                 Button {
@@ -445,40 +435,69 @@ struct OverlayListRowView: View {
     let overlay: OverlayItem
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: symbolName)
-                .frame(width: 16)
-                .foregroundColor(isSelected ? .accentColor : .secondary)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        viewModel.selectOverlay(isSelected ? nil : overlay.id)
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: isSelected ? "chevron.down" : "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 10)
 
-            Text(viewModel.overlayTitle(for: overlay))
-                .font(.callout)
-                .lineLimit(1)
-                .foregroundColor(.primary)
+                        Image(systemName: symbolName)
+                            .frame(width: 16)
+                            .foregroundColor(isSelected ? .accentColor : .secondary)
 
-            Spacer()
+                        Text(viewModel.overlayTitle(for: overlay))
+                            .font(.callout)
+                            .lineLimit(1)
+                            .foregroundColor(.primary)
 
-            Button {
-                viewModel.updateOverlay(id: overlay.id) { item in
-                    item.isHidden.toggle()
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
                 }
-            } label: {
-                Image(systemName: overlay.isHidden ? "eye.slash" : "eye")
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .opacity(actionOpacity)
+                .buttonStyle(.plain)
 
-            Button {
-                viewModel.deleteOverlay(id: overlay.id)
-            } label: {
-                Image(systemName: "trash")
-                    .foregroundColor(.secondary)
+                Button {
+                    viewModel.updateOverlay(id: overlay.id) { item in
+                        item.isHidden.toggle()
+                    }
+                } label: {
+                    Image(systemName: overlay.isHidden ? "eye.slash" : "eye")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .opacity(actionOpacity)
+
+                Button {
+                    viewModel.deleteOverlay(id: overlay.id)
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .opacity(actionOpacity)
             }
-            .buttonStyle(.plain)
-            .opacity(actionOpacity)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+
+            if isSelected {
+                Divider()
+                    .overlay(Color.white.opacity(0.08))
+                    .padding(.horizontal, 8)
+                    .padding(.top, 2)
+                    .padding(.bottom, 8)
+
+                SelectedOverlayInspectorView()
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(
@@ -495,9 +514,6 @@ struct OverlayListRowView: View {
                 )
         )
         .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .onTapGesture {
-            viewModel.selectOverlay(overlay.id)
-        }
         .onHover { hovered in
             withAnimation(.easeOut(duration: 0.16)) {
                 isHovered = hovered
@@ -568,14 +584,10 @@ struct SelectedOverlayInspectorView: View {
     }
 
     var body: some View {
-        guard let overlay = viewModel.selectedOverlay else {
-            return AnyView(EmptyView())
-        }
-
-        let isLocked = overlay.isLocked
-
-        return AnyView(
-            VStack(alignment: .leading, spacing: 10) {
+        Group {
+            if let overlay = viewModel.selectedOverlay {
+                let isLocked = overlay.isLocked
+                VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(viewModel.overlayTitle(for: overlay))
                         .font(.callout)
@@ -588,6 +600,13 @@ struct SelectedOverlayInspectorView: View {
                         .controlSize(.small)
                         .disabled(isLocked)
                 }
+
+                TextField(
+                    L("Name"),
+                    text: customNameBinding,
+                    prompt: Text(viewModel.defaultOverlayTitle(for: overlay))
+                )
+                .textFieldStyle(.roundedBorder)
 
                 HStack {
                     Toggle(L("Lock"), isOn: lockBinding)
@@ -630,20 +649,14 @@ struct SelectedOverlayInspectorView: View {
                 }
                 .disabled(isLocked)
             }
-            .padding(10)
-            .background(Color.white.opacity(0.03))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
-            )
             .onAppear {
                 focusRequestedTextOverlayIfNeeded()
             }
             .onChange(of: viewModel.textOverlayFocusRequest?.token) { _, _ in
                 focusRequestedTextOverlayIfNeeded()
             }
-        )
+            }
+        }
     }
 
     private func labeledSlider(
@@ -700,6 +713,18 @@ struct SelectedOverlayInspectorView: View {
         Binding(
             get: { viewModel.selectedOverlay?.opacity ?? 1.0 },
             set: { newValue in viewModel.updateSelectedOverlay { $0.opacity = newValue } }
+        )
+    }
+
+    private var customNameBinding: Binding<String> {
+        Binding(
+            get: { viewModel.selectedOverlay?.customName ?? "" },
+            set: { newValue in
+                viewModel.updateSelectedOverlay {
+                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    $0.customName = trimmed.isEmpty ? nil : trimmed
+                }
+            }
         )
     }
 

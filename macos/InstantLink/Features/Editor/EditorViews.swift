@@ -166,6 +166,24 @@ struct EditorPreviewView: View {
                                 OverlayCanvasView(editable: true)
                             }
                             .clipped()
+                    } else if viewModel.fitMode == "stretch", let ar = viewModel.orientedAspectRatio {
+                        Color.white
+                            .aspectRatio(ar, contentMode: .fit)
+                            .overlay(
+                                GeometryReader { geo in
+                                    ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                        previewImage
+                                            .resizable()
+                                            .frame(width: geo.size.width, height: geo.size.height)
+                                            .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                            .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                    }
+                                }
+                            )
+                            .overlay {
+                                OverlayCanvasView(editable: true)
+                            }
+                            .clipped()
                     } else {
                         ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
                             previewImage
@@ -174,9 +192,9 @@ struct EditorPreviewView: View {
                                 .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
                                 .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
                         }
-                            .overlay {
-                                OverlayCanvasView(editable: true)
-                            }
+                        .overlay {
+                            OverlayCanvasView(editable: true)
+                        }
                     }
                 }
                 .padding(4)
@@ -326,7 +344,7 @@ struct EditorSidebarView: View {
                         }
                         .controlSize(.small)
                         .buttonStyle(.bordered)
-                        .tint(viewModel.isHorizontallyFlipped ? .accentColor : .secondary)
+                        .tint(viewModel.isHorizontallyFlipped ? .accentColor : nil)
                     }
                 }
 

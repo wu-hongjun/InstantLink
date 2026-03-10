@@ -148,6 +148,28 @@ struct MainPreviewView: View {
                                     guard !viewModel.isPrinting else { return }
                                     openEditor()
                                 }
+                        } else if viewModel.fitMode == "stretch", let ar = viewModel.orientedAspectRatio {
+                            Color.white
+                                .aspectRatio(ar, contentMode: .fit)
+                                .overlay(
+                                    GeometryReader { geo in
+                                        ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                            previewImage
+                                                .resizable()
+                                                .frame(width: geo.size.width, height: geo.size.height)
+                                                .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                                .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                        }
+                                    }
+                                )
+                                .overlay {
+                                    OverlayCanvasView()
+                                }
+                                .clipped()
+                                .onTapGesture(count: 2) {
+                                    guard !viewModel.isPrinting else { return }
+                                    openEditor()
+                                }
                         } else {
                             ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
                                 previewImage
@@ -156,13 +178,13 @@ struct MainPreviewView: View {
                                     .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
                                     .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
                             }
-                                .overlay {
-                                    OverlayCanvasView()
-                                }
-                                .onTapGesture(count: 2) {
-                                    guard !viewModel.isPrinting else { return }
-                                    openEditor()
-                                }
+                            .overlay {
+                                OverlayCanvasView()
+                            }
+                            .onTapGesture(count: 2) {
+                                guard !viewModel.isPrinting else { return }
+                                openEditor()
+                            }
                         }
                     }
                     .padding(4)

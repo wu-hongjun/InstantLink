@@ -6,14 +6,6 @@ struct MainPreviewView: View {
     @State private var isTargeted = false
     var openEditor: () -> Void
 
-    private var transferProgressText: String {
-        guard let progress = viewModel.printProgress, progress.total > 0 else {
-            return L("Preparing...")
-        }
-        let percent = Int((Double(progress.sent) / Double(progress.total) * 100).rounded())
-        return "\(min(max(percent, 0), 100))%"
-    }
-
     private var showsSimulatedFilmFrame: Bool {
         viewModel.selectedImage != nil && viewModel.printerModelTag != nil
     }
@@ -42,18 +34,21 @@ struct MainPreviewView: View {
                             .fontWeight(.medium)
                             .foregroundColor(.secondary)
                     }
-                    if let p = viewModel.printProgress {
-                        ProgressView(value: Double(p.sent), total: Double(p.total))
+                    Text(viewModel.currentPrintPhaseText)
+                        .font(.callout)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    if let progress = viewModel.currentPrintProgressFraction {
+                        ProgressView(value: progress, total: 1)
                             .progressViewStyle(.linear)
                             .frame(width: 120)
-                        Text(transferProgressText)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if let percentText = viewModel.currentPrintProgressPercentText {
+                            Text(percentText)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     } else {
                         ProgressView().controlSize(.regular)
-                        Text(L("Preparing..."))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -304,14 +299,6 @@ struct MainActionsView: View {
     var openEditor: () -> Void
     @Binding var isQueueStripVisible: Bool
 
-    private var transferProgressText: String {
-        guard let progress = viewModel.printProgress, progress.total > 0 else {
-            return L("Preparing...")
-        }
-        let percent = Int((Double(progress.sent) / Double(progress.total) * 100).rounded())
-        return "\(min(max(percent, 0), 100))%"
-    }
-
     private var canPrintCurrent: Bool {
         viewModel.selectedImage != nil && viewModel.isConnected && !viewModel.isPrinting
     }
@@ -328,7 +315,11 @@ struct MainActionsView: View {
             if viewModel.batchPrintTotal > 1 {
                 return L("printing_n_of_m", viewModel.batchPrintIndex, viewModel.batchPrintTotal)
             }
-            return transferProgressText
+            if let percentText = viewModel.currentPrintProgressPercentText,
+               viewModel.printPhase == .sending {
+                return percentText
+            }
+            return viewModel.currentPrintPhaseText
         }
         return L("Print")
     }

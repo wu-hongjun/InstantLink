@@ -159,6 +159,9 @@
 
 /* Print Progress */
 "Preparing..." = "準備中...";
+"Preparing image..." = "画像を準備中...";
+"Sending to printer..." = "プリンターに送信中...";
+"Starting print..." = "印刷を開始中...";
 "transfer_progress" = "送信中 %d/%d";
 "App:" = "アプリ：";
 "Core:" = "コア：";

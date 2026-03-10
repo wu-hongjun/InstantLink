@@ -159,6 +159,9 @@
 
 /* Print Progress */
 "Preparing..." = "准备中...";
+"Preparing image..." = "准备图像...";
+"Sending to printer..." = "正在发送到打印机...";
+"Starting print..." = "正在开始打印...";
 "transfer_progress" = "正在发送 %d/%d";
 "App:" = "应用：";
 "Core:" = "核心：";

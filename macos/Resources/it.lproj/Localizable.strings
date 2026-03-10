@@ -160,6 +160,9 @@
 
 /* Print Progress */
 "Preparing..." = "Preparazione...";
+"Preparing image..." = "Preparazione immagine...";
+"Sending to printer..." = "Invio alla stampante...";
+"Starting print..." = "Avvio della stampa...";
 "transfer_progress" = "Invio %d/%d";
 "App:" = "App:";
 "Core:" = "Core:";

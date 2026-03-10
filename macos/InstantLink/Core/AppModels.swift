@@ -187,6 +187,12 @@ enum PrinterStatusIndicatorState {
     case error
 }
 
+enum PrintProgressPhase: Equatable {
+    case preparing
+    case sending
+    case starting
+}
+
 struct DateStampPreset {
     let displayName: String
     let fontStyle: TimestampPresetFontStyle

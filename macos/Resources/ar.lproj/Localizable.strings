@@ -159,6 +159,9 @@
 
 /* Print Progress */
 "Preparing..." = "جارٍ التحضير...";
+"Preparing image..." = "جارٍ تجهيز الصورة...";
+"Sending to printer..." = "جارٍ الإرسال إلى الطابعة...";
+"Starting print..." = "جارٍ بدء الطباعة...";
 "transfer_progress" = "جارٍ الإرسال %d/%d";
 "App:" = "التطبيق:";
 "Core:" = "النواة:";

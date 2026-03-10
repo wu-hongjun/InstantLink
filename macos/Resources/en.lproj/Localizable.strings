@@ -159,6 +159,9 @@
 
 /* Print Progress */
 "Preparing..." = "Preparing...";
+"Preparing image..." = "Preparing image...";
+"Sending to printer..." = "Sending to printer...";
+"Starting print..." = "Starting print...";
 "transfer_progress" = "Sending %d/%d";
 "App:" = "App:";
 "Core:" = "Core:";

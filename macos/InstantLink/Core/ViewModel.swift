@@ -257,6 +257,7 @@ class ViewModel: ObservableObject {
     // UI state
     @Published var isPrinting = false
     @Published var printProgress: (sent: Int, total: Int)?
+    @Published var printPhase: PrintProgressPhase?
     @Published var isSearching = false
     @Published var isRefreshing = false
     @Published var statusMessage: String?
@@ -356,6 +357,34 @@ class ViewModel: ObservableObject {
         }
 
         return .ready
+    }
+
+    var currentPrintPhaseText: String {
+        switch printPhase ?? .preparing {
+        case .preparing:
+            return L("Preparing image...")
+        case .sending:
+            return L("Sending to printer...")
+        case .starting:
+            return L("Starting print...")
+        }
+    }
+
+    var currentPrintProgressFraction: Double? {
+        switch printPhase {
+        case .sending:
+            guard let progress = printProgress, progress.total > 0 else { return nil }
+            return min(max(Double(progress.sent) / Double(progress.total), 0), 1)
+        case .starting:
+            return 1
+        default:
+            return nil
+        }
+    }
+
+    var currentPrintProgressPercentText: String? {
+        guard let fraction = currentPrintProgressFraction else { return nil }
+        return "\(Int((fraction * 100).rounded()))%"
     }
 
     func saveProfile(_ profile: PrinterProfile) {
@@ -1529,10 +1558,23 @@ class ViewModel: ObservableObject {
     // MARK: - Printing
 
     func printSelectedImage() async {
-        guard let prepared = prepareImageForPrint() else { return }
         await MainActor.run {
             isPrinting = true
             printProgress = nil
+            printPhase = .preparing
+        }
+
+        guard let prepared = prepareImageForPrint() else {
+            await MainActor.run {
+                isPrinting = false
+                printProgress = nil
+                printPhase = nil
+            }
+            return
+        }
+
+        await MainActor.run {
+            printPhase = .sending
         }
         let progressRelay = PrintProgressRelay(viewModel: self)
 
@@ -1551,6 +1593,7 @@ class ViewModel: ObservableObject {
         await MainActor.run {
             isPrinting = false
             printProgress = nil
+            printPhase = nil
             if success {
                 showStatus(L("Printed!"), tone: .success)
             } else {
@@ -1572,6 +1615,7 @@ class ViewModel: ObservableObject {
         await MainActor.run {
             isPrinting = true
             printProgress = nil
+            printPhase = .preparing
             batchPrintIndex = 0
             batchPrintTotal = count
         }
@@ -1582,15 +1626,22 @@ class ViewModel: ObservableObject {
             await MainActor.run {
                 batchPrintIndex = offset + 1
                 selectQueueItem(at: queueIndex)
+                printPhase = .preparing
+                printProgress = nil
             }
 
             guard let prepared = prepareImageForPrint(item) else {
                 await MainActor.run {
                     isPrinting = false
+                    printPhase = nil
                     batchPrintTotal = 0
                     showError(L("print_failed_at", offset + 1, count))
                 }
                 return
+            }
+
+            await MainActor.run {
+                printPhase = .sending
             }
             let progressRelay = PrintProgressRelay(viewModel: self)
 
@@ -1609,6 +1660,7 @@ class ViewModel: ObservableObject {
             if !success {
                 await MainActor.run {
                     isPrinting = false
+                    printPhase = nil
                     batchPrintTotal = 0
                     showError(L("print_failed_at", offset + 1, count))
                 }
@@ -1621,6 +1673,7 @@ class ViewModel: ObservableObject {
             if remaining <= 0 && offset < count - 1 {
                 await MainActor.run {
                     isPrinting = false
+                    printPhase = nil
                     batchPrintTotal = 0
                     showError(L("film_ran_out", offset + 1, count))
                 }
@@ -1631,6 +1684,7 @@ class ViewModel: ObservableObject {
         await MainActor.run {
             isPrinting = false
             printProgress = nil
+            printPhase = nil
             batchPrintTotal = 0
             showStatus(L("printed_n_images", count))
         }
@@ -1722,7 +1776,9 @@ private final class PrintProgressRelay: @unchecked Sendable {
 
     func update(sent: UInt32, total: UInt32) {
         DispatchQueue.main.async { [weak self] in
-            self?.viewModel?.printProgress = (sent: Int(sent), total: Int(total))
+            guard let viewModel = self?.viewModel else { return }
+            viewModel.printProgress = (sent: Int(sent), total: Int(total))
+            viewModel.printPhase = total > 0 && sent >= total ? .starting : .sending
         }
     }
 }

@@ -160,6 +160,9 @@
 
 /* Print Progress */
 "Preparing..." = "מכין...";
+"Preparing image..." = "מכין תמונה...";
+"Sending to printer..." = "שולח למדפסת...";
+"Starting print..." = "מתחיל הדפסה...";
 "transfer_progress" = "שולח %d/%d";
 "App:" = "אפליקציה:";
 "Core:" = "ליבה:";

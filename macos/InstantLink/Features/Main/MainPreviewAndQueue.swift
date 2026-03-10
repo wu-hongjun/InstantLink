@@ -6,6 +6,14 @@ struct MainPreviewView: View {
     @State private var isTargeted = false
     var openEditor: () -> Void
 
+    private var transferProgressText: String {
+        guard let progress = viewModel.printProgress, progress.total > 0 else {
+            return L("Preparing...")
+        }
+        let percent = Int((Double(progress.sent) / Double(progress.total) * 100).rounded())
+        return "\(min(max(percent, 0), 100))%"
+    }
+
     private var showsSimulatedFilmFrame: Bool {
         viewModel.selectedImage != nil && viewModel.printerModelTag != nil
     }
@@ -38,7 +46,7 @@ struct MainPreviewView: View {
                         ProgressView(value: Double(p.sent), total: Double(p.total))
                             .progressViewStyle(.linear)
                             .frame(width: 120)
-                        Text(L("transfer_progress", p.sent, p.total))
+                        Text(transferProgressText)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else {
@@ -296,6 +304,14 @@ struct MainActionsView: View {
     var openEditor: () -> Void
     @Binding var isQueueStripVisible: Bool
 
+    private var transferProgressText: String {
+        guard let progress = viewModel.printProgress, progress.total > 0 else {
+            return L("Preparing...")
+        }
+        let percent = Int((Double(progress.sent) / Double(progress.total) * 100).rounded())
+        return "\(min(max(percent, 0), 100))%"
+    }
+
     private var canPrintCurrent: Bool {
         viewModel.selectedImage != nil && viewModel.isConnected && !viewModel.isPrinting
     }
@@ -312,7 +328,7 @@ struct MainActionsView: View {
             if viewModel.batchPrintTotal > 1 {
                 return L("printing_n_of_m", viewModel.batchPrintIndex, viewModel.batchPrintTotal)
             }
-            return viewModel.printProgress.map { L("transfer_progress", $0.sent, $0.total) } ?? L("Preparing...")
+            return transferProgressText
         }
         return L("Print")
     }

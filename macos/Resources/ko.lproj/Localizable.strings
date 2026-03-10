@@ -22,11 +22,13 @@
 "Cancel" = "취소";
 "Try Again" = "다시 시도";
 "Open File" = "파일 열기";
+"Open" = "열기";
 "Save" = "저장";
 "Reset" = "재설정";
 "Reset Crop" = "자르기 초기화";
 "Scan for Printers" = "프린터 스캔";
 "Edit Image" = "이미지 편집";
+"Edit" = "편집";
 "Done" = "완료";
 "Print" = "인쇄";
 "Flip" = "반전";

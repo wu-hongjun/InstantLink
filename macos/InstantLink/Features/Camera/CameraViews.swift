@@ -222,10 +222,12 @@ struct CameraActionsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "slider.horizontal.3")
-                            Text(L("Edit Image"))
+                            Text(L("Edit"))
                         }
                         .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
                     .controlSize(.large)
 
                     Button {
@@ -239,7 +241,7 @@ struct CameraActionsView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .controlSize(.large)
                     .disabled(!viewModel.isConnected || viewModel.isPrinting)
                 }

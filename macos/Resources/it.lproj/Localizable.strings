@@ -23,11 +23,13 @@
 "Cancel" = "Annulla";
 "Try Again" = "Riprova";
 "Open File" = "Apri file";
+"Open" = "Apri";
 "Save" = "Salva";
 "Reset" = "Reimposta";
 "Reset Crop" = "Reimposta ritaglio";
 "Scan for Printers" = "Cerca stampanti";
 "Edit Image" = "Modifica immagine";
+"Edit" = "Modifica";
 "Done" = "Fatto";
 "Print" = "Stampa";
 "Flip" = "Rifletti";

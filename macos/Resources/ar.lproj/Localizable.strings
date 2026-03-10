@@ -22,11 +22,13 @@
 "Cancel" = "إلغاء";
 "Try Again" = "إعادة المحاولة";
 "Open File" = "فتح ملف";
+"Open" = "فتح";
 "Save" = "حفظ";
 "Reset" = "إعادة تعيين";
 "Reset Crop" = "إعادة تعيين القص";
 "Scan for Printers" = "البحث عن طابعات";
 "Edit Image" = "تعديل الصورة";
+"Edit" = "تحرير";
 "Done" = "تم";
 "Print" = "طباعة";
 "Flip" = "قلب";

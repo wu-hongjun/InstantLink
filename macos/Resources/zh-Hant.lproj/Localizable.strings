@@ -22,11 +22,13 @@
 "Cancel" = "取消";
 "Try Again" = "重試";
 "Open File" = "開啟檔案";
+"Open" = "開啟";
 "Save" = "儲存";
 "Reset" = "重設";
 "Reset Crop" = "重設裁切";
 "Scan for Printers" = "掃描印表機";
 "Edit Image" = "編輯圖片";
+"Edit" = "編輯";
 "Done" = "完成";
 "Print" = "列印";
 "Flip" = "翻轉";

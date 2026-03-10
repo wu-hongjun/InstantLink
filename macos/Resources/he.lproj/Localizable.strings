@@ -23,11 +23,13 @@
 "Cancel" = "ביטול";
 "Try Again" = "נסה שוב";
 "Open File" = "פתח קובץ";
+"Open" = "פתח";
 "Save" = "שמור";
 "Reset" = "אפס";
 "Reset Crop" = "אפס חיתוך";
 "Scan for Printers" = "חפש מדפסות";
 "Edit Image" = "ערוך תמונה";
+"Edit" = "ערוך";
 "Done" = "סיום";
 "Print" = "הדפס";
 "Flip" = "הפוך";

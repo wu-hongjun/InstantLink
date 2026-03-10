@@ -22,11 +22,13 @@
 "Cancel" = "Abbrechen";
 "Try Again" = "Erneut versuchen";
 "Open File" = "Datei öffnen";
+"Open" = "Öffnen";
 "Save" = "Sichern";
 "Reset" = "Zurücksetzen";
 "Reset Crop" = "Zuschnitt zurücksetzen";
 "Scan for Printers" = "Nach Druckern suchen";
 "Edit Image" = "Bild bearbeiten";
+"Edit" = "Bearbeiten";
 "Done" = "Fertig";
 "Print" = "Drucken";
 "Flip" = "Spiegeln";

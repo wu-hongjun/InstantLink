@@ -39,7 +39,7 @@ struct ImageEditorView: View {
                     Text(L("No image selected"))
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Button(L("Open File")) { viewModel.selectImage() }
+                    Button(L("Open")) { viewModel.selectImage() }
                         .buttonStyle(.bordered)
                         .buttonBorderShape(.roundedRectangle)
                         .controlSize(.small)

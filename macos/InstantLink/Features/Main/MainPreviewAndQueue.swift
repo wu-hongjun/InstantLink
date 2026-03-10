@@ -188,7 +188,7 @@ struct MainPreviewView: View {
                     Text(L("Drop images or click Open File"))
                         .font(.callout)
                         .foregroundColor(.secondary)
-                    Button(L("Open File")) { viewModel.selectImage() }
+                    Button(L("Open")) { viewModel.selectImage() }
                         .buttonStyle(.bordered)
                         .buttonBorderShape(.roundedRectangle)
                         .controlSize(.small)
@@ -581,15 +581,16 @@ struct QuickPrintToolbarView: View {
             }
 
             quickToolbarButton(
-                title: L("Open File"),
+                title: L("Open"),
                 systemImage: "plus",
                 action: { viewModel.selectImage() }
             )
 
             quickToolbarButton(
-                title: L("Edit Image"),
+                title: L("Edit"),
                 systemImage: "slider.horizontal.3",
-                action: openEditor
+                action: openEditor,
+                prominent: true
             )
             .disabled(viewModel.selectedImage == nil || viewModel.isPrinting)
         }
@@ -602,14 +603,27 @@ struct QuickPrintToolbarView: View {
     private func quickToolbarButton(
         title: String,
         systemImage: String,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        prominent: Bool = false
     ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
+        Group {
+            if prominent {
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.small)
+                .tint(.orange)
+            } else {
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.small)
+            }
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.roundedRectangle)
-        .controlSize(.small)
     }
 }
 

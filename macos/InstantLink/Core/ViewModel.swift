@@ -620,14 +620,7 @@ class ViewModel: ObservableObject {
 
     var exposureDisplayValue: String {
         let normalized = abs(exposureEV) < 0.001 ? 0 : exposureEV
-        let sign = normalized > 0 ? "+" : ""
-        let valueText: String
-        if abs(normalized.rounded() - normalized) < 0.001 {
-            valueText = "\(Int(normalized.rounded()))"
-        } else {
-            valueText = String(format: "%.1f", normalized)
-        }
-        return "\(sign)\(valueText) EV"
+        return String(format: "%+.1f EV", normalized)
     }
 
     func setExposureEV(_ value: Double) {

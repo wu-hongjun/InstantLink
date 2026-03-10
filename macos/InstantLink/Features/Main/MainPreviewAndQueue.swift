@@ -737,20 +737,20 @@ struct QuickExposureControlsView: View {
     var showsChrome: Bool = true
     var controlSize: ControlSize = .small
 
-    private var valueButtonMinWidth: CGFloat {
+    private var valueButtonWidth: CGFloat {
         switch controlSize {
         case .mini:
-            return 58
+            return 66
         case .small:
-            return 68
+            return 76
         case .regular:
-            return 78
+            return 88
         case .large:
-            return 86
+            return 96
         case .extraLarge:
-            return 94
+            return 104
         @unknown default:
-            return 68
+            return 76
         }
     }
 
@@ -770,7 +770,7 @@ struct QuickExposureControlsView: View {
             } label: {
                 Text(viewModel.exposureDisplayValue)
                     .monospacedDigit()
-                    .frame(minWidth: valueButtonMinWidth)
+                    .frame(width: valueButtonWidth)
             }
             .disabled(!viewModel.canResetExposure)
 

@@ -159,14 +159,16 @@ struct MainView: View {
                             Text(viewModel.pairingStatus)
                                 .font(.callout)
                                 .foregroundColor(.secondary)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label(L("Make sure your printer is turned on"), systemImage: "1.circle")
-                                Label(L("Press the button to enable Bluetooth"), systemImage: "2.circle")
-                                Label(L("Keep the printer nearby"), systemImage: "3.circle")
+                            if viewModel.pairingPhase != .connecting {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label(L("Make sure your printer is turned on"), systemImage: "1.circle")
+                                    Label(L("Press the button to enable Bluetooth"), systemImage: "2.circle")
+                                    Label(L("Keep the printer nearby"), systemImage: "3.circle")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 4)
                             }
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 4)
                             Button(L("Cancel")) {
                                 viewModel.stopPairing()
                             }
@@ -330,12 +332,8 @@ struct MainView: View {
 
     private var groupedConnectedHeader: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                printerIdentityControl
-                HeaderDivider()
-                printerPickerControl
-            }
-            .layoutPriority(1)
+            printerIdentityControl
+                .layoutPriority(1)
 
             Spacer(minLength: 0)
 
@@ -360,7 +358,6 @@ struct MainView: View {
     private var compactConnectedHeader: some View {
         HStack(spacing: 12) {
             printerIdentityControl
-            printerPickerControl
 
             Spacer()
 
@@ -400,19 +397,6 @@ struct MainView: View {
                         .background(Capsule().fill(.secondary))
                 }
             }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var printerPickerControl: some View {
-        Button {
-            viewModel.showPrinterPicker = true
-        } label: {
-            Image(systemName: "chevron.down")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundColor(.secondary)
-                .frame(width: 16, height: 16)
-                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

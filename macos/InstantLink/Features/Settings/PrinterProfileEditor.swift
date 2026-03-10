@@ -111,6 +111,14 @@ struct PrinterProfileEditorView: View {
             Divider()
 
             HStack {
+                Button(L("Switch Printer")) {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        viewModel.showPrinterPicker = true
+                    }
+                }
+                .controlSize(.regular)
+
                 Spacer()
                 Button(L("Cancel")) { dismiss() }
                     .keyboardShortcut(.cancelAction)

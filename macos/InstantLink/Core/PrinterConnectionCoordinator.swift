@@ -1,6 +1,12 @@
 import Combine
 import Foundation
 
+enum PrinterPairingPhase: Equatable {
+    case idle
+    case scanning
+    case connecting
+}
+
 struct PrinterConnectionFFIStatus: Equatable {
     var battery: Int
     var filmRemaining: Int
@@ -66,6 +72,7 @@ struct PrinterConnectionSnapshot: Equatable {
     var isRefreshing = false
     var isScanning = false
     var isPairing = false
+    var pairingPhase: PrinterPairingPhase = .idle
     var pairingAttempt = 0
     var pairingStatus: String?
     var hasSearchedOnce = false
@@ -143,6 +150,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
 
         mutateSnapshot { snapshot in
             snapshot.isPairing = true
+            snapshot.pairingPhase = .scanning
             snapshot.pairingAttempt = 0
             snapshot.pairingStatus = L("Scanning...")
         }
@@ -154,6 +162,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
             while !Task.isCancelled {
                 self.mutateSnapshot { snapshot in
                     snapshot.pairingAttempt += 1
+                    snapshot.pairingPhase = .scanning
                     snapshot.pairingStatus = L("Scanning...")
                 }
 
@@ -173,6 +182,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
                 }
 
                 self.mutateSnapshot { snapshot in
+                    snapshot.pairingPhase = .connecting
                     snapshot.pairingStatus = L("connecting_to", target)
                 }
 
@@ -194,6 +204,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
                 self.mutateSnapshot { snapshot in
                     snapshot.isConnected = true
                     snapshot.isPairing = false
+                    snapshot.pairingPhase = .idle
                     snapshot.printerName = target
                     snapshot.printerModel = model
                     snapshot.battery = status?.battery ?? 0
@@ -214,6 +225,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
 
             self.mutateSnapshot { snapshot in
                 snapshot.isPairing = false
+                snapshot.pairingPhase = .idle
                 snapshot.hasSearchedOnce = true
             }
             self.pairingTask = nil
@@ -225,6 +237,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
         pairingTask = nil
         mutateSnapshot { snapshot in
             snapshot.isPairing = false
+            snapshot.pairingPhase = .idle
         }
     }
 

@@ -302,19 +302,12 @@ struct LanguageAppearanceSection: View {
 
     @EnvironmentObject var viewModel: ViewModel
     @Environment(\.dismiss) private var dismiss
-    private let initialLanguage: String
+    @State private var initialLanguage: String
     @State private var selectedLanguage: String
 
     init() {
-        let saved: String
-        if let langs = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-           let first = langs.first,
-           Self.supportedLanguages.contains(first) {
-            saved = first
-        } else {
-            saved = ""
-        }
-        initialLanguage = saved
+        let saved = Self.savedLanguageCode()
+        _initialLanguage = State(initialValue: saved)
         _selectedLanguage = State(initialValue: saved)
     }
 
@@ -324,7 +317,7 @@ struct LanguageAppearanceSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L("Language & Appearance"))
+            Text(L("Appearance"))
                 .font(.headline)
 
             HStack(alignment: .top, spacing: 12) {
@@ -341,17 +334,10 @@ struct LanguageAppearanceSection: View {
                     }
                     .labelsHidden()
                     .frame(maxWidth: .infinity)
-                    .onChange(of: selectedLanguage) { newValue in
-                        if newValue.isEmpty {
-                            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-                        } else {
-                            UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
-                        }
-                    }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(L("Appearance"))
+                    Text(L("Theme"))
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -373,6 +359,8 @@ struct LanguageAppearanceSection: View {
                         .foregroundColor(.secondary)
                     Spacer()
                     Button(L("Restart")) {
+                        Self.persistLanguageCode(selectedLanguage)
+                        initialLanguage = selectedLanguage
                         dismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                             AppRelauncher.relaunchCurrentApp()
@@ -385,6 +373,23 @@ struct LanguageAppearanceSection: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+        }
+    }
+
+    private static func savedLanguageCode() -> String {
+        if let langs = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+           let first = langs.first,
+           supportedLanguages.contains(first) {
+            return first
+        }
+        return ""
+    }
+
+    private static func persistLanguageCode(_ code: String) {
+        if code.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([code], forKey: "AppleLanguages")
         }
     }
 

@@ -43,6 +43,7 @@ class ViewModel: ObservableObject {
             isRefreshing: isRefreshing,
             isScanning: isScanning,
             isPairing: isPairing,
+            pairingPhase: pairingPhase,
             pairingAttempt: pairingAttempt,
             pairingStatus: pairingStatus,
             hasSearchedOnce: hasSearchedOnce
@@ -284,6 +285,7 @@ class ViewModel: ObservableObject {
 
     // Pairing mode
     @Published var isPairing = false
+    @Published var pairingPhase: PrinterPairingPhase = .idle
     @Published var pairingAttempt = 0
     @Published var pairingStatus: String = L("Scanning...")
     private var statusMessageDismissWorkItem: DispatchWorkItem?
@@ -365,6 +367,7 @@ class ViewModel: ObservableObject {
         isRefreshing = snapshot.isRefreshing
         isScanning = snapshot.isScanning
         isPairing = snapshot.isPairing
+        pairingPhase = snapshot.pairingPhase
         pairingAttempt = snapshot.pairingAttempt
         pairingStatus = snapshot.pairingStatus ?? L("Scanning...")
         hasSearchedOnce = snapshot.hasSearchedOnce

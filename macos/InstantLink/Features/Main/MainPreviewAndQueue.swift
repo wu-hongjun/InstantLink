@@ -562,8 +562,15 @@ struct QuickPrintToolbarView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
-            QuickExposureControlsView(showsChrome: false)
+            QuickZoomControlsView(
+                resetTitle: L("Reset Zoom"),
+                showsChrome: false,
+                controlSize: .regular
+            )
+            QuickExposureControlsView(
+                showsChrome: false,
+                controlSize: .regular
+            )
 
             quickToolbarButton(
                 title: L("Rotate"),
@@ -636,7 +643,7 @@ struct QuickPrintToolbarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.roundedRectangle)
-                .controlSize(.small)
+                .controlSize(.regular)
                 .tint(.orange)
             } else {
                 Button(action: action) {
@@ -644,7 +651,7 @@ struct QuickPrintToolbarView: View {
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.roundedRectangle)
-                .controlSize(.small)
+                .controlSize(.regular)
                 .tint(isActive ? .accentColor : nil)
             }
         }
@@ -655,6 +662,7 @@ struct QuickZoomControlsView: View {
     @EnvironmentObject var viewModel: ViewModel
     let resetTitle: String
     var showsChrome: Bool = true
+    var controlSize: ControlSize = .small
 
     var body: some View {
         ControlGroup {
@@ -681,7 +689,7 @@ struct QuickZoomControlsView: View {
             .help(L("Zoom In"))
             .accessibilityLabel(Text(L("Zoom In")))
         }
-        .controlSize(.small)
+        .controlSize(controlSize)
         .frame(minHeight: 30)
         .background {
             if showsChrome {
@@ -694,6 +702,7 @@ struct QuickZoomControlsView: View {
 struct QuickExposureControlsView: View {
     @EnvironmentObject var viewModel: ViewModel
     var showsChrome: Bool = true
+    var controlSize: ControlSize = .small
 
     var body: some View {
         ControlGroup {
@@ -720,7 +729,7 @@ struct QuickExposureControlsView: View {
             .help(L("Exposure"))
             .accessibilityLabel(Text(L("Exposure")))
         }
-        .controlSize(.small)
+        .controlSize(controlSize)
         .frame(minHeight: 30)
         .background {
             if showsChrome {

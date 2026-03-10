@@ -66,6 +66,7 @@
 "Date Stamp" = "日付スタンプ";
 "Defaults For New Photos" = "新しい写真のデフォルト設定";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "この変更の後に追加された写真に適用されます。既存のキュー項目は変更されません。";
+"Changes also apply to the current photo while setting defaults for new photos." = "新しい写真のデフォルトを設定している間、変更は現在の写真にも適用されます。";
 
 /* Editor — Fit Mode Options */
 "Crop" = "切り抜き";
@@ -214,6 +215,7 @@
 "Corner Radius" = "角丸半径";
 "Source" = "ソース";
 "Display" = "表示";
+"Exposure" = "露出";
 "Coordinates" = "座標";
 "Name" = "名前";
 "Name + Coordinates" = "名前 + 座標";

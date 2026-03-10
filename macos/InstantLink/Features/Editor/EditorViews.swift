@@ -93,15 +93,17 @@ struct EditorPreviewView: View {
                                 localFrameSize = size
                             }
                             .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .scaleEffect(
-                                        x: viewModel.isHorizontallyFlipped ? -effectiveZoom : effectiveZoom,
-                                        y: effectiveZoom
-                                    )
-                                    .offset(effectiveOffset(imageSize: image.size))
-                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                    previewImage
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .scaleEffect(
+                                            x: viewModel.isHorizontallyFlipped ? -effectiveZoom : effectiveZoom,
+                                            y: effectiveZoom
+                                        )
+                                        .offset(effectiveOffset(imageSize: image.size))
+                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                }
                             )
                             .overlay {
                                 OverlayCanvasView(editable: true)
@@ -150,22 +152,26 @@ struct EditorPreviewView: View {
                         Color.white
                             .aspectRatio(ar, contentMode: .fit)
                             .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
-                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                    previewImage
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                }
                             )
                             .overlay {
                                 OverlayCanvasView(editable: true)
                             }
                             .clipped()
                     } else {
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
-                            .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                        ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                            previewImage
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                        }
                             .overlay {
                                 OverlayCanvasView(editable: true)
                             }
@@ -261,6 +267,13 @@ struct EditorSidebarView: View {
     @EnvironmentObject var viewModel: ViewModel
     @State private var showDefaultsPopover = false
 
+    private var defaultsDescription: String {
+        if viewModel.shouldMirrorDefaultsToSelectedImage {
+            return L("Changes also apply to the current photo while setting defaults for new photos.")
+        }
+        return L("Applies to photos added after this change. Existing queue items stay unchanged.")
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -274,6 +287,12 @@ struct EditorSidebarView: View {
                     .labelsHidden()
 
                     QuickZoomControlsView(resetTitle: L("Reset Zoom"))
+                }
+
+                Divider()
+
+                AccordionSection(L("Exposure"), icon: "sun.max") {
+                    QuickExposureControlsView()
                 }
 
                 Divider()
@@ -363,7 +382,7 @@ struct EditorSidebarView: View {
                                 .font(.callout)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
-                            Text(L("Applies to photos added after this change. Existing queue items stay unchanged."))
+                            Text(defaultsDescription)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.leading)
@@ -399,12 +418,47 @@ struct EditorSidebarView: View {
 struct NewPhotoDefaultsPopover: View {
     @EnvironmentObject var viewModel: ViewModel
 
+    private var defaultsDescription: String {
+        if viewModel.shouldMirrorDefaultsToSelectedImage {
+            return L("Changes also apply to the current photo while setting defaults for new photos.")
+        }
+        return L("Applies to photos added after this change. Existing queue items stay unchanged.")
+    }
+
+    private var defaultFitModeBinding: Binding<String> {
+        Binding(
+            get: { viewModel.newPhotoDefaults.fitMode },
+            set: { viewModel.setDefaultFitMode($0) }
+        )
+    }
+
+    private var defaultFilmOrientationBinding: Binding<String> {
+        Binding(
+            get: { viewModel.newPhotoDefaults.filmOrientation },
+            set: { viewModel.setDefaultFilmOrientation($0) }
+        )
+    }
+
+    private var defaultRotationBinding: Binding<Int> {
+        Binding(
+            get: { viewModel.newPhotoDefaults.rotationAngle },
+            set: { viewModel.setDefaultRotationAngle($0) }
+        )
+    }
+
+    private var defaultFlipBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.newPhotoDefaults.isHorizontallyFlipped },
+            set: { viewModel.setDefaultHorizontalFlip($0) }
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(L("Defaults For New Photos"))
                 .font(.headline)
 
-            Text(L("Applies to photos added after this change. Existing queue items stay unchanged."))
+            Text(defaultsDescription)
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -413,7 +467,7 @@ struct NewPhotoDefaultsPopover: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Picker("", selection: $viewModel.newPhotoDefaults.fitMode) {
+                Picker("", selection: defaultFitModeBinding) {
                     Text(L("Crop")).tag("crop")
                     Text(L("Contain")).tag("contain")
                     Text(L("Stretch")).tag("stretch")
@@ -428,7 +482,7 @@ struct NewPhotoDefaultsPopover: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    Picker("", selection: $viewModel.newPhotoDefaults.filmOrientation) {
+                    Picker("", selection: defaultFilmOrientationBinding) {
                         Text(L("Standard")).tag("default")
                         Text(L("Rotated")).tag("rotated")
                     }
@@ -442,7 +496,7 @@ struct NewPhotoDefaultsPopover: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Picker("", selection: $viewModel.newPhotoDefaults.rotationAngle) {
+                Picker("", selection: defaultRotationBinding) {
                     Text("0°").tag(0)
                     Text("90°").tag(90)
                     Text("180°").tag(180)
@@ -452,7 +506,7 @@ struct NewPhotoDefaultsPopover: View {
                 .labelsHidden()
             }
 
-            Toggle(L("Flip"), isOn: $viewModel.newPhotoDefaults.isHorizontallyFlipped)
+            Toggle(L("Flip"), isOn: defaultFlipBinding)
 
             DefaultTimestampOverlayEditor()
 

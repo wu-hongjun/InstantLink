@@ -67,6 +67,7 @@
 "Date Stamp" = "חותמת תאריך";
 "Defaults For New Photos" = "ברירות מחדל לתמונות חדשות";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "חל על תמונות שנוספו אחרי השינוי הזה. פריטים קיימים בתור נשארים ללא שינוי.";
+"Changes also apply to the current photo while setting defaults for new photos." = "השינויים מוחלים גם על התמונה הנוכחית בזמן הגדרת ברירות המחדל לתמונות חדשות.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "חיתוך";
@@ -215,6 +216,7 @@
 "Corner Radius" = "רדיוס פינה";
 "Source" = "מקור";
 "Display" = "תצוגה";
+"Exposure" = "חשיפה";
 "Coordinates" = "קואורדינטות";
 "Name" = "שם";
 "Name + Coordinates" = "שם + קואורדינטות";

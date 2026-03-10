@@ -67,6 +67,7 @@
 "Date Stamp" = "Carimbo de data";
 "Defaults For New Photos" = "Padrões para novas fotos";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "Aplica-se às fotos adicionadas após esta mudança. Os itens já existentes na fila permanecem inalterados.";
+"Changes also apply to the current photo while setting defaults for new photos." = "As mudanças também são aplicadas à foto atual enquanto você define os padrões para novas fotos.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "Cortar";
@@ -215,6 +216,7 @@
 "Corner Radius" = "Raio do canto";
 "Source" = "Origem";
 "Display" = "Exibição";
+"Exposure" = "Exposição";
 "Coordinates" = "Coordenadas";
 "Name" = "Nome";
 "Name + Coordinates" = "Nome + coordenadas";

@@ -12,6 +12,7 @@ struct QueueEditingSnapshot: Equatable {
     var fitMode: String
     var cropOffsetNormalized: CGSize
     var cropZoom: CGFloat
+    var exposureEV: Double
     var rotationAngle: Int
     var isHorizontallyFlipped: Bool
     var overlays: [OverlayItem]
@@ -21,6 +22,7 @@ struct QueueEditingSnapshot: Equatable {
         fitMode = editState.fitMode
         cropOffsetNormalized = editState.cropOffsetNormalized
         cropZoom = editState.cropZoom
+        exposureEV = editState.exposureEV
         rotationAngle = editState.rotationAngle
         isHorizontallyFlipped = editState.isHorizontallyFlipped
         overlays = editState.overlays
@@ -32,6 +34,7 @@ struct QueueEditingSnapshot: Equatable {
             fitMode: fitMode,
             cropOffsetNormalized: cropOffsetNormalized,
             cropZoom: cropZoom,
+            exposureEV: exposureEV,
             rotationAngle: rotationAngle,
             isHorizontallyFlipped: isHorizontallyFlipped,
             overlays: overlays,
@@ -294,6 +297,7 @@ final class QueueEditCoordinator: ObservableObject {
     private func makeQueueItemEditStateFromDefaults() -> QueueItemEditState {
         QueueItemEditState(
             fitMode: newPhotoDefaults.fitMode,
+            exposureEV: 0,
             rotationAngle: newPhotoDefaults.rotationAngle,
             isHorizontallyFlipped: newPhotoDefaults.isHorizontallyFlipped,
             overlays: newPhotoDefaults.overlays,

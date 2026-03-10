@@ -67,6 +67,7 @@
 "Date Stamp" = "Horodatage";
 "Defaults For New Photos" = "Réglages par défaut pour les nouvelles photos";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "S'applique aux photos ajoutées après cette modification. Les éléments déjà présents dans la file d'attente restent inchangés.";
+"Changes also apply to the current photo while setting defaults for new photos." = "Les modifications s'appliquent aussi à la photo actuelle pendant que vous définissez les réglages par défaut des nouvelles photos.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "Recadrer";
@@ -215,6 +216,7 @@
 "Corner Radius" = "Rayon des coins";
 "Source" = "Source";
 "Display" = "Affichage";
+"Exposure" = "Exposition";
 "Coordinates" = "Coordonnées";
 "Name" = "Nom";
 "Name + Coordinates" = "Nom + coordonnées";

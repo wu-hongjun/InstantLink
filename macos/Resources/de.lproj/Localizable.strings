@@ -66,6 +66,7 @@
 "Date Stamp" = "Datumsstempel";
 "Defaults For New Photos" = "Standardwerte für neue Fotos";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "Gilt für Fotos, die nach dieser Änderung hinzugefügt werden. Vorhandene Warteschlangeneinträge bleiben unverändert.";
+"Changes also apply to the current photo while setting defaults for new photos." = "Änderungen gelten auch für das aktuelle Foto, während Standardwerte für neue Fotos festgelegt werden.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "Zuschneiden";
@@ -214,6 +215,7 @@
 "Corner Radius" = "Eckenradius";
 "Source" = "Quelle";
 "Display" = "Anzeige";
+"Exposure" = "Belichtung";
 "Coordinates" = "Koordinaten";
 "Name" = "Name";
 "Name + Coordinates" = "Name + Koordinaten";

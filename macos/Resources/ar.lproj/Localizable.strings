@@ -66,6 +66,7 @@
 "Date Stamp" = "ختم التاريخ";
 "Defaults For New Photos" = "الإعدادات الافتراضية للصور الجديدة";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "ينطبق على الصور التي تتم إضافتها بعد هذا التغيير. تبقى عناصر قائمة الانتظار الحالية كما هي.";
+"Changes also apply to the current photo while setting defaults for new photos." = "تُطبَّق التغييرات أيضًا على الصورة الحالية أثناء ضبط الإعدادات الافتراضية للصور الجديدة.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "قص";
@@ -214,6 +215,7 @@
 "Corner Radius" = "استدارة الزاوية";
 "Source" = "المصدر";
 "Display" = "العرض";
+"Exposure" = "التعريض";
 "Coordinates" = "الإحداثيات";
 "Name" = "الاسم";
 "Name + Coordinates" = "الاسم + الإحداثيات";

@@ -67,8 +67,9 @@ struct MainPreviewView: View {
                                 localFrameSize = size
                             }
                             .overlay(
-                                Image(nsImage: image)
-                                    .resizable()
+                                ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                    previewImage
+                                        .resizable()
                                         .aspectRatio(contentMode: .fill)
                                         .scaleEffect(
                                             x: viewModel.isHorizontallyFlipped ? -effectiveZoom : effectiveZoom,
@@ -76,7 +77,7 @@ struct MainPreviewView: View {
                                         )
                                         .offset(effectiveOffset(imageSize: image.size))
                                         .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
-                                )
+                                }
                                 .overlay {
                                     OverlayCanvasView()
                                 }
@@ -124,15 +125,18 @@ struct MainPreviewView: View {
                                     guard !viewModel.isPrinting else { return }
                                     openEditor()
                                 }
+                            )
                         } else if viewModel.fitMode == "contain", let ar = viewModel.orientedAspectRatio {
                             Color.white
                                 .aspectRatio(ar, contentMode: .fit)
                                 .overlay(
-                                    Image(nsImage: image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
-                                        .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                    ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                        previewImage
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                            .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                                    }
                                 )
                                 .overlay {
                                     OverlayCanvasView()
@@ -143,11 +147,13 @@ struct MainPreviewView: View {
                                     openEditor()
                                 }
                         } else {
-                            Image(nsImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
-                                .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                            ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                                previewImage
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                    .rotationEffect(.degrees(Double(viewModel.rotationAngle)))
+                            }
                                 .overlay {
                                     OverlayCanvasView()
                                 }
@@ -363,19 +369,21 @@ struct QueueThumbnailView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Button(action: onSelect) {
-                Image(nsImage: item.image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .scaleEffect(x: item.editState.isHorizontallyFlipped ? -1 : 1, y: 1)
-                    .rotationEffect(.degrees(Double(item.editState.rotationAngle)))
-                    .frame(width: thumbnailWidth, height: thumbnailHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-                    )
-                    .shadow(color: isSelected ? Color.accentColor.opacity(0.18) : .clear, radius: 4, y: 2)
-                    .opacity(isDragging ? 0.5 : 1.0)
+                ExposureAdjustedImageView(image: item.image, exposureEV: item.editState.exposureEV) { previewImage in
+                    previewImage
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .scaleEffect(x: item.editState.isHorizontallyFlipped ? -1 : 1, y: 1)
+                        .rotationEffect(.degrees(Double(item.editState.rotationAngle)))
+                        .frame(width: thumbnailWidth, height: thumbnailHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                        )
+                        .shadow(color: isSelected ? Color.accentColor.opacity(0.18) : .clear, radius: 4, y: 2)
+                        .opacity(isDragging ? 0.5 : 1.0)
+                }
             }
             .buttonStyle(.plain)
 
@@ -527,6 +535,7 @@ struct QuickPrintToolbarView: View {
     var body: some View {
         HStack(spacing: 8) {
             QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
+            QuickExposureControlsView(showsChrome: false)
 
             quickToolbarButton(
                 title: L("Rotate"),
@@ -611,6 +620,53 @@ struct QuickZoomControlsView: View {
             .disabled(!viewModel.canQuickZoomIn)
             .help(L("Zoom In"))
             .accessibilityLabel(Text(L("Zoom In")))
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, minHeight: 36)
+        .background {
+            if showsChrome {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.ultraThinMaterial)
+            }
+        }
+        .overlay {
+            if showsChrome {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.white.opacity(0.18))
+            }
+        }
+    }
+}
+
+struct QuickExposureControlsView: View {
+    @EnvironmentObject var viewModel: ViewModel
+    var showsChrome: Bool = true
+
+    var body: some View {
+        ControlGroup {
+            Button {
+                viewModel.decreaseExposure()
+            } label: {
+                Image(systemName: "minus")
+            }
+            .disabled(!viewModel.canDecreaseExposure)
+            .help(L("Exposure"))
+            .accessibilityLabel(Text(L("Exposure")))
+
+            Button(viewModel.exposureDisplayValue) {
+                viewModel.resetExposure()
+            }
+            .disabled(!viewModel.canResetExposure)
+
+            Button {
+                viewModel.increaseExposure()
+            } label: {
+                Image(systemName: "plus")
+            }
+            .disabled(!viewModel.canIncreaseExposure)
+            .help(L("Exposure"))
+            .accessibilityLabel(Text(L("Exposure")))
         }
         .controlSize(.small)
         .padding(.horizontal, 12)

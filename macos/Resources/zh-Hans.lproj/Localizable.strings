@@ -66,6 +66,7 @@
 "Date Stamp" = "日期印记";
 "Defaults For New Photos" = "新照片默认设置";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "仅适用于此更改后添加的照片。现有队列项目保持不变。";
+"Changes also apply to the current photo while setting defaults for new photos." = "在为新照片设置默认值时，更改也会应用到当前照片。";
 
 /* Editor — Fit Mode Options */
 "Crop" = "裁剪";
@@ -214,6 +215,7 @@
 "Corner Radius" = "圆角半径";
 "Source" = "来源";
 "Display" = "显示";
+"Exposure" = "曝光";
 "Coordinates" = "坐标";
 "Name" = "名称";
 "Name + Coordinates" = "名称 + 坐标";

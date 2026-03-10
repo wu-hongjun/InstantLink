@@ -10,6 +10,7 @@ enum PrintRenderService {
         let fitMode: String
         let cropOffsetNormalized: CGSize
         let cropZoom: CGFloat
+        let exposureEV: Double
         let rotationAngle: Int
         let isHorizontallyFlipped: Bool
         let overlays: [OverlayItem]
@@ -55,6 +56,11 @@ enum PrintRenderService {
                cropZoom: request.cropZoom
            ) {
             currentCG = cropped
+            processed = true
+        }
+
+        if let exposureAdjusted = ImageAdjustmentService.applyExposure(to: currentCG, ev: request.exposureEV) {
+            currentCG = exposureAdjusted
             processed = true
         }
 

@@ -181,6 +181,36 @@ struct AppPanelBackground: View {
     }
 }
 
+struct ExposureAdjustedImageView<Content: View>: View {
+    let image: NSImage
+    let exposureEV: Double
+    let content: (Image) -> Content
+
+    @State private var renderedImage: NSImage
+
+    init(
+        image: NSImage,
+        exposureEV: Double,
+        @ViewBuilder content: @escaping (Image) -> Content
+    ) {
+        self.image = image
+        self.exposureEV = exposureEV
+        self.content = content
+        _renderedImage = State(initialValue: ImageAdjustmentService.applyExposure(to: image, ev: exposureEV) ?? image)
+    }
+
+    var body: some View {
+        content(Image(nsImage: renderedImage))
+            .onAppear(perform: refresh)
+            .onChange(of: ObjectIdentifier(image)) { _ in refresh() }
+            .onChange(of: exposureEV) { _ in refresh() }
+    }
+
+    private func refresh() {
+        renderedImage = ImageAdjustmentService.applyExposure(to: image, ev: exposureEV) ?? image
+    }
+}
+
 struct CropFrameSizeKey: PreferenceKey {
     static var defaultValue: CGSize = .zero
 

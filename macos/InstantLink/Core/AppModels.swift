@@ -232,6 +232,7 @@ struct QueueItemEditState: Equatable {
     var fitMode: String
     var cropOffsetNormalized: CGSize = .zero
     var cropZoom: CGFloat = 1.0
+    var exposureEV: Double = 0
     var rotationAngle: Int = 0
     var isHorizontallyFlipped: Bool = false
     var overlays: [OverlayItem] = []

@@ -66,6 +66,7 @@
 "Date Stamp" = "날짜 스탬프";
 "Defaults For New Photos" = "새 사진의 기본 설정";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "이 변경 이후에 추가된 사진에 적용됩니다. 기존 대기열 항목은 변경되지 않습니다.";
+"Changes also apply to the current photo while setting defaults for new photos." = "새 사진 기본값을 설정하는 동안 변경 사항이 현재 사진에도 적용됩니다.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "자르기";
@@ -214,6 +215,7 @@
 "Corner Radius" = "모서리 반경";
 "Source" = "소스";
 "Display" = "표시";
+"Exposure" = "노출";
 "Coordinates" = "좌표";
 "Name" = "이름";
 "Name + Coordinates" = "이름 + 좌표";

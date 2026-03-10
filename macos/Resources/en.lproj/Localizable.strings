@@ -66,6 +66,7 @@
 "Date Stamp" = "Date Stamp";
 "Defaults For New Photos" = "Defaults For New Photos";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "Applies to photos added after this change. Existing queue items stay unchanged.";
+"Changes also apply to the current photo while setting defaults for new photos." = "Changes also apply to the current photo while setting defaults for new photos.";
 
 /* Editor — Fit Mode Options */
 "Crop" = "Crop";
@@ -214,6 +215,7 @@
 "Corner Radius" = "Corner Radius";
 "Source" = "Source";
 "Display" = "Display";
+"Exposure" = "Exposure";
 "Coordinates" = "Coordinates";
 "Name" = "Name";
 "Name + Coordinates" = "Name + Coordinates";

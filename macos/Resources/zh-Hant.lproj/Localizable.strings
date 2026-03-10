@@ -66,6 +66,7 @@
 "Date Stamp" = "日期印記";
 "Defaults For New Photos" = "新照片預設設定";
 "Applies to photos added after this change. Existing queue items stay unchanged." = "僅適用於此變更後新增的照片。現有佇列項目維持不變。";
+"Changes also apply to the current photo while setting defaults for new photos." = "在為新照片設定預設值時，變更也會套用到目前照片。";
 
 /* Editor — Fit Mode Options */
 "Crop" = "裁切";
@@ -214,6 +215,7 @@
 "Corner Radius" = "圓角半徑";
 "Source" = "來源";
 "Display" = "顯示";
+"Exposure" = "曝光";
 "Coordinates" = "座標";
 "Name" = "名稱";
 "Name + Coordinates" = "名稱 + 座標";

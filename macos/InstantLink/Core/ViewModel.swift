@@ -17,6 +17,9 @@ class ViewModel: ObservableObject {
     static let minCropZoom: CGFloat = 1.0
     static let maxCropZoom: CGFloat = 5.0
     static let quickCropZoomStep: CGFloat = 0.25
+    static let minExposureEV = -6.0
+    static let maxExposureEV = 6.0
+    static let quickExposureStep = 0.5
 
     let ffi: InstantLinkFFI
     private var isApplyingQueueItemEditState = false
@@ -123,6 +126,16 @@ class ViewModel: ObservableObject {
     }
     @Published var cropZoom: CGFloat = 1.0 {
         didSet { persistSelectedQueueItemEditState() }
+    }
+    @Published var exposureEV: Double = 0 {
+        didSet {
+            let clamped = Self.clampedExposureEV(exposureEV)
+            if clamped != exposureEV {
+                exposureEV = clamped
+                return
+            }
+            persistSelectedQueueItemEditState()
+        }
     }
 
     // Rotation
@@ -591,6 +604,52 @@ class ViewModel: ObservableObject {
         cropZoom = Self.minCropZoom
     }
 
+    static func clampedExposureEV(_ value: Double) -> Double {
+        min(max(value, minExposureEV), maxExposureEV)
+    }
+
+    var canIncreaseExposure: Bool {
+        selectedImage != nil && exposureEV < Self.maxExposureEV - 0.001
+    }
+
+    var canDecreaseExposure: Bool {
+        selectedImage != nil && exposureEV > Self.minExposureEV + 0.001
+    }
+
+    var canResetExposure: Bool {
+        selectedImage != nil && abs(exposureEV) > 0.001
+    }
+
+    var exposureDisplayValue: String {
+        let normalized = abs(exposureEV) < 0.001 ? 0 : exposureEV
+        let sign = normalized > 0 ? "+" : ""
+        let valueText: String
+        if abs(normalized.rounded() - normalized) < 0.001 {
+            valueText = "\(Int(normalized.rounded()))"
+        } else {
+            valueText = String(format: "%.1f", normalized)
+        }
+        return "\(sign)\(valueText) EV"
+    }
+
+    func setExposureEV(_ value: Double) {
+        exposureEV = Self.clampedExposureEV(value)
+    }
+
+    func increaseExposure() {
+        guard selectedImage != nil else { return }
+        setExposureEV(exposureEV + Self.quickExposureStep)
+    }
+
+    func decreaseExposure() {
+        guard selectedImage != nil else { return }
+        setExposureEV(exposureEV - Self.quickExposureStep)
+    }
+
+    func resetExposure() {
+        setExposureEV(0)
+    }
+
     var canQuickZoomIn: Bool {
         selectedImage != nil && cropZoom < Self.maxCropZoom - 0.001
     }
@@ -692,6 +751,34 @@ class ViewModel: ObservableObject {
         syncQueueCoordinatorState()
     }
 
+    var shouldMirrorDefaultsToSelectedImage: Bool {
+        captureMode == .file && selectedImage != nil
+    }
+
+    func setDefaultFitMode(_ value: String) {
+        newPhotoDefaults.fitMode = value
+        guard shouldMirrorDefaultsToSelectedImage else { return }
+        fitMode = value
+    }
+
+    func setDefaultFilmOrientation(_ value: String) {
+        newPhotoDefaults.filmOrientation = value
+        guard shouldMirrorDefaultsToSelectedImage else { return }
+        filmOrientation = value
+    }
+
+    func setDefaultRotationAngle(_ value: Int) {
+        newPhotoDefaults.rotationAngle = value
+        guard shouldMirrorDefaultsToSelectedImage else { return }
+        rotationAngle = value
+    }
+
+    func setDefaultHorizontalFlip(_ value: Bool) {
+        newPhotoDefaults.isHorizontallyFlipped = value
+        guard shouldMirrorDefaultsToSelectedImage else { return }
+        isHorizontallyFlipped = value
+    }
+
     func saveSelectedTimestampOverlayAsNewPhotoDefaults() {
         guard let overlay = selectedTimestampOverlay else {
             return
@@ -714,6 +801,7 @@ class ViewModel: ObservableObject {
             fitMode: fitMode,
             cropOffsetNormalized: cropOffsetNormalized,
             cropZoom: cropZoom,
+            exposureEV: exposureEV,
             rotationAngle: rotationAngle,
             isHorizontallyFlipped: isHorizontallyFlipped,
             overlays: overlays,
@@ -731,6 +819,7 @@ class ViewModel: ObservableObject {
         fitMode = snapshot.fitMode
         cropOffsetNormalized = snapshot.cropOffsetNormalized
         cropZoom = snapshot.cropZoom
+        exposureEV = snapshot.exposureEV
         rotationAngle = snapshot.rotationAngle
         isHorizontallyFlipped = snapshot.isHorizontallyFlipped
         overlays = snapshot.overlays
@@ -953,6 +1042,7 @@ class ViewModel: ObservableObject {
                 return false
             }
         }
+        syncDefaultTimestampOverlayToSelectedImage()
     }
 
     func updateDefaultTimestampOverlay(_ mutate: (inout TimestampOverlayData) -> Void) {
@@ -968,6 +1058,44 @@ class ViewModel: ObservableObject {
         mutate(&data)
         overlay.content = .timestamp(data)
         newPhotoDefaults.overlays[index] = overlay
+        syncDefaultTimestampOverlayToSelectedImage()
+    }
+
+    private func syncDefaultTimestampOverlayToSelectedImage() {
+        guard shouldMirrorDefaultsToSelectedImage else { return }
+
+        let selectedTimestampIndex = overlays.firstIndex { overlay in
+            if case .timestamp = overlay.content {
+                return true
+            }
+            return false
+        }
+
+        guard let defaultTimestampOverlay else {
+            if let selectedTimestampIndex {
+                let removedID = overlays[selectedTimestampIndex].id
+                overlays.remove(at: selectedTimestampIndex)
+                if selectedOverlayID == removedID {
+                    selectedOverlayID = overlays.last?.id
+                }
+            }
+            return
+        }
+
+        if let selectedTimestampIndex {
+            let existing = overlays[selectedTimestampIndex]
+            var replacement = defaultTimestampOverlay
+            replacement.id = existing.id
+            replacement.createdAt = existing.createdAt
+            replacement.zIndex = existing.zIndex
+            overlays[selectedTimestampIndex] = replacement
+        } else {
+            var mirrored = defaultTimestampOverlay
+            mirrored.id = UUID()
+            mirrored.createdAt = Date()
+            mirrored.zIndex = (overlays.map(\.zIndex).max() ?? -1) + 1
+            overlays.append(mirrored)
+        }
     }
 
     func overlayTitle(for overlay: OverlayItem) -> String {
@@ -1242,6 +1370,7 @@ class ViewModel: ObservableObject {
                 fitMode: item.editState.fitMode,
                 cropOffsetNormalized: item.editState.cropOffsetNormalized,
                 cropZoom: item.editState.cropZoom,
+                exposureEV: item.editState.exposureEV,
                 rotationAngle: item.editState.rotationAngle,
                 isHorizontallyFlipped: item.editState.isHorizontallyFlipped,
                 overlays: item.editState.overlays,

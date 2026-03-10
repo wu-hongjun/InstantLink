@@ -61,21 +61,25 @@ struct CameraView: View {
             } else if let image = viewModel.capturedImage {
                 FilmFrameView(filmModel: viewModel.printerModelTag, isRotated: viewModel.filmOrientation == "rotated") {
                     if let ar = viewModel.orientedAspectRatio {
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .aspectRatio(ar, contentMode: .fit)
-                            .overlay {
-                                OverlayCanvasView()
-                            }
-                            .clipped()
+                        ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                            previewImage
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .aspectRatio(ar, contentMode: .fit)
+                                .overlay {
+                                    OverlayCanvasView()
+                                }
+                                .clipped()
+                        }
                     } else {
-                        Image(nsImage: image)
-                            .resizable()
-                            .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
-                            .aspectRatio(contentMode: .fit)
+                        ExposureAdjustedImageView(image: image, exposureEV: viewModel.exposureEV) { previewImage in
+                            previewImage
+                                .resizable()
+                                .scaleEffect(x: viewModel.isHorizontallyFlipped ? -1 : 1, y: 1)
+                                .aspectRatio(contentMode: .fit)
+                        }
                     }
                 }
                 .padding(4)

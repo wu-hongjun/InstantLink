@@ -349,12 +349,13 @@ final class PrinterConnectionCoordinator: ObservableObject {
         }
     }
 
-    func refresh() async {
+    func refresh(forceDisconnectOnFailure: Bool = false) async -> Bool {
         mutateSnapshot { snapshot in
             snapshot.isRefreshing = true
         }
 
         let status = await ffi.fetchConnectionStatus()
+        var isConnectedAfterRefresh = false
 
         mutateSnapshot { snapshot in
             snapshot.isRefreshing = false
@@ -365,13 +366,20 @@ final class PrinterConnectionCoordinator: ObservableObject {
                 snapshot.filmRemaining = status.filmRemaining
                 snapshot.isCharging = status.isCharging
                 snapshot.printCount = status.printCount
+                isConnectedAfterRefresh = true
             } else {
                 consecutiveRefreshFailures += 1
-                if snapshot.isConnected == false || consecutiveRefreshFailures >= 2 {
+                if forceDisconnectOnFailure || snapshot.isConnected == false || consecutiveRefreshFailures >= 2 {
                     snapshot.isConnected = false
+                    snapshot.connectionStage = nil
+                    snapshot.connectionStageDetail = nil
+                    snapshot.pairingPhase = .idle
                 }
+                isConnectedAfterRefresh = snapshot.isConnected
             }
         }
+
+        return isConnectedAfterRefresh
     }
 
     func scanNearby(duration: Int = 3) async {

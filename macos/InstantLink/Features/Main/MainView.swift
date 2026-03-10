@@ -376,10 +376,7 @@ struct MainView: View {
 
     private var printerIdentityControl: some View {
         Button {
-            if let bleId = viewModel.printerName, let profile = viewModel.printerProfiles[bleId] {
-                viewModel.editingProfile = profile
-                viewModel.showProfileEditor = true
-            }
+            viewModel.handlePrinterIdentityAction()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: printerStatusSymbolName)

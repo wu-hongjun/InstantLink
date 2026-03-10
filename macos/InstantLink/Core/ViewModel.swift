@@ -473,9 +473,13 @@ class ViewModel: ObservableObject {
 
     // MARK: - Refresh (quiet — no "searching" spinner, just update numbers)
 
-    func refreshStatus(allowDuringPrinting: Bool = false) async {
-        guard allowDuringPrinting || !isPrinting else { return }
-        await connectionCoordinator.refresh()
+    @discardableResult
+    func refreshStatus(
+        allowDuringPrinting: Bool = false,
+        forceDisconnectOnFailure: Bool = false
+    ) async -> Bool {
+        guard allowDuringPrinting || !isPrinting else { return isConnected }
+        return await connectionCoordinator.refresh(forceDisconnectOnFailure: forceDisconnectOnFailure)
     }
 
     // MARK: - Scan (discover all printers for the picker, then connect)
@@ -497,6 +501,22 @@ class ViewModel: ObservableObject {
     func scanNearby() {
         Task {
             await connectionCoordinator.scanNearby()
+        }
+    }
+
+    func handlePrinterIdentityAction() {
+        switch printerStatusIndicatorState {
+        case .disconnected, .connecting, .refreshing:
+            showPrinterPicker = true
+            scanNearby()
+        case .ready, .busy, .warning, .error:
+            guard let bleId = printerName, let profile = printerProfiles[bleId] else {
+                showPrinterPicker = true
+                scanNearby()
+                return
+            }
+            editingProfile = profile
+            showProfileEditor = true
         }
     }
 
@@ -1587,7 +1607,24 @@ class ViewModel: ObservableObject {
 
     // MARK: - Printing
 
+    private func ensurePrinterReadyForPrint() async -> Bool {
+        guard isConnected || ffi.isConnected() else {
+            showError(L("Connect to your printer"))
+            return false
+        }
+
+        let isStillConnected = await refreshStatus(forceDisconnectOnFailure: true)
+        guard isStillConnected else {
+            showError(L("Connect to your printer"))
+            return false
+        }
+
+        return true
+    }
+
     func printSelectedImage() async {
+        guard await ensurePrinterReadyForPrint() else { return }
+
         await MainActor.run {
             isPrinting = true
             printProgress = nil
@@ -1641,6 +1678,7 @@ class ViewModel: ObservableObject {
 
         let count = min(queue.count - firstIndex, filmRemaining)
         guard count > 0 else { return }
+        guard await ensurePrinterReadyForPrint() else { return }
 
         await MainActor.run {
             isPrinting = true

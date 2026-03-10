@@ -102,48 +102,70 @@ struct CameraView: View {
 struct CameraActionsView: View {
     @EnvironmentObject var viewModel: ViewModel
 
+    private var timerTitle: String {
+        switch viewModel.timerMode {
+        case 2:
+            return "2s"
+        case 10:
+            return "10s"
+        default:
+            return L("Off")
+        }
+    }
+
+    private var isHorizontalOrientation: Bool {
+        (viewModel.orientedAspectRatio ?? 1.0) > 1.0
+    }
+
+    private var orientationTitle: String {
+        isHorizontalOrientation ? L("Horizontal") : L("Vertical")
+    }
+
+    private var orientationSymbolName: String {
+        isHorizontalOrientation ? "rectangle" : "rectangle.portrait"
+    }
+
     var body: some View {
         VStack(spacing: 10) {
             if viewModel.cameraState == .viewfinder {
                 HStack(spacing: 8) {
-                    Picker(L("Timer"), selection: $viewModel.timerMode) {
-                        Text(L("Off")).tag(0)
-                        Text("2s").tag(2)
-                        Text("10s").tag(10)
+                    Menu {
+                        Button(L("Off")) { viewModel.timerMode = 0 }
+                        Button("2s") { viewModel.timerMode = 2 }
+                        Button("10s") { viewModel.timerMode = 10 }
+                    } label: {
+                        utilityControlLabel(title: timerTitle, systemImage: "timer")
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(maxWidth: 140)
+                    .menuStyle(.borderlessButton)
+                    .help(L("Timer"))
 
                     if viewModel.printerAspectRatio != nil {
-                        HStack(spacing: 8) {
-                            Button {
-                                viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: viewModel.filmOrientation == "default" ? "rectangle.portrait" : "rectangle")
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .font(.system(size: 8, weight: .semibold))
-                                }
-                                .font(.callout)
-                            }
-                            .help(L("Film Orientation"))
-
-                            Button {
-                                viewModel.toggleHorizontalFlip()
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.left.and.right")
-                                    Text(L("Flip"))
-                                }
-                                .font(.callout)
-                                .foregroundColor(viewModel.isHorizontallyFlipped ? .accentColor : .primary)
-                            }
-                            .buttonStyle(.bordered)
-                            .help(L("Flip"))
+                        Button {
+                            viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
+                        } label: {
+                            utilityControlLabel(
+                                title: orientationTitle,
+                                systemImage: orientationSymbolName,
+                                isActive: viewModel.filmOrientation == "rotated"
+                            )
                         }
+                        .buttonStyle(.plain)
+                        .help(L("Film Orientation"))
+
+                        Button {
+                            viewModel.toggleHorizontalFlip()
+                        } label: {
+                            utilityControlLabel(
+                                title: L("Flip"),
+                                systemImage: "arrow.left.and.right",
+                                isActive: viewModel.isHorizontallyFlipped
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .help(L("Flip"))
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
 
                 if viewModel.timerCountdown != nil {
                     Button {
@@ -210,7 +232,7 @@ struct CameraActionsView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .tint(.orange)
                     .controlSize(.large)
 
@@ -225,7 +247,7 @@ struct CameraActionsView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .disabled(!viewModel.isConnected || viewModel.isPrinting)
                 }
@@ -236,5 +258,25 @@ struct CameraActionsView: View {
                 viewModel.discoverCameras(ensureSession: true)
             }
         }
+    }
+
+    private func utilityControlLabel(
+        title: String,
+        systemImage: String,
+        isActive: Bool = false
+    ) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.callout.weight(.medium))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isActive ? Color.accentColor.opacity(0.12) : Color.white.opacity(0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(isActive ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.14), lineWidth: 1)
+            )
+            .foregroundStyle(isActive ? Color.accentColor : Color.primary)
     }
 }

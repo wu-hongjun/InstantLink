@@ -250,66 +250,63 @@ struct QueueStripView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(Array(viewModel.queue.enumerated()), id: \.element.id) { index, item in
-                        QueueThumbnailView(
-                            item: item,
-                            isSelected: index == viewModel.selectedQueueIndex,
-                            isDragging: draggingItemID == item.id,
-                            onSelect: { viewModel.selectQueueItem(at: index) },
-                            onRemove: { withAnimation { viewModel.removeQueueItem(at: index) } }
-                        )
-                        .id(item.id)
-                        .contextMenu {
-                            if index > 0 {
-                                Button(L("Move Left")) {
-                                    withAnimation { viewModel.moveQueueItem(from: index, to: index - 1) }
-                                }
-                            }
-                            if index < viewModel.queue.count - 1 {
-                                Button(L("Move Right")) {
-                                    withAnimation { viewModel.moveQueueItem(from: index, to: index + 1) }
-                                }
-                            }
-                            Divider()
-                            Button(L("Remove")) {
-                                withAnimation { viewModel.removeQueueItem(at: index) }
-                            }
-                        }
-                        .onDrag {
-                            draggingItemID = item.id
-                            return NSItemProvider(object: item.id.uuidString as NSString)
-                        }
-                        .onDrop(of: [.text], delegate: QueueDropDelegate(
-                            targetIndex: index,
-                            viewModel: viewModel,
-                            draggingItemID: $draggingItemID
-                        ))
-                    }
-
-                    Button { viewModel.selectImage() } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .frame(width: addButtonWidth, height: thumbnailHeight)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3]))
-                                    .foregroundColor(.secondary.opacity(0.4))
+                        ForEach(Array(viewModel.queue.enumerated()), id: \.element.id) { index, item in
+                            QueueThumbnailView(
+                                item: item,
+                                isSelected: index == viewModel.selectedQueueIndex,
+                                isDragging: draggingItemID == item.id,
+                                onSelect: { viewModel.selectQueueItem(at: index) },
+                                onRemove: { withAnimation { viewModel.removeQueueItem(at: index) } }
                             )
-                    }
-                    .buttonStyle(.plain)
-                    .frame(width: addButtonWidth + 8, height: thumbnailHeight + 8)
+                            .id(item.id)
+                            .contextMenu {
+                                if index > 0 {
+                                    Button(L("Move Left")) {
+                                        withAnimation { viewModel.moveQueueItem(from: index, to: index - 1) }
+                                    }
+                                }
+                                if index < viewModel.queue.count - 1 {
+                                    Button(L("Move Right")) {
+                                        withAnimation { viewModel.moveQueueItem(from: index, to: index + 1) }
+                                    }
+                                }
+                                Divider()
+                                Button(L("Remove")) {
+                                    withAnimation { viewModel.removeQueueItem(at: index) }
+                                }
+                            }
+                            .onDrag {
+                                draggingItemID = item.id
+                                return NSItemProvider(object: item.id.uuidString as NSString)
+                            }
+                            .onDrop(of: [.text], delegate: QueueDropDelegate(
+                                targetIndex: index,
+                                viewModel: viewModel,
+                                draggingItemID: $draggingItemID
+                            ))
+                        }
+
+                        Button { viewModel.selectImage() } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .frame(width: addButtonWidth, height: thumbnailHeight)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .fill(Color.white.opacity(0.04))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3]))
+                                        .foregroundColor(.secondary.opacity(0.28))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: addButtonWidth + 6, height: thumbnailHeight + 6)
                 }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 2)
+                .padding(.vertical, 1)
             }
-            .padding(4)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
             .opacity(viewModel.isPrinting ? 0.72 : 1.0)
             .allowsHitTesting(!viewModel.isPrinting)
             .onChange(of: viewModel.selectedQueueIndex) { _, _ in
@@ -379,9 +376,8 @@ struct QueueThumbnailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
-                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                                .stroke(isSelected ? Color.accentColor.opacity(0.7) : Color.clear, lineWidth: 1.5)
                         )
-                        .shadow(color: isSelected ? Color.accentColor.opacity(0.18) : .clear, radius: 4, y: 2)
                         .opacity(isDragging ? 0.5 : 1.0)
                 }
             }
@@ -391,10 +387,10 @@ struct QueueThumbnailView: View {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(.white.opacity(0.95))
-                    .background(
-                        Circle()
-                            .fill(Color.black.opacity(0.55))
+                    .foregroundColor(.secondary)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
                     )
             }
             .buttonStyle(.plain)
@@ -407,13 +403,13 @@ struct QueueThumbnailView: View {
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.12) : (isHovered ? Color.white.opacity(0.08) : Color.clear))
+                .fill(isSelected ? Color.accentColor.opacity(0.10) : (isHovered ? Color.white.opacity(0.05) : Color.clear))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.white.opacity(isHovered ? 0.16 : 0), lineWidth: 1)
+                .stroke(isSelected ? Color.accentColor.opacity(0.32) : Color.white.opacity(isHovered ? 0.10 : 0), lineWidth: 1)
         )
-        .frame(width: thumbnailWidth + 8, height: thumbnailHeight + 8)
+        .frame(width: thumbnailWidth + 6, height: thumbnailHeight + 6)
         .onHover { hovered in
             withAnimation(.easeOut(duration: 0.16)) {
                 isHovered = hovered
@@ -539,8 +535,8 @@ struct QuickPrintToolbarView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
-            QuickExposureControlsView(showsChrome: false)
+            QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: true)
+            QuickExposureControlsView(showsChrome: true)
 
             quickToolbarButton(
                 title: L("Rotate"),
@@ -557,9 +553,9 @@ struct QuickPrintToolbarView: View {
                     systemImage: orientationSymbolName,
                     action: {
                         viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
-                    }
+                    },
+                    isActive: viewModel.filmOrientation == "rotated"
                 )
-                .tint(viewModel.filmOrientation == "rotated" ? .accentColor : .secondary)
                 .disabled(viewModel.selectedImage == nil)
                 .help(L("Film Orientation"))
                 .accessibilityLabel(Text(L("Film Orientation")))
@@ -573,9 +569,9 @@ struct QuickPrintToolbarView: View {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isQueueStripVisible.toggle()
                         }
-                    }
+                    },
+                    isActive: isQueueStripVisible
                 )
-                .tint(isQueueStripVisible ? .accentColor : .secondary)
                 .help(L("Queue"))
                 .accessibilityLabel(Text(L("Queue")))
             }
@@ -594,9 +590,7 @@ struct QuickPrintToolbarView: View {
             )
             .disabled(viewModel.selectedImage == nil || viewModel.isPrinting)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .center)
         .disabled(viewModel.isPrinting)
     }
 
@@ -604,26 +598,52 @@ struct QuickPrintToolbarView: View {
         title: String,
         systemImage: String,
         action: @escaping () -> Void,
+        isActive: Bool = false,
         prominent: Bool = false
     ) -> some View {
-        Group {
-            if prominent {
-                Button(action: action) {
-                    Label(title, systemImage: systemImage)
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.small)
-                .tint(.orange)
-            } else {
-                Button(action: action) {
-                    Label(title, systemImage: systemImage)
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.small)
-            }
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.callout.weight(.medium))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(buttonBackground(isActive: isActive, prominent: prominent))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(buttonStroke(isActive: isActive, prominent: prominent), lineWidth: 1)
+                )
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(buttonForeground(isActive: isActive, prominent: prominent))
+    }
+
+    private func buttonBackground(isActive: Bool, prominent: Bool) -> some ShapeStyle {
+        if prominent {
+            return AnyShapeStyle(Color.orange.opacity(0.18))
+        }
+        if isActive {
+            return AnyShapeStyle(Color.accentColor.opacity(0.12))
+        }
+        return AnyShapeStyle(Color.white.opacity(0.06))
+    }
+
+    private func buttonStroke(isActive: Bool, prominent: Bool) -> Color {
+        if prominent {
+            return Color.orange.opacity(0.35)
+        }
+        if isActive {
+            return Color.accentColor.opacity(0.3)
+        }
+        return Color.white.opacity(0.14)
+    }
+
+    private func buttonForeground(isActive: Bool, prominent: Bool) -> Color {
+        if prominent {
+            return .orange
+        }
+        if isActive {
+            return .accentColor
+        }
+        return .primary
     }
 }
 
@@ -661,14 +681,7 @@ struct QuickZoomControlsView: View {
         .frame(minHeight: 30)
         .background {
             if showsChrome {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.ultraThinMaterial)
-            }
-        }
-        .overlay {
-            if showsChrome {
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.white.opacity(0.18))
+                CompactGlassSurface(cornerRadius: 9)
             }
         }
     }
@@ -707,14 +720,7 @@ struct QuickExposureControlsView: View {
         .frame(minHeight: 30)
         .background {
             if showsChrome {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.ultraThinMaterial)
-            }
-        }
-        .overlay {
-            if showsChrome {
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.white.opacity(0.18))
+                CompactGlassSurface(cornerRadius: 9)
             }
         }
     }

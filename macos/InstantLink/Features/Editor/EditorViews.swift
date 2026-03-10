@@ -232,13 +232,14 @@ struct AccordionSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
             } label: {
                 HStack {
                     Image(systemName: icon)
                         .frame(width: 16)
+                        .foregroundColor(.secondary)
                     Text(title)
                         .font(.callout)
                         .fontWeight(.medium)
@@ -248,7 +249,8 @@ struct AccordionSection<Content: View>: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -257,7 +259,8 @@ struct AccordionSection<Content: View>: View {
                 VStack(alignment: .leading, spacing: 8) {
                     content()
                 }
-                .padding(.bottom, 8)
+                .padding(.top, 6)
+                .padding(.leading, 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -277,7 +280,7 @@ struct EditorSidebarView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(spacing: 12) {
                 AccordionSection(L("Fit Mode"), icon: "crop") {
                     Picker("", selection: $viewModel.fitMode) {
                         Text(L("Crop")).tag("crop")
@@ -290,13 +293,9 @@ struct EditorSidebarView: View {
                     QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
                 }
 
-                Divider()
-
                 AccordionSection(L("Exposure"), icon: "sun.max") {
                     QuickExposureControlsView(showsChrome: false)
                 }
-
-                Divider()
 
                 AccordionSection(L("Rotate"), icon: "rotate.right") {
                     HStack(spacing: 8) {
@@ -326,8 +325,6 @@ struct EditorSidebarView: View {
                         .tint(viewModel.isHorizontallyFlipped ? .accentColor : .secondary)
                     }
                 }
-
-                Divider()
 
                 AccordionSection(L("Overlays"), icon: "sparkles", expanded: true) {
                     Menu {
@@ -367,8 +364,6 @@ struct EditorSidebarView: View {
                     }
                 }
 
-                Divider()
-
                 Button {
                     showDefaultsPopover = true
                 } label: {
@@ -399,12 +394,10 @@ struct EditorSidebarView: View {
                     .padding(.vertical, 10)
                     .padding(.horizontal, 10)
                     .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.08))
+                        CompactGlassSurface(cornerRadius: 12)
                     )
                 }
                 .buttonStyle(.plain)
-                .padding(.top, 12)
                 .popover(isPresented: $showDefaultsPopover, arrowEdge: .leading) {
                     NewPhotoDefaultsPopover()
                         .environmentObject(viewModel)
@@ -455,7 +448,7 @@ struct NewPhotoDefaultsPopover: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(L("Defaults For New Photos"))
                 .font(.headline)
 
@@ -463,7 +456,7 @@ struct NewPhotoDefaultsPopover: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            VStack(alignment: .leading, spacing: 8) {
+            EditorInsetGroup {
                 Text(L("Fit Mode"))
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -478,7 +471,7 @@ struct NewPhotoDefaultsPopover: View {
             }
 
             if let aspectRatio = viewModel.printerAspectRatio, aspectRatio != 1.0 {
-                VStack(alignment: .leading, spacing: 8) {
+                EditorInsetGroup {
                     Text(L("Film Orientation"))
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -492,7 +485,7 @@ struct NewPhotoDefaultsPopover: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            EditorInsetGroup {
                 Text(L("Rotate"))
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -505,41 +498,40 @@ struct NewPhotoDefaultsPopover: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                Toggle(L("Flip"), isOn: defaultFlipBinding)
+                    .font(.callout)
             }
 
-            Toggle(L("Flip"), isOn: defaultFlipBinding)
-
-            DefaultTimestampOverlayEditor()
+            EditorInsetGroup {
+                DefaultTimestampOverlayEditor()
+            }
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Button(L("Use Selected Timestamp as Default")) {
-                        viewModel.saveSelectedTimestampOverlayAsNewPhotoDefaults()
-                    }
-                    .disabled(viewModel.selectedTimestampOverlay == nil)
-
-                    Spacer()
-
-                    Button(L("Use Current Layout as Default")) {
-                        viewModel.saveCurrentLayoutAsNewPhotoDefaults()
-                    }
-                    .disabled(viewModel.selectedImage == nil)
+            HStack {
+                Button(L("Use Selected Timestamp as Default")) {
+                    viewModel.saveSelectedTimestampOverlayAsNewPhotoDefaults()
                 }
+                .disabled(viewModel.selectedTimestampOverlay == nil)
 
-                HStack {
-                    Spacer()
+                Spacer()
 
-                    Button(L("Reset Defaults")) {
-                        viewModel.resetNewPhotoDefaults()
-                    }
-                    .disabled(viewModel.newPhotoDefaults == NewPhotoDefaults())
+                Button(L("Use Current Layout as Default")) {
+                    viewModel.saveCurrentLayoutAsNewPhotoDefaults()
                 }
+                .disabled(viewModel.selectedImage == nil)
+            }
+
+            HStack {
+                Spacer()
+                Button(L("Reset Defaults")) {
+                    viewModel.resetNewPhotoDefaults()
+                }
+                .disabled(viewModel.newPhotoDefaults == NewPhotoDefaults())
             }
         }
         .padding(16)
-        .frame(width: 320)
+        .frame(width: 336)
     }
 }
 
@@ -584,22 +576,21 @@ struct OverlayListRowView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(
                     isSelected
                         ? Color.accentColor.opacity(0.14)
-                        : (isHovered ? Color.white.opacity(0.08) : Color.secondary.opacity(0.05))
+                        : (isHovered ? Color.white.opacity(0.09) : Color.white.opacity(0.04))
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(
-                    isSelected ? Color.accentColor.opacity(0.38) : Color.white.opacity(isHovered ? 0.14 : 0),
+                    isSelected ? Color.accentColor.opacity(0.36) : Color.white.opacity(isHovered ? 0.18 : 0.08),
                     lineWidth: 1
                 )
         )
-        .shadow(color: isSelected ? Color.accentColor.opacity(0.12) : .clear, radius: 8, y: 4)
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .onTapGesture {
             viewModel.selectOverlay(overlay.id)
         }
@@ -642,13 +633,24 @@ struct InspectorSectionCard<Content: View>: View {
             content()
         }
         .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
+        .background(Color.white.opacity(0.035))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+struct EditorInsetGroup<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            content()
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
     }
 }
@@ -724,6 +726,13 @@ struct SelectedOverlayInspectorView: View {
                 }
                 .disabled(isLocked)
             }
+            .padding(10)
+            .background(Color.white.opacity(0.03))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+            )
             .onAppear {
                 focusRequestedTextOverlayIfNeeded()
             }
@@ -928,10 +937,10 @@ struct SelectedOverlayInspectorView: View {
     private var timestampControls: some View {
         VStack(alignment: .leading, spacing: 8) {
             RoundedRectangle(cornerRadius: 6)
-                .fill(.thinMaterial)
+                .fill(Color.white.opacity(0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
                 )
                 .frame(height: 48)
                 .overlay {
@@ -1211,10 +1220,10 @@ struct DefaultTimestampOverlayEditor: View {
             if let overlay = viewModel.defaultTimestampOverlay,
                case .timestamp(let data) = overlay.content {
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(.thinMaterial)
+                    .fill(Color.white.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
                     )
                     .frame(height: 48)
                     .overlay {

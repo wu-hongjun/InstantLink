@@ -181,6 +181,20 @@ struct AppPanelBackground: View {
     }
 }
 
+struct CompactGlassSurface: View {
+    var cornerRadius: CGFloat = 10
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(.thinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.035), radius: 5, y: 2)
+    }
+}
+
 struct ExposureAdjustedImageView<Content: View>: View {
     let image: NSImage
     let exposureEV: Double

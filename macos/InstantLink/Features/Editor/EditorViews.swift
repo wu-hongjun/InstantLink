@@ -331,17 +331,30 @@ struct EditorSidebarView: View {
                 }
 
                 AccordionSection(L("Overlays"), icon: "sparkles", expanded: true) {
-                    Menu {
-                        Button(L("Text")) { viewModel.addOverlay(kind: .text) }
-                        Button(L("QR Code")) { viewModel.addOverlay(kind: .qrCode) }
-                        Button(L("Timestamp")) { viewModel.addOverlay(kind: .timestamp) }
-                        Button(L("Image")) { viewModel.addOverlay(kind: .image) }
-                        Button(L("Location")) { viewModel.addOverlay(kind: .location) }
-                    } label: {
-                        Label(L("Add Overlay"), systemImage: "plus")
-                            .frame(maxWidth: .infinity)
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(minimum: 0), spacing: 8),
+                            GridItem(.flexible(minimum: 0), spacing: 8)
+                        ],
+                        alignment: .leading,
+                        spacing: 8
+                    ) {
+                        overlayAddButton(L("Text"), systemImage: "textformat") {
+                            viewModel.addOverlay(kind: .text)
+                        }
+                        overlayAddButton(L("QR Code"), systemImage: "qrcode") {
+                            viewModel.addOverlay(kind: .qrCode)
+                        }
+                        overlayAddButton(L("Timestamp"), systemImage: "calendar") {
+                            viewModel.addOverlay(kind: .timestamp)
+                        }
+                        overlayAddButton(L("Image"), systemImage: "photo") {
+                            viewModel.addOverlay(kind: .image)
+                        }
+                        overlayAddButton(L("Location"), systemImage: "location") {
+                            viewModel.addOverlay(kind: .location)
+                        }
                     }
-                    .controlSize(.small)
 
                     if viewModel.overlays.isEmpty {
                         Text(L("No overlays yet"))
@@ -410,6 +423,20 @@ struct EditorSidebarView: View {
             .padding(12)
         }
         .frame(minWidth: 360, idealWidth: 400, maxWidth: 460)
+    }
+
+    private func overlayAddButton(
+        _ title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.roundedRectangle)
+        .controlSize(.small)
     }
 }
 

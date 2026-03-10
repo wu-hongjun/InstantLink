@@ -343,7 +343,7 @@ struct MainView: View {
     private var groupedConnectedHeader: some View {
         HStack(spacing: 10) {
             printerIdentityControl
-                .layoutPriority(1)
+                .layoutPriority(2)
 
             Spacer(minLength: 0)
 
@@ -362,6 +362,7 @@ struct MainView: View {
     private var compactConnectedHeader: some View {
         HStack(spacing: 12) {
             printerIdentityControl
+                .layoutPriority(2)
 
             Spacer()
 
@@ -425,7 +426,7 @@ struct MainView: View {
         .pickerStyle(.segmented)
         .controlSize(.regular)
         .labelsHidden()
-        .frame(width: 220)
+        .frame(width: 180)
         .onChange(of: viewModel.captureMode) { _, newMode in
             if newMode == .camera {
                 viewModel.requestCameraAccessAndStart()

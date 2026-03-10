@@ -75,7 +75,8 @@ struct EditorPreviewView: View {
             AppPanelBackground(
                 chromeColor: panelChromeColor,
                 dashed: viewModel.selectedImage == nil,
-                showsChrome: !showsSimulatedFilmFrame
+                showsChrome: !showsSimulatedFilmFrame,
+                showsBaseChrome: viewModel.selectedImage != nil
             )
 
             if let image = viewModel.selectedImage {

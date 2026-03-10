@@ -25,7 +25,8 @@ struct MainPreviewView: View {
             AppPanelBackground(
                 chromeColor: panelChromeColor,
                 dashed: viewModel.selectedImage == nil,
-                showsChrome: !showsSimulatedFilmFrame
+                showsChrome: !showsSimulatedFilmFrame,
+                showsBaseChrome: viewModel.selectedImage != nil
             )
 
             if viewModel.isPrinting {

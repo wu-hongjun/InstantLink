@@ -88,7 +88,7 @@ struct CameraView: View {
         .overlay(showFlash ? Color.white.opacity(0.8) : Color.clear)
         .frame(minHeight: 120, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.22), value: viewModel.cameraState)
-        .onChange(of: viewModel.cameraState) { newState in
+        .onChange(of: viewModel.cameraState) { _, newState in
             if newState == .preview {
                 showFlash = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -106,22 +106,6 @@ struct CameraActionsView: View {
         VStack(spacing: 10) {
             if viewModel.cameraState == .viewfinder {
                 HStack(spacing: 8) {
-                    if viewModel.availableCameras.count > 1 {
-                        Picker(L("Camera"), selection: Binding(
-                            get: { viewModel.selectedCamera?.uniqueID ?? "" },
-                            set: { id in
-                                if let device = viewModel.availableCameras.first(where: { $0.uniqueID == id }) {
-                                    viewModel.switchCamera(to: device)
-                                }
-                            }
-                        )) {
-                            ForEach(viewModel.availableCameras, id: \.uniqueID) { device in
-                                Text(device.localizedName).tag(device.uniqueID)
-                            }
-                        }
-                        .labelsHidden()
-                    }
-
                     Picker(L("Timer"), selection: $viewModel.timerMode) {
                         Text(L("Off")).tag(0)
                         Text("2s").tag(2)
@@ -245,6 +229,11 @@ struct CameraActionsView: View {
                     .controlSize(.large)
                     .disabled(!viewModel.isConnected || viewModel.isPrinting)
                 }
+            }
+        }
+        .onAppear {
+            if viewModel.captureMode == .camera {
+                viewModel.discoverCameras(ensureSession: true)
             }
         }
     }

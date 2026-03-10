@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import SwiftUI
 
 struct MainView: View {
@@ -263,7 +264,7 @@ struct MainView: View {
             }
             Task { await viewModel.checkForUpdates() }
         }
-        .onChange(of: viewModel.queue.count) { newCount in
+        .onChange(of: viewModel.queue.count) { _, newCount in
             syncQueueStripVisibility(for: newCount)
         }
         .onReceive(NotificationCenter.default.publisher(for: .findPrinter)) { _ in
@@ -301,6 +302,12 @@ struct MainView: View {
                     session.startRunning()
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasConnectedNotification)) { _ in
+            viewModel.discoverCameras(ensureSession: viewModel.captureMode == .camera)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasDisconnectedNotification)) { _ in
+            viewModel.discoverCameras(ensureSession: viewModel.captureMode == .camera)
         }
     }
 
@@ -341,6 +348,9 @@ struct MainView: View {
             Spacer(minLength: 0)
 
             captureModeControl
+            if viewModel.captureMode == .camera {
+                cameraToolbarControl
+            }
 
             HStack(spacing: 8) {
                 batteryStatusControl
@@ -359,6 +369,9 @@ struct MainView: View {
             Spacer()
 
             captureModeControl
+            if viewModel.captureMode == .camera {
+                cameraToolbarCompactControl
+            }
 
             batteryStatusControl
             filmStatusControl
@@ -406,7 +419,7 @@ struct MainView: View {
         .controlSize(.small)
         .labelsHidden()
         .frame(width: 150)
-        .onChange(of: viewModel.captureMode) { newMode in
+        .onChange(of: viewModel.captureMode) { _, newMode in
             if newMode == .camera {
                 viewModel.requestCameraAccessAndStart()
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -420,6 +433,59 @@ struct MainView: View {
                 syncQueueStripVisibility(for: viewModel.queue.count, force: true)
             }
         }
+    }
+
+    @ViewBuilder
+    private var cameraSelectionMenuContent: some View {
+        if viewModel.availableCameras.isEmpty {
+            Text(L("No camera available"))
+        } else {
+            ForEach(viewModel.availableCameras, id: \.uniqueID) { device in
+                Button {
+                    viewModel.switchCamera(to: device)
+                } label: {
+                    if device.uniqueID == viewModel.selectedCamera?.uniqueID {
+                        Label(device.localizedName, systemImage: "checkmark")
+                    } else {
+                        Text(device.localizedName)
+                    }
+                }
+            }
+        }
+    }
+
+    private var cameraToolbarControl: some View {
+        Menu {
+            cameraSelectionMenuContent
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "video")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(viewModel.selectedCamera?.localizedName ?? L("Camera"))
+                    .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .help(L("Camera"))
+        .disabled(viewModel.availableCameras.isEmpty)
+        .frame(minWidth: 140, idealWidth: 180, maxWidth: 220, alignment: .leading)
+    }
+
+    private var cameraToolbarCompactControl: some View {
+        Menu {
+            cameraSelectionMenuContent
+        } label: {
+            Image(systemName: "video")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .help(L("Camera"))
+        .disabled(viewModel.availableCameras.isEmpty)
     }
 
     private var batteryStatusControl: some View {

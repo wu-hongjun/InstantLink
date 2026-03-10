@@ -8,14 +8,14 @@ Prebuilt artifacts are published on the [Releases](https://github.com/wu-hongjun
 - `InstantLink-CLI-vX.Y.Z.zip` for the standalone CLI
 - `InstantLink-FFI-vX.Y.Z.zip` for FFI consumers
 
-The app release targets **macOS Apple Silicon**. Download the `.dmg`, mount it, and drag `InstantLink.app` into `/Applications`.
+The app release targets **macOS 15+ on Apple Silicon**. Download the `.dmg`, mount it, and drag `InstantLink.app` into `/Applications`.
 
 ## From Source
 
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) stable with edition `2024`
-- macOS for the SwiftUI app and BLE via CoreBluetooth
+- macOS 15+ for the SwiftUI app and BLE via CoreBluetooth
 - Linux is supported for CLI development and BLE via BlueZ
 
 ### Build the Workspace

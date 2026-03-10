@@ -1151,15 +1151,13 @@ class ViewModel: ObservableObject {
     func requestCameraAccessAndStart() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            discoverCameras()
-            startCameraSession()
+            discoverCameras(ensureSession: true)
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     if granted {
-                        self.discoverCameras()
-                        self.startCameraSession()
+                        self.discoverCameras(ensureSession: true)
                     } else {
                         self.captureMode = .file
                         self.showError(L("Camera access denied"))
@@ -1172,20 +1170,79 @@ class ViewModel: ObservableObject {
         }
     }
 
-    func discoverCameras() {
+    func discoverCameras(ensureSession: Bool = false) {
+        let previousSelectedCameraID = selectedCamera?.uniqueID
         let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
+            deviceTypes: cameraDiscoveryDeviceTypes,
             mediaType: .video,
             position: .unspecified
         )
-        availableCameras = discovery.devices
-        if selectedCamera == nil || !availableCameras.contains(where: { $0.uniqueID == selectedCamera?.uniqueID }) {
-            selectedCamera = availableCameras.first
+        let mergedDevices = discovery.devices.sorted(by: cameraSortOrder)
+
+        let nextSelectedCamera = mergedDevices.first(where: { $0.uniqueID == previousSelectedCameraID })
+            ?? mergedDevices.first
+        let selectionChanged = previousSelectedCameraID != nextSelectedCamera?.uniqueID
+
+        availableCameras = mergedDevices
+        selectedCamera = nextSelectedCamera
+
+        guard ensureSession, captureMode == .camera else { return }
+
+        if mergedDevices.isEmpty {
+            stopCameraSession()
+            return
+        }
+
+        // Keep the live session stable while previewing a captured photo.
+        guard cameraState == .viewfinder else { return }
+
+        if captureSession == nil {
+            startCameraSession()
+        } else if selectionChanged, let nextSelectedCamera {
+            switchCamera(to: nextSelectedCamera)
+        }
+    }
+
+    private var cameraDiscoveryDeviceTypes: [AVCaptureDevice.DeviceType] {
+        [
+            .builtInWideAngleCamera,
+            .external,
+            .continuityCamera,
+            .deskViewCamera
+        ]
+    }
+
+    private func cameraSortOrder(_ lhs: AVCaptureDevice, _ rhs: AVCaptureDevice) -> Bool {
+        let lhsRank = cameraSortRank(for: lhs)
+        let rhsRank = cameraSortRank(for: rhs)
+        if lhsRank != rhsRank {
+            return lhsRank < rhsRank
+        }
+        return lhs.localizedName.localizedCaseInsensitiveCompare(rhs.localizedName) == .orderedAscending
+    }
+
+    private func cameraSortRank(for device: AVCaptureDevice) -> Int {
+        if device.deviceType == .continuityCamera {
+            return 1
+        }
+        if device.deviceType == .deskViewCamera {
+            return 2
+        }
+        switch device.position {
+        case .front:
+            return 0
+        case .back:
+            return 3
+        default:
+            return 4
         }
     }
 
     func startCameraSession() {
-        guard let camera = selectedCamera else { return }
+        guard let camera = selectedCamera ?? availableCameras.first else { return }
+        if selectedCamera?.uniqueID != camera.uniqueID {
+            selectedCamera = camera
+        }
         let session = AVCaptureSession()
         session.sessionPreset = .photo
 
@@ -1244,6 +1301,7 @@ class ViewModel: ObservableObject {
         cancelTimer()
         capturedImage = nil
         cameraState = .viewfinder
+        discoverCameras(ensureSession: true)
     }
 
     func captureWithTimer() {

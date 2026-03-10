@@ -1,5 +1,5 @@
 site_name: InstantLink
-site_description: Open-source CLI and macOS app for Fujifilm Instax Link printers via BLE
+site_description: Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE
 site_url: https://instantlink.hongjunwu.com/
 repo_url: https://github.com/wu-hongjun/InstantLink
 repo_name: wu-hongjun/InstantLink
@@ -56,6 +56,7 @@ nav:
       - Plan 009 Repo Simplification Audit: plans/009-repo-simplification-audit.md
       - Plan 010 UI/UX Pass 3: plans/010-ui-ux-pass-3.md
       - Plan 011 macOS Coordinator Extraction: plans/011-macos-coordinator-extraction.md
+      - Plan 012 macOS 15 Baseline and Liquid Glass Adoption: plans/012-macos-15-liquid-glass-adoption.md
 
 plugins:
   - search

@@ -312,7 +312,7 @@ struct QueueStripView: View {
             .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
             .opacity(viewModel.isPrinting ? 0.72 : 1.0)
             .allowsHitTesting(!viewModel.isPrinting)
-            .onChange(of: viewModel.selectedQueueIndex) { _ in
+            .onChange(of: viewModel.selectedQueueIndex) { _, _ in
                 if viewModel.queue.indices.contains(viewModel.selectedQueueIndex) {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         proxy.scrollTo(viewModel.queue[viewModel.selectedQueueIndex].id, anchor: .center)

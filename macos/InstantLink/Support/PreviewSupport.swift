@@ -202,8 +202,8 @@ struct ExposureAdjustedImageView<Content: View>: View {
     var body: some View {
         content(Image(nsImage: renderedImage))
             .onAppear(perform: refresh)
-            .onChange(of: ObjectIdentifier(image)) { _ in refresh() }
-            .onChange(of: exposureEV) { _ in refresh() }
+            .onChange(of: ObjectIdentifier(image)) { _, _ in refresh() }
+            .onChange(of: exposureEV) { _, _ in refresh() }
     }
 
     private func refresh() {

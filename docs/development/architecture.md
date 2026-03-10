@@ -69,6 +69,7 @@ The macOS app lives in `macos/InstantLink/` and is split by responsibility.
 - `OverlayModels.swift` defines the overlay data model and typed payloads
 - `InstantLinkFFI.swift` loads `libinstantlink_ffi.dylib` and resolves the FFI symbols at runtime
 - `.lproj/Localizable.strings` bundles provide 12-language localization
+- Deployment baseline is macOS 15 (`arm64-apple-macosx15.0` in `scripts/build-app.sh` and `LSMinimumSystemVersion` `15.0` in `macos/Info.plist.template`)
 
 The app no longer compiles a Swift CLI wrapper or keeps a CLI fallback path for printer operations. Runtime printer/device work goes through `InstantLinkFFI.swift` into the bundled `libinstantlink_ffi.dylib`. The bundled `instantlink-cli` binary remains in the app only for lightweight metadata lookups such as version display.
 

@@ -13,21 +13,23 @@ Set up a proper macOS app bundle build using `swiftc` (no Xcode project), matchi
 Rewrote to match StatusLight's approach:
 
 1. Takes a `<version>` argument (e.g., `0.1.0` or `v0.1.0`)
-2. Expects pre-built release binary at `target/release/instantlink`
+2. Builds the Rust workspace in release mode (supports optional `RUST_TARGET`)
 3. Creates `InstantLink.app/Contents/` structure:
    - `MacOS/instantlink-cli` — CLI binary (renamed to avoid case collision with launcher)
-   - `MacOS/InstantLink` — SwiftUI launcher compiled with `swiftc`
+   - `Frameworks/libinstantlink_ffi.dylib` — bundled FFI runtime
+   - `MacOS/InstantLink` — SwiftUI launcher compiled with `swiftc` from `macos/InstantLink/**/*.swift`
    - `Info.plist` — Generated from template with version substitution
    - `PkgInfo` — Standard `APPL????`
-4. Ad-hoc codesigns the bundle
-5. Optionally creates DMG using `create-dmg`
+4. Compiles the launcher for `arm64-apple-macosx15.0`
+5. Ad-hoc codesigns the bundle
+6. Optionally creates DMG using `create-dmg`
 
 ### Info.plist.template
 
 - Bundle ID: `com.instantlink.app`
-- `LSUIElement: true` (menu bar app, no dock icon by default)
+- `LSUIElement: false` (normal app window + dock presence)
 - `NSBluetoothAlwaysUsageDescription` for BLE permission
-- Minimum macOS 13.0 (Ventura)
+- Minimum macOS 15.0
 - Version substituted at build time
 
 ### CLI Binary Naming

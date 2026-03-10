@@ -118,7 +118,7 @@ if [[ ${#SWIFT_SOURCES[@]} -eq 0 ]]; then
 fi
 
 swiftc \
-  -target arm64-apple-macosx13.0 \
+  -target arm64-apple-macosx15.0 \
   -O \
   -o "$MACOS_DIR/InstantLink" \
   "${SWIFT_SOURCES[@]}" \

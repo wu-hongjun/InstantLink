@@ -727,7 +727,7 @@ struct SelectedOverlayInspectorView: View {
             .onAppear {
                 focusRequestedTextOverlayIfNeeded()
             }
-            .onChange(of: viewModel.textOverlayFocusRequest?.token) { _ in
+            .onChange(of: viewModel.textOverlayFocusRequest?.token) { _, _ in
                 focusRequestedTextOverlayIfNeeded()
             }
         )

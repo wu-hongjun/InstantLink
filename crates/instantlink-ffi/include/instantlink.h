@@ -8,6 +8,22 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef void (*instantlink_connect_stage_cb)(int32_t stage, const char *detail);
+
+typedef enum instantlink_connect_stage_code {
+  INSTANTLINK_CONNECT_STAGE_SCAN_STARTED = 0,
+  INSTANTLINK_CONNECT_STAGE_SCAN_FINISHED = 1,
+  INSTANTLINK_CONNECT_STAGE_DEVICE_MATCHED = 2,
+  INSTANTLINK_CONNECT_STAGE_BLE_CONNECTING = 3,
+  INSTANTLINK_CONNECT_STAGE_SERVICE_DISCOVERY = 4,
+  INSTANTLINK_CONNECT_STAGE_CHARACTERISTIC_LOOKUP = 5,
+  INSTANTLINK_CONNECT_STAGE_NOTIFICATION_SUBSCRIBE = 6,
+  INSTANTLINK_CONNECT_STAGE_MODEL_DETECTING = 7,
+  INSTANTLINK_CONNECT_STAGE_STATUS_FETCHING = 8,
+  INSTANTLINK_CONNECT_STAGE_CONNECTED = 9,
+  INSTANTLINK_CONNECT_STAGE_FAILED = 10,
+} instantlink_connect_stage_code;
+
 /**
  * Initialize the FFI layer (logging + runtime). Safe to call multiple times.
  */
@@ -41,6 +57,23 @@ int32_t instantlink_connect(void);
  * `name` must be a valid, non-null, null-terminated UTF-8 C string.
  */
 int32_t instantlink_connect_named(const char *name, int32_t duration_secs);
+
+/**
+ * Connect to a specific printer by name with configurable scan duration and progress callback.
+ *
+ * Progress callback stage codes:
+ * 0 scan_started, 1 scan_finished, 2 device_matched, 3 ble_connecting,
+ * 4 service_discovery, 5 characteristic_lookup, 6 notification_subscribe,
+ * 7 model_detecting, 8 status_fetching, 9 connected, 10 failed.
+ *
+ * # Safety
+ *
+ * `name` must be a valid, non-null, null-terminated UTF-8 C string.
+ * `detail` passed to callback is only valid during the callback invocation.
+ */
+int32_t instantlink_connect_named_with_progress(const char *name,
+                                                int32_t duration_secs,
+                                                instantlink_connect_stage_cb progress_cb);
 
 /**
  * Disconnect from the current printer.

@@ -44,6 +44,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "스캔 중...";
+"pairing_stage_scanning" = "프린터를 검색 중...";
+"pairing_stage_found" = "%@ 찾음";
+"pairing_stage_opening_bluetooth" = "Bluetooth 연결을 여는 중...";
+"pairing_stage_setting_up_services" = "프린터 서비스를 설정 중...";
+"pairing_stage_reading_info" = "프린터 정보를 읽는 중...";
+"pairing_stage_connected" = "연결됨";
+"pairing_stage_connect_failed" = "연결 실패";
 "Printing..." = "인쇄 중...";
 "Printed!" = "인쇄 완료!";
 "Print failed" = "인쇄 실패";

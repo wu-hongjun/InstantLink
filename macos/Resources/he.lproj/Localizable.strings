@@ -45,6 +45,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "מחפש...";
+"pairing_stage_scanning" = "מחפש מדפסות...";
+"pairing_stage_found" = "נמצאה %@";
+"pairing_stage_opening_bluetooth" = "פותח חיבור Bluetooth...";
+"pairing_stage_setting_up_services" = "מגדיר את שירותי המדפסת...";
+"pairing_stage_reading_info" = "קורא את פרטי המדפסת...";
+"pairing_stage_connected" = "מחובר";
+"pairing_stage_connect_failed" = "החיבור נכשל";
 "Printing..." = "מדפיס...";
 "Printed!" = "הודפס!";
 "Print failed" = "ההדפסה נכשלה";

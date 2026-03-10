@@ -14,6 +14,7 @@ use futures::StreamExt;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
+use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::error::{PrinterError, Result};
 use crate::protocol::{self, PacketAssembler};
 
@@ -136,21 +137,32 @@ pub struct BleTransport {
 impl BleTransport {
     /// Connect to a peripheral and set up characteristics and notifications.
     pub async fn connect(peripheral: Peripheral) -> Result<Self> {
+        Self::connect_with_progress(peripheral, None).await
+    }
+
+    /// Connect to a peripheral and emit setup stages as progress events.
+    pub async fn connect_with_progress(
+        peripheral: Peripheral,
+        progress: Option<&ConnectProgressCallback>,
+    ) -> Result<Self> {
         if peripheral.is_connected().await.unwrap_or(false) {
             Self::disconnect_quietly(&peripheral, None).await;
         }
 
+        emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
         peripheral
             .connect()
             .await
             .map_err(|e| PrinterError::Ble(format!("connect failed: {e}")))?;
 
+        emit_connect_progress(progress, ConnectStage::ServiceDiscovery, None::<String>);
         if let Err(e) = peripheral.discover_services().await {
             Self::disconnect_quietly(&peripheral, None).await;
             return Err(PrinterError::Ble(format!("service discovery failed: {e}")));
         }
 
         let chars = peripheral.characteristics();
+        emit_connect_progress(progress, ConnectStage::CharacteristicLookup, None::<String>);
 
         let write_char = match chars.iter().find(|c| c.uuid == WRITE_CHAR_UUID).cloned() {
             Some(characteristic) => characteristic,
@@ -176,9 +188,16 @@ impl BleTransport {
 
         // Subscribe to notifications BEFORE spawning the listener task
         // so that a failed subscribe() doesn't leak a spawned task.
+        emit_connect_progress(
+            progress,
+            ConnectStage::NotificationSubscribe,
+            None::<String>,
+        );
         if let Err(e) = peripheral.subscribe(&notify_char).await {
             Self::disconnect_quietly(&peripheral, Some(&notify_char)).await;
-            return Err(PrinterError::Ble(format!("notification subscribe failed: {e}")));
+            return Err(PrinterError::Ble(format!(
+                "notification subscribe failed: {e}"
+            )));
         }
 
         let (tx, rx) = mpsc::channel(64);
@@ -186,7 +205,9 @@ impl BleTransport {
             Ok(stream) => stream,
             Err(e) => {
                 Self::disconnect_quietly(&peripheral, Some(&notify_char)).await;
-                return Err(PrinterError::Ble(format!("notification stream failed: {e}")));
+                return Err(PrinterError::Ble(format!(
+                    "notification stream failed: {e}"
+                )));
             }
         };
 
@@ -237,10 +258,7 @@ impl BleTransport {
         }
     }
 
-    async fn disconnect_quietly(
-        peripheral: &Peripheral,
-        notify_char: Option<&Characteristic>
-    ) {
+    async fn disconnect_quietly(peripheral: &Peripheral, notify_char: Option<&Characteristic>) {
         if let Some(notify_char) = notify_char {
             let _ = peripheral.unsubscribe(notify_char).await;
         }

@@ -49,6 +49,8 @@ class ViewModel: ObservableObject {
             pairingPhase: pairingPhase,
             pairingAttempt: pairingAttempt,
             pairingStatus: pairingStatus,
+            connectionStage: pairingConnectionStage,
+            connectionStageDetail: pairingConnectionStageDetail,
             hasSearchedOnce: hasSearchedOnce
         ),
         initialProfiles: printerProfiles,
@@ -288,6 +290,8 @@ class ViewModel: ObservableObject {
     @Published var pairingPhase: PrinterPairingPhase = .idle
     @Published var pairingAttempt = 0
     @Published var pairingStatus: String = L("Scanning...")
+    @Published var pairingConnectionStage: ConnectionStage?
+    @Published var pairingConnectionStageDetail: String?
     private var statusMessageDismissWorkItem: DispatchWorkItem?
     private var pendingCaptureMode: CaptureMode?
 
@@ -357,6 +361,13 @@ class ViewModel: ObservableObject {
         }
 
         return .ready
+    }
+
+    var isConnectingSpecificPrinter: Bool {
+        if let stage = pairingConnectionStage {
+            return stage.indicatesSpecificPrinterConnection
+        }
+        return pairingPhase == .connecting
     }
 
     var currentPrintPhaseText: String {
@@ -440,6 +451,8 @@ class ViewModel: ObservableObject {
         pairingPhase = snapshot.pairingPhase
         pairingAttempt = snapshot.pairingAttempt
         pairingStatus = snapshot.pairingStatus ?? L("Scanning...")
+        pairingConnectionStage = snapshot.connectionStage
+        pairingConnectionStageDetail = snapshot.connectionStageDetail
         hasSearchedOnce = snapshot.hasSearchedOnce
         isApplyingConnectionSnapshot = false
     }

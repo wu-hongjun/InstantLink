@@ -10,6 +10,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 
 use crate::commands::{Command, Response};
+use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::error::{PrinterError, Result};
 use crate::image::{self, FitMode};
 use crate::models::PrinterModel;
@@ -117,9 +118,19 @@ impl BlePrinterDevice {
     /// Auto-detects the printer model by querying IMAGE_SUPPORT_INFO,
     /// using the optional DIS model number hint for Link 3 detection.
     pub async fn new(transport: Box<dyn Transport>, name: String) -> Result<Self> {
+        Self::new_with_progress(transport, name, None).await
+    }
+
+    /// Create a new BLE Instax device and emit model-detection progress.
+    pub async fn new_with_progress(
+        transport: Box<dyn Transport>,
+        name: String,
+        progress: Option<&ConnectProgressCallback>,
+    ) -> Result<Self> {
         let dis_model = transport.model_number_hint().map(|s| s.to_string());
 
         // Query image support info to detect model
+        emit_connect_progress(progress, ConnectStage::ModelDetecting, None::<String>);
         let cmd = Command::ImageSupportInfo;
         let packet = transport
             .send_and_receive(&cmd.encode(), DEFAULT_TIMEOUT)

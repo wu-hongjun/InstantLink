@@ -44,6 +44,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "جارٍ البحث...";
+"pairing_stage_scanning" = "جارٍ البحث عن الطابعات...";
+"pairing_stage_found" = "تم العثور على %@";
+"pairing_stage_opening_bluetooth" = "جارٍ فتح اتصال Bluetooth...";
+"pairing_stage_setting_up_services" = "جارٍ إعداد خدمات الطابعة...";
+"pairing_stage_reading_info" = "جارٍ قراءة معلومات الطابعة...";
+"pairing_stage_connected" = "تم الاتصال";
+"pairing_stage_connect_failed" = "فشل الاتصال";
 "Printing..." = "جارٍ الطباعة...";
 "Printed!" = "تمت الطباعة!";
 "Print failed" = "فشلت الطباعة";

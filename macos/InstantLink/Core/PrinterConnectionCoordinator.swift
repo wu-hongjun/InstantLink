@@ -15,8 +15,14 @@ struct PrinterConnectionFFIStatus: Equatable {
 }
 
 protocol PrinterConnectionFFIBoundary: AnyObject {
+    var supportsConnectionStageCallbacks: Bool { get }
     func scanPrinters(duration: Int) async -> [String]
     func connectNamedPrinter(_ device: String, duration: Int) async -> Bool
+    func connectNamedPrinter(
+        _ device: String,
+        duration: Int,
+        progress: @escaping @Sendable (ConnectionStageUpdate) -> Void
+    ) async -> Bool
     func disconnectPrinter() async
     func isPrinterConnected() -> Bool
     func fetchConnectionStatus() async -> PrinterConnectionFFIStatus?
@@ -30,6 +36,14 @@ extension InstantLinkFFI: PrinterConnectionFFIBoundary {
 
     func connectNamedPrinter(_ device: String, duration: Int) async -> Bool {
         await connect(device: device, duration: duration)
+    }
+
+    func connectNamedPrinter(
+        _ device: String,
+        duration: Int,
+        progress: @escaping @Sendable (ConnectionStageUpdate) -> Void
+    ) async -> Bool {
+        await connect(device: device, duration: duration, progress: progress)
     }
 
     func disconnectPrinter() async {
@@ -75,6 +89,8 @@ struct PrinterConnectionSnapshot: Equatable {
     var pairingPhase: PrinterPairingPhase = .idle
     var pairingAttempt = 0
     var pairingStatus: String?
+    var connectionStage: ConnectionStage?
+    var connectionStageDetail: String?
     var hasSearchedOnce = false
 }
 
@@ -191,7 +207,9 @@ final class PrinterConnectionCoordinator: ObservableObject {
             snapshot.isPairing = true
             snapshot.pairingPhase = .scanning
             snapshot.pairingAttempt = 0
-            snapshot.pairingStatus = L("Scanning...")
+            snapshot.pairingStatus = L("pairing_stage_scanning")
+            snapshot.connectionStage = .scanStarted
+            snapshot.connectionStageDetail = nil
         }
         emitStatus(.dismiss)
 
@@ -204,6 +222,8 @@ final class PrinterConnectionCoordinator: ObservableObject {
                     self.mutateSnapshot { snapshot in
                         snapshot.isPairing = false
                         snapshot.pairingPhase = .idle
+                        snapshot.connectionStage = nil
+                        snapshot.connectionStageDetail = nil
                         snapshot.hasSearchedOnce = true
                     }
                     self.pairingTask = nil
@@ -215,7 +235,9 @@ final class PrinterConnectionCoordinator: ObservableObject {
                 self.mutateSnapshot { snapshot in
                     snapshot.pairingAttempt += 1
                     snapshot.pairingPhase = .scanning
-                    snapshot.pairingStatus = L("Scanning...")
+                    snapshot.pairingStatus = L("pairing_stage_scanning")
+                    snapshot.connectionStage = .scanStarted
+                    snapshot.connectionStageDetail = nil
                 }
 
                 let printers = await self.ffi.scanPrinters(duration: scanDuration)
@@ -233,22 +255,48 @@ final class PrinterConnectionCoordinator: ObservableObject {
                     continue
                 }
 
-                self.mutateSnapshot { snapshot in
-                    snapshot.pairingPhase = .connecting
-                    snapshot.pairingStatus = L("connecting_to", target)
+                if self.ffi.supportsConnectionStageCallbacks {
+                    self.applyConnectionStageUpdate(
+                        ConnectionStageUpdate(stage: .deviceMatched, detail: target),
+                        fallbackTargetName: target
+                    )
+                } else {
+                    self.mutateSnapshot { snapshot in
+                        snapshot.pairingPhase = .connecting
+                        snapshot.pairingStatus = L("connecting_to", target)
+                        snapshot.connectionStage = nil
+                        snapshot.connectionStageDetail = nil
+                    }
                 }
 
                 if self.ffi.isPrinterConnected() {
                     await self.ffi.disconnectPrinter()
                 }
 
-                let connected = await self.ffi.connectNamedPrinter(target, duration: connectDuration)
+                let connected: Bool
+                if self.ffi.supportsConnectionStageCallbacks {
+                    connected = await self.ffi.connectNamedPrinter(target, duration: connectDuration) { [weak self] update in
+                        guard let self else { return }
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.applyConnectionStageUpdate(update, fallbackTargetName: target)
+                        }
+                    }
+                } else {
+                    connected = await self.ffi.connectNamedPrinter(target, duration: connectDuration)
+                }
                 if Task.isCancelled { break }
                 guard connected else {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                     continue
                 }
 
+                self.mutateSnapshot { snapshot in
+                    snapshot.connectionStage = .statusFetching
+                    snapshot.connectionStageDetail = target
+                    snapshot.pairingPhase = .connecting
+                    snapshot.pairingStatus = L("pairing_stage_reading_info")
+                }
                 let model = self.ffi.fetchConnectedPrinterModel() ?? "Unknown"
                 let status = await self.ffi.fetchConnectionStatus()
                 if Task.isCancelled { break }
@@ -257,6 +305,9 @@ final class PrinterConnectionCoordinator: ObservableObject {
                     snapshot.isConnected = true
                     snapshot.isPairing = false
                     snapshot.pairingPhase = .idle
+                    snapshot.pairingStatus = L("pairing_stage_connected")
+                    snapshot.connectionStage = .connected
+                    snapshot.connectionStageDetail = target
                     snapshot.printerName = target
                     snapshot.printerModel = model
                     snapshot.battery = status?.battery ?? 0
@@ -279,6 +330,8 @@ final class PrinterConnectionCoordinator: ObservableObject {
             self.mutateSnapshot { snapshot in
                 snapshot.isPairing = false
                 snapshot.pairingPhase = .idle
+                snapshot.connectionStage = nil
+                snapshot.connectionStageDetail = nil
                 snapshot.hasSearchedOnce = true
             }
             self.pairingTask = nil
@@ -291,6 +344,8 @@ final class PrinterConnectionCoordinator: ObservableObject {
         mutateSnapshot { snapshot in
             snapshot.isPairing = false
             snapshot.pairingPhase = .idle
+            snapshot.connectionStage = nil
+            snapshot.connectionStageDetail = nil
         }
     }
 
@@ -425,6 +480,46 @@ final class PrinterConnectionCoordinator: ObservableObject {
     private func mutateSnapshot(_ mutate: (inout PrinterConnectionSnapshot) -> Void) {
         mutate(&snapshot)
         callbacks.onSnapshotChange(snapshot)
+    }
+
+    private func applyConnectionStageUpdate(_ update: ConnectionStageUpdate, fallbackTargetName: String) {
+        mutateSnapshot { snapshot in
+            snapshot.connectionStage = update.stage
+            snapshot.connectionStageDetail = update.detail
+            snapshot.pairingPhase = pairingPhase(for: update.stage)
+            snapshot.pairingStatus = pairingStatusText(for: update, fallbackTargetName: fallbackTargetName)
+        }
+    }
+
+    private func pairingPhase(for stage: ConnectionStage) -> PrinterPairingPhase {
+        switch stage {
+        case .scanStarted, .scanFinished:
+            return .scanning
+        default:
+            return .connecting
+        }
+    }
+
+    private func pairingStatusText(for update: ConnectionStageUpdate, fallbackTargetName: String) -> String {
+        switch update.stage {
+        case .scanStarted, .scanFinished:
+            return L("pairing_stage_scanning")
+        case .deviceMatched:
+            let device = update.detail ?? fallbackTargetName
+            return L("pairing_stage_found", device)
+        case .bleConnecting:
+            return L("pairing_stage_opening_bluetooth")
+        case .servicesDiscovering, .characteristicsResolving, .notificationsSubscribing:
+            return L("pairing_stage_setting_up_services")
+        case .modelDetecting, .statusFetching:
+            return L("pairing_stage_reading_info")
+        case .connected:
+            return L("pairing_stage_connected")
+        case .failed:
+            return L("pairing_stage_connect_failed")
+        case .unknown(_):
+            return L("connecting_to", fallbackTargetName)
+        }
     }
 
     private func emitStatus(_ event: PrinterConnectionStatusEvent) {

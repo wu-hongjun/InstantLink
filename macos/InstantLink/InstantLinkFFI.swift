@@ -1,5 +1,51 @@
 import Foundation
 
+enum ConnectionStage: Equatable, Sendable {
+    case scanStarted
+    case scanFinished
+    case deviceMatched
+    case bleConnecting
+    case servicesDiscovering
+    case characteristicsResolving
+    case notificationsSubscribing
+    case modelDetecting
+    case statusFetching
+    case connected
+    case failed
+    case unknown(Int32)
+
+    init(rawCode: Int32) {
+        switch rawCode {
+        case 0: self = .scanStarted
+        case 1: self = .scanFinished
+        case 2: self = .deviceMatched
+        case 3: self = .bleConnecting
+        case 4: self = .servicesDiscovering
+        case 5: self = .characteristicsResolving
+        case 6: self = .notificationsSubscribing
+        case 7: self = .modelDetecting
+        case 8: self = .statusFetching
+        case 9: self = .connected
+        case 10: self = .failed
+        default: self = .unknown(rawCode)
+        }
+    }
+
+    var indicatesSpecificPrinterConnection: Bool {
+        switch self {
+        case .scanStarted, .scanFinished:
+            return false
+        default:
+            return true
+        }
+    }
+}
+
+struct ConnectionStageUpdate: Equatable, Sendable {
+    let stage: ConnectionStage
+    let detail: String?
+}
+
 /// Direct FFI wrapper for `libinstantlink_ffi.dylib`.
 ///
 /// Loads the bundled dylib via `dlopen` and exposes each C function as a
@@ -20,6 +66,7 @@ class InstantLinkFFI {
     private let _init: @convention(c) () -> Void
     private let _connect: @convention(c) () -> Int32
     private let _connect_named: @convention(c) (UnsafePointer<CChar>, Int32) -> Int32
+    private let _connect_named_with_progress: (@convention(c) (UnsafePointer<CChar>, Int32, (@convention(c) (Int32, UnsafePointer<CChar>?) -> Void)?) -> Int32)?
     private let _disconnect: @convention(c) () -> Int32
     private let _is_connected: @convention(c) () -> Int32
 
@@ -61,6 +108,8 @@ class InstantLinkFFI {
         }
         self.handle = h
 
+        let pConnectNamedWithProgress = dlsym(h, "instantlink_connect_named_with_progress")
+
         // Resolve all symbols
         guard let pInit = dlsym(h, "instantlink_init"),
               let pConnect = dlsym(h, "instantlink_connect"),
@@ -90,6 +139,14 @@ class InstantLinkFFI {
         _init = unsafeBitCast(pInit, to: (@convention(c) () -> Void).self)
         _connect = unsafeBitCast(pConnect, to: (@convention(c) () -> Int32).self)
         _connect_named = unsafeBitCast(pConnectNamed, to: (@convention(c) (UnsafePointer<CChar>, Int32) -> Int32).self)
+        if let pConnectNamedWithProgress {
+            _connect_named_with_progress = unsafeBitCast(
+                pConnectNamedWithProgress,
+                to: (@convention(c) (UnsafePointer<CChar>, Int32, (@convention(c) (Int32, UnsafePointer<CChar>?) -> Void)?) -> Int32).self
+            )
+        } else {
+            _connect_named_with_progress = nil
+        }
         _disconnect = unsafeBitCast(pDisconnect, to: (@convention(c) () -> Int32).self)
         _is_connected = unsafeBitCast(pIsConnected, to: (@convention(c) () -> Int32).self)
         _battery = unsafeBitCast(pBattery, to: (@convention(c) () -> Int32).self)
@@ -122,6 +179,10 @@ class InstantLinkFFI {
         await blocking { self._connect() == 0 }
     }
 
+    var supportsConnectionStageCallbacks: Bool {
+        _connect_named_with_progress != nil
+    }
+
     /// Connect to a named printer with configurable scan duration.
     func connect(device: String, duration: Int = 5) async -> Bool {
         await blocking {
@@ -129,6 +190,40 @@ class InstantLinkFFI {
                 self._connect_named(cName, Int32(duration)) == 0
             }
         }
+    }
+
+    /// Connect to a named printer and receive connection-stage callbacks when supported by FFI.
+    ///
+    /// Falls back to the simple connect API if the progress symbol is unavailable.
+    func connect(
+        device: String,
+        duration: Int = 5,
+        progress: @escaping @Sendable (ConnectionStageUpdate) -> Void
+    ) async -> Bool {
+        guard let connectWithProgress = _connect_named_with_progress else {
+            return await connect(device: device, duration: duration)
+        }
+
+        let box = ConnectionStageBox(callback: progress)
+        let boxPtr = Unmanaged.passRetained(box)
+        ConnectionStageBox.current = boxPtr
+
+        let callback: @convention(c) (Int32, UnsafePointer<CChar>?) -> Void = { stageCode, detailPtr in
+            let detail = detailPtr.map { String(cString: $0) }?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedDetail = (detail?.isEmpty == true) ? nil : detail
+            let update = ConnectionStageUpdate(stage: ConnectionStage(rawCode: stageCode), detail: normalizedDetail)
+            ConnectionStageBox.current?.takeUnretainedValue().callback(update)
+        }
+
+        let isConnected = await blocking {
+            device.withCString { cName in
+                connectWithProgress(cName, Int32(duration), callback) == 0
+            }
+        }
+
+        boxPtr.release()
+        ConnectionStageBox.current = nil
+        return isConnected
     }
 
     /// Disconnect from the current printer.
@@ -347,6 +442,30 @@ private final class ProgressBox: @unchecked Sendable {
 
     let callback: @Sendable (UInt32, UInt32) -> Void
     init(callback: @escaping @Sendable (UInt32, UInt32) -> Void) {
+        self.callback = callback
+    }
+}
+
+private final class ConnectionStageBox: @unchecked Sendable {
+    private static let lock = NSLock()
+    private static var _current: Unmanaged<ConnectionStageBox>?
+
+    static var current: Unmanaged<ConnectionStageBox>? {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _current
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            _current = newValue
+        }
+    }
+
+    let callback: @Sendable (ConnectionStageUpdate) -> Void
+
+    init(callback: @escaping @Sendable (ConnectionStageUpdate) -> Void) {
         self.callback = callback
     }
 }

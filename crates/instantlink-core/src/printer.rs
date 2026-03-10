@@ -3,6 +3,7 @@
 use std::path::Path;
 use std::time::Duration;
 
+use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::device::{BlePrinterDevice, PrinterDevice, PrinterStatus};
 use crate::error::{PrinterError, Result};
 use crate::image::FitMode;
@@ -41,36 +42,83 @@ pub async fn connect(
     device_name: &str,
     duration: Option<Duration>,
 ) -> Result<Box<dyn PrinterDevice>> {
-    let adapter = transport::get_adapter().await?;
-    let results = transport::scan(&adapter, duration.unwrap_or(DEFAULT_SCAN_DURATION)).await?;
+    connect_internal(device_name, duration, None, false).await
+}
 
-    let mut exact_matches = Vec::new();
-    let mut partial_matches = Vec::new();
+/// Connect to a specific printer by name and emit progress stages.
+pub async fn connect_with_progress(
+    device_name: &str,
+    duration: Option<Duration>,
+    progress: Option<&ConnectProgressCallback>,
+) -> Result<Box<dyn PrinterDevice>> {
+    connect_internal(device_name, duration, progress, true).await
+}
 
-    for result in results {
-        if result.1 == device_name {
-            exact_matches.push(result);
-        } else if result.1.contains(device_name) {
-            partial_matches.push(result);
+async fn connect_internal(
+    device_name: &str,
+    duration: Option<Duration>,
+    progress: Option<&ConnectProgressCallback>,
+    fetch_initial_status: bool,
+) -> Result<Box<dyn PrinterDevice>> {
+    let result: Result<Box<dyn PrinterDevice>> = async {
+        emit_connect_progress(progress, ConnectStage::ScanStarted, None::<String>);
+        let adapter = transport::get_adapter().await?;
+        let results = transport::scan(&adapter, duration.unwrap_or(DEFAULT_SCAN_DURATION)).await?;
+        emit_connect_progress(progress, ConnectStage::ScanFinished, None::<String>);
+
+        let mut exact_matches = Vec::new();
+        let mut partial_matches = Vec::new();
+
+        for result in results {
+            if result.1 == device_name {
+                exact_matches.push(result);
+            } else if result.1.contains(device_name) {
+                partial_matches.push(result);
+            }
         }
+
+        let matches = if exact_matches.is_empty() {
+            partial_matches
+        } else {
+            exact_matches
+        };
+
+        let match_count = matches.len();
+        let (peripheral, name) = match match_count {
+            0 => return Err(PrinterError::PrinterNotFound),
+            1 => matches.into_iter().next().expect("one match must exist"),
+            count => return Err(PrinterError::MultiplePrinters { count }),
+        };
+
+        emit_connect_progress(progress, ConnectStage::DeviceMatched, Some(name.clone()));
+
+        let transport = BleTransport::connect_with_progress(peripheral, progress).await?;
+        let device =
+            BlePrinterDevice::new_with_progress(Box::new(transport), name, progress).await?;
+
+        if fetch_initial_status {
+            emit_connect_progress(progress, ConnectStage::StatusFetching, None::<String>);
+            let _ = device.status().await?;
+        }
+        emit_connect_progress(
+            progress,
+            ConnectStage::Connected,
+            Some(device.name().to_owned()),
+        );
+
+        Ok::<Box<dyn PrinterDevice>, PrinterError>(Box::new(device))
+    }
+    .await;
+
+    if let Err(err) = &result {
+        emit_connect_progress(
+            progress,
+            ConnectStage::Failed,
+            Some::<String>(err.to_string()),
+        );
     }
 
-    let matches = if exact_matches.is_empty() {
-        partial_matches
-    } else {
-        exact_matches
-    };
-
-    let match_count = matches.len();
-    let (peripheral, name) = match match_count {
-        0 => return Err(PrinterError::PrinterNotFound),
-        1 => matches.into_iter().next().expect("one match must exist"),
-        count => return Err(PrinterError::MultiplePrinters { count }),
-    };
-
-    let transport = BleTransport::connect(peripheral).await?;
-    let device = BlePrinterDevice::new(Box::new(transport), name).await?;
-    Ok(Box::new(device))
+    result
 }
 
 /// Connect to the first available Instax printer.

@@ -44,6 +44,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "スキャン中...";
+"pairing_stage_scanning" = "プリンターを検索中...";
+"pairing_stage_found" = "%@ が見つかりました";
+"pairing_stage_opening_bluetooth" = "Bluetooth接続を開始中...";
+"pairing_stage_setting_up_services" = "プリンターサービスを設定中...";
+"pairing_stage_reading_info" = "プリンター情報を読み込み中...";
+"pairing_stage_connected" = "接続済み";
+"pairing_stage_connect_failed" = "接続に失敗しました";
 "Printing..." = "印刷中...";
 "Printed!" = "印刷完了！";
 "Print failed" = "印刷失敗";

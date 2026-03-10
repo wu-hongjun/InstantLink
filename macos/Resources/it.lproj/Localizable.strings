@@ -45,6 +45,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "Ricerca...";
+"pairing_stage_scanning" = "Ricerca delle stampanti...";
+"pairing_stage_found" = "Trovata %@";
+"pairing_stage_opening_bluetooth" = "Apertura della connessione Bluetooth...";
+"pairing_stage_setting_up_services" = "Configurazione dei servizi della stampante...";
+"pairing_stage_reading_info" = "Lettura delle informazioni della stampante...";
+"pairing_stage_connected" = "Connesso";
+"pairing_stage_connect_failed" = "Connessione non riuscita";
 "Printing..." = "Stampa in corso...";
 "Printed!" = "Stampato!";
 "Print failed" = "Stampa non riuscita";

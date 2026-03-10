@@ -163,7 +163,7 @@ struct MainView: View {
                             Text(viewModel.pairingStatus)
                                 .font(.callout)
                                 .foregroundColor(.secondary)
-                            if viewModel.pairingPhase != .connecting {
+                            if !viewModel.isConnectingSpecificPrinter {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Label(L("Make sure your printer is turned on"), systemImage: "1.circle")
                                     Label(L("Press the button to enable Bluetooth"), systemImage: "2.circle")

@@ -44,6 +44,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "正在扫描...";
+"pairing_stage_scanning" = "正在搜索打印机...";
+"pairing_stage_found" = "已找到 %@";
+"pairing_stage_opening_bluetooth" = "正在打开蓝牙连接...";
+"pairing_stage_setting_up_services" = "正在设置打印机服务...";
+"pairing_stage_reading_info" = "正在读取打印机信息...";
+"pairing_stage_connected" = "已连接";
+"pairing_stage_connect_failed" = "连接失败";
 "Printing..." = "正在打印...";
 "Printed!" = "打印完成！";
 "Print failed" = "打印失败";

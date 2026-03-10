@@ -57,6 +57,7 @@ nav:
       - Plan 010 UI/UX Pass 3: plans/010-ui-ux-pass-3.md
       - Plan 011 macOS Coordinator Extraction: plans/011-macos-coordinator-extraction.md
       - Plan 012 macOS 15 Baseline and Liquid Glass Adoption: plans/012-macos-15-liquid-glass-adoption.md
+      - Plan 013 FFI Connection Stage Callbacks: plans/013-ffi-connection-stage-callbacks.md
 
 plugins:
   - search

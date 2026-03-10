@@ -44,6 +44,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "正在掃描...";
+"pairing_stage_scanning" = "正在搜尋印表機...";
+"pairing_stage_found" = "已找到 %@";
+"pairing_stage_opening_bluetooth" = "正在開啟藍牙連線...";
+"pairing_stage_setting_up_services" = "正在設定印表機服務...";
+"pairing_stage_reading_info" = "正在讀取印表機資訊...";
+"pairing_stage_connected" = "已連線";
+"pairing_stage_connect_failed" = "連線失敗";
 "Printing..." = "正在列印...";
 "Printed!" = "列印完成！";
 "Print failed" = "列印失敗";

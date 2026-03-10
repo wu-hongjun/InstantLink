@@ -44,6 +44,13 @@
 
 /* Dynamic Status Messages */
 "Scanning..." = "Scanning...";
+"pairing_stage_scanning" = "Scanning for printers...";
+"pairing_stage_found" = "Found %@";
+"pairing_stage_opening_bluetooth" = "Opening Bluetooth connection...";
+"pairing_stage_setting_up_services" = "Setting up printer services...";
+"pairing_stage_reading_info" = "Reading printer information...";
+"pairing_stage_connected" = "Connected";
+"pairing_stage_connect_failed" = "Connection failed";
 "Printing..." = "Printing...";
 "Printed!" = "Printed!";
 "Print failed" = "Print failed";

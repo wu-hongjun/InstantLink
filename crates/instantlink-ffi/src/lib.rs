@@ -16,11 +16,12 @@
 
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::sync::{Mutex, Once, OnceLock};
 use std::time::Duration;
 
+use instantlink_core::connect_progress::{ConnectProgressEvent, ConnectStage};
 use instantlink_core::error::PrinterError;
 
 static INIT: Once = Once::new();
@@ -56,6 +57,24 @@ fn error_code(e: &PrinterError) -> i32 {
         PrinterError::Protocol(_) => -3,
         PrinterError::Io(_) => -3,
     }
+}
+
+fn connect_stage_code(stage: ConnectStage) -> i32 {
+    stage as i32
+}
+
+fn emit_connect_progress(
+    progress_cb: Option<extern "C" fn(i32, *const c_char)>,
+    event: ConnectProgressEvent,
+) {
+    let Some(progress_cb) = progress_cb else {
+        return;
+    };
+    let detail = event.detail.and_then(|detail| CString::new(detail).ok());
+    let detail_ptr = detail
+        .as_ref()
+        .map_or(std::ptr::null(), |detail| detail.as_ptr());
+    progress_cb(connect_stage_code(event.stage), detail_ptr);
 }
 
 /// Helper: read a C string pointer into a `&str`, returning `-5` on error.
@@ -202,6 +221,74 @@ pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration
         }
 
         match rt.block_on(instantlink_core::printer::connect(s, dur)) {
+            Ok(device) => {
+                let lock = get_device_lock();
+                if let Ok(mut guard) = lock.lock() {
+                    *guard = Some(device);
+                    0
+                } else {
+                    -3
+                }
+            }
+            Err(e) => error_code(&e),
+        }
+    }))
+    .unwrap_or(-3)
+}
+
+/// Connect to a specific printer by name with configurable scan duration and progress callback.
+///
+/// Progress callback stage codes:
+/// 0 scan_started, 1 scan_finished, 2 device_matched, 3 ble_connecting,
+/// 4 service_discovery, 5 characteristic_lookup, 6 notification_subscribe,
+/// 7 model_detecting, 8 status_fetching, 9 connected, 10 failed.
+///
+/// # Safety
+///
+/// `name` must be a valid, non-null, null-terminated UTF-8 C string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_connect_named_with_progress(
+    name: *const c_char,
+    duration_secs: i32,
+    progress_cb: Option<extern "C" fn(i32, *const c_char)>,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let s = match cstr_to_str(name) {
+            Ok(s) => s,
+            Err(code) => return code,
+        };
+        let dur = if duration_secs > 0 {
+            Some(Duration::from_secs(duration_secs as u64))
+        } else {
+            None
+        };
+        let rt = get_runtime();
+        let old_device = {
+            let lock = get_device_lock();
+            if let Ok(mut guard) = lock.lock() {
+                guard.take()
+            } else {
+                return -3;
+            }
+        };
+        if let Some(old_device) = old_device {
+            let _ = rt.block_on(old_device.disconnect());
+        }
+
+        let progress = progress_cb.map(|progress_cb| {
+            Box::new(move |event: ConnectProgressEvent| {
+                emit_connect_progress(Some(progress_cb), event)
+            }) as Box<dyn Fn(ConnectProgressEvent) + Send + Sync>
+        });
+        let progress_ref = progress
+            .as_ref()
+            .map(|callback| callback.as_ref() as &(dyn Fn(ConnectProgressEvent) + Send + Sync));
+
+        match rt.block_on(instantlink_core::printer::connect_with_progress(
+            s,
+            dur,
+            progress_ref,
+        )) {
             Ok(device) => {
                 let lock = get_device_lock();
                 if let Ok(mut guard) = lock.lock() {

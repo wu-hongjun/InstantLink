@@ -392,10 +392,8 @@ final class PrinterConnectionCoordinator: ObservableObject {
         let savedIdentifiers = Set(profiles.keys)
 
         mutateSnapshot { snapshot in
+            snapshot.availablePrinters = printers
             snapshot.nearbyPrinters = printers.filter { savedIdentifiers.contains($0) == false }
-            for printer in printers where snapshot.availablePrinters.contains(printer) == false {
-                snapshot.availablePrinters.append(printer)
-            }
             snapshot.isScanning = false
         }
     }
@@ -434,7 +432,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
     }
 
     func switchPrinter(to name: String, connectDuration: Int = 3) async {
-        guard name != snapshot.selectedPrinter else { return }
+        guard name != snapshot.selectedPrinter || snapshot.isConnected == false else { return }
 
         mutateSnapshot { snapshot in
             snapshot.selectedPrinter = name

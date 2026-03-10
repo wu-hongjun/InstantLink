@@ -504,11 +504,21 @@ class ViewModel: ObservableObject {
         }
     }
 
+    func reconnectSelectedPrinterOrScan() {
+        if let reconnectTarget = selectedPrinter ?? printerName ?? printerProfiles.keys.sorted().first {
+            selectedPrinter = reconnectTarget
+            startPairing()
+            return
+        }
+
+        showPrinterPicker = true
+        scanNearby()
+    }
+
     func handlePrinterIdentityAction() {
         switch printerStatusIndicatorState {
         case .disconnected, .connecting, .refreshing:
-            showPrinterPicker = true
-            scanNearby()
+            reconnectSelectedPrinterOrScan()
         case .ready, .busy, .warning, .error:
             guard let bleId = printerName, let profile = printerProfiles[bleId] else {
                 showPrinterPicker = true

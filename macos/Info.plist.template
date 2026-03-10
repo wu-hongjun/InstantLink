@@ -42,6 +42,9 @@
   <key>NSCameraUsageDescription</key>
   <string>InstantLink needs camera access to take photos for printing.</string>
 
+  <key>NSCameraUseContinuityCameraDeviceType</key>
+  <true/>
+
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
 

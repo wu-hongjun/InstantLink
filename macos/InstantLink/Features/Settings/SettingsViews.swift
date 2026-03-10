@@ -32,6 +32,7 @@ struct PrinterPickerSheet: View {
 
                     ForEach(sortedProfiles, id: \.bleIdentifier) { profile in
                         let isCurrentConnected = profile.bleIdentifier == viewModel.printerName && viewModel.isConnected
+                        let isDetectedNearby = viewModel.availablePrinters.contains(profile.bleIdentifier)
                         Button {
                             if !isCurrentConnected {
                                 viewModel.switchPrinter(to: profile.bleIdentifier)
@@ -40,7 +41,7 @@ struct PrinterPickerSheet: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Circle()
-                                    .fill(isCurrentConnected ? Color.green : Color.gray.opacity(0.4))
+                                    .fill(isCurrentConnected ? Color.green : (isDetectedNearby ? Color.accentColor : Color.gray.opacity(0.4)))
                                     .frame(width: 8, height: 8)
 
                                 VStack(alignment: .leading, spacing: 2) {
@@ -58,6 +59,11 @@ struct PrinterPickerSheet: View {
                                                 .padding(.horizontal, 5)
                                                 .padding(.vertical, 1)
                                                 .background(Capsule().fill(.secondary))
+                                        }
+                                        if isDetectedNearby && !isCurrentConnected {
+                                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                                .font(.system(size: 10, weight: .semibold))
+                                                .foregroundColor(.accentColor)
                                         }
                                     }
                                 }

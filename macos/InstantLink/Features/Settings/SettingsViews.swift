@@ -189,6 +189,8 @@ struct SettingsView: View {
                     LanguageAppearanceSection()
                     Divider().padding(.vertical, 12)
                     PrinterManagementSection()
+                    Divider().padding(.vertical, 12)
+                    ExperimentalSettingsSection()
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
@@ -506,6 +508,39 @@ struct PrinterManagementSection: View {
             }
         } message: {
             Text(L("delete_printer_bluetooth_message"))
+        }
+    }
+}
+
+struct ExperimentalSettingsSection: View {
+    @EnvironmentObject var viewModel: ViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("Experimental Settings"))
+                .font(.headline)
+
+            Button {
+                viewModel.runLedTest()
+            } label: {
+                HStack(spacing: 6) {
+                    if viewModel.isRunningLedTest {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(L("Running LED Test..."))
+                    } else {
+                        Image(systemName: "lightbulb.max")
+                        Text(L("Run LED Test"))
+                    }
+                }
+            }
+            .disabled(!viewModel.isConnected || viewModel.isPrinting || viewModel.isRunningLedTest)
+
+            if !viewModel.isConnected {
+                Text(L("Connect to your printer"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }

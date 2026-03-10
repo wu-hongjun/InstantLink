@@ -136,6 +136,7 @@
 
 /* Settings Window */
 "Settings" = "設定";
+"Experimental Settings" = "實驗性設定";
 "Language" = "語言";
 "Language & Appearance" = "語言與外觀";
 "Appearance" = "外觀";
@@ -155,6 +156,10 @@
 "Open Bluetooth Settings" = "打開藍牙設定";
 "GitHub" = "GitHub";
 "Report an Issue" = "回報問題";
+"Run LED Test" = "執行 LED 測試";
+"Running LED Test..." = "正在執行 LED 測試...";
+"LED test failed" = "LED 測試失敗";
+"LED test finished" = "LED 測試完成";
 
 /* Updates */
 "Check for Updates" = "檢查更新";

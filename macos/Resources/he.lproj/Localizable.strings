@@ -137,6 +137,7 @@
 
 /* Settings Window */
 "Settings" = "הגדרות";
+"Experimental Settings" = "הגדרות ניסיוניות";
 "Language" = "שפה";
 "Language & Appearance" = "שפה ומראה";
 "Appearance" = "מראה";
@@ -156,6 +157,10 @@
 "Open Bluetooth Settings" = "פתח הגדרות Bluetooth";
 "GitHub" = "GitHub";
 "Report an Issue" = "דווח על בעיה";
+"Run LED Test" = "הפעל בדיקת LED";
+"Running LED Test..." = "בדיקת LED פועלת...";
+"LED test failed" = "בדיקת LED נכשלה";
+"LED test finished" = "בדיקת LED הושלמה";
 
 /* Updates */
 "Check for Updates" = "בדוק עדכונים";

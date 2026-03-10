@@ -285,6 +285,7 @@ class ViewModel: ObservableObject {
     @Published var isUpdating = false
     @Published var updateProgress: Double = 0
     @Published var updateError: String?
+    @Published var isRunningLedTest = false
 
     // Pairing mode
     @Published var isPairing = false
@@ -337,6 +338,36 @@ class ViewModel: ObservableObject {
             await self.printerLedCoordinator.turnOff(using: self.ffi)
         }
         connectionCoordinator.stopPairingLoop()
+    }
+
+    func runLedTest() {
+        guard isConnected, !isPrinting, !isRunningLedTest else { return }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.isRunningLedTest = true
+            defer { self.isRunningLedTest = false }
+
+            let steps: [(r: UInt8, g: UInt8, b: UInt8, pattern: UInt8, delay: UInt64)] = [
+                (31, 111, 235, 2, 900_000_000),
+                (248, 120, 67, 0, 900_000_000),
+                (38, 222, 109, 1, 1_000_000_000),
+                (230, 57, 70, 1, 1_000_000_000),
+            ]
+
+            for step in steps {
+                let didSet = await self.ffi.setLed(r: step.r, g: step.g, b: step.b, pattern: step.pattern)
+                guard didSet else {
+                    self.showError(L("LED test failed"))
+                    _ = await self.ffi.ledOff()
+                    return
+                }
+                try? await Task.sleep(nanoseconds: step.delay)
+            }
+
+            _ = await self.ffi.ledOff()
+            self.showStatus(L("LED test finished"), tone: .success)
+        }
     }
 
     // MARK: - Printer Profiles

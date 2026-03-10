@@ -136,6 +136,7 @@
 
 /* Settings Window */
 "Settings" = "Einstellungen";
+"Experimental Settings" = "Experimentelle Einstellungen";
 "Language" = "Sprache";
 "Language & Appearance" = "Sprache & Erscheinungsbild";
 "Appearance" = "Erscheinungsbild";
@@ -155,6 +156,10 @@
 "Open Bluetooth Settings" = "Bluetooth-Einstellungen öffnen";
 "GitHub" = "GitHub";
 "Report an Issue" = "Problem melden";
+"Run LED Test" = "LED-Test ausführen";
+"Running LED Test..." = "LED-Test läuft...";
+"LED test failed" = "LED-Test fehlgeschlagen";
+"LED test finished" = "LED-Test abgeschlossen";
 
 /* Updates */
 "Check for Updates" = "Nach Updates suchen";

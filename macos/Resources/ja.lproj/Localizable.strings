@@ -136,6 +136,7 @@
 
 /* Settings Window */
 "Settings" = "設定";
+"Experimental Settings" = "実験的な設定";
 "Language" = "言語";
 "Language & Appearance" = "言語と外観";
 "Appearance" = "外観";
@@ -155,6 +156,10 @@
 "Open Bluetooth Settings" = "Bluetooth設定を開く";
 "GitHub" = "GitHub";
 "Report an Issue" = "問題を報告";
+"Run LED Test" = "LED テストを実行";
+"Running LED Test..." = "LED テスト実行中...";
+"LED test failed" = "LED テスト失敗";
+"LED test finished" = "LED テスト完了";
 
 /* Updates */
 "Check for Updates" = "アップデートを確認";

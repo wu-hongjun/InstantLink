@@ -1160,7 +1160,7 @@ class ViewModel: ObservableObject {
         case .image:
             return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.24, normalizedWidth: 0.24, normalizedHeight: 0.24)
         case .timestamp:
-            return OverlayPlacement(normalizedCenterX: 0.78, normalizedCenterY: 0.9, normalizedWidth: 0.34, normalizedHeight: 0.1)
+            return OverlayPlacement(normalizedCenterX: 0.82, normalizedCenterY: 0.93, normalizedWidth: 0.34, normalizedHeight: 0.1)
         case .location:
             return OverlayPlacement(normalizedCenterX: 0.24, normalizedCenterY: 0.9, normalizedWidth: 0.34, normalizedHeight: 0.12)
         case .text:

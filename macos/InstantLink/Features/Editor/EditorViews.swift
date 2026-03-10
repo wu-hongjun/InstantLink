@@ -602,15 +602,15 @@ struct SelectedOverlayInspectorView: View {
                 .controlSize(.small)
 
                 InspectorSectionCard(title: L("Position")) {
-                    labeledSlider("X", value: positionXBinding, range: 0.05...0.95)
-                    labeledSlider("Y", value: positionYBinding, range: 0.05...0.95)
-                    labeledSlider(L("Width"), value: widthBinding, range: 0.08...0.95)
-                    labeledSlider(L("Height"), value: heightBinding, range: 0.06...0.95)
+                    labeledSlider("X", value: positionXBinding, range: 0.05...0.95, decimals: 1, displayMultiplier: 100, suffix: "%")
+                    labeledSlider("Y", value: positionYBinding, range: 0.05...0.95, decimals: 1, displayMultiplier: 100, suffix: "%")
+                    labeledSlider(L("Width"), value: widthBinding, range: 0.08...0.95, decimals: 1, displayMultiplier: 100, suffix: "%")
+                    labeledSlider(L("Height"), value: heightBinding, range: 0.06...0.95, decimals: 1, displayMultiplier: 100, suffix: "%")
                 }
                 .disabled(isLocked)
 
                 InspectorSectionCard(title: L("Appearance")) {
-                    labeledSlider(L("Opacity"), value: opacityBinding, range: 0.1...1.0)
+                    labeledSlider(L("Opacity"), value: opacityBinding, range: 0.1...1.0, decimals: 1, displayMultiplier: 100, suffix: "%")
                 }
                 .disabled(isLocked)
 
@@ -646,13 +646,54 @@ struct SelectedOverlayInspectorView: View {
         )
     }
 
-    private func labeledSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+    private func labeledSlider(
+        _ title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        decimals: Int = 2,
+        displayMultiplier: Double = 1,
+        suffix: String = ""
+    ) -> some View {
+        let displayBinding = Binding<Double>(
+            get: { value.wrappedValue * displayMultiplier },
+            set: { newValue in
+                let normalized = newValue / max(displayMultiplier, 0.0001)
+                value.wrappedValue = min(max(normalized, range.lowerBound), range.upperBound)
+            }
+        )
+
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                HStack(spacing: 4) {
+                    TextField("", value: displayBinding, formatter: sliderFormatter(decimals: decimals))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: decimals == 0 ? 56 : 68)
+                        .multilineTextAlignment(.trailing)
+                        .controlSize(.small)
+                        .font(.caption.monospacedDigit())
+                    if !suffix.isEmpty {
+                        Text(suffix)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
             Slider(value: value, in: range)
         }
+    }
+
+    private func sliderFormatter(decimals: Int) -> NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = decimals
+        formatter.maximumFractionDigits = decimals
+        formatter.minimumIntegerDigits = 1
+        formatter.generatesDecimalNumbers = true
+        return formatter
     }
 
     private var opacityBinding: Binding<Double> {
@@ -727,7 +768,7 @@ struct SelectedOverlayInspectorView: View {
                 set: { newValue in
                     viewModel.updateSelectedTextOverlay { $0.fontScale = newValue }
                 }
-            ), range: 0.05...0.24)
+            ), range: 0.05...0.24, decimals: 1, displayMultiplier: 100, suffix: "%")
 
             Picker(L("Alignment"), selection: Binding(
                 get: {
@@ -988,7 +1029,7 @@ struct SelectedOverlayInspectorView: View {
                 set: { newValue in
                     viewModel.updateSelectedImageOverlay { $0.cornerRadius = newValue }
                 }
-            ), range: 0...32)
+            ), range: 0...32, decimals: 0, suffix: "pt")
         }
     }
 
@@ -1148,7 +1189,7 @@ struct SelectedOverlayInspectorView: View {
             set: { newValue in
                 viewModel.updateSelectedLocationOverlay { $0.precision = Int(newValue.rounded()) }
             }
-        ), range: 0...6)
+        ), range: 0...6, decimals: 0)
     }
 }
 

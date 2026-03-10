@@ -217,7 +217,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
         pairingTask = Task { [weak self] in
             guard let self else { return }
 
-            if disconnectCurrentPrinter, self.ffi.isPrinterConnected() {
+            if disconnectCurrentPrinter || self.ffi.isPrinterConnected() {
                 await self.ffi.disconnectPrinter()
                 if Task.isCancelled {
                     self.mutateSnapshot { snapshot in

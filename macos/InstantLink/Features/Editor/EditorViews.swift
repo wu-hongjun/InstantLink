@@ -72,7 +72,11 @@ struct EditorPreviewView: View {
 
     var body: some View {
         ZStack {
-            AppPanelBackground(chromeColor: panelChromeColor, dashed: viewModel.selectedImage == nil)
+            AppPanelBackground(
+                chromeColor: panelChromeColor,
+                dashed: viewModel.selectedImage == nil,
+                showsChrome: !showsSimulatedFilmFrame
+            )
 
             if let image = viewModel.selectedImage {
                 FilmFrameView(filmModel: viewModel.printerModelTag, isRotated: viewModel.filmOrientation == "rotated") {

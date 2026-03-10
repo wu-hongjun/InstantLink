@@ -16,7 +16,10 @@ struct CameraView: View {
 
     var body: some View {
         ZStack {
-            AppPanelBackground(chromeColor: panelChromeColor)
+            AppPanelBackground(
+                chromeColor: panelChromeColor,
+                showsChrome: !showsSimulatedFilmFrame
+            )
 
             if viewModel.cameraState == .viewfinder {
                 if let session = viewModel.captureSession {

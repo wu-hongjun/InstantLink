@@ -151,22 +151,29 @@ struct HeaderDivider: View {
 struct AppPanelBackground: View {
     let chromeColor: Color
     var dashed: Bool = false
+    var showsChrome: Bool = true
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(.regularMaterial)
-            .overlay(
+        Group {
+            if showsChrome {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
-                        style: StrokeStyle(lineWidth: 1.5, dash: dashed ? [6] : [])
+                    .fill(.regularMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
                     )
-                    .foregroundColor(chromeColor)
-            )
-            .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(
+                                style: StrokeStyle(lineWidth: 1.5, dash: dashed ? [6] : [])
+                            )
+                            .foregroundColor(chromeColor)
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+            } else {
+                Color.clear
+            }
+        }
     }
 }
 

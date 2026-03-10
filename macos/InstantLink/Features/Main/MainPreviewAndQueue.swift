@@ -22,7 +22,11 @@ struct MainPreviewView: View {
 
     var body: some View {
         ZStack {
-            AppPanelBackground(chromeColor: panelChromeColor, dashed: viewModel.selectedImage == nil)
+            AppPanelBackground(
+                chromeColor: panelChromeColor,
+                dashed: viewModel.selectedImage == nil,
+                showsChrome: !showsSimulatedFilmFrame
+            )
 
             if viewModel.isPrinting {
                 VStack(spacing: 8) {

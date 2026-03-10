@@ -535,8 +535,8 @@ struct QuickPrintToolbarView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: true)
-            QuickExposureControlsView(showsChrome: true)
+            QuickZoomControlsView(resetTitle: L("Reset Zoom"), showsChrome: false)
+            QuickExposureControlsView(showsChrome: false)
 
             quickToolbarButton(
                 title: L("Rotate"),
@@ -601,49 +601,25 @@ struct QuickPrintToolbarView: View {
         isActive: Bool = false,
         prominent: Bool = false
     ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.callout.weight(.medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(buttonBackground(isActive: isActive, prominent: prominent))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(buttonStroke(isActive: isActive, prominent: prominent), lineWidth: 1)
-                )
+        Group {
+            if prominent {
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.small)
+                .tint(.orange)
+            } else {
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.small)
+                .tint(isActive ? .accentColor : nil)
+            }
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(buttonForeground(isActive: isActive, prominent: prominent))
-    }
-
-    private func buttonBackground(isActive: Bool, prominent: Bool) -> some ShapeStyle {
-        if prominent {
-            return AnyShapeStyle(Color.orange.opacity(0.18))
-        }
-        if isActive {
-            return AnyShapeStyle(Color.accentColor.opacity(0.12))
-        }
-        return AnyShapeStyle(Color.white.opacity(0.06))
-    }
-
-    private func buttonStroke(isActive: Bool, prominent: Bool) -> Color {
-        if prominent {
-            return Color.orange.opacity(0.35)
-        }
-        if isActive {
-            return Color.accentColor.opacity(0.3)
-        }
-        return Color.white.opacity(0.14)
-    }
-
-    private func buttonForeground(isActive: Bool, prominent: Bool) -> Color {
-        if prominent {
-            return .orange
-        }
-        if isActive {
-            return .accentColor
-        }
-        return .primary
     }
 }
 

@@ -130,38 +130,55 @@ struct CameraActionsView: View {
             if viewModel.cameraState == .viewfinder {
                 HStack(spacing: 8) {
                     Menu {
+                        if viewModel.availableCameras.isEmpty {
+                            Text(L("No camera available"))
+                        } else {
+                            ForEach(viewModel.availableCameras, id: \.uniqueID) { device in
+                                Button {
+                                    viewModel.switchCamera(to: device)
+                                } label: {
+                                    if device.uniqueID == viewModel.selectedCamera?.uniqueID {
+                                        Label(device.localizedName, systemImage: "checkmark")
+                                    } else {
+                                        Text(device.localizedName)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Label(viewModel.selectedCamera?.localizedName ?? L("Camera"), systemImage: "video")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(viewModel.availableCameras.isEmpty)
+                    .help(L("Camera"))
+
+                    Menu {
                         Button(L("Off")) { viewModel.timerMode = 0 }
                         Button("2s") { viewModel.timerMode = 2 }
                         Button("10s") { viewModel.timerMode = 10 }
                     } label: {
-                        utilityControlLabel(title: timerTitle, systemImage: "timer")
+                        Label(timerTitle, systemImage: "timer")
                     }
-                    .menuStyle(.borderlessButton)
+                    .buttonStyle(.bordered)
                     .help(L("Timer"))
 
                     if viewModel.printerAspectRatio != nil {
                         Button {
                             viewModel.filmOrientation = viewModel.filmOrientation == "default" ? "rotated" : "default"
                         } label: {
-                            utilityControlLabel(
-                                title: orientationTitle,
-                                systemImage: orientationSymbolName,
-                                isActive: viewModel.filmOrientation == "rotated"
-                            )
+                            Label(orientationTitle, systemImage: orientationSymbolName)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
+                        .tint(viewModel.filmOrientation == "rotated" ? .accentColor : nil)
                         .help(L("Film Orientation"))
 
                         Button {
                             viewModel.toggleHorizontalFlip()
                         } label: {
-                            utilityControlLabel(
-                                title: L("Flip"),
-                                systemImage: "arrow.left.and.right",
-                                isActive: viewModel.isHorizontallyFlipped
-                            )
+                            Label(L("Flip"), systemImage: "arrow.left.and.right")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
+                        .tint(viewModel.isHorizontallyFlipped ? .accentColor : nil)
                         .help(L("Flip"))
                     }
                 }
@@ -258,25 +275,5 @@ struct CameraActionsView: View {
                 viewModel.discoverCameras(ensureSession: true)
             }
         }
-    }
-
-    private func utilityControlLabel(
-        title: String,
-        systemImage: String,
-        isActive: Bool = false
-    ) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(.callout.weight(.medium))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isActive ? Color.accentColor.opacity(0.12) : Color.white.opacity(0.06))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(isActive ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.14), lineWidth: 1)
-            )
-            .foregroundStyle(isActive ? Color.accentColor : Color.primary)
     }
 }

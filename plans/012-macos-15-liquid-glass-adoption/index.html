@@ -10,13 +10,11 @@
       
       
       
-        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/011-macos-coordinator-extraction/">
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/012-macos-15-liquid-glass-adoption/">
       
       
-        <link rel="prev" href="../010-ui-ux-pass-3/">
+        <link rel="prev" href="../011-macos-coordinator-extraction/">
       
-      
-        <link rel="next" href="../012-macos-15-liquid-glass-adoption/">
       
       
         
@@ -27,7 +25,7 @@
     
     
       
-        <title>Plan 011 macOS Coordinator Extraction - InstantLink</title>
+        <title>Plan 012 macOS 15 Baseline and Liquid Glass Adoption - InstantLink</title>
       
     
     
@@ -78,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#plan-011-macos-coordinator-and-render-service-extraction" class="md-skip">
+        <a href="#plan-012-macos-15-baseline-and-liquid-glass-adoption" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Plan 011 macOS Coordinator Extraction
+              Plan 012 macOS 15 Baseline and Liquid Glass Adoption
             
           </span>
         </div>
@@ -1182,6 +1180,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1201,7 +1227,7 @@
   <span class="md-ellipsis">
     
   
-    Plan 011 macOS Coordinator Extraction
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
   
 
     
@@ -1219,7 +1245,7 @@
   <span class="md-ellipsis">
     
   
-    Plan 011 macOS Coordinator Extraction
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
   
 
     
@@ -1245,10 +1271,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#objective" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        Objective
       
     </span>
   </a>
@@ -1256,10 +1282,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#target-structure" class="md-nav__link">
+  <a href="#why-this-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Target Structure
+        Why This Plan
       
     </span>
   </a>
@@ -1267,10 +1293,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#extraction-1-printer-connection-coordinator" class="md-nav__link">
+  <a href="#principles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Extraction 1: Printer Connection Coordinator
+        Principles
       
     </span>
   </a>
@@ -1278,46 +1304,152 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#extraction-2-queueedit-state-coordinator" class="md-nav__link">
+  <a href="#scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Extraction 2: Queue/Edit-State Coordinator
+        Scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-deployment-target-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Deployment Target Cleanup
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#extraction-3-print-preparationrender-service" class="md-nav__link">
+  <a href="#phase-1-foundation-slice-implemented" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Extraction 3: Print Preparation/Render Service
+        Phase 1 Foundation Slice (Implemented)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1 Foundation Slice (Implemented)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2-camera-platform-modernization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Camera Platform Modernization
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-order" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#3-main-window-liquid-glass-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Order
+        3. Main Window Liquid Glass Pass
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#verification" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#4-camera-and-editor-surface-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verification
+        4. Camera and Editor Surface Pass
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-motion-and-state-polish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Motion and State Polish
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Order
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Order">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Foundation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-visual-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Visual Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-liquid-glass-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Liquid Glass Enhancements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-qa-and-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: QA and Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1332,38 +1464,21 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Goals
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1403,10 +1518,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#objective" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        Objective
       
     </span>
   </a>
@@ -1414,10 +1529,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#target-structure" class="md-nav__link">
+  <a href="#why-this-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Target Structure
+        Why This Plan
       
     </span>
   </a>
@@ -1425,10 +1540,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#extraction-1-printer-connection-coordinator" class="md-nav__link">
+  <a href="#principles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Extraction 1: Printer Connection Coordinator
+        Principles
       
     </span>
   </a>
@@ -1436,46 +1551,152 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#extraction-2-queueedit-state-coordinator" class="md-nav__link">
+  <a href="#scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Extraction 2: Queue/Edit-State Coordinator
+        Scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-deployment-target-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Deployment Target Cleanup
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#extraction-3-print-preparationrender-service" class="md-nav__link">
+  <a href="#phase-1-foundation-slice-implemented" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Extraction 3: Print Preparation/Render Service
+        Phase 1 Foundation Slice (Implemented)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1 Foundation Slice (Implemented)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2-camera-platform-modernization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Camera Platform Modernization
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-order" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#3-main-window-liquid-glass-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Order
+        3. Main Window Liquid Glass Pass
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#verification" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#4-camera-and-editor-surface-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verification
+        4. Camera and Editor Surface Pass
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-motion-and-state-polish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Motion and State Polish
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Order
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Order">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Foundation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-visual-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Visual Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-liquid-glass-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Liquid Glass Enhancements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-qa-and-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: QA and Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1484,6 +1705,17 @@
     <span class="md-ellipsis">
       
         Exit Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Goals
       
     </span>
   </a>
@@ -1510,95 +1742,106 @@
   
 
 
-<h1 id="plan-011-macos-coordinator-and-render-service-extraction">Plan 011: macOS Coordinator and Render Service Extraction<a class="headerlink" href="#plan-011-macos-coordinator-and-render-service-extraction" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Proposed</p>
-<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
-<p>Reduce <code>macos/InstantLink/Core/ViewModel.swift</code> further by extracting three non-UI responsibilities behind clear boundaries:</p>
-<ol>
-<li>printer connection and pairing</li>
-<li>queue and per-photo edit-state management</li>
-<li>print preparation and render composition</li>
-</ol>
-<p>This plan is about simplifying ownership and making future UI iteration safer. It is not intended to change user-facing behavior.</p>
-<h2 id="target-structure">Target Structure<a class="headerlink" href="#target-structure" title="Permanent link">&para;</a></h2>
-<p>Add these new files under <code>macos/InstantLink/Core/</code>:</p>
+<h1 id="plan-012-macos-15-baseline-and-liquid-glass-adoption">Plan 012: macOS 15 Baseline and Liquid Glass Adoption<a class="headerlink" href="#plan-012-macos-15-baseline-and-liquid-glass-adoption" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> In Progress (Phase 1 foundation implemented locally; Liquid Glass passes pending)</p>
+<h2 id="objective">Objective<a class="headerlink" href="#objective" title="Permanent link">&para;</a></h2>
+<p>Raise the macOS app baseline from 13.0 to 15.0, then make the UI feel native on macOS 26 by adopting Liquid Glass-friendly structure and visuals with graceful fallback on macOS 15.</p>
+<p>This is not a rewrite. The goal is to remove version-floor debt, simplify platform conditionals, and deliberately restyle the existing SwiftUI app around newer macOS design language.</p>
+<h2 id="why-this-plan">Why This Plan<a class="headerlink" href="#why-this-plan" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>PrinterConnectionCoordinator.swift</code></li>
-<li><code>QueueEditCoordinator.swift</code></li>
-<li><code>PrintRenderService.swift</code></li>
+<li>The app historically targeted macOS 13 in <code>scripts/build-app.sh</code> and <code>macos/Info.plist.template</code>, which kept older platform constraints around.</li>
+<li>The UI already uses custom SwiftUI composition, so a deployment target bump alone will not materially improve appearance.</li>
+<li>A macOS 15 baseline gives us a cleaner codebase without unnecessarily dropping to a macOS 26-only support policy.</li>
+<li>macOS 26 should be treated as a visual enhancement target, not the minimum runtime target.</li>
 </ul>
-<p><code>ViewModel</code> should remain the observable bridge for SwiftUI, but delegate workflow logic into these types.</p>
-<h2 id="extraction-1-printer-connection-coordinator">Extraction 1: Printer Connection Coordinator<a class="headerlink" href="#extraction-1-printer-connection-coordinator" title="Permanent link">&para;</a></h2>
-<p>Own:
-- pairing loop
-- printer discovery and nearby scan
-- selected printer switching
-- connection refresh and status hydration
-- profile bootstrap after first successful connection</p>
-<p>Suggested surface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">@</span><span class="n">MainActor</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kr">final</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">PrinterConnectionCoordinator</span>
-</code></pre></div>
-<p>Inputs:
-- <code>InstantLinkFFI</code>
-- access to persisted printer profiles
-- callbacks for status/error publishing</p>
-<p>Outputs:
-- connection snapshot struct with <code>isConnected</code>, printer identity, battery, film, charging, print count
-- profile update events</p>
-<h2 id="extraction-2-queueedit-state-coordinator">Extraction 2: Queue/Edit-State Coordinator<a class="headerlink" href="#extraction-2-queueedit-state-coordinator" title="Permanent link">&para;</a></h2>
-<p>Own:
-- queue add/remove/reorder/select
-- queue item edit-state persistence and restoration
-- new-photo defaults seeding
-- camera draft/file-mode edit-state transitions</p>
-<p>Suggested surface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">@</span><span class="n">MainActor</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kr">final</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">QueueEditCoordinator</span>
-</code></pre></div>
-<p>Outputs:
-- authoritative queue array
-- selected queue index
-- active edit state for the selected item</p>
-<p>This coordinator should become the only layer allowed to mutate <code>QueueItem</code> and <code>QueueItemEditState</code>.</p>
-<h2 id="extraction-3-print-preparationrender-service">Extraction 3: Print Preparation/Render Service<a class="headerlink" href="#extraction-3-print-preparationrender-service" title="Permanent link">&para;</a></h2>
-<p>Own:
-- crop/flip/rotate pipeline
-- final film canvas rendering
-- overlay composition
-- temporary print-file generation</p>
-<p>Suggested surface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">enum</span><span class="w"> </span><span class="nc">PrintRenderService</span>
-</code></pre></div>
-<p>Key rule:
-- preview math and print math must share the same placement rules</p>
-<p>Longer term, this service should be usable by both print execution and export/share flows.</p>
-<h2 id="migration-order">Migration Order<a class="headerlink" href="#migration-order" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Extract <code>PrintRenderService</code> first. It is the most self-contained and easiest to verify against existing output.</li>
-<li>Extract <code>QueueEditCoordinator</code> next. This removes the largest cluster of state mutation from <code>ViewModel</code>.</li>
-<li>Extract <code>PrinterConnectionCoordinator</code> last. It has the most app-wide touch points and should move after the queue/render seams are stable.</li>
-</ol>
-<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
-<p>For each extraction step:</p>
+<h2 id="principles">Principles<a class="headerlink" href="#principles" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>cargo test --workspace</code></li>
-<li><code>bash scripts/build-app.sh 0.1.2</code></li>
-<li>manual macOS smoke test:</li>
-<li>pair printer</li>
-<li>import/reorder/remove queue items</li>
-<li>edit two different images and switch between them</li>
-<li>print current and batch print</li>
-<li>camera capture, edit, and print</li>
+<li>Keep <code>macOS 15</code> as the minimum supported version.</li>
+<li>Build with the latest SDK and add <code>macOS 26</code> enhancements behind availability checks where needed.</li>
+<li>Prefer system materials, grouping, spacing, and motion over custom borders and cards.</li>
+<li>Reduce custom chrome before adding more visual effects.</li>
+<li>Preserve workflow clarity first; visual polish must not obscure controls or state.</li>
+</ul>
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
+<h3 id="1-deployment-target-cleanup">1. Deployment Target Cleanup<a class="headerlink" href="#1-deployment-target-cleanup" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Update the Swift build target in <code>scripts/build-app.sh</code> from <code>macosx13.0</code> to <code>macosx15.0</code>.</li>
+<li>Update <code>LSMinimumSystemVersion</code> in <code>macos/Info.plist.template</code> to <code>15.0</code>.</li>
+<li>Remove or simplify macOS 13/14 compatibility branches that become unnecessary after the target bump.</li>
+</ul>
+<h2 id="phase-1-foundation-slice-implemented">Phase 1 Foundation Slice (Implemented)<a class="headerlink" href="#phase-1-foundation-slice-implemented" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>scripts/build-app.sh</code> now compiles the launcher with <code>-target arm64-apple-macosx15.0</code>.</li>
+<li><code>macos/Info.plist.template</code> now sets <code>LSMinimumSystemVersion</code> to <code>15.0</code>.</li>
+<li>Camera mode now has a stable camera-selection control and refreshed camera discovery/session handling.</li>
+<li>Baseline documentation was updated to reflect macOS 15 as the minimum supported version.</li>
+<li>Remaining work is UI modernization and polish phases; no backward-compatibility layer for macOS 13/14 is planned.</li>
+</ul>
+<h3 id="2-camera-platform-modernization">2. Camera Platform Modernization<a class="headerlink" href="#2-camera-platform-modernization" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Keep multi-camera selection visible and stable in camera mode.</li>
+<li>Use the newer camera device surface available on macOS 15+ for better built-in, Continuity Camera, and Desk View handling.</li>
+<li>Refresh camera availability dynamically when devices connect or disconnect.</li>
+<li>Revisit camera ordering and naming so the active camera is obvious.</li>
+</ul>
+<h3 id="3-main-window-liquid-glass-pass">3. Main Window Liquid Glass Pass<a class="headerlink" href="#3-main-window-liquid-glass-pass" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Audit <code>macos/InstantLink/Features/Main/MainView.swift</code>, <code>macos/InstantLink/Features/Main/MainPreviewAndQueue.swift</code>, and <code>macos/InstantLink/Support/PreviewSupport.swift</code>.</li>
+<li>Remove remaining redundant borders, opaque cards, and nested chrome.</li>
+<li>Rebuild the connected header and printer-mode action rows around cleaner system grouping.</li>
+<li>Prefer material-backed surfaces only where they separate layers or anchor interaction.</li>
+</ul>
+<h3 id="4-camera-and-editor-surface-pass">4. Camera and Editor Surface Pass<a class="headerlink" href="#4-camera-and-editor-surface-pass" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Audit <code>macos/InstantLink/Features/Camera/CameraViews.swift</code> and <code>macos/InstantLink/Features/Editor/EditorViews.swift</code>.</li>
+<li>Make the camera action strip and editor sidebar controls feel consistent with the main window.</li>
+<li>Replace remaining control-specific wrappers with shared styles or plain system controls.</li>
+<li>Ensure overlays, crop controls, exposure controls, and defaults popovers read as one coherent system.</li>
+</ul>
+<h3 id="5-motion-and-state-polish">5. Motion and State Polish<a class="headerlink" href="#5-motion-and-state-polish" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add restrained transitions for mode switches, queue reveal/hide, overlay selection, and editor presentation.</li>
+<li>Add hover and pressed-state polish to desktop controls where helpful.</li>
+<li>Ensure animations are fast, interruptible, and do not block print/camera workflows.</li>
+</ul>
+<h2 id="implementation-order">Implementation Order<a class="headerlink" href="#implementation-order" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-foundation">Phase 1: Foundation<a class="headerlink" href="#phase-1-foundation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Bump the deployment target to macOS 15.</li>
+<li>Land the camera selector/discovery cleanup.</li>
+<li>Remove obsolete availability branches and document the new baseline.</li>
+</ul>
+<h3 id="phase-2-visual-structure">Phase 2: Visual Structure<a class="headerlink" href="#phase-2-visual-structure" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Refactor shared visual primitives in <code>macos/InstantLink/Support/PreviewSupport.swift</code>.</li>
+<li>Standardize toolbar/action-row structure across printer mode, camera mode, and editor.</li>
+<li>Reduce chrome density and align spacing rules.</li>
+</ul>
+<h3 id="phase-3-liquid-glass-enhancements">Phase 3: Liquid Glass Enhancements<a class="headerlink" href="#phase-3-liquid-glass-enhancements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Introduce macOS 26-specific material refinements where they clearly improve the app.</li>
+<li>Tune hover, focus, and transition behavior for a more modern desktop feel.</li>
+<li>Avoid custom effects that compete with system glass.</li>
+</ul>
+<h3 id="phase-4-qa-and-audit">Phase 4: QA and Audit<a class="headerlink" href="#phase-4-qa-and-audit" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Verify appearance in <code>System</code>, <code>Light</code>, and <code>Dark</code>.</li>
+<li>Manually test printer mode, camera mode, queue editing, overlays, settings, and update/restart flows.</li>
+<li>Run a focused UI review on both macOS 15 and macOS 26.</li>
 </ul>
 <h2 id="exit-criteria">Exit Criteria<a class="headerlink" href="#exit-criteria" title="Permanent link">&para;</a></h2>
-<p>This plan is complete when:</p>
 <ul>
-<li><code>ViewModel</code> no longer directly owns pairing loop logic</li>
-<li><code>ViewModel</code> no longer directly mutates queue/edit-state internals</li>
-<li>print preparation lives outside <code>ViewModel</code></li>
-<li>printer-profile flow remains unified through one editor component</li>
-<li>no user-visible behavior regresses during pairing, editing, or printing</li>
+<li>The app builds and runs with a minimum target of macOS 15.</li>
+<li>Camera mode reliably lists and switches among all cameras available to the system.</li>
+<li>The main window, camera mode, and editor no longer rely on redundant card chrome.</li>
+<li>The app feels visually intentional on macOS 26 without breaking on macOS 15.</li>
+<li>No core workflows regress: connect, capture, import, edit, overlay, print, and batch print.</li>
+</ul>
+<h2 id="non-goals">Non-Goals<a class="headerlink" href="#non-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Dropping support to a macOS 26-only minimum.</li>
+<li>Rewriting the app around a new navigation model.</li>
+<li>Large-scale visual experimentation that diverges from system conventions.</li>
 </ul>
 
 

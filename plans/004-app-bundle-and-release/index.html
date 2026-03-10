@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Open-source CLI and macOS app for Fujifilm Instax Link printers via BLE">
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
       
       
       
@@ -850,6 +850,8 @@
       
         
       
+        
+      
     
     
     
@@ -1345,6 +1347,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1501,21 +1531,23 @@
 <p>Rewrote to match StatusLight's approach:</p>
 <ol>
 <li>Takes a <code>&lt;version&gt;</code> argument (e.g., <code>0.1.0</code> or <code>v0.1.0</code>)</li>
-<li>Expects pre-built release binary at <code>target/release/instantlink</code></li>
+<li>Builds the Rust workspace in release mode (supports optional <code>RUST_TARGET</code>)</li>
 <li>Creates <code>InstantLink.app/Contents/</code> structure:</li>
 <li><code>MacOS/instantlink-cli</code> — CLI binary (renamed to avoid case collision with launcher)</li>
-<li><code>MacOS/InstantLink</code> — SwiftUI launcher compiled with <code>swiftc</code></li>
+<li><code>Frameworks/libinstantlink_ffi.dylib</code> — bundled FFI runtime</li>
+<li><code>MacOS/InstantLink</code> — SwiftUI launcher compiled with <code>swiftc</code> from <code>macos/InstantLink/**/*.swift</code></li>
 <li><code>Info.plist</code> — Generated from template with version substitution</li>
 <li><code>PkgInfo</code> — Standard <code>APPL????</code></li>
+<li>Compiles the launcher for <code>arm64-apple-macosx15.0</code></li>
 <li>Ad-hoc codesigns the bundle</li>
 <li>Optionally creates DMG using <code>create-dmg</code></li>
 </ol>
 <h3 id="infoplisttemplate">Info.plist.template<a class="headerlink" href="#infoplisttemplate" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Bundle ID: <code>com.instantlink.app</code></li>
-<li><code>LSUIElement: true</code> (menu bar app, no dock icon by default)</li>
+<li><code>LSUIElement: false</code> (normal app window + dock presence)</li>
 <li><code>NSBluetoothAlwaysUsageDescription</code> for BLE permission</li>
-<li>Minimum macOS 13.0 (Ventura)</li>
+<li>Minimum macOS 15.0</li>
 <li>Version substituted at build time</li>
 </ul>
 <h3 id="cli-binary-naming">CLI Binary Naming<a class="headerlink" href="#cli-binary-naming" title="Permanent link">&para;</a></h3>

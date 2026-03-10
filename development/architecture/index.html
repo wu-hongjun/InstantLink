@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Open-source CLI and macOS app for Fujifilm Instax Link printers via BLE">
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
       
       
       
@@ -1011,6 +1011,8 @@
       
         
       
+        
+      
     
     
     
@@ -1362,6 +1364,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1584,6 +1614,7 @@
 <li><code>OverlayModels.swift</code> defines the overlay data model and typed payloads</li>
 <li><code>InstantLinkFFI.swift</code> loads <code>libinstantlink_ffi.dylib</code> and resolves the FFI symbols at runtime</li>
 <li><code>.lproj/Localizable.strings</code> bundles provide 12-language localization</li>
+<li>Deployment baseline is macOS 15 (<code>arm64-apple-macosx15.0</code> in <code>scripts/build-app.sh</code> and <code>LSMinimumSystemVersion</code> <code>15.0</code> in <code>macos/Info.plist.template</code>)</li>
 </ul>
 <p>The app no longer compiles a Swift CLI wrapper or keeps a CLI fallback path for printer operations. Runtime printer/device work goes through <code>InstantLinkFFI.swift</code> into the bundled <code>libinstantlink_ffi.dylib</code>. The bundled <code>instantlink-cli</code> binary remains in the app only for lightweight metadata lookups such as version display.</p>
 <h3 id="macos-editing-model">macOS Editing Model<a class="headerlink" href="#macos-editing-model" title="Permanent link">&para;</a></h3>

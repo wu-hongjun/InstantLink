@@ -514,6 +514,12 @@ struct PrinterManagementSection: View {
 
 struct ExperimentalSettingsSection: View {
     @EnvironmentObject var viewModel: ViewModel
+    private let ledChannels: [(label: String, color: Color)] = [
+        ("R", .red),
+        ("G", .green),
+        ("B", .blue),
+        ("W", .white),
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -528,6 +534,16 @@ struct ExperimentalSettingsSection: View {
                         ProgressView()
                             .controlSize(.small)
                         Text(L("Running LED Test..."))
+                        if let channel = viewModel.ledTestCurrentChannel {
+                            Text(channel)
+                                .font(.caption.monospacedDigit())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color.accentColor.opacity(0.12))
+                                )
+                        }
                     } else {
                         Image(systemName: "lightbulb.max")
                         Text(L("Run LED Test"))
@@ -536,11 +552,44 @@ struct ExperimentalSettingsSection: View {
             }
             .disabled(!viewModel.isConnected || viewModel.isPrinting || viewModel.isRunningLedTest)
 
+            HStack(spacing: 8) {
+                ForEach(ledChannels, id: \.label) { channel in
+                    LedTestChannelChip(
+                        label: channel.label,
+                        color: channel.color,
+                        isActive: viewModel.ledTestCurrentChannel == channel.label
+                    )
+                }
+            }
+
             if !viewModel.isConnected {
                 Text(L("Connect to your printer"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
         }
+    }
+}
+
+private struct LedTestChannelChip: View {
+    let label: String
+    let color: Color
+    let isActive: Bool
+
+    var body: some View {
+        Text(label)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(label == "W" ? Color.primary : .white)
+            .frame(width: 24, height: 24)
+            .background(
+                Circle()
+                    .fill(color.opacity(label == "W" ? 0.95 : 0.9))
+            )
+            .overlay(
+                Circle()
+                    .stroke(isActive ? Color.accentColor : Color.primary.opacity(label == "W" ? 0.10 : 0), lineWidth: isActive ? 2 : 0)
+            )
+            .scaleEffect(isActive ? 1.08 : 1.0)
+            .animation(.snappy(duration: 0.18), value: isActive)
     }
 }

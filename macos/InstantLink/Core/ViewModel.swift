@@ -286,6 +286,7 @@ class ViewModel: ObservableObject {
     @Published var updateProgress: Double = 0
     @Published var updateError: String?
     @Published var isRunningLedTest = false
+    @Published var ledTestCurrentChannel: String?
 
     // Pairing mode
     @Published var isPairing = false
@@ -346,16 +347,20 @@ class ViewModel: ObservableObject {
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.isRunningLedTest = true
-            defer { self.isRunningLedTest = false }
+            defer {
+                self.isRunningLedTest = false
+                self.ledTestCurrentChannel = nil
+            }
 
-            let steps: [(r: UInt8, g: UInt8, b: UInt8, pattern: UInt8, delay: UInt64)] = [
-                (31, 111, 235, 2, 900_000_000),
-                (248, 120, 67, 0, 900_000_000),
-                (38, 222, 109, 1, 1_000_000_000),
-                (230, 57, 70, 1, 1_000_000_000),
+            let steps: [(channel: String, r: UInt8, g: UInt8, b: UInt8, pattern: UInt8, delay: UInt64)] = [
+                ("R", 255, 0, 0, 0, 800_000_000),
+                ("G", 0, 255, 0, 0, 800_000_000),
+                ("B", 0, 0, 255, 0, 800_000_000),
+                ("W", 255, 255, 255, 0, 800_000_000),
             ]
 
             for step in steps {
+                self.ledTestCurrentChannel = step.channel
                 let didSet = await self.ffi.setLed(r: step.r, g: step.g, b: step.b, pattern: step.pattern)
                 guard didSet else {
                     self.showError(L("LED test failed"))

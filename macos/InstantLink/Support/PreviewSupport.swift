@@ -195,6 +195,59 @@ struct CompactGlassSurface: View {
     }
 }
 
+struct InstaxPrinterGlyph: View {
+    var size: CGFloat = 40
+    var color: Color = .secondary
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.16, style: .continuous)
+                .fill(color.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: size * 0.16, style: .continuous)
+                        .stroke(color.opacity(0.55), lineWidth: max(1, size * 0.045))
+                )
+                .frame(width: size * 0.80, height: size * 0.54)
+                .offset(y: -size * 0.05)
+
+            RoundedRectangle(cornerRadius: size * 0.035, style: .continuous)
+                .fill(color.opacity(0.70))
+                .frame(width: size * 0.34, height: size * 0.05)
+                .offset(y: -size * 0.14)
+
+            Circle()
+                .fill(color.opacity(0.80))
+                .frame(width: size * 0.07, height: size * 0.07)
+                .offset(x: size * 0.22, y: -size * 0.05)
+
+            RoundedRectangle(cornerRadius: size * 0.07, style: .continuous)
+                .fill(.white.opacity(0.98))
+                .overlay(
+                    RoundedRectangle(cornerRadius: size * 0.07, style: .continuous)
+                        .stroke(color.opacity(0.14), lineWidth: max(1, size * 0.025))
+                )
+                .frame(width: size * 0.44, height: size * 0.42)
+                .overlay {
+                    RoundedRectangle(cornerRadius: size * 0.045, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    color.opacity(0.28),
+                                    color.opacity(0.12)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: size * 0.29, height: size * 0.18)
+                        .offset(y: -size * 0.07)
+                }
+                .offset(y: size * 0.17)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 struct ExposureAdjustedImageView<Content: View>: View {
     let image: NSImage
     let exposureEV: Double

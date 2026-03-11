@@ -177,9 +177,7 @@ struct MainView: View {
                             }
                             .controlSize(.large)
                         } else if viewModel.hasKnownPrinterTarget {
-                            Image(systemName: "printer.dotmatrix")
-                                .font(.system(size: 40))
-                                .foregroundColor(.secondary)
+                            InstaxPrinterGlyph(size: 54)
                             Text(L("No printer connected"))
                                 .font(.headline)
                             VStack(alignment: .leading, spacing: 4) {
@@ -204,9 +202,7 @@ struct MainView: View {
                                 .controlSize(.large)
                             }
                         } else if viewModel.hasSearchedOnce {
-                            Image(systemName: "printer.dotmatrix")
-                                .font(.system(size: 40))
-                                .foregroundColor(.secondary)
+                            InstaxPrinterGlyph(size: 54)
                             Text(L("No printer found"))
                                 .font(.headline)
                             VStack(alignment: .leading, spacing: 4) {
@@ -222,9 +218,7 @@ struct MainView: View {
                             }
                             .controlSize(.large)
                         } else {
-                            Image(systemName: "printer.dotmatrix")
-                                .font(.system(size: 40))
-                                .foregroundColor(.secondary)
+                            InstaxPrinterGlyph(size: 54)
                             Text(L("Connect to your printer"))
                                 .font(.headline)
                             VStack(alignment: .leading, spacing: 4) {
@@ -651,9 +645,7 @@ private struct PairingChecklistCard: View {
                     Circle()
                         .fill(Color.accentColor.opacity(0.10))
                         .frame(width: 34, height: 34)
-                    Image(systemName: "printer.dotmatrix")
-                        .font(.headline)
-                        .foregroundStyle(Color.accentColor)
+                    InstaxPrinterGlyph(size: 18, color: Color.accentColor)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {

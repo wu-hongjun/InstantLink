@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use instantlink_core::image::FitMode;
 use instantlink_core::printer;
+use serde::Serialize;
 
 #[derive(Parser)]
 #[command(
@@ -196,34 +197,75 @@ async fn main() -> Result<()> {
             color_mode,
         } => {
             let fit_mode = FitMode::from_str_lossy(&fit);
+            let fit_mode_name = match fit_mode {
+                FitMode::Crop => "crop",
+                FitMode::Contain => "contain",
+                FitMode::Stretch => "stretch",
+            };
             let print_option: u8 = match color_mode.to_lowercase().as_str() {
                 "natural" => 1,
                 _ => 0, // rich (default)
             };
 
-            let sp = output::spinner("Connecting to printer...");
+            let sp = (!cli.json).then(|| output::spinner("Connecting to printer..."));
             let device = match cli.device.as_deref() {
                 Some(name) => printer::connect(name, None).await?,
                 None => printer::connect_any(None).await?,
             };
-            sp.finish_and_clear();
+            if let Some(sp) = sp {
+                sp.finish_and_clear();
+            }
 
             let model = device.model();
             let mode_name = if print_option == 0 { "Rich" } else { "Natural" };
-            println!("Printing to {} ({}) [{}]", device.name(), model, mode_name);
-
-            let sp = output::spinner("Printing...");
-            let progress = move |sent: usize, total: usize| {
-                sp.set_message(format!("Sending chunk {sent}/{total}..."));
+            if !cli.json {
+                println!("Printing to {} ({}) [{}]", device.name(), model, mode_name);
+            }
+            let transfer_spinner = (!cli.json).then(|| output::spinner("Printing..."));
+            let progress = |sent: usize, total: usize| {
+                if let Some(sp) = transfer_spinner.as_ref() {
+                    sp.set_message(format!("Sending chunk {sent}/{total}..."));
+                }
             };
 
             let print_result = device
-                .print_file(&image, fit_mode, quality, print_option, Some(&progress))
+                .print_file(
+                    &image,
+                    fit_mode,
+                    quality,
+                    print_option,
+                    (!cli.json).then_some(&progress),
+                )
                 .await;
+            if let Some(sp) = transfer_spinner {
+                sp.finish_and_clear();
+            }
 
             device.disconnect().await?;
             print_result.context("print failed")?;
-            println!("Print complete!");
+            if cli.json {
+                #[derive(Serialize)]
+                struct PrintOutput {
+                    success: bool,
+                    printer: String,
+                    model: String,
+                    image: String,
+                    fit: String,
+                    quality: u8,
+                    color_mode: String,
+                }
+                output::print_json(&PrintOutput {
+                    success: true,
+                    printer: device.name().to_string(),
+                    model: model.to_string(),
+                    image: image.display().to_string(),
+                    fit: fit_mode_name.to_string(),
+                    quality,
+                    color_mode: mode_name.to_ascii_lowercase(),
+                })?;
+            } else {
+                println!("Print complete!");
+            }
         }
 
         Commands::Led { action } => match action {
@@ -243,7 +285,25 @@ async fn main() -> Result<()> {
                 let result = device.set_led(r, g, b, pattern_byte).await;
                 device.disconnect().await?;
                 result.context("failed to set LED")?;
-                println!("LED set to #{:02x}{:02x}{:02x} ({})", r, g, b, pattern);
+                if cli.json {
+                    #[derive(Serialize)]
+                    struct LedSetOutput {
+                        success: bool,
+                        printer: String,
+                        action: &'static str,
+                        color: String,
+                        pattern: String,
+                    }
+                    output::print_json(&LedSetOutput {
+                        success: true,
+                        printer: device.name().to_string(),
+                        action: "set",
+                        color: format!("#{:02x}{:02x}{:02x}", r, g, b),
+                        pattern,
+                    })?;
+                } else {
+                    println!("LED set to #{:02x}{:02x}{:02x} ({})", r, g, b, pattern);
+                }
             }
             LedAction::Off => {
                 let device = match cli.device.as_deref() {
@@ -254,7 +314,21 @@ async fn main() -> Result<()> {
                 let result = device.led_off().await;
                 device.disconnect().await?;
                 result.context("failed to turn off LED")?;
-                println!("LED off");
+                if cli.json {
+                    #[derive(Serialize)]
+                    struct LedOffOutput {
+                        success: bool,
+                        printer: String,
+                        action: &'static str,
+                    }
+                    output::print_json(&LedOffOutput {
+                        success: true,
+                        printer: device.name().to_string(),
+                        action: "off",
+                    })?;
+                } else {
+                    println!("LED off");
+                }
             }
         },
 

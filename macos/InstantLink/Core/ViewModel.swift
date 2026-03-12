@@ -528,12 +528,9 @@ class ViewModel: ObservableObject {
     // MARK: - Refresh (quiet — no "searching" spinner, just update numbers)
 
     @discardableResult
-    func refreshStatus(
-        allowDuringPrinting: Bool = false,
-        forceDisconnectOnFailure: Bool = false
-    ) async -> Bool {
+    func refreshStatus(allowDuringPrinting: Bool = false) async -> Bool {
         guard allowDuringPrinting || !isPrinting else { return isConnected }
-        return await connectionCoordinator.refresh(forceDisconnectOnFailure: forceDisconnectOnFailure)
+        return await connectionCoordinator.refresh()
     }
 
     // MARK: - Scan (discover all printers for the picker, then connect)
@@ -1732,7 +1729,7 @@ class ViewModel: ObservableObject {
     // MARK: - Printing
 
     private func ensurePrinterReadyForPrint() async -> Bool {
-        let isStillConnected = await refreshStatus(forceDisconnectOnFailure: true)
+        let isStillConnected = await refreshStatus()
         guard isStillConnected else {
             showError(L("Connect to your printer"))
             return false
@@ -1755,6 +1752,7 @@ class ViewModel: ObservableObject {
                 isPrinting = false
                 printProgress = nil
                 printPhase = nil
+                showError(L("Print failed"))
             }
             return
         }
@@ -1829,7 +1827,7 @@ class ViewModel: ObservableObject {
                     isPrinting = false
                     printPhase = nil
                     batchPrintTotal = 0
-                    showError(L("print_failed_at", offset + 1, count))
+                    showError("\(L("print_failed_at", offset + 1, count)): \(L("Print failed"))")
                 }
                 return
             }
@@ -1859,7 +1857,7 @@ class ViewModel: ObservableObject {
                     printProgress = nil
                     printPhase = nil
                     batchPrintTotal = 0
-                    showError("\(L("print_failed_at", offset + 1, count)) (\(result.code))")
+                    showError("\(L("print_failed_at", offset + 1, count)): \(printFailureMessage(for: result.code))")
                 }
                 return
             }

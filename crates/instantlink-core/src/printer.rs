@@ -72,8 +72,10 @@ async fn connect_internal(
         for result in results {
             if printer_name_matches(&result.1, device_name) {
                 exact_matches.push(result);
-            } else if normalized_printer_name(&result.1).contains(&normalized_printer_name(device_name))
-                || normalized_printer_name(device_name).contains(&normalized_printer_name(&result.1))
+            } else if normalized_printer_name(&result.1)
+                .contains(&normalized_printer_name(device_name))
+                || normalized_printer_name(device_name)
+                    .contains(&normalized_printer_name(&result.1))
             {
                 partial_matches.push(result);
             }
@@ -100,7 +102,10 @@ async fn connect_internal(
 
         if fetch_initial_status {
             emit_connect_progress(progress, ConnectStage::StatusFetching, None::<String>);
-            let _ = device.status().await?;
+            if let Err(error) = device.status().await {
+                let _ = device.disconnect().await;
+                return Err(error);
+            }
         }
         emit_connect_progress(
             progress,
@@ -156,7 +161,10 @@ fn normalized_printer_name(name: &str) -> String {
 fn extracted_printer_serial(name: &str) -> Option<String> {
     let normalized = normalized_printer_name(name);
     let suffix = normalized.strip_prefix("INSTAX-")?;
-    let digits: String = suffix.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+    let digits: String = suffix
+        .chars()
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect();
     (!digits.is_empty()).then_some(digits)
 }
 

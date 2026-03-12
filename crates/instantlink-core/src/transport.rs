@@ -270,20 +270,14 @@ impl BleTransport {
             )
             .await;
         }
-        let is_connected = tokio::time::timeout(
-            DEFAULT_DISCONNECT_TIMEOUT,
-            peripheral.is_connected(),
-        )
-        .await
-        .ok()
-        .and_then(|result| result.ok())
-        .unwrap_or(false);
+        let is_connected =
+            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.is_connected())
+                .await
+                .ok()
+                .and_then(|result| result.ok())
+                .unwrap_or(false);
         if is_connected {
-            let _ = tokio::time::timeout(
-                DEFAULT_DISCONNECT_TIMEOUT,
-                peripheral.disconnect(),
-            )
-            .await;
+            let _ = tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.disconnect()).await;
             tokio::time::sleep(Duration::from_millis(250)).await;
         }
     }
@@ -338,21 +332,16 @@ impl Transport for BleTransport {
             self.peripheral.unsubscribe(&self.notify_char),
         )
         .await;
-        let is_connected = tokio::time::timeout(
-            DEFAULT_DISCONNECT_TIMEOUT,
-            self.peripheral.is_connected(),
-        )
-        .await
-        .map_err(|_| PrinterError::Timeout)?
-        .map_err(|e| PrinterError::Ble(format!("is_connected failed: {e}")))?;
+        let is_connected =
+            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, self.peripheral.is_connected())
+                .await
+                .map_err(|_| PrinterError::Timeout)?
+                .map_err(|e| PrinterError::Ble(format!("is_connected failed: {e}")))?;
         if is_connected {
-            tokio::time::timeout(
-                DEFAULT_DISCONNECT_TIMEOUT,
-                self.peripheral.disconnect(),
-            )
-            .await
-            .map_err(|_| PrinterError::Timeout)?
-            .map_err(|e| PrinterError::Ble(format!("disconnect failed: {e}")))?;
+            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, self.peripheral.disconnect())
+                .await
+                .map_err(|_| PrinterError::Timeout)?
+                .map_err(|e| PrinterError::Ble(format!("disconnect failed: {e}")))?;
             tokio::time::sleep(Duration::from_millis(250)).await;
         }
         Ok(())

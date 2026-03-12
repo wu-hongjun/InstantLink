@@ -462,7 +462,7 @@ struct MainView: View {
 
     private var batteryStatusControl: some View {
         Button {
-            Task { await viewModel.refreshStatus(forceDisconnectOnFailure: true) }
+            Task { await viewModel.refreshStatus() }
         } label: {
             StatusItem(
                 icon: viewModel.isCharging ? "battery.100.bolt" : "battery.100",
@@ -475,7 +475,7 @@ struct MainView: View {
 
     private var filmStatusControl: some View {
         Button {
-            Task { await viewModel.refreshStatus(forceDisconnectOnFailure: true) }
+            Task { await viewModel.refreshStatus() }
         } label: {
             StatusItem(icon: "film", value: L("film_remaining", viewModel.filmRemaining))
         }

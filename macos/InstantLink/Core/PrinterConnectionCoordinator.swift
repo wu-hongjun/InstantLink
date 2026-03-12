@@ -130,7 +130,6 @@ final class PrinterConnectionCoordinator: ObservableObject {
 
     private var pairingTask: Task<Void, Never>?
     private var pairingSessionID = UUID()
-    private var consecutiveRefreshFailures = 0
     private var refreshSessionID = UUID()
 
     init(
@@ -302,7 +301,7 @@ final class PrinterConnectionCoordinator: ObservableObject {
         }
     }
 
-    func refresh(forceDisconnectOnFailure: Bool = false) async -> Bool {
+    func refresh() async -> Bool {
         guard snapshot.isPairing == false else { return false }
         let refreshSessionID = self.refreshSessionID
         mutateSnapshot { snapshot in
@@ -318,7 +317,6 @@ final class PrinterConnectionCoordinator: ObservableObject {
         mutateSnapshot { snapshot in
             snapshot.isRefreshing = false
             if let status {
-                consecutiveRefreshFailures = 0
                 snapshot.isConnected = true
                 snapshot.battery = status.battery
                 snapshot.filmRemaining = status.filmRemaining
@@ -326,7 +324,6 @@ final class PrinterConnectionCoordinator: ObservableObject {
                 snapshot.printCount = status.printCount
                 isConnectedAfterRefresh = true
             } else {
-                consecutiveRefreshFailures += 1
                 snapshot.isConnected = false
                 snapshot.connectionStage = nil
                 snapshot.connectionStageDetail = nil
@@ -401,8 +398,6 @@ final class PrinterConnectionCoordinator: ObservableObject {
             snapshot.isConnected = false
             snapshot.isRefreshing = false
         }
-        consecutiveRefreshFailures = 0
-
         startPairingLoop(connectDuration: connectDuration)
     }
 
@@ -539,7 +534,6 @@ final class PrinterConnectionCoordinator: ObservableObject {
                 snapshot.availablePrinters.append(target)
             }
         }
-        consecutiveRefreshFailures = 0
         bootstrapOrUpdateProfile(for: target, detectedModel: model)
         return true
     }

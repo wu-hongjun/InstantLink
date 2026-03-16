@@ -10,13 +10,11 @@
       
       
       
-        <link rel="canonical" href="https://instantlink.hongjunwu.com/reference/protocol/">
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/017-reconnect-fallback-behavior/">
       
       
-        <link rel="prev" href="../cli/">
+        <link rel="prev" href="../016-transport-command-serialization/">
       
-      
-        <link rel="next" href="../ffi/">
       
       
         
@@ -27,7 +25,7 @@
     
     
       
-        <title>Protocol - InstantLink</title>
+        <title>Plan 017 Reconnect Fallback and Recovery UX - InstantLink</title>
       
     
     
@@ -78,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ble-protocol-reference" class="md-skip">
+        <a href="#plan-017-reconnect-fallback-and-recovery-ux" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Protocol
+              Plan 017 Reconnect Fallback and Recovery UX
             
           </span>
         </div>
@@ -264,13 +262,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../cli/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
           
   
   
@@ -310,11 +306,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../plans/001-full-stack-scaffold/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../001-full-stack-scaffold/" class="md-tabs__link">
           
   
   
@@ -523,10 +521,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -540,20 +536,17 @@
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -571,7 +564,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -589,7 +582,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -614,37 +607,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Protocol
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
         
   
   
@@ -660,153 +626,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#ble-service" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BLE Service
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packet-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Commands
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Query Commands">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#device-info-sub-indices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Device Info Sub-Indices
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#infotype-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        InfoType Values
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#image-transfer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Image Transfer
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#power-and-led-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Power and LED Commands
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#print-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Print Flow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#model-specific-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Model-Specific Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transport-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Transport Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -819,7 +638,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ffi/" class="md-nav__link">
+      <a href="../../reference/ffi/" class="md-nav__link">
         
   
   
@@ -1000,8 +819,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1043,17 +864,20 @@
     
     
       
+        
+        
+      
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -1071,7 +895,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1089,7 +913,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/001-full-stack-scaffold/" class="md-nav__link">
+      <a href="../001-full-stack-scaffold/" class="md-nav__link">
         
   
   
@@ -1117,7 +941,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/002-ci-cd-setup/" class="md-nav__link">
+      <a href="../002-ci-cd-setup/" class="md-nav__link">
         
   
   
@@ -1145,7 +969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/003-github-pages/" class="md-nav__link">
+      <a href="../003-github-pages/" class="md-nav__link">
         
   
   
@@ -1173,7 +997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/004-app-bundle-and-release/" class="md-nav__link">
+      <a href="../004-app-bundle-and-release/" class="md-nav__link">
         
   
   
@@ -1201,7 +1025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/005-mock-transport-device-tests/" class="md-nav__link">
+      <a href="../005-mock-transport-device-tests/" class="md-nav__link">
         
   
   
@@ -1229,7 +1053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/006-overlay-system/" class="md-nav__link">
+      <a href="../006-overlay-system/" class="md-nav__link">
         
   
   
@@ -1257,7 +1081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/007-ui-ux-pass-1/" class="md-nav__link">
+      <a href="../007-ui-ux-pass-1/" class="md-nav__link">
         
   
   
@@ -1285,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/008-ui-ux-pass-2/" class="md-nav__link">
+      <a href="../008-ui-ux-pass-2/" class="md-nav__link">
         
   
   
@@ -1313,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/009-repo-simplification-audit/" class="md-nav__link">
+      <a href="../009-repo-simplification-audit/" class="md-nav__link">
         
   
   
@@ -1341,7 +1165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/010-ui-ux-pass-3/" class="md-nav__link">
+      <a href="../010-ui-ux-pass-3/" class="md-nav__link">
         
   
   
@@ -1369,7 +1193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/011-macos-coordinator-extraction/" class="md-nav__link">
+      <a href="../011-macos-coordinator-extraction/" class="md-nav__link">
         
   
   
@@ -1397,7 +1221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
         
   
   
@@ -1425,7 +1249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/013-ffi-connection-stage-callbacks/" class="md-nav__link">
+      <a href="../013-ffi-connection-stage-callbacks/" class="md-nav__link">
         
   
   
@@ -1453,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/014-printer-led-print-feedback/" class="md-nav__link">
+      <a href="../014-printer-led-print-feedback/" class="md-nav__link">
         
   
   
@@ -1481,7 +1305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/015-ffi-callback-safety/" class="md-nav__link">
+      <a href="../015-ffi-callback-safety/" class="md-nav__link">
         
   
   
@@ -1509,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plans/016-transport-command-serialization/" class="md-nav__link">
+      <a href="../016-transport-command-serialization/" class="md-nav__link">
         
   
   
@@ -1534,10 +1358,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../plans/017-reconnect-fallback-behavior/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1553,6 +1404,214 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Problems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ux-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UX Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proposed-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed State Machine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Proposed State Machine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reconnect-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reconnect entry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-targeted-reconnect-succeeds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If targeted reconnect succeeds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-targeted-reconnect-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If targeted reconnect fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-scan-finds-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If scan finds nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinator-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinator Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ui-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rollout-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollout Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1592,10 +1651,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ble-service" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BLE Service
+        Goal
       
     </span>
   </a>
@@ -1603,10 +1662,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#packet-format" class="md-nav__link">
+  <a href="#current-problems" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Packet Format
+        Current Problems
       
     </span>
   </a>
@@ -1614,22 +1673,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#query-commands" class="md-nav__link">
+  <a href="#ux-principles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query Commands
+        UX Principles
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Query Commands">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proposed-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed State Machine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Proposed State Machine">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#device-info-sub-indices" class="md-nav__link">
+  <a href="#reconnect-entry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Device Info Sub-Indices
+        Reconnect entry
       
     </span>
   </a>
@@ -1637,10 +1707,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#infotype-values" class="md-nav__link">
+  <a href="#if-targeted-reconnect-succeeds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        InfoType Values
+        If targeted reconnect succeeds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-targeted-reconnect-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If targeted reconnect fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-scan-finds-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If scan finds nothing
       
     </span>
   </a>
@@ -1653,10 +1745,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#image-transfer" class="md-nav__link">
+  <a href="#implementation-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Image Transfer
+        Implementation Scope
       
     </span>
   </a>
@@ -1664,10 +1756,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#power-and-led-commands" class="md-nav__link">
+  <a href="#coordinator-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Power and LED Commands
+        Coordinator Changes
       
     </span>
   </a>
@@ -1675,10 +1767,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#print-flow" class="md-nav__link">
+  <a href="#ui-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Print Flow
+        UI Changes
       
     </span>
   </a>
@@ -1686,10 +1778,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-specific-parameters" class="md-nav__link">
+  <a href="#testing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model-Specific Parameters
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rollout-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollout Order
       
     </span>
   </a>
@@ -1697,21 +1828,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#transport-notes" class="md-nav__link">
+  <a href="#exit-criteria" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Transport Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
+        Exit Criteria
       
     </span>
   </a>
@@ -1738,372 +1858,123 @@
   
 
 
-<h1 id="ble-protocol-reference">BLE Protocol Reference<a class="headerlink" href="#ble-protocol-reference" title="Permanent link">&para;</a></h1>
-<p>This documents the Instax Link BLE packet protocol that InstantLink currently implements over BLE GATT.</p>
-<h2 id="ble-service">BLE Service<a class="headerlink" href="#ble-service" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>UUID</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Service</td>
-<td><code>70954782-2d83-473d-9e5f-81e1d02d5273</code></td>
-</tr>
-<tr>
-<td>Write Characteristic</td>
-<td><code>70954783-2d83-473d-9e5f-81e1d02d5273</code></td>
-</tr>
-<tr>
-<td>Notify Characteristic</td>
-<td><code>70954784-2d83-473d-9e5f-81e1d02d5273</code></td>
-</tr>
-</tbody>
-</table>
-<h2 id="packet-format">Packet Format<a class="headerlink" href="#packet-format" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[0x41 0x62] [length:2B] [opcode:2B] [payload...] [checksum:1B]
-</code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Size</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Header</td>
-<td>2 bytes</td>
-<td>Request: <code>0x41 0x62</code>, Response: <code>0x61 0x42</code></td>
-</tr>
-<tr>
-<td>Length</td>
-<td>2 bytes</td>
-<td>Big-endian packet size including header and checksum</td>
-</tr>
-<tr>
-<td>Opcode</td>
-<td>2 bytes</td>
-<td>Command identifier</td>
-</tr>
-<tr>
-<td>Payload</td>
-<td>variable</td>
-<td>Command-specific data</td>
-</tr>
-<tr>
-<td>Checksum</td>
-<td>1 byte</td>
-<td><code>(255 - (sum_of_preceding_bytes &amp; 255)) &amp; 255</code></td>
-</tr>
-</tbody>
-</table>
-<h2 id="query-commands">Query Commands<a class="headerlink" href="#query-commands" title="Permanent link">&para;</a></h2>
-<p>All status queries use opcode <code>0x0002</code> with an <code>InfoType</code> selector byte.</p>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Payload</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x0001</code></td>
-<td>Device Info Service</td>
-<td>SubIndex(1B)</td>
-<td>Query a device-info string</td>
-</tr>
-<tr>
-<td><code>0x0002</code></td>
-<td>Support Function Info</td>
-<td>InfoType(1B)</td>
-<td>Query printer capabilities or status</td>
-</tr>
-</tbody>
-</table>
-<h3 id="device-info-sub-indices">Device Info Sub-Indices<a class="headerlink" href="#device-info-sub-indices" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Sub-index</th>
-<th>Field</th>
-<th>Example</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x00</code></td>
-<td>Manufacturer</td>
-<td><code>FUJIFILM</code></td>
-</tr>
-<tr>
-<td><code>0x01</code></td>
-<td>Model</td>
-<td><code>SP-4</code></td>
-</tr>
-<tr>
-<td><code>0x02</code></td>
-<td>Serial Number</td>
-<td><code>10458647</code></td>
-</tr>
-<tr>
-<td><code>0x03</code></td>
-<td>Unknown version</td>
-<td><code>0000</code></td>
-</tr>
-<tr>
-<td><code>0x04</code></td>
-<td>Hardware version</td>
-<td><code>0102</code></td>
-</tr>
-<tr>
-<td><code>0x05</code></td>
-<td>Firmware version</td>
-<td><code>1.00</code></td>
-</tr>
-</tbody>
-</table>
-<p>Response format: <code>[return_code] [sub_index] [string_length] [ASCII bytes...]</code></p>
-<h3 id="infotype-values"><code>InfoType</code> Values<a class="headerlink" href="#infotype-values" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>InfoType</th>
-<th>Name</th>
-<th>Response Data</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x00</code></td>
-<td>Image Support Info</td>
-<td>Width(2B), Height(2B)</td>
-</tr>
-<tr>
-<td><code>0x01</code></td>
-<td>Battery Status</td>
-<td>State(1B), Level(1B)</td>
-</tr>
-<tr>
-<td><code>0x02</code></td>
-<td>Printer Function Info</td>
-<td>Film remaining in bits <code>0...3</code>, charging in bit <code>7</code></td>
-</tr>
-<tr>
-<td><code>0x03</code></td>
-<td>Print Count</td>
-<td>Print count(2B, big-endian)</td>
-</tr>
-</tbody>
-</table>
-<p>Response format: <code>[return_code] [info_type] [data...]</code></p>
-<h2 id="image-transfer">Image Transfer<a class="headerlink" href="#image-transfer" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Payload</th>
-<th>Response</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x1000</code></td>
-<td>Download Start</td>
-<td>PictureType + PrintOption + PrintOption2 + Zero + ImageSize(4B)</td>
-<td>ACK status</td>
-</tr>
-<tr>
-<td><code>0x1001</code></td>
-<td>Data</td>
-<td>ChunkIndex(4B) + chunk data</td>
-<td>ACK status</td>
-</tr>
-<tr>
-<td><code>0x1002</code></td>
-<td>Download End</td>
-<td>none</td>
-<td>ACK status</td>
-</tr>
-<tr>
-<td><code>0x1003</code></td>
-<td>Download Cancel</td>
-<td>none</td>
-<td>ACK status</td>
-</tr>
-<tr>
-<td><code>0x1080</code></td>
-<td>Print Image</td>
-<td>none</td>
-<td>Print status</td>
-</tr>
-</tbody>
-</table>
-<p>Success is model-aware. InstantLink accepts status <code>0</code> and each model's success code:</p>
+<h1 id="plan-017-reconnect-fallback-and-recovery-ux">Plan 017: Reconnect Fallback and Recovery UX<a class="headerlink" href="#plan-017-reconnect-fallback-and-recovery-ux" title="Permanent link">&para;</a></h1>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Make reconnect behavior predictable and user-comprehensible when a remembered printer is unavailable, renamed, slow to reappear, or fails its first targeted reconnect attempt.</p>
+<p>The target UX is simple:</p>
 <ul>
-<li>Mini: <code>0</code></li>
-<li>Mini Link 3: <code>16</code></li>
-<li>Square: <code>12</code></li>
-<li>Wide: <code>15</code></li>
+<li>if we know which printer the user wants, try that first</li>
+<li>if that fails, automatically fall back to broader recovery options</li>
+<li>never leave the user staring at a dead-end spinner with no next step</li>
 </ul>
-<p>Rejection codes currently mapped in the core:</p>
+<h2 id="current-problems">Current Problems<a class="headerlink" href="#current-problems" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>178</code> no film</li>
-<li><code>179</code> cover open</li>
-<li><code>180</code> low battery</li>
-<li><code>181</code> printer busy</li>
+<li>Reconnect to a remembered printer is currently a one-shot targeted attempt.</li>
+<li>If that attempt fails, the app can stop without a clean fallback into scan or switch-printer selection.</li>
+<li>The UI can transiently show misleading connected/disconnected states while refresh and reconnect race.</li>
+<li>Saved printers and nearby results are still conceptually split in ways that can obscure what the app is actually trying to do.</li>
 </ul>
-<h2 id="power-and-led-commands">Power and LED Commands<a class="headerlink" href="#power-and-led-commands" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Opcode</th>
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x0100</code></td>
-<td>Shut Down</td>
-<td>Power off the printer</td>
-</tr>
-<tr>
-<td><code>0x0101</code></td>
-<td>Reset</td>
-<td>Reset the printer</td>
-</tr>
-<tr>
-<td><code>0x3000</code></td>
-<td>XYZ Axis Info</td>
-<td>Query accelerometer/orientation</td>
-</tr>
-<tr>
-<td><code>0x3001</code></td>
-<td>LED Pattern Settings</td>
-<td>Set LED color or animation</td>
-</tr>
-<tr>
-<td><code>0x3010</code></td>
-<td>Additional Printer Info</td>
-<td>Query additional printer info</td>
-</tr>
-</tbody>
-</table>
-<p>LED payload format:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[when:1B] [frame_count:1B] [speed:1B] [repeat:1B] [B,G,R per frame...]
-</code></pre></div>
-<p>Colors are sent in <strong>BGR</strong> order.</p>
-<h2 id="print-flow">Print Flow<a class="headerlink" href="#print-flow" title="Permanent link">&para;</a></h2>
+<h2 id="ux-principles">UX Principles<a class="headerlink" href="#ux-principles" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Reconnect should feel like recovery, not a separate product flow.</li>
+<li>We should show one truthful current action at a time.</li>
+<li>Known-printer reconnect failure should lead directly to the next best action, not a blank end state.</li>
+<li>The app should only show <code>Connected</code> after post-connect status fetch succeeds.</li>
+</ul>
+<h2 id="proposed-state-machine">Proposed State Machine<a class="headerlink" href="#proposed-state-machine" title="Permanent link">&para;</a></h2>
+<h3 id="reconnect-entry">Reconnect entry<a class="headerlink" href="#reconnect-entry" title="Permanent link">&para;</a></h3>
+<p>When the user clicks <code>Reconnect</code> and a selected/saved printer exists:</p>
 <ol>
-<li>Connect to the printer over BLE</li>
-<li>Discover services and subscribe to notifications</li>
-<li>Query <code>Image Support Info</code></li>
-<li>Detect the model:</li>
-<li>use DIS model hint <code>FI033</code> first for Mini Link 3</li>
-<li>otherwise fall back to the reported width and height</li>
-<li>Resize and JPEG-encode the image for the detected model</li>
-<li>Send <code>Download Start</code> and wait for ACK</li>
-<li>Send <code>Data</code> chunks, waiting for ACK after each chunk</li>
-<li>Send <code>Download End</code> and wait for ACK</li>
-<li>Send <code>Print Image</code> and accept <code>0</code> or the model-specific success code</li>
-<li>Disconnect</li>
+<li>show <code>No printer connected</code></li>
+<li>immediately transition into a pairing/reconnect sheet/state</li>
+<li>show <code>Reconnecting to &lt;printer name&gt;...</code></li>
+<li>run one targeted reconnect attempt with real connection-stage progress</li>
 </ol>
-<h2 id="model-specific-parameters">Model-Specific Parameters<a class="headerlink" href="#model-specific-parameters" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Model</th>
-<th>Width</th>
-<th>Height</th>
-<th>Chunk Size</th>
-<th>Max Image Size</th>
-<th>Success Code</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Mini Link</td>
-<td>600</td>
-<td>800</td>
-<td>900 B</td>
-<td><code>105 KB</code></td>
-<td><code>0</code></td>
-<td>Standard Mini behavior</td>
-</tr>
-<tr>
-<td>Mini Link 3</td>
-<td>600</td>
-<td>800</td>
-<td>900 B</td>
-<td><code>55 KB</code></td>
-<td><code>16</code></td>
-<td>Uses DIS hint <code>FI033</code>, vertically flipped upload</td>
-</tr>
-<tr>
-<td>Square Link</td>
-<td>800</td>
-<td>800</td>
-<td>1808 B</td>
-<td><code>105 KB</code></td>
-<td><code>12</code></td>
-<td>Adds packet and pre-execute delays</td>
-</tr>
-<tr>
-<td>Wide Link</td>
-<td>1260</td>
-<td>840</td>
-<td>900 B</td>
-<td><code>225 KB</code></td>
-<td><code>15</code></td>
-<td>Wide-format image limit</td>
-</tr>
-</tbody>
-</table>
-<h2 id="transport-notes">Transport Notes<a class="headerlink" href="#transport-notes" title="Permanent link">&para;</a></h2>
-<p>InstantLink's production runtime is BLE-only. The packet structure has also been observed over other transports during reverse engineering, but those transports are not implemented in this codebase.</p>
-<table>
-<thead>
-<tr>
-<th>Transport</th>
-<th>Status in InstantLink</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>BLE GATT</td>
-<td>Implemented</td>
-<td>Primary transport in <code>transport.rs</code></td>
-</tr>
-<tr>
-<td>RFCOMM/SPP</td>
-<td>Not implemented</td>
-<td>Protocol-level background only</td>
-</tr>
-<tr>
-<td>USB CDC ACM</td>
-<td>Not implemented</td>
-<td>Protocol-level background only</td>
-</tr>
-</tbody>
-</table>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h3 id="if-targeted-reconnect-succeeds">If targeted reconnect succeeds<a class="headerlink" href="#if-targeted-reconnect-succeeds" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="https://github.com/jpwsutton/instax_api/issues/21">jpwsutton/instax_api#21</a></li>
-<li><a href="https://github.com/javl/InstaxBLE">javl/InstaxBLE</a></li>
-<li><a href="https://github.com/linssenste/instax-link-web">linssenste/instax-link-web</a></li>
-<li><a href="https://github.com/dgwilson/ESP32-Instax-Bridge">dgwilson/ESP32-Instax-Bridge</a></li>
-<li><a href="../../development/reverse-engineering/">Reverse Engineering Guide</a></li>
+<li>fetch status</li>
+<li>only then transition to connected UI</li>
+</ul>
+<h3 id="if-targeted-reconnect-fails">If targeted reconnect fails<a class="headerlink" href="#if-targeted-reconnect-fails" title="Permanent link">&para;</a></h3>
+<p>Automatically move to recovery mode:</p>
+<ul>
+<li>keep the reconnect sheet/state visible</li>
+<li>update copy to <code>Couldn’t reconnect to &lt;printer name&gt;</code></li>
+<li>start a bounded nearby scan</li>
+<li>surface both:</li>
+<li>saved printers</li>
+<li>nearby printers</li>
+</ul>
+<p>The selected/remembered printer should stay highlighted if it appears again.</p>
+<h3 id="if-scan-finds-nothing">If scan finds nothing<a class="headerlink" href="#if-scan-finds-nothing" title="Permanent link">&para;</a></h3>
+<p>Show explicit recovery actions:</p>
+<ul>
+<li><code>Try Again</code></li>
+<li><code>Switch Printer</code></li>
+<li><code>Open Bluetooth Settings</code> if the printer was recently forgotten or the app suspects system-level pairing issues</li>
+</ul>
+<h2 id="implementation-scope">Implementation Scope<a class="headerlink" href="#implementation-scope" title="Permanent link">&para;</a></h2>
+<p>Primary files:</p>
+<ul>
+<li><code>macos/InstantLink/Core/PrinterConnectionCoordinator.swift</code></li>
+<li><code>macos/InstantLink/Core/ViewModel.swift</code></li>
+<li><code>macos/InstantLink/Features/Main/MainView.swift</code></li>
+</ul>
+<p>Supporting areas:</p>
+<ul>
+<li>saved-printer picker UI in <code>SettingsViews.swift</code></li>
+<li>connection-stage text mapping</li>
+<li>localizable strings for recovery copy</li>
+</ul>
+<h2 id="coordinator-changes">Coordinator Changes<a class="headerlink" href="#coordinator-changes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Introduce explicit reconnect attempt outcome states:</li>
+<li><code>targetedReconnect</code></li>
+<li><code>scanFallback</code></li>
+<li><code>manualSelection</code></li>
+<li>Separate:</li>
+<li>reconnecting to a known printer</li>
+<li>scanning for any printer</li>
+<li>Ensure stale refresh results cannot overwrite reconnect state.</li>
+<li>Keep session tokens on reconnect flows so canceled/older attempts cannot repaint the UI.</li>
+</ul>
+<h2 id="ui-changes">UI Changes<a class="headerlink" href="#ui-changes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Replace ambiguous end states with one recovery panel.</li>
+<li>When reconnect fallback begins, keep the same modal/screen visible instead of bouncing between disconnected and picker flows.</li>
+<li>Show <code>Switch Printer</code> as a first-class recovery action, not as an unrelated detour.</li>
+</ul>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<h3 id="manual">Manual<a class="headerlink" href="#manual" title="Permanent link">&para;</a></h3>
+<ul>
+<li>remembered printer off -&gt; on -&gt; reconnect succeeds</li>
+<li>remembered printer remains off -&gt; fallback scan -&gt; no results</li>
+<li>remembered printer renamed / <code>(IOS)</code> suffix variant -&gt; fallback recovers</li>
+<li>remembered printer unavailable -&gt; user switches to another saved printer</li>
+<li>reconnect canceled mid-flight -&gt; new reconnect attempt starts cleanly</li>
+</ul>
+<h3 id="automated">Automated<a class="headerlink" href="#automated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>coordinator tests for:</li>
+<li>targeted reconnect success</li>
+<li>targeted reconnect failure -&gt; scan fallback</li>
+<li>stale callback ignored after cancel</li>
+<li>no connected-state transition before status fetch success</li>
+</ul>
+<h2 id="rollout-order">Rollout Order<a class="headerlink" href="#rollout-order" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Refactor reconnect coordinator states.</li>
+<li>Implement targeted reconnect -&gt; scan fallback flow.</li>
+<li>Update disconnected/pairing UI copy and actions.</li>
+<li>Add coordinator tests.</li>
+<li>Run app build and hardware reconnect smoke tests.</li>
+</ol>
+<h2 id="exit-criteria">Exit Criteria<a class="headerlink" href="#exit-criteria" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Reconnect never ends in a dead-end spinner.</li>
+<li>Failed targeted reconnect always yields a clear next action.</li>
+<li>The app no longer flashes misleading connected state during reconnect failure.</li>
+<li>Saved-printer recovery and switch-printer behavior feel like one coherent flow.</li>
 </ul>
 
 

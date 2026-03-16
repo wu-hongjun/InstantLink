@@ -1000,6 +1000,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1435,6 +1441,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1612,7 +1702,7 @@
 </code></pre></div>
 <h2 id="build-the-macos-app">Build the macOS App<a class="headerlink" href="#build-the-macos-app" title="Permanent link">&para;</a></h2>
 <p>The app bundle embeds the CLI binary and the FFI dylib. Runtime printer/device operations use the bundled FFI dylib; the bundled CLI is kept only for lightweight metadata such as version reporting.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>scripts/build-app.sh<span class="w"> </span><span class="m">0</span>.1.4
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>scripts/build-app.sh<span class="w"> </span><span class="m">0</span>.1.5
 </code></pre></div>
 <p><code>scripts/build-app.sh</code> requires a semver version argument. It builds the Rust workspace, compiles the SwiftUI launcher, bundles localizations and fonts, codesigns the app, and creates a <code>.dmg</code> when <code>create-dmg</code> is installed (<code>brew install create-dmg</code>).</p>
 <p>The resulting bundle is written to <code>target/release/InstantLink.app</code>.</p>

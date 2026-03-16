@@ -114,7 +114,7 @@ Features include drag-and-drop image printing, a built-in image editor, overlays
 
 ```bash
 # Build the app bundle
-bash scripts/build-app.sh 0.1.4
+bash scripts/build-app.sh 0.1.5
 ```
 
 ## Documentation

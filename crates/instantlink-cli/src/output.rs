@@ -18,7 +18,12 @@ pub fn spinner(message: &str) -> ProgressBar {
 
 /// Print a value as JSON to stdout.
 pub fn print_json<T: Serialize>(value: &T) -> anyhow::Result<()> {
-    let json = serde_json::to_string_pretty(value)?;
+    let json = render_json(value)?;
     println!("{json}");
     Ok(())
+}
+
+/// Render a value as pretty JSON.
+pub fn render_json<T: Serialize>(value: &T) -> anyhow::Result<String> {
+    Ok(serde_json::to_string_pretty(value)?)
 }

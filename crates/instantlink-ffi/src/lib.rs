@@ -755,7 +755,197 @@ pub unsafe extern "C" fn instantlink_print_with_progress_ctx(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use instantlink_core::{FitMode, PrinterDevice, PrinterModel, PrinterStatus};
+    use std::ffi::CString;
+    use std::future::Future;
+    use std::path::Path;
+    use std::pin::Pin;
     use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
+    use std::sync::{Mutex as StdMutex, MutexGuard};
+
+    fn ffi_test_lock() -> &'static StdMutex<()> {
+        static LOCK: OnceLock<StdMutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| StdMutex::new(()))
+    }
+
+    struct TestDeviceGuard<'a> {
+        _lock: MutexGuard<'a, ()>,
+        previous: Option<Box<dyn PrinterDevice>>,
+    }
+
+    impl Drop for TestDeviceGuard<'_> {
+        fn drop(&mut self) {
+            let lock = get_device_lock();
+            let mut guard = lock.lock().unwrap();
+            *guard = self.previous.take();
+        }
+    }
+
+    fn install_test_device(device: Option<Box<dyn PrinterDevice>>) -> TestDeviceGuard<'static> {
+        let lock_guard = ffi_test_lock().lock().unwrap();
+        let lock = get_device_lock();
+        let mut guard = lock.lock().unwrap();
+        let previous = guard.take();
+        *guard = device;
+        drop(guard);
+        TestDeviceGuard {
+            _lock: lock_guard,
+            previous,
+        }
+    }
+
+    struct FakeDevice {
+        name: String,
+        model: PrinterModel,
+        status: PrinterStatus,
+    }
+
+    impl FakeDevice {
+        fn new(name: &str, model: PrinterModel) -> Self {
+            Self {
+                name: name.to_string(),
+                model,
+                status: PrinterStatus {
+                    battery: 82,
+                    is_charging: true,
+                    film_remaining: 7,
+                    print_count: 123,
+                    model,
+                    name: name.to_string(),
+                },
+            }
+        }
+    }
+
+    impl PrinterDevice for FakeDevice {
+        fn status<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<
+            Box<dyn Future<Output = instantlink_core::Result<PrinterStatus>> + Send + 'async_trait>,
+        >
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(self.status.clone()) })
+        }
+
+        fn battery<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<u8>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(self.status.battery) })
+        }
+
+        fn film_and_charging<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<(u8, bool)>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok((self.status.film_remaining, self.status.is_charging)) })
+        }
+
+        fn print_count<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<u16>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(self.status.print_count) })
+        }
+
+        fn model(&self) -> PrinterModel {
+            self.model
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn print_file<'life0, 'life1, 'life2, 'async_trait>(
+            &'life0 self,
+            _path: &'life1 Path,
+            _fit: FitMode,
+            _quality: u8,
+            _print_option: u8,
+            _progress: Option<&'life2 (dyn Fn(usize, usize) + Send + Sync)>,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            'life2: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(()) })
+        }
+
+        fn print_bytes<'life0, 'life1, 'life2, 'async_trait>(
+            &'life0 self,
+            _data: &'life1 [u8],
+            _fit: FitMode,
+            _quality: u8,
+            _print_option: u8,
+            _progress: Option<&'life2 (dyn Fn(usize, usize) + Send + Sync)>,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            'life2: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(()) })
+        }
+
+        fn set_led<'life0, 'async_trait>(
+            &'life0 self,
+            _r: u8,
+            _g: u8,
+            _b: u8,
+            _pattern: u8,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(()) })
+        }
+
+        fn shutdown<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(()) })
+        }
+
+        fn reset<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(()) })
+        }
+
+        fn disconnect<'life0, 'async_trait>(
+            &'life0 self,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move { Ok(()) })
+        }
+    }
 
     extern "C" fn connect_progress_recorder(
         stage: i32,
@@ -800,6 +990,98 @@ mod tests {
         );
         assert_eq!(slots.0.load(Ordering::SeqCst), 7);
         assert_eq!(slots.1.load(Ordering::SeqCst), 52);
+    }
+
+    #[test]
+    fn ffi_scan_rejects_null_output_buffer() {
+        let _guard = install_test_device(None);
+        let code = unsafe { instantlink_scan(0, std::ptr::null_mut(), 16) };
+        assert_eq!(code, -5);
+    }
+
+    #[test]
+    fn ffi_status_rejects_null_pointers() {
+        let _guard = install_test_device(None);
+        let mut battery = 0;
+        let mut film = 0;
+        let mut charging = 0;
+        let code = unsafe {
+            instantlink_status(&mut battery, &mut film, &mut charging, std::ptr::null_mut())
+        };
+        assert_eq!(code, -5);
+    }
+
+    #[test]
+    fn ffi_status_writes_outputs_for_connected_device() {
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::MiniLink3,
+        ))));
+        let (mut battery, mut film, mut charging, mut print_count) = (0, 0, 0, 0);
+        let code =
+            unsafe { instantlink_status(&mut battery, &mut film, &mut charging, &mut print_count) };
+        assert_eq!(code, 0);
+        assert_eq!((battery, film, charging, print_count), (82, 7, 1, 123));
+    }
+
+    #[test]
+    fn ffi_device_name_truncates_and_nul_terminates() {
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::Mini,
+        ))));
+        let mut buffer = [b'x' as c_char; 8];
+        let written = unsafe { instantlink_device_name(buffer.as_mut_ptr(), buffer.len() as i32) };
+        assert_eq!(written, 7);
+        assert_eq!(buffer[7], 0);
+        let bytes: Vec<u8> = buffer[..7].iter().map(|byte| *byte as u8).collect();
+        assert_eq!(String::from_utf8(bytes).unwrap(), "INSTAX-");
+    }
+
+    #[test]
+    fn ffi_disconnect_returns_not_found_when_no_device() {
+        let _guard = install_test_device(None);
+        assert_eq!(instantlink_disconnect(), -1);
+    }
+
+    #[test]
+    fn ffi_error_code_mapping_is_stable() {
+        assert_eq!(error_code(&PrinterError::PrinterNotFound), -1);
+        assert_eq!(error_code(&PrinterError::MultiplePrinters { count: 2 }), -2);
+        assert_eq!(error_code(&PrinterError::Timeout), -4);
+        assert_eq!(error_code(&PrinterError::NoFilm), -8);
+        assert_eq!(error_code(&PrinterError::LowBattery { percent: 10 }), -9);
+        assert_eq!(error_code(&PrinterError::CoverOpen), -10);
+        assert_eq!(error_code(&PrinterError::PrinterBusy), -11);
+        assert_eq!(
+            error_code(&PrinterError::UnexpectedResponse("bad packet".into())),
+            -7
+        );
+    }
+
+    #[test]
+    fn ffi_connect_progress_wrapper_accepts_null_callback() {
+        let _guard = install_test_device(None);
+        let code = unsafe { instantlink_connect_named_with_progress(std::ptr::null(), 0, None) };
+        assert_eq!(code, -5);
+    }
+
+    #[test]
+    fn ffi_print_progress_wrapper_accepts_null_callback_without_device() {
+        let _guard = install_test_device(None);
+        let path = CString::new("photo.jpg").unwrap();
+        let code = unsafe { instantlink_print_with_progress(path.as_ptr(), 97, 0, 0, None) };
+        assert_eq!(code, -1);
+    }
+
+    #[test]
+    fn ffi_print_progress_ctx_accepts_null_callback_without_device() {
+        let _guard = install_test_device(None);
+        let path = CString::new("photo.jpg").unwrap();
+        let code = unsafe {
+            instantlink_print_with_progress_ctx(path.as_ptr(), 97, 0, 0, None, std::ptr::null_mut())
+        };
+        assert_eq!(code, -1);
     }
 }
 

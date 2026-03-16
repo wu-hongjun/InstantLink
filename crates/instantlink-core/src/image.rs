@@ -195,6 +195,7 @@ pub fn prepare_image_from_bytes(
 mod tests {
     use super::*;
     use image::ImageFormat;
+    use image::RgbImage;
 
     fn create_test_image(w: u32, h: u32) -> DynamicImage {
         DynamicImage::new_rgb8(w, h)
@@ -347,5 +348,60 @@ mod tests {
         let all = PrinterModel::all();
         assert_eq!(all.len(), 4);
         assert!(all.contains(&PrinterModel::MiniLink3));
+    }
+
+    #[test]
+    fn encode_jpeg_returns_image_too_large_when_quality_one_still_exceeds_limit() {
+        let img = create_test_image(600, 800);
+        let err = encode_jpeg(&img, 1, 1).unwrap_err();
+        match err {
+            PrinterError::ImageTooLarge { size, max } => {
+                assert!(size > max);
+                assert_eq!(max, 1);
+            }
+            other => panic!("expected ImageTooLarge, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn prepare_image_from_bytes_flips_vertically_for_link3() {
+        let width = PrinterModel::MiniLink3.spec().width;
+        let height = PrinterModel::MiniLink3.spec().height;
+        let mut rgb = RgbImage::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                let pixel = if y < height / 2 {
+                    image::Rgb([255, 0, 0])
+                } else {
+                    image::Rgb([0, 0, 255])
+                };
+                rgb.put_pixel(x, y, pixel);
+            }
+        }
+
+        let mut encoded = Cursor::new(Vec::new());
+        DynamicImage::ImageRgb8(rgb)
+            .write_to(&mut encoded, ImageFormat::Png)
+            .unwrap();
+
+        let (jpeg, _) = prepare_image_from_bytes(
+            &encoded.into_inner(),
+            PrinterModel::MiniLink3,
+            FitMode::Crop,
+            97,
+        )
+        .unwrap();
+        let processed = load_image_from_bytes(&jpeg).unwrap().to_rgb8();
+        let top = processed.get_pixel(width / 2, height / 4);
+        let bottom = processed.get_pixel(width / 2, (height * 3) / 4);
+
+        assert!(
+            top[2] > top[0],
+            "expected blue-dominant top pixel, got {top:?}"
+        );
+        assert!(
+            bottom[0] > bottom[2],
+            "expected red-dominant bottom pixel, got {bottom:?}"
+        );
     }
 }

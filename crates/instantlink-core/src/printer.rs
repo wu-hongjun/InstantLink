@@ -66,33 +66,7 @@ async fn connect_internal(
         let results = transport::scan(&adapter, duration.unwrap_or(DEFAULT_SCAN_DURATION)).await?;
         emit_connect_progress(progress, ConnectStage::ScanFinished, None::<String>);
 
-        let mut exact_matches = Vec::new();
-        let mut partial_matches = Vec::new();
-
-        for result in results {
-            if printer_name_matches(&result.1, device_name) {
-                exact_matches.push(result);
-            } else if normalized_printer_name(&result.1)
-                .contains(&normalized_printer_name(device_name))
-                || normalized_printer_name(device_name)
-                    .contains(&normalized_printer_name(&result.1))
-            {
-                partial_matches.push(result);
-            }
-        }
-
-        let matches = if exact_matches.is_empty() {
-            partial_matches
-        } else {
-            exact_matches
-        };
-
-        let match_count = matches.len();
-        let (peripheral, name) = match match_count {
-            0 => return Err(PrinterError::PrinterNotFound),
-            1 => matches.into_iter().next().expect("one match must exist"),
-            count => return Err(PrinterError::MultiplePrinters { count }),
-        };
+        let (peripheral, name) = select_matching_result(results, device_name)?;
 
         emit_connect_progress(progress, ConnectStage::DeviceMatched, Some(name.clone()));
 
@@ -168,6 +142,44 @@ fn extracted_printer_serial(name: &str) -> Option<String> {
     (!digits.is_empty()).then_some(digits)
 }
 
+fn select_matching_result<T>(results: Vec<(T, String)>, device_name: &str) -> Result<(T, String)> {
+    let mut exact_matches = Vec::new();
+    let mut partial_matches = Vec::new();
+
+    for result in results {
+        if printer_name_matches(&result.1, device_name) {
+            exact_matches.push(result);
+        } else if normalized_printer_name(&result.1).contains(&normalized_printer_name(device_name))
+            || normalized_printer_name(device_name).contains(&normalized_printer_name(&result.1))
+        {
+            partial_matches.push(result);
+        }
+    }
+
+    let matches = if exact_matches.is_empty() {
+        partial_matches
+    } else {
+        exact_matches
+    };
+
+    match matches.len() {
+        0 => Err(PrinterError::PrinterNotFound),
+        1 => Ok(matches.into_iter().next().expect("one match must exist")),
+        count => Err(PrinterError::MultiplePrinters { count }),
+    }
+}
+
+fn combine_operation_and_disconnect<T>(
+    operation_result: Result<T>,
+    disconnect_result: Result<()>,
+) -> Result<T> {
+    match (operation_result, disconnect_result) {
+        (Err(err), _) => Err(err),
+        (Ok(_), Err(err)) => Err(err),
+        (Ok(value), Ok(())) => Ok(value),
+    }
+}
+
 /// Connect to the first available Instax printer.
 pub async fn connect_any(duration: Option<Duration>) -> Result<Box<dyn PrinterDevice>> {
     let adapter = transport::get_adapter().await?;
@@ -185,7 +197,11 @@ pub async fn connect_any(duration: Option<Duration>) -> Result<Box<dyn PrinterDe
 
 #[cfg(test)]
 mod tests {
-    use super::{extracted_printer_serial, normalized_printer_name, printer_name_matches};
+    use super::{
+        combine_operation_and_disconnect, extracted_printer_serial, normalized_printer_name,
+        printer_name_matches, select_matching_result,
+    };
+    use crate::error::PrinterError;
 
     #[test]
     fn normalizes_parenthetical_suffixes() {
@@ -214,6 +230,49 @@ mod tests {
             Some("12345678")
         );
     }
+
+    #[test]
+    fn select_matching_result_prefers_exact_match_over_partial_match() {
+        let results = vec![
+            (1, "INSTAX-1234".to_string()),
+            (2, "INSTAX-12345678 (iOS)".to_string()),
+        ];
+        let (matched, name) = select_matching_result(results, "INSTAX-12345678").unwrap();
+        assert_eq!(matched, 2);
+        assert_eq!(name, "INSTAX-12345678 (iOS)");
+    }
+
+    #[test]
+    fn select_matching_result_returns_multiple_printers_for_multiple_exact_matches() {
+        let results = vec![
+            (1, "INSTAX-12345678".to_string()),
+            (2, "INSTAX-12345678 (iOS)".to_string()),
+        ];
+        let err = select_matching_result(results, "INSTAX-12345678").unwrap_err();
+        assert!(matches!(err, PrinterError::MultiplePrinters { count: 2 }));
+    }
+
+    #[test]
+    fn combine_operation_and_disconnect_prefers_operation_error() {
+        let err = combine_operation_and_disconnect::<()>(
+            Err(PrinterError::PrinterBusy),
+            Err(PrinterError::Timeout),
+        )
+        .unwrap_err();
+        assert!(matches!(err, PrinterError::PrinterBusy));
+    }
+
+    #[test]
+    fn combine_operation_and_disconnect_returns_disconnect_error_after_success() {
+        let err = combine_operation_and_disconnect(Ok(()), Err(PrinterError::Timeout)).unwrap_err();
+        assert!(matches!(err, PrinterError::Timeout));
+    }
+
+    #[test]
+    fn combine_operation_and_disconnect_returns_success_value() {
+        let value = combine_operation_and_disconnect(Ok(42_u8), Ok(())).unwrap();
+        assert_eq!(value, 42);
+    }
 }
 
 /// One-shot print: connect to a printer, print an image, disconnect.
@@ -233,12 +292,7 @@ pub async fn print_file(
 
     let print_result = device.print_file(path, fit, quality, 0, progress).await;
     let disconnect_result = device.disconnect().await;
-
-    match (print_result, disconnect_result) {
-        (Err(err), _) => Err(err),
-        (Ok(()), Err(err)) => Err(err),
-        (Ok(()), Ok(())) => Ok(()),
-    }
+    combine_operation_and_disconnect(print_result, disconnect_result)
 }
 
 /// Get printer status: connect, query, disconnect.
@@ -253,10 +307,5 @@ pub async fn get_status(
 
     let status_result = device.status().await;
     let disconnect_result = device.disconnect().await;
-
-    match (status_result, disconnect_result) {
-        (Err(err), _) => Err(err),
-        (Ok(_), Err(err)) => Err(err),
-        (Ok(status), Ok(())) => Ok(status),
-    }
+    combine_operation_and_disconnect(status_result, disconnect_result)
 }

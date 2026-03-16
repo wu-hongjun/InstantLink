@@ -71,9 +71,10 @@ InstantLink/
 
 ```bash
 cargo test --workspace
+bash scripts/test-macos.sh
 ```
 
-This covers protocol encoding/decoding, image preparation, mock transport flows, and device-level behavior without real hardware.
+This covers protocol encoding/decoding, image preparation, mock transport flows, device-level behavior, and the repo-native macOS unit harness for core Swift logic without real hardware.
 
 ### Hardware Verification
 

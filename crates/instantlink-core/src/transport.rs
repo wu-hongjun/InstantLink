@@ -18,6 +18,34 @@ use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connec
 use crate::error::{PrinterError, Result};
 use crate::protocol::{self, PacketAssembler};
 
+async fn receive_packet_from_channel(
+    rx: &mut mpsc::Receiver<Vec<u8>>,
+    assembler: &mut PacketAssembler,
+    timeout: Duration,
+) -> Result<protocol::Packet> {
+    let deadline = tokio::time::Instant::now() + timeout;
+
+    loop {
+        if let Some(packet) = assembler.feed(&[]) {
+            return Ok(packet);
+        }
+
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            return Err(PrinterError::Timeout);
+        }
+
+        let data = tokio::time::timeout(remaining, rx.recv())
+            .await
+            .map_err(|_| PrinterError::Timeout)?
+            .ok_or_else(|| PrinterError::Ble("notification channel closed".into()))?;
+
+        if let Some(packet) = assembler.feed(&data) {
+            return Ok(packet);
+        }
+    }
+}
+
 /// Instax BLE service UUID.
 pub const SERVICE_UUID: Uuid = Uuid::from_u128(0x70954782_2d83_473d_9e5f_81e1d02d5273);
 /// Instax BLE write characteristic UUID.
@@ -308,27 +336,7 @@ impl Transport for BleTransport {
     async fn receive(&self, timeout: Duration) -> Result<protocol::Packet> {
         let mut rx = self.rx.lock().await;
         let mut assembler = self.assembler.lock().await;
-        let deadline = tokio::time::Instant::now() + timeout;
-
-        loop {
-            if let Some(packet) = assembler.feed(&[]) {
-                return Ok(packet);
-            }
-
-            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-            if remaining.is_zero() {
-                return Err(PrinterError::Timeout);
-            }
-
-            let data = tokio::time::timeout(remaining, rx.recv())
-                .await
-                .map_err(|_| PrinterError::Timeout)?
-                .ok_or_else(|| PrinterError::Ble("notification channel closed".into()))?;
-
-            if let Some(packet) = assembler.feed(&data) {
-                return Ok(packet);
-            }
-        }
+        receive_packet_from_channel(&mut rx, &mut assembler, timeout).await
     }
 
     async fn send_and_receive(&self, data: &[u8], timeout: Duration) -> Result<protocol::Packet> {
@@ -360,5 +368,61 @@ impl Transport for BleTransport {
 
     fn model_number_hint(&self) -> Option<&str> {
         self.dis_model_number.as_deref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn receive_packet_from_channel_uses_total_deadline_across_fragments() {
+        let (tx, mut rx) = mpsc::channel(4);
+        let mut assembler = PacketAssembler::new();
+        let packet = protocol::build_packet(0x1234, &[0xAB; 176]);
+        let fragments = protocol::fragment(&packet);
+        assert!(
+            fragments.len() > 1,
+            "test packet must span multiple fragments"
+        );
+
+        let sender = tokio::spawn(async move {
+            tx.send(fragments[0].clone()).await.unwrap();
+            tokio::time::sleep(Duration::from_millis(40)).await;
+            tx.send(fragments[1].clone()).await.unwrap();
+        });
+
+        let start = tokio::time::Instant::now();
+        let err = receive_packet_from_channel(&mut rx, &mut assembler, Duration::from_millis(25))
+            .await
+            .unwrap_err();
+        sender.await.unwrap();
+
+        assert!(matches!(err, PrinterError::Timeout));
+        assert!(start.elapsed() < Duration::from_millis(60));
+    }
+
+    #[tokio::test]
+    async fn receive_packet_from_channel_returns_packet_when_fragments_arrive_in_time() {
+        let (tx, mut rx) = mpsc::channel(4);
+        let mut assembler = PacketAssembler::new();
+        let packet = protocol::build_packet(0x1234, &[0xAA, 0xBB]);
+        let fragments = protocol::fragment(&packet);
+
+        let sender = tokio::spawn(async move {
+            for fragment in fragments {
+                tx.send(fragment).await.unwrap();
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        });
+
+        let received =
+            receive_packet_from_channel(&mut rx, &mut assembler, Duration::from_millis(100))
+                .await
+                .unwrap();
+        sender.await.unwrap();
+
+        assert_eq!(received.opcode, 0x1234);
+        assert_eq!(received.payload, vec![0xAA, 0xBB]);
     }
 }

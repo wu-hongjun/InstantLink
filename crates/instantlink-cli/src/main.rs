@@ -2,7 +2,7 @@
 
 mod output;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -11,7 +11,138 @@ use instantlink_core::image::FitMode;
 use instantlink_core::printer;
 use serde::Serialize;
 
-#[derive(Parser)]
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct InfoOutput {
+    name: String,
+    model: String,
+    battery: u8,
+    is_charging: bool,
+    film_remaining: u8,
+    print_count: u16,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct PrintOutput {
+    success: bool,
+    printer: String,
+    model: String,
+    image: String,
+    fit: String,
+    quality: u8,
+    color_mode: String,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct LedSetOutput {
+    success: bool,
+    printer: String,
+    action: &'static str,
+    color: String,
+    pattern: String,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct LedOffOutput {
+    success: bool,
+    printer: String,
+    action: &'static str,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct StatusOutput {
+    connected: bool,
+    name: String,
+    model: String,
+    battery: u8,
+    is_charging: bool,
+    film_remaining: u8,
+    print_count: u16,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct DisconnectedStatusOutput {
+    connected: bool,
+}
+
+fn build_info_output(
+    name: &str,
+    model: &str,
+    battery: u8,
+    is_charging: bool,
+    film_remaining: u8,
+    print_count: u16,
+) -> InfoOutput {
+    InfoOutput {
+        name: name.to_string(),
+        model: model.to_string(),
+        battery,
+        is_charging,
+        film_remaining,
+        print_count,
+    }
+}
+
+fn build_print_output(
+    printer: &str,
+    model: &str,
+    image: &Path,
+    fit: &str,
+    quality: u8,
+    color_mode: &str,
+) -> PrintOutput {
+    PrintOutput {
+        success: true,
+        printer: printer.to_string(),
+        model: model.to_string(),
+        image: image.display().to_string(),
+        fit: fit.to_string(),
+        quality,
+        color_mode: color_mode.to_string(),
+    }
+}
+
+fn build_led_set_output(printer: &str, r: u8, g: u8, b: u8, pattern: &str) -> LedSetOutput {
+    LedSetOutput {
+        success: true,
+        printer: printer.to_string(),
+        action: "set",
+        color: format!("#{:02x}{:02x}{:02x}", r, g, b),
+        pattern: pattern.to_string(),
+    }
+}
+
+fn build_led_off_output(printer: &str) -> LedOffOutput {
+    LedOffOutput {
+        success: true,
+        printer: printer.to_string(),
+        action: "off",
+    }
+}
+
+fn build_status_output(
+    name: &str,
+    model: &str,
+    battery: u8,
+    is_charging: bool,
+    film_remaining: u8,
+    print_count: u16,
+) -> StatusOutput {
+    StatusOutput {
+        connected: true,
+        name: name.to_string(),
+        model: model.to_string(),
+        battery,
+        is_charging,
+        film_remaining,
+        print_count,
+    }
+}
+
+fn build_disconnected_status_output() -> DisconnectedStatusOutput {
+    DisconnectedStatusOutput { connected: false }
+}
+
+#[derive(Debug, Parser)]
 #[command(
     name = "instantlink",
     version,
@@ -30,7 +161,7 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Commands {
     /// Scan for nearby Instax printers
     Scan {
@@ -67,7 +198,7 @@ enum Commands {
     Status,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum LedAction {
     /// Set LED color and pattern
     Set {
@@ -162,23 +293,14 @@ async fn main() -> Result<()> {
             disconnect_result?;
 
             if cli.json {
-                #[derive(serde::Serialize)]
-                struct Info {
-                    name: String,
-                    model: String,
-                    battery: u8,
-                    is_charging: bool,
-                    film_remaining: u8,
-                    print_count: u16,
-                }
-                output::print_json(&Info {
-                    name: device.name().to_string(),
-                    model: model.to_string(),
+                output::print_json(&build_info_output(
+                    device.name(),
+                    &model.to_string(),
                     battery,
                     is_charging,
                     film_remaining,
                     print_count,
-                })?;
+                ))?;
             } else {
                 println!();
                 println!("Printer:    {}", device.name());
@@ -244,25 +366,14 @@ async fn main() -> Result<()> {
             device.disconnect().await?;
             print_result.context("print failed")?;
             if cli.json {
-                #[derive(Serialize)]
-                struct PrintOutput {
-                    success: bool,
-                    printer: String,
-                    model: String,
-                    image: String,
-                    fit: String,
-                    quality: u8,
-                    color_mode: String,
-                }
-                output::print_json(&PrintOutput {
-                    success: true,
-                    printer: device.name().to_string(),
-                    model: model.to_string(),
-                    image: image.display().to_string(),
-                    fit: fit_mode_name.to_string(),
+                output::print_json(&build_print_output(
+                    device.name(),
+                    &model.to_string(),
+                    &image,
+                    fit_mode_name,
                     quality,
-                    color_mode: mode_name.to_ascii_lowercase(),
-                })?;
+                    &mode_name.to_ascii_lowercase(),
+                ))?;
             } else {
                 println!("Print complete!");
             }
@@ -286,21 +397,7 @@ async fn main() -> Result<()> {
                 device.disconnect().await?;
                 result.context("failed to set LED")?;
                 if cli.json {
-                    #[derive(Serialize)]
-                    struct LedSetOutput {
-                        success: bool,
-                        printer: String,
-                        action: &'static str,
-                        color: String,
-                        pattern: String,
-                    }
-                    output::print_json(&LedSetOutput {
-                        success: true,
-                        printer: device.name().to_string(),
-                        action: "set",
-                        color: format!("#{:02x}{:02x}{:02x}", r, g, b),
-                        pattern,
-                    })?;
+                    output::print_json(&build_led_set_output(device.name(), r, g, b, &pattern))?;
                 } else {
                     println!("LED set to #{:02x}{:02x}{:02x} ({})", r, g, b, pattern);
                 }
@@ -315,17 +412,7 @@ async fn main() -> Result<()> {
                 device.disconnect().await?;
                 result.context("failed to turn off LED")?;
                 if cli.json {
-                    #[derive(Serialize)]
-                    struct LedOffOutput {
-                        success: bool,
-                        printer: String,
-                        action: &'static str,
-                    }
-                    output::print_json(&LedOffOutput {
-                        success: true,
-                        printer: device.name().to_string(),
-                        action: "off",
-                    })?;
+                    output::print_json(&build_led_off_output(device.name()))?;
                 } else {
                     println!("LED off");
                 }
@@ -340,25 +427,14 @@ async fn main() -> Result<()> {
             match status {
                 Ok(status) => {
                     if cli.json {
-                        #[derive(serde::Serialize)]
-                        struct StatusOutput {
-                            connected: bool,
-                            name: String,
-                            model: String,
-                            battery: u8,
-                            is_charging: bool,
-                            film_remaining: u8,
-                            print_count: u16,
-                        }
-                        output::print_json(&StatusOutput {
-                            connected: true,
-                            name: status.name,
-                            model: status.model.to_string(),
-                            battery: status.battery,
-                            is_charging: status.is_charging,
-                            film_remaining: status.film_remaining,
-                            print_count: status.print_count,
-                        })?;
+                        output::print_json(&build_status_output(
+                            &status.name,
+                            &status.model.to_string(),
+                            status.battery,
+                            status.is_charging,
+                            status.film_remaining,
+                            status.print_count,
+                        ))?;
                     } else {
                         println!("Connected:  yes");
                         println!("Printer:    {}", status.name);
@@ -375,11 +451,7 @@ async fn main() -> Result<()> {
                 }
                 Err(_) => {
                     if cli.json {
-                        #[derive(serde::Serialize)]
-                        struct Disconnected {
-                            connected: bool,
-                        }
-                        output::print_json(&Disconnected { connected: false })?;
+                        output::print_json(&build_disconnected_status_output())?;
                     } else {
                         println!("Connected:  no");
                         println!("No Instax printer found");
@@ -402,4 +474,124 @@ fn parse_hex_color(s: &str) -> Result<(u8, u8, u8)> {
     let g = u8::from_str_radix(&hex[2..4], 16).context("invalid green component")?;
     let b = u8::from_str_radix(&hex[4..6], 16).context("invalid blue component")?;
     Ok((r, g, b))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+    use serde_json::Value;
+
+    #[test]
+    fn parse_scan_defaults() {
+        let cli = Cli::try_parse_from(["instantlink", "scan"]).unwrap();
+        match cli.command {
+            Commands::Scan { duration } => assert_eq!(duration, 5),
+            other => panic!("expected scan command, got {other:?}"),
+        }
+        assert!(!cli.json);
+        assert_eq!(cli.device, None);
+    }
+
+    #[test]
+    fn parse_print_defaults() {
+        let cli = Cli::try_parse_from(["instantlink", "print", "sample.jpg"]).unwrap();
+        match cli.command {
+            Commands::Print {
+                image,
+                quality,
+                fit,
+                color_mode,
+            } => {
+                assert_eq!(image, PathBuf::from("sample.jpg"));
+                assert_eq!(quality, 97);
+                assert_eq!(fit, "crop");
+                assert_eq!(color_mode, "rich");
+            }
+            other => panic!("expected print command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_led_set_defaults() {
+        let cli = Cli::try_parse_from(["instantlink", "led", "set", "#ff0000"]).unwrap();
+        match cli.command {
+            Commands::Led { action } => match action {
+                LedAction::Set { color, pattern } => {
+                    assert_eq!(color, "#ff0000");
+                    assert_eq!(pattern, "solid");
+                }
+                other => panic!("expected led set action, got {other:?}"),
+            },
+            other => panic!("expected led command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_global_json_and_device_flags() {
+        let cli = Cli::try_parse_from([
+            "instantlink",
+            "--json",
+            "--device",
+            "INSTAX-12345678",
+            "status",
+        ])
+        .unwrap();
+        assert!(cli.json);
+        assert_eq!(cli.device.as_deref(), Some("INSTAX-12345678"));
+        assert!(matches!(cli.command, Commands::Status));
+    }
+
+    #[test]
+    fn parse_hex_color_accepts_hash_prefixed_and_plain() {
+        assert_eq!(parse_hex_color("#FF0000").unwrap(), (255, 0, 0));
+        assert_eq!(parse_hex_color("00ff7f").unwrap(), (0, 255, 127));
+    }
+
+    #[test]
+    fn parse_hex_color_rejects_invalid_length() {
+        let error = parse_hex_color("fff").unwrap_err().to_string();
+        assert!(error.contains("expected 6 hex digits"));
+    }
+
+    #[test]
+    fn print_json_emits_expected_payload() {
+        let payload = build_print_output(
+            "INSTAX-12345678",
+            "Instax Mini Link 3",
+            &PathBuf::from("photo.jpg"),
+            "contain",
+            92,
+            "natural",
+        );
+        let json = output::render_json(&payload).unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["success"], true);
+        assert_eq!(value["printer"], "INSTAX-12345678");
+        assert_eq!(value["model"], "Instax Mini Link 3");
+        assert_eq!(value["image"], "photo.jpg");
+        assert_eq!(value["fit"], "contain");
+        assert_eq!(value["quality"], 92);
+        assert_eq!(value["color_mode"], "natural");
+    }
+
+    #[test]
+    fn led_set_json_emits_expected_payload() {
+        let payload = build_led_set_output("INSTAX-12345678", 255, 153, 49, "blink");
+        let json = output::render_json(&payload).unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["success"], true);
+        assert_eq!(value["printer"], "INSTAX-12345678");
+        assert_eq!(value["action"], "set");
+        assert_eq!(value["color"], "#ff9931");
+        assert_eq!(value["pattern"], "blink");
+    }
+
+    #[test]
+    fn status_json_disconnected_shape_is_stable() {
+        let payload = build_disconnected_status_output();
+        let json = output::render_json(&payload).unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value, serde_json::json!({ "connected": false }));
+    }
 }

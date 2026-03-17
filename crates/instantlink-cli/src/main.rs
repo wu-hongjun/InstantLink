@@ -513,6 +513,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_print_custom_values() {
+        let cli = Cli::try_parse_from([
+            "instantlink",
+            "print",
+            "nested/photo.jpg",
+            "--quality",
+            "88",
+            "--fit",
+            "stretch",
+            "--color-mode",
+            "natural",
+        ])
+        .unwrap();
+        match cli.command {
+            Commands::Print {
+                image,
+                quality,
+                fit,
+                color_mode,
+            } => {
+                assert_eq!(image, PathBuf::from("nested/photo.jpg"));
+                assert_eq!(quality, 88);
+                assert_eq!(fit, "stretch");
+                assert_eq!(color_mode, "natural");
+            }
+            other => panic!("expected print command, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn parse_led_set_defaults() {
         let cli = Cli::try_parse_from(["instantlink", "led", "set", "#ff0000"]).unwrap();
         match cli.command {
@@ -549,9 +579,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_hex_color_rejects_invalid_component() {
+        let error = parse_hex_color("gg00ff").unwrap_err().to_string();
+        assert!(error.contains("invalid red component"));
+    }
+
+    #[test]
     fn parse_hex_color_rejects_invalid_length() {
         let error = parse_hex_color("fff").unwrap_err().to_string();
         assert!(error.contains("expected 6 hex digits"));
+    }
+
+    #[test]
+    fn info_json_emits_expected_payload() {
+        let payload = build_info_output("INSTAX-12345678", "Instax Wide Link", 64, true, 5, 91);
+        let json = output::render_json(&payload).unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["name"], "INSTAX-12345678");
+        assert_eq!(value["model"], "Instax Wide Link");
+        assert_eq!(value["battery"], 64);
+        assert_eq!(value["is_charging"], true);
+        assert_eq!(value["film_remaining"], 5);
+        assert_eq!(value["print_count"], 91);
     }
 
     #[test]
@@ -585,6 +634,31 @@ mod tests {
         assert_eq!(value["action"], "set");
         assert_eq!(value["color"], "#ff9931");
         assert_eq!(value["pattern"], "blink");
+    }
+
+    #[test]
+    fn led_off_json_emits_expected_payload() {
+        let payload = build_led_off_output("INSTAX-12345678");
+        let json = output::render_json(&payload).unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["success"], true);
+        assert_eq!(value["printer"], "INSTAX-12345678");
+        assert_eq!(value["action"], "off");
+    }
+
+    #[test]
+    fn status_json_connected_shape_is_stable() {
+        let payload =
+            build_status_output("INSTAX-12345678", "Instax Mini Link 3", 82, true, 7, 123);
+        let json = output::render_json(&payload).unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["connected"], true);
+        assert_eq!(value["name"], "INSTAX-12345678");
+        assert_eq!(value["model"], "Instax Mini Link 3");
+        assert_eq!(value["battery"], 82);
+        assert_eq!(value["is_charging"], true);
+        assert_eq!(value["film_remaining"], 7);
+        assert_eq!(value["print_count"], 123);
     }
 
     #[test]

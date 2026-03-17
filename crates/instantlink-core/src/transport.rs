@@ -425,4 +425,37 @@ mod tests {
         assert_eq!(received.opcode, 0x1234);
         assert_eq!(received.payload, vec![0xAA, 0xBB]);
     }
+
+    #[tokio::test]
+    async fn receive_packet_from_channel_returns_buffered_packet_without_waiting() {
+        let (_tx, mut rx) = mpsc::channel(1);
+        let first = protocol::build_packet(0x1111, &[0x00]);
+        let second = protocol::build_packet(0x4321, &[0x01, 0x02, 0x03]);
+        let mut assembler = PacketAssembler::new();
+        let mut combined = first;
+        combined.extend_from_slice(&second);
+        let initial = assembler.feed(&combined).unwrap();
+        assert_eq!(initial.opcode, 0x1111);
+
+        let received =
+            receive_packet_from_channel(&mut rx, &mut assembler, Duration::from_millis(10))
+                .await
+                .unwrap();
+
+        assert_eq!(received.opcode, 0x4321);
+        assert_eq!(received.payload, vec![0x01, 0x02, 0x03]);
+    }
+
+    #[tokio::test]
+    async fn receive_packet_from_channel_errors_when_notification_channel_closes() {
+        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1);
+        let mut assembler = PacketAssembler::new();
+        drop(tx);
+
+        let err = receive_packet_from_channel(&mut rx, &mut assembler, Duration::from_millis(20))
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, PrinterError::Ble(message) if message == "notification channel closed"));
+    }
 }

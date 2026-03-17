@@ -232,6 +232,28 @@ mod tests {
     }
 
     #[test]
+    fn normalized_printer_name_collapses_whitespace_and_uppercases() {
+        assert_eq!(
+            normalized_printer_name("  instax-12345678   (iOS)  "),
+            "INSTAX-12345678"
+        );
+    }
+
+    #[test]
+    fn extracted_printer_serial_returns_none_for_non_instax_names() {
+        assert_eq!(extracted_printer_serial("mini-link"), None);
+        assert_eq!(extracted_printer_serial("INSTAX-ABCDEF"), None);
+    }
+
+    #[test]
+    fn printer_name_matches_returns_false_for_different_serials() {
+        assert!(!printer_name_matches(
+            "INSTAX-12345678 (iOS)",
+            "INSTAX-87654321"
+        ));
+    }
+
+    #[test]
     fn select_matching_result_prefers_exact_match_over_partial_match() {
         let results = vec![
             (1, "INSTAX-1234".to_string()),
@@ -249,6 +271,34 @@ mod tests {
             (2, "INSTAX-12345678 (iOS)".to_string()),
         ];
         let err = select_matching_result(results, "INSTAX-12345678").unwrap_err();
+        assert!(matches!(err, PrinterError::MultiplePrinters { count: 2 }));
+    }
+
+    #[test]
+    fn select_matching_result_falls_back_to_partial_match() {
+        let results = vec![
+            (1, "INSTAX-1234".to_string()),
+            (2, "INSTAX-9999".to_string()),
+        ];
+        let (matched, name) = select_matching_result(results, "1234").unwrap();
+        assert_eq!(matched, 1);
+        assert_eq!(name, "INSTAX-1234");
+    }
+
+    #[test]
+    fn select_matching_result_returns_not_found_when_no_match_exists() {
+        let results = vec![(1, "INSTAX-1234".to_string())];
+        let err = select_matching_result(results, "INSTAX-9999").unwrap_err();
+        assert!(matches!(err, PrinterError::PrinterNotFound));
+    }
+
+    #[test]
+    fn select_matching_result_returns_multiple_printers_for_multiple_partial_matches() {
+        let results = vec![
+            (1, "INSTAX-1234".to_string()),
+            (2, "INSTAX-12345".to_string()),
+        ];
+        let err = select_matching_result(results, "123").unwrap_err();
         assert!(matches!(err, PrinterError::MultiplePrinters { count: 2 }));
     }
 

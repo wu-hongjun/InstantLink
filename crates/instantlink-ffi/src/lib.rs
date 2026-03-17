@@ -761,7 +761,7 @@ mod tests {
     use std::path::Path;
     use std::pin::Pin;
     use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
-    use std::sync::{Mutex as StdMutex, MutexGuard};
+    use std::sync::{Arc, Mutex as StdMutex, MutexGuard};
 
     fn ffi_test_lock() -> &'static StdMutex<()> {
         static LOCK: OnceLock<StdMutex<()>> = OnceLock::new();
@@ -776,15 +776,17 @@ mod tests {
     impl Drop for TestDeviceGuard<'_> {
         fn drop(&mut self) {
             let lock = get_device_lock();
-            let mut guard = lock.lock().unwrap();
+            let mut guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
             *guard = self.previous.take();
         }
     }
 
     fn install_test_device(device: Option<Box<dyn PrinterDevice>>) -> TestDeviceGuard<'static> {
-        let lock_guard = ffi_test_lock().lock().unwrap();
+        let lock_guard = ffi_test_lock()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let lock = get_device_lock();
-        let mut guard = lock.lock().unwrap();
+        let mut guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         let previous = guard.take();
         *guard = device;
         drop(guard);
@@ -794,10 +796,35 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct PrintInvocation {
+        path: String,
+        fit: FitMode,
+        quality: u8,
+        print_option: u8,
+        progress_enabled: bool,
+    }
+
+    #[derive(Debug, Default)]
+    struct FakeFailures {
+        status: Option<PrinterError>,
+        battery: Option<PrinterError>,
+        film_and_charging: Option<PrinterError>,
+        print_count: Option<PrinterError>,
+        print_file: Option<PrinterError>,
+        set_led: Option<PrinterError>,
+        disconnect: Option<PrinterError>,
+    }
+
     struct FakeDevice {
         name: String,
         model: PrinterModel,
         status: PrinterStatus,
+        print_calls: Arc<StdMutex<Vec<PrintInvocation>>>,
+        led_calls: Arc<StdMutex<Vec<(u8, u8, u8, u8)>>>,
+        shutdown_calls: Arc<AtomicU32>,
+        reset_calls: Arc<AtomicU32>,
+        failures: Arc<StdMutex<FakeFailures>>,
     }
 
     impl FakeDevice {
@@ -813,7 +840,17 @@ mod tests {
                     model,
                     name: name.to_string(),
                 },
+                print_calls: Arc::new(StdMutex::new(Vec::new())),
+                led_calls: Arc::new(StdMutex::new(Vec::new())),
+                shutdown_calls: Arc::new(AtomicU32::new(0)),
+                reset_calls: Arc::new(AtomicU32::new(0)),
+                failures: Arc::new(StdMutex::new(FakeFailures::default())),
             }
+        }
+
+        fn with_failures(self, failures: FakeFailures) -> Self {
+            *self.failures.lock().unwrap() = failures;
+            self
         }
     }
 
@@ -827,7 +864,14 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(self.status.clone()) })
+            let result = self
+                .failures
+                .lock()
+                .unwrap()
+                .status
+                .take()
+                .map_or_else(|| Ok(self.status.clone()), Err);
+            Box::pin(std::future::ready(result))
         }
 
         fn battery<'life0, 'async_trait>(
@@ -837,7 +881,14 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(self.status.battery) })
+            let result = self
+                .failures
+                .lock()
+                .unwrap()
+                .battery
+                .take()
+                .map_or_else(|| Ok(self.status.battery), Err);
+            Box::pin(std::future::ready(result))
         }
 
         fn film_and_charging<'life0, 'async_trait>(
@@ -847,7 +898,17 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok((self.status.film_remaining, self.status.is_charging)) })
+            let result = self
+                .failures
+                .lock()
+                .unwrap()
+                .film_and_charging
+                .take()
+                .map_or_else(
+                    || Ok((self.status.film_remaining, self.status.is_charging)),
+                    Err,
+                );
+            Box::pin(std::future::ready(result))
         }
 
         fn print_count<'life0, 'async_trait>(
@@ -857,7 +918,14 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(self.status.print_count) })
+            let result = self
+                .failures
+                .lock()
+                .unwrap()
+                .print_count
+                .take()
+                .map_or_else(|| Ok(self.status.print_count), Err);
+            Box::pin(std::future::ready(result))
         }
 
         fn model(&self) -> PrinterModel {
@@ -882,7 +950,24 @@ mod tests {
             'life2: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(()) })
+            self.print_calls.lock().unwrap().push(PrintInvocation {
+                path: _path.display().to_string(),
+                fit: _fit,
+                quality: _quality,
+                print_option: _print_option,
+                progress_enabled: _progress.is_some(),
+            });
+            if let Some(progress) = _progress {
+                progress(2, 5);
+            }
+            let result = self
+                .failures
+                .lock()
+                .unwrap()
+                .print_file
+                .take()
+                .map_or(Ok(()), Err);
+            Box::pin(std::future::ready(result))
         }
 
         fn print_bytes<'life0, 'life1, 'life2, 'async_trait>(
@@ -913,7 +998,15 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(()) })
+            let led_calls = Arc::clone(&self.led_calls);
+            let result = self.failures.lock().unwrap().set_led.take();
+            Box::pin(async move {
+                led_calls.lock().unwrap().push((_r, _g, _b, _pattern));
+                match result {
+                    Some(err) => Err(err),
+                    None => Ok(()),
+                }
+            })
         }
 
         fn shutdown<'life0, 'async_trait>(
@@ -923,7 +1016,11 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(()) })
+            let shutdown_calls = Arc::clone(&self.shutdown_calls);
+            Box::pin(async move {
+                shutdown_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
         }
 
         fn reset<'life0, 'async_trait>(
@@ -933,7 +1030,11 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(()) })
+            let reset_calls = Arc::clone(&self.reset_calls);
+            Box::pin(async move {
+                reset_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
         }
 
         fn disconnect<'life0, 'async_trait>(
@@ -943,7 +1044,13 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
-            Box::pin(async move { Ok(()) })
+            let result = self.failures.lock().unwrap().disconnect.take();
+            Box::pin(async move {
+                match result {
+                    Some(err) => Err(err),
+                    None => Ok(()),
+                }
+            })
         }
     }
 
@@ -955,6 +1062,15 @@ mod tests {
         let stage_slot = unsafe { &*(context as *const AtomicI32) };
         stage_slot.store(stage, Ordering::SeqCst);
         assert!(!detail.is_null());
+    }
+
+    extern "C" fn connect_progress_noop(_stage: i32, _detail: *const c_char) {}
+
+    extern "C" fn connect_progress_with_context_noop(
+        _stage: i32,
+        _detail: *const c_char,
+        _context: *mut c_void,
+    ) {
     }
 
     extern "C" fn print_progress_recorder(sent: u32, total: u32, context: *mut c_void) {
@@ -1000,6 +1116,34 @@ mod tests {
     }
 
     #[test]
+    fn ffi_string_helpers_reject_invalid_inputs() {
+        assert_eq!(unsafe { cstr_to_str(std::ptr::null()) }, Err(-5));
+
+        let invalid = [0x66_u8 as c_char, -1_i8 as c_char, 0];
+        assert_eq!(unsafe { cstr_to_str(invalid.as_ptr()) }, Err(-5));
+
+        let mut buffer = [0 as c_char; 4];
+        assert_eq!(
+            unsafe { write_str_to_buf("abc", std::ptr::null_mut(), 8) },
+            -5
+        );
+        assert_eq!(
+            unsafe { write_str_to_buf("abc", buffer.as_mut_ptr(), 0) },
+            -5
+        );
+    }
+
+    #[test]
+    fn write_str_to_buf_truncates_and_nul_terminates() {
+        let mut buffer = [b'x' as c_char; 4];
+        let written = unsafe { write_str_to_buf("printer", buffer.as_mut_ptr(), 4) };
+        assert_eq!(written, 3);
+        assert_eq!(buffer[3], 0);
+        let bytes: Vec<u8> = buffer[..3].iter().map(|byte| *byte as u8).collect();
+        assert_eq!(String::from_utf8(bytes).unwrap(), "pri");
+    }
+
+    #[test]
     fn ffi_status_rejects_null_pointers() {
         let _guard = install_test_device(None);
         let mut battery = 0;
@@ -1009,6 +1153,15 @@ mod tests {
             instantlink_status(&mut battery, &mut film, &mut charging, std::ptr::null_mut())
         };
         assert_eq!(code, -5);
+    }
+
+    #[test]
+    fn ffi_status_returns_not_found_without_device() {
+        let _guard = install_test_device(None);
+        let (mut battery, mut film, mut charging, mut print_count) = (0, 0, 0, 0);
+        let code =
+            unsafe { instantlink_status(&mut battery, &mut film, &mut charging, &mut print_count) };
+        assert_eq!(code, -1);
     }
 
     #[test]
@@ -1022,6 +1175,57 @@ mod tests {
             unsafe { instantlink_status(&mut battery, &mut film, &mut charging, &mut print_count) };
         assert_eq!(code, 0);
         assert_eq!((battery, film, charging, print_count), (82, 7, 1, 123));
+    }
+
+    #[test]
+    fn ffi_simple_getters_return_connected_values() {
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::MiniLink3,
+        ))));
+
+        assert_eq!(instantlink_battery(), 82);
+        assert_eq!(instantlink_film_remaining(), 7);
+        assert_eq!(instantlink_print_count(), 123);
+
+        let (mut film, mut charging) = (0, 0);
+        let code = unsafe { instantlink_film_and_charging(&mut film, &mut charging) };
+        assert_eq!(code, 0);
+        assert_eq!((film, charging), (7, 1));
+    }
+
+    #[test]
+    fn ffi_simple_getters_require_a_connected_device() {
+        let _guard = install_test_device(None);
+        assert_eq!(instantlink_battery(), -1);
+        assert_eq!(instantlink_film_remaining(), -1);
+        assert_eq!(instantlink_print_count(), -1);
+
+        let (mut film, mut charging) = (0, 0);
+        let code = unsafe { instantlink_film_and_charging(&mut film, &mut charging) };
+        assert_eq!(code, -1);
+    }
+
+    #[test]
+    fn ffi_getters_map_device_errors() {
+        let device =
+            FakeDevice::new("INSTAX-12345678", PrinterModel::Mini).with_failures(FakeFailures {
+                battery: Some(PrinterError::LowBattery { percent: 4 }),
+                film_and_charging: Some(PrinterError::NoFilm),
+                print_count: Some(PrinterError::PrinterBusy),
+                status: Some(PrinterError::CoverOpen),
+                ..FakeFailures::default()
+            });
+        let _guard = install_test_device(Some(Box::new(device)));
+
+        assert_eq!(instantlink_battery(), -9);
+        assert_eq!(instantlink_film_remaining(), -8);
+        assert_eq!(instantlink_print_count(), -11);
+
+        let (mut battery, mut film, mut charging, mut print_count) = (0, 0, 0, 0);
+        let status_code =
+            unsafe { instantlink_status(&mut battery, &mut film, &mut charging, &mut print_count) };
+        assert_eq!(status_code, -10);
     }
 
     #[test]
@@ -1039,9 +1243,80 @@ mod tests {
     }
 
     #[test]
+    fn ffi_device_model_writes_model_name() {
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::MiniLink3,
+        ))));
+        let mut buffer = [0 as c_char; 32];
+        let written = unsafe { instantlink_device_model(buffer.as_mut_ptr(), buffer.len() as i32) };
+        assert!(written > 0);
+        let bytes: Vec<u8> = buffer[..written as usize]
+            .iter()
+            .map(|byte| *byte as u8)
+            .collect();
+        assert_eq!(String::from_utf8(bytes).unwrap(), "Instax Mini Link 3");
+    }
+
+    #[test]
+    fn ffi_device_name_and_model_validate_buffers_and_connection() {
+        let mut buffer = [0 as c_char; 8];
+        {
+            let _guard = install_test_device(None);
+            assert_eq!(
+                unsafe { instantlink_device_name(buffer.as_mut_ptr(), 8) },
+                -1
+            );
+            assert_eq!(
+                unsafe { instantlink_device_model(buffer.as_mut_ptr(), 8) },
+                -1
+            );
+        }
+
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::Mini,
+        ))));
+        assert_eq!(
+            unsafe { instantlink_device_name(std::ptr::null_mut(), 8) },
+            -5
+        );
+        assert_eq!(
+            unsafe { instantlink_device_model(std::ptr::null_mut(), 8) },
+            -5
+        );
+    }
+
+    #[test]
     fn ffi_disconnect_returns_not_found_when_no_device() {
         let _guard = install_test_device(None);
         assert_eq!(instantlink_disconnect(), -1);
+    }
+
+    #[test]
+    fn ffi_disconnect_surfaces_device_error_codes() {
+        let device =
+            FakeDevice::new("INSTAX-12345678", PrinterModel::Mini).with_failures(FakeFailures {
+                disconnect: Some(PrinterError::Timeout),
+                ..FakeFailures::default()
+            });
+        let _guard = install_test_device(Some(Box::new(device)));
+        assert_eq!(instantlink_disconnect(), -4);
+    }
+
+    #[test]
+    fn ffi_is_connected_reflects_device_presence() {
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::Mini,
+        ))));
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn ffi_is_connected_returns_zero_without_device() {
+        let _guard = install_test_device(None);
+        assert_eq!(instantlink_is_connected(), 0);
     }
 
     #[test]
@@ -1067,6 +1342,37 @@ mod tests {
     }
 
     #[test]
+    fn ffi_connect_named_variants_reject_invalid_utf8() {
+        let invalid = [0x66_u8 as c_char, -1_i8 as c_char, 0];
+        let _guard = install_test_device(None);
+        assert_eq!(
+            unsafe { instantlink_connect_named(invalid.as_ptr(), 0) },
+            -5
+        );
+        assert_eq!(
+            unsafe {
+                instantlink_connect_named_with_progress(
+                    invalid.as_ptr(),
+                    0,
+                    Some(connect_progress_noop),
+                )
+            },
+            -5
+        );
+        assert_eq!(
+            unsafe {
+                instantlink_connect_named_with_progress_ctx(
+                    invalid.as_ptr(),
+                    0,
+                    Some(connect_progress_with_context_noop),
+                    std::ptr::null_mut(),
+                )
+            },
+            -5
+        );
+    }
+
+    #[test]
     fn ffi_print_progress_wrapper_accepts_null_callback_without_device() {
         let _guard = install_test_device(None);
         let path = CString::new("photo.jpg").unwrap();
@@ -1082,6 +1388,115 @@ mod tests {
             instantlink_print_with_progress_ctx(path.as_ptr(), 97, 0, 0, None, std::ptr::null_mut())
         };
         assert_eq!(code, -1);
+    }
+
+    #[test]
+    fn ffi_print_variants_reject_invalid_utf8_paths() {
+        let invalid = [0x66_u8 as c_char, -1_i8 as c_char, 0];
+        let _guard = install_test_device(None);
+        assert_eq!(unsafe { instantlink_print(invalid.as_ptr(), 97, 0, 0) }, -5);
+        assert_eq!(
+            unsafe { instantlink_print_with_progress(invalid.as_ptr(), 97, 0, 0, None) },
+            -5
+        );
+        assert_eq!(
+            unsafe {
+                instantlink_print_with_progress_ctx(
+                    invalid.as_ptr(),
+                    97,
+                    0,
+                    0,
+                    Some(print_progress_recorder),
+                    std::ptr::null_mut(),
+                )
+            },
+            -5
+        );
+    }
+
+    #[test]
+    fn ffi_print_with_progress_ctx_maps_fit_and_reports_progress() {
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::Square);
+        let print_calls = Arc::clone(&device.print_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let path = CString::new("photo.jpg").unwrap();
+        let progress = (AtomicU32::new(0), AtomicU32::new(0));
+        let code = unsafe {
+            instantlink_print_with_progress_ctx(
+                path.as_ptr(),
+                88,
+                2,
+                1,
+                Some(print_progress_recorder),
+                (&progress as *const (AtomicU32, AtomicU32))
+                    .cast_mut()
+                    .cast(),
+            )
+        };
+        assert_eq!(code, 0);
+        assert_eq!(progress.0.load(Ordering::SeqCst), 2);
+        assert_eq!(progress.1.load(Ordering::SeqCst), 5);
+        let recorded = print_calls.lock().unwrap().clone();
+        assert_eq!(
+            recorded,
+            vec![PrintInvocation {
+                path: "photo.jpg".to_string(),
+                fit: FitMode::Stretch,
+                quality: 88,
+                print_option: 1,
+                progress_enabled: true,
+            }]
+        );
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn ffi_print_and_led_calls_surface_device_errors() {
+        let device =
+            FakeDevice::new("INSTAX-12345678", PrinterModel::Mini).with_failures(FakeFailures {
+                print_file: Some(PrinterError::NoFilm),
+                set_led: Some(PrinterError::PrinterBusy),
+                ..FakeFailures::default()
+            });
+        let print_calls = Arc::clone(&device.print_calls);
+        let led_calls = Arc::clone(&device.led_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let path = CString::new("photo.jpg").unwrap();
+
+        assert_eq!(unsafe { instantlink_print(path.as_ptr(), 90, 1, 0) }, -8);
+        assert_eq!(instantlink_set_led(255, 0, 0, 2), -11);
+        assert_eq!(instantlink_is_connected(), 1);
+
+        assert_eq!(
+            print_calls.lock().unwrap().clone(),
+            vec![PrintInvocation {
+                path: "photo.jpg".to_string(),
+                fit: FitMode::Contain,
+                quality: 90,
+                print_option: 0,
+                progress_enabled: false,
+            }]
+        );
+        assert_eq!(led_calls.lock().unwrap().clone(), vec![(255, 0, 0, 2)]);
+    }
+
+    #[test]
+    fn ffi_led_shutdown_and_reset_delegate_to_connected_device() {
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        let led_calls = Arc::clone(&device.led_calls);
+        let shutdown_calls = Arc::clone(&device.shutdown_calls);
+        let reset_calls = Arc::clone(&device.reset_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+
+        assert_eq!(instantlink_set_led(255, 128, 64, 2), 0);
+        assert_eq!(instantlink_led_off(), 0);
+        assert_eq!(instantlink_shutdown(), 0);
+        assert_eq!(instantlink_reset(), 0);
+
+        let recorded_led_calls = led_calls.lock().unwrap().clone();
+        assert_eq!(recorded_led_calls, vec![(255, 128, 64, 2), (0, 0, 0, 0)]);
+        assert_eq!(shutdown_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(reset_calls.load(Ordering::SeqCst), 1);
     }
 }
 

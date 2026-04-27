@@ -18,7 +18,7 @@ This documents the Instax Link BLE packet protocol that InstantLink currently im
 
 | Field | Size | Description |
 |-------|------|-------------|
-| Header | 2 bytes | Request: `0x41 0x62`, Response: `0x61 0x42` |
+| Header | 2 bytes | Request: `0x41 0x62` (from `HEADER` constant), Response: `0x61 0x42` (from `RESPONSE_HEADER` constant) |
 | Length | 2 bytes | Big-endian packet size including header and checksum |
 | Opcode | 2 bytes | Command identifier |
 | Payload | variable | Command-specific data |
@@ -55,7 +55,23 @@ Response format: `[return_code] [sub_index] [string_length] [ASCII bytes...]`
 | `0x02` | Printer Function Info | Film remaining in bits `0...3`, charging in bit `7` |
 | `0x03` | Print Count | Print count(2B, big-endian) |
 
-Response format: `[return_code] [info_type] [data...]`
+#### Status Response Payload Format
+
+All status queries return a packet with response header `0x61 0x42` (see `crates/instantlink-core/src/protocol.rs`), followed by this payload:
+
+| Offset | Field | Size | Description |
+|--------|-------|------|-------------|
+| 0 | Return Code | 1 B | `0x00` for success |
+| 1 | InfoType | 1 B | Echoes the requested info type |
+| 2+ | Data | variable | Type-specific payload (see table above) |
+
+**Printer Function Info** (InfoType `0x02`) bit layout:
+
+| Bit(s) | Field | Range | Notes |
+|--------|-------|-------|-------|
+| 0–3 | Film Remaining | 0–15 | Number of exposures left |
+| 4–6 | Reserved | — | Not used |
+| 7 | Is Charging | 0 or 1 | `1` if printer is on charger |
 
 ## Image Transfer
 
@@ -108,11 +124,39 @@ Colors are sent in **BGR** order.
    - use DIS model hint `FI033` first for Mini Link 3
    - otherwise fall back to the reported width and height
 5. Resize and JPEG-encode the image for the detected model
-6. Send `Download Start` and wait for ACK
-7. Send `Data` chunks, waiting for ACK after each chunk
-8. Send `Download End` and wait for ACK
-9. Send `Print Image` and accept `0` or the model-specific success code
-10. Disconnect
+6. Apply vertical flip if required by model (see **Mini Link 3** section below)
+7. Send `Download Start` and wait for ACK
+8. Send `Data` chunks, waiting for ACK after each chunk
+9. Send `Download End` and wait for ACK
+10. Send `Print Image` and accept `0` or the model-specific success code
+11. Disconnect
+
+### Mini Link 3 Vertical-Flip Behavior
+
+The Mini Link 3 printer requires a vertically flipped image upload. This is the only printing difference between the Mini Link 3 and the standard Mini Link.
+
+**Detection**
+
+Mini Link 3 is detected via the BLE Device Information Service (DIS) model number characteristic:
+- If the DIS model string contains `FI033`, the device is identified as `PrinterModel::MiniLink3`
+- Both Mini Link and Mini Link 3 report the same image support dimensions (`600 × 800`), so the DIS hint is necessary to distinguish them
+
+See `crates/instantlink-core/src/device.rs`, `detect_model()` function (line 473–489).
+
+**Flip Application**
+
+The JPEG image payload is flipped vertically **before** fragmentation and transmission:
+
+1. Load and resize the image to printer dimensions (`600 × 800`)
+2. Apply vertical flip via `image.flipv()` if the model spec has `flip_vertical: true`
+3. JPEG-encode the flipped image
+4. Chunk and send the resulting bytes with standard ACK-based flow
+
+See `crates/instantlink-core/src/image.rs`, `prepare_image()` and `prepare_image_from_bytes()` functions (lines 162–164 and 186–188).
+
+**Printer-Side Expectation**
+
+The printer expects the entire image to be flipped once at upload time. Chunking and acknowledgement protocol are otherwise identical to other models. The flip is applied **only to the JPEG row order**, not to the wire framing or packet structure.
 
 ## Model-Specific Parameters
 

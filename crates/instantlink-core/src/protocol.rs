@@ -17,6 +17,13 @@
 /// Request header bytes (client → printer: "Ab").
 pub const HEADER: [u8; 2] = [0x41, 0x62];
 /// Response header bytes (printer → client: "aB").
+///
+/// # Examples
+///
+/// ```
+/// use instantlink_core::protocol::RESPONSE_HEADER;
+/// assert_eq!(RESPONSE_HEADER, [0x61, 0x42]);
+/// ```
 pub const RESPONSE_HEADER: [u8; 2] = [0x61, 0x42];
 
 /// Maximum BLE sub-packet size for MTU fragmentation.

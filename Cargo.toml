@@ -35,6 +35,7 @@ cbindgen = "0.27"
 # Utilities
 uuid = { version = "1", features = ["v4"] }
 futures = "0.3"
+tokio-util = { version = "0.7", features = ["rt"] }
 
 [profile.release]
 lto = "fat"

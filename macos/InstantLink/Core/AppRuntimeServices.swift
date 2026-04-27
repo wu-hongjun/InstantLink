@@ -255,7 +255,7 @@ enum AppUpdateService {
 
             let actualHex = SHA256.hexDigest(of: dmgData)
 
-            guard actualHex == expectedHex else {
+            guard actualHex.lowercased() == expectedHex.lowercased() else {
                 try? FileManager.default.removeItem(atPath: dmgPath)
                 reportFailure(L("update_error_checksum_mismatch"), onFailure: onFailure)
                 return

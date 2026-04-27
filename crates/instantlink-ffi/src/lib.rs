@@ -14,8 +14,6 @@
 //! - `-10` — printer cover is open
 //! - `-11` — printer is busy
 
-#![allow(unsafe_op_in_unsafe_fn)]
-
 use std::ffi::{CStr, CString, c_void};
 use std::os::raw::c_char;
 use std::sync::{Mutex, Once, OnceLock};
@@ -196,7 +194,9 @@ unsafe fn cstr_to_str<'a>(ptr: *const c_char) -> Result<&'a str, i32> {
     if ptr.is_null() {
         return Err(-5);
     }
-    CStr::from_ptr(ptr).to_str().map_err(|_| -5)
+    // SAFETY: ptr is non-null (checked above) and the caller guarantees it points to a
+    // valid, null-terminated C string whose lifetime covers at least 'a.
+    unsafe { CStr::from_ptr(ptr) }.to_str().map_err(|_| -5)
 }
 
 /// Helper: write a Rust string into a caller-provided buffer.
@@ -214,8 +214,15 @@ unsafe fn write_str_to_buf(s: &str, out: *mut c_char, out_len: i32) -> i32 {
     let max = (out_len - 1) as usize;
     let bytes = s.as_bytes();
     let copy_len = bytes.len().min(max);
-    std::ptr::copy_nonoverlapping(bytes.as_ptr(), out as *mut u8, copy_len);
-    *out.add(copy_len) = 0; // NUL terminator
+    // SAFETY: out is non-null (checked above), points to a buffer of at least out_len bytes
+    // (caller contract), and copy_len <= max = out_len - 1, so both source and destination
+    // ranges are valid and non-overlapping (src is a Rust &[u8], dst is the caller's buffer).
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out as *mut u8, copy_len);
+        // SAFETY: out.add(copy_len) is within the buffer because copy_len <= out_len - 1,
+        // so index copy_len is the last valid byte of the out_len-byte buffer.
+        *out.add(copy_len) = 0; // NUL terminator
+    }
     copy_len as i32
 }
 
@@ -256,7 +263,9 @@ pub unsafe extern "C" fn instantlink_scan(
             Ok(printers) => {
                 let names: Vec<&str> = printers.iter().map(|p| p.name.as_str()).collect();
                 let json = serde_json::to_string(&names).unwrap_or_else(|_| "[]".to_string());
-                write_str_to_buf(&json, out_json, out_len)
+                // SAFETY: out_json is non-null (checked above) and points to a caller-owned
+                // buffer of at least out_len bytes, valid for the duration of this call.
+                unsafe { write_str_to_buf(&json, out_json, out_len) }
             }
             Err(e) => error_code(&e),
         }
@@ -308,7 +317,9 @@ pub extern "C" fn instantlink_connect() -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration_secs: i32) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let s = match cstr_to_str(name) {
+        // SAFETY: name must be a valid, non-null, null-terminated UTF-8 C string that remains
+        // valid for the duration of this call (documented in the function's Safety contract).
+        let s = match unsafe { cstr_to_str(name) } {
             Ok(s) => s,
             Err(code) => return code,
         };
@@ -363,7 +374,9 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress(
     progress_cb: Option<extern "C" fn(i32, *const c_char)>,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let s = match cstr_to_str(name) {
+        // SAFETY: name must be a valid, non-null, null-terminated UTF-8 C string that remains
+        // valid for the duration of this call (documented in the function's Safety contract).
+        let s = match unsafe { cstr_to_str(name) } {
             Ok(s) => s,
             Err(code) => return code,
         };
@@ -399,7 +412,9 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress_ctx(
     context: *mut c_void,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let s = match cstr_to_str(name) {
+        // SAFETY: name must be a valid, non-null, null-terminated UTF-8 C string that remains
+        // valid for the duration of this call (documented in the function's Safety contract).
+        let s = match unsafe { cstr_to_str(name) } {
             Ok(s) => s,
             Err(code) => return code,
         };
@@ -508,8 +523,13 @@ pub unsafe extern "C" fn instantlink_film_and_charging(
                 let rt = get_runtime();
                 match rt.block_on(device.film_and_charging()) {
                     Ok((film, charging)) => {
-                        *out_film = film as i32;
-                        *out_charging = i32::from(charging);
+                        // SAFETY: out_film and out_charging are non-null (checked above) and
+                        // point to caller-owned i32 slots that are valid for write throughout
+                        // this call; no other thread aliases these pointers during the call.
+                        unsafe {
+                            *out_film = film as i32;
+                            *out_charging = i32::from(charging);
+                        }
                         0
                     }
                     Err(e) => error_code(&e),
@@ -575,10 +595,15 @@ pub unsafe extern "C" fn instantlink_status(
                 let rt = get_runtime();
                 match rt.block_on(device.status()) {
                     Ok(status) => {
-                        *out_battery = status.battery as i32;
-                        *out_film = status.film_remaining as i32;
-                        *out_charging = i32::from(status.is_charging);
-                        *out_print_count = status.print_count as i32;
+                        // SAFETY: all four output pointers are non-null (checked above) and
+                        // each points to a distinct caller-owned i32 slot that is exclusively
+                        // accessible during this call; the pointers do not alias each other.
+                        unsafe {
+                            *out_battery = status.battery as i32;
+                            *out_film = status.film_remaining as i32;
+                            *out_charging = i32::from(status.is_charging);
+                            *out_print_count = status.print_count as i32;
+                        }
                         0
                     }
                     Err(e) => error_code(&e),
@@ -606,7 +631,10 @@ pub unsafe extern "C" fn instantlink_device_name(out: *mut c_char, out_len: i32)
         let lock = get_device_lock();
         if let Ok(guard) = lock.lock() {
             if let Some(ref device) = *guard {
-                write_str_to_buf(device.name(), out, out_len)
+                // SAFETY: out is a caller-owned buffer of at least out_len bytes
+                // (documented in the function's Safety contract); write_str_to_buf
+                // validates the null/length preconditions before touching the pointer.
+                unsafe { write_str_to_buf(device.name(), out, out_len) }
             } else {
                 -1
             }
@@ -631,7 +659,10 @@ pub unsafe extern "C" fn instantlink_device_model(out: *mut c_char, out_len: i32
         if let Ok(guard) = lock.lock() {
             if let Some(ref device) = *guard {
                 let model_str = device.model().to_string();
-                write_str_to_buf(&model_str, out, out_len)
+                // SAFETY: out is a caller-owned buffer of at least out_len bytes
+                // (documented in the function's Safety contract); write_str_to_buf
+                // validates the null/length preconditions before touching the pointer.
+                unsafe { write_str_to_buf(&model_str, out, out_len) }
             } else {
                 -1
             }
@@ -659,7 +690,9 @@ pub unsafe extern "C" fn instantlink_print(
     print_option: u8,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let s = match cstr_to_str(path) {
+        // SAFETY: path must be a valid, non-null, null-terminated UTF-8 C string that remains
+        // valid for the duration of this call (documented in the function's Safety contract).
+        let s = match unsafe { cstr_to_str(path) } {
             Ok(s) => s,
             Err(code) => return code,
         };
@@ -706,7 +739,9 @@ pub unsafe extern "C" fn instantlink_print_with_progress(
     progress_cb: Option<extern "C" fn(u32, u32)>,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let s = match cstr_to_str(path) {
+        // SAFETY: path must be a valid, non-null, null-terminated UTF-8 C string that remains
+        // valid for the duration of this call (documented in the function's Safety contract).
+        let s = match unsafe { cstr_to_str(path) } {
             Ok(s) => s,
             Err(code) => return code,
         };
@@ -736,7 +771,9 @@ pub unsafe extern "C" fn instantlink_print_with_progress_ctx(
     context: *mut c_void,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let s = match cstr_to_str(path) {
+        // SAFETY: path must be a valid, non-null, null-terminated UTF-8 C string that remains
+        // valid for the duration of this call (documented in the function's Safety contract).
+        let s = match unsafe { cstr_to_str(path) } {
             Ok(s) => s,
             Err(code) => return code,
         };

@@ -63,7 +63,9 @@ jobs:
         run: cargo llvm-cov --workspace --summary-only --fail-under-lines 60
 
       - name: Save LCOV Report
-        run: cargo llvm-cov --workspace --lcov --output-path target/llvm-cov/lcov.info
+        run: |
+          mkdir -p target/llvm-cov
+          cargo llvm-cov --workspace --lcov --output-path target/llvm-cov/lcov.info
 
       - name: Upload Coverage Artifact
         uses: actions/upload-artifact@v4

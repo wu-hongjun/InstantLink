@@ -162,7 +162,7 @@ impl PacketAssembler {
     ///   checksum did not match; the packet bytes were discarded.
     /// - `Err(ProtocolError::LengthMismatch)` — the declared length field is
     ///   smaller than the minimum packet size.
-    pub fn feed(&mut self, data: &[u8]) -> Result<Option<Packet>, ProtocolError> {
+    pub fn feed(&mut self, data: &[u8]) -> std::result::Result<Option<Packet>, ProtocolError> {
         self.buffer.extend_from_slice(data);
 
         // Need at least the header + length to know the full packet size
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn feed_signals_bad_checksum() {
-        let mut pkt = build_packet(0xBEEF, &[0x01, 0x02]);
+        let mut pkt = build_packet(0xBEEF, &[0x01, 0x02]).unwrap();
         // Corrupt the checksum byte (last byte)
         let last = pkt.len() - 1;
         pkt[last] ^= 0xFF;

@@ -187,12 +187,11 @@ impl PacketAssembler {
         let expected_total = declared as usize;
 
         if expected_total < MIN_PACKET_SIZE {
+            // Capture length before drain so the error reflects the original buffer state.
+            let actual = self.buffer.len();
             // Nonsensical length field — discard the two header bytes and retry.
             self.buffer.drain(..2);
-            return Err(ProtocolError::LengthMismatch {
-                declared,
-                actual: self.buffer.len(),
-            });
+            return Err(ProtocolError::LengthMismatch { declared, actual });
         }
 
         if self.buffer.len() < expected_total {
@@ -430,6 +429,29 @@ mod tests {
                 assert_eq!(opcode, 0xBEEF);
             }
             other => panic!("expected BadChecksum, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn assembler_length_mismatch_reports_pre_drain_length() {
+        // Build a packet whose declared length field is smaller than MIN_PACKET_SIZE (7).
+        // The assembler should return LengthMismatch with `actual` equal to the number
+        // of bytes fed (including the two header bytes that are drained afterwards).
+        let mut asm = PacketAssembler::new();
+        // Valid header, declared length = 3 (< MIN_PACKET_SIZE = 7), plus two padding bytes.
+        let input = [HEADER[0], HEADER[1], 0x00, 0x03, 0x00, 0x00];
+        let err = asm.feed(&input).unwrap_err();
+        match err {
+            ProtocolError::LengthMismatch { declared, actual } => {
+                assert_eq!(declared, 3);
+                // actual must equal the pre-drain buffer length (6), not the post-drain length (4).
+                assert_eq!(
+                    actual,
+                    input.len(),
+                    "actual should reflect pre-drain buffer length"
+                );
+            }
+            other => panic!("expected LengthMismatch, got {other:?}"),
         }
     }
 }

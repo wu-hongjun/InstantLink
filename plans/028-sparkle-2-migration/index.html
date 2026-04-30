@@ -1,0 +1,1879 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
+      
+      
+      
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/028-sparkle-2-migration/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Plan 028: Sparkle 2 Auto-Update Migration - InstantLink</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-028-sparkle-2-auto-update-migration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="InstantLink" class="md-header__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InstantLink
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan 028: Sparkle 2 Auto-Update Migration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="white"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../001-full-stack-scaffold/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plans
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InstantLink" class="md-nav__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InstantLink
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/reverse-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reverse Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plans
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plans
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../001-full-stack-scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 001 Full-Stack Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../002-ci-cd-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 002 CI/CD Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 003 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../004-app-bundle-and-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 004 App Bundle and Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../005-mock-transport-device-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 005 Mock Transport Device Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-overlay-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 006 Overlay System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-ui-ux-pass-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 007 UI/UX Pass 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../008-ui-ux-pass-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 008 UI/UX Pass 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../009-repo-simplification-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 009 Repo Simplification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../010-ui-ux-pass-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 010 UI/UX Pass 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../013-ffi-connection-stage-callbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 013 FFI Connection Stage Callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../014-printer-led-print-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 014 Printer LED Print Phase Feedback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Now
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#threat-model-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threat Model Improvements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Today
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proposed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build &amp; dependency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#swift-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Swift code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appcast-feed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appcast Feed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rollout-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollout Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="plan-028-sparkle-2-auto-update-migration">Plan 028: Sparkle 2 Auto-Update Migration<a class="headerlink" href="#plan-028-sparkle-2-auto-update-migration" title="Permanent link">&para;</a></h1>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Replace the hand-rolled auto-update logic in <code>AppRuntimeServices.swift</code> with the <a href="https://sparkle-project.org/">Sparkle 2</a> framework. Sparkle gives us EdDSA signature verification, an audited install dance, an appcast-driven release feed, optional delta updates, and a UX that we no longer have to maintain.</p>
+<h2 id="why-now">Why Now<a class="headerlink" href="#why-now" title="Permanent link">&para;</a></h2>
+<p>Plan 018 shipped SHA-256 verification and TOCTOU isolation, which are sound for an indie distribution but still leave us:</p>
+<ul>
+<li>maintaining bespoke <code>URLSession</code> + <code>hdiutil</code> + <code>cp -R</code> + relaunch logic</li>
+<li>relying on an attacker not also being able to publish a matching <code>.sha256</code> (our integrity check trusts the same release page that hosts the artifact)</li>
+<li>with no built-in story for delta updates, background checks, or a "skip this version" UX</li>
+</ul>
+<p>Sparkle's EdDSA model raises the bar: the public key is baked into the running app, and any update payload not signed by the matching private key is rejected at install time, regardless of where it was hosted.</p>
+<h2 id="threat-model-improvements">Threat Model Improvements<a class="headerlink" href="#threat-model-improvements" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Threat</th>
+<th>Today (Plan 018)</th>
+<th>After Sparkle 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attacker hijacks the GitHub release page (or its CDN) and serves a tampered DMG <strong>and</strong> a matching <code>.sha256</code></td>
+<td>Installs successfully</td>
+<td>Rejected — signature does not match the baked-in public key</td>
+</tr>
+<tr>
+<td>Attacker MITMs the appcast/release feed</td>
+<td>Mitigated by HTTPS only</td>
+<td>Mitigated by HTTPS <strong>and</strong> EdDSA</td>
+</tr>
+<tr>
+<td>Attacker compromises the build machine and steals the SHA-256 generation step</td>
+<td>Tampered DMG installs</td>
+<td>Tampered DMG installs <strong>only if</strong> the attacker also has the EdDSA private key (held offline / in CI secret)</td>
+</tr>
+<tr>
+<td>Local user with same UID swaps DMG between verify and mount</td>
+<td>Closed by Plan 018's staging dir</td>
+<td>Closed by Sparkle's atomic install pipeline</td>
+</tr>
+</tbody>
+</table>
+<h2 id="architecture-changes">Architecture Changes<a class="headerlink" href="#architecture-changes" title="Permanent link">&para;</a></h2>
+<h3 id="today">Today<a class="headerlink" href="#today" title="Permanent link">&para;</a></h3>
+<p><code>AppUpdateService</code> (in <code>AppRuntimeServices.swift</code>):</p>
+<ol>
+<li>Hits the GitHub Releases API.</li>
+<li>Downloads the DMG and its <code>.sha256</code> sibling.</li>
+<li>Verifies the digest, isolates the DMG into a <code>0700</code> staging dir.</li>
+<li><code>hdiutil attach</code> → copy <code>.app</code> → <code>hdiutil detach</code> → relaunch.</li>
+</ol>
+<h3 id="proposed">Proposed<a class="headerlink" href="#proposed" title="Permanent link">&para;</a></h3>
+<p>Sparkle's <code>SPUStandardUpdaterController</code> owns the lifecycle:</p>
+<ol>
+<li>Polls our appcast XML feed on a schedule (and on demand from the Settings panel).</li>
+<li>Fetches the DMG that the appcast points at.</li>
+<li>Verifies the EdDSA signature embedded in the appcast <code>&lt;enclosure&gt;</code>.</li>
+<li>Mounts, copies, and relaunches via Sparkle's hardened install path.</li>
+<li>Surfaces UI through Sparkle's standard sheet (dismiss, install, skip-version, install-on-quit).</li>
+</ol>
+<p>We can keep our existing GitHub Releases publishing flow — the appcast feed is just an XML file we serve from the same repo (<code>gh-pages</code> already publishes documentation).</p>
+<h2 id="implementation-scope">Implementation Scope<a class="headerlink" href="#implementation-scope" title="Permanent link">&para;</a></h2>
+<h3 id="build-dependency">Build &amp; dependency<a class="headerlink" href="#build-dependency" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add Sparkle (Swift Package) as a dependency. We currently build with <code>swiftc</code> directly, no Xcode project — adding an SPM dependency means either:</li>
+<li>migrating the build to <code>swift build</code> against a <code>Package.swift</code>, or</li>
+<li>vendoring the Sparkle XCFramework and linking it manually inside <code>scripts/build-app.sh</code>.</li>
+<li>Update <code>scripts/build-app.sh</code> to copy the Sparkle XPC services (<code>Autoupdate.app</code>, <code>Updater.app</code>) into <code>Contents/Frameworks/</code>. Sparkle 2 requires both bundles to live inside the host app's framework directory.</li>
+<li>Update <code>Info.plist</code>:</li>
+<li><code>SUFeedURL</code> → URL of our appcast XML feed</li>
+<li><code>SUPublicEDKey</code> → base64-encoded EdDSA public key</li>
+<li><code>SUEnableAutomaticChecks</code> → <code>YES</code></li>
+<li><code>LSMinimumSystemVersion</code> stays at our current macOS 15 baseline</li>
+</ul>
+<h3 id="swift-code">Swift code<a class="headerlink" href="#swift-code" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Replace <code>AppUpdateService</code> (and its consumers in <code>ViewModel.swift</code>) with <code>SPUStandardUpdaterController</code>.</li>
+<li>Keep a thin Swift wrapper so <code>Settings → Check for Updates Now</code> still works (call <code>updater.checkForUpdates(nil)</code>).</li>
+<li>Drop:</li>
+<li><code>verifyAndInstall</code> and the SHA-256 helpers</li>
+<li><code>installDownloadedApp</code>, the <code>hdiutil</code> shell-out</li>
+<li>the localized <code>update_error_*</code> strings (Sparkle owns the UI now)</li>
+<li>Keep:</li>
+<li>relaunch helper logic if Sparkle's relaunch hook needs custom behavior (likely unneeded)</li>
+<li>the existing <code>Localizable.strings</code> keys for non-update flows</li>
+</ul>
+<h3 id="release-pipeline">Release pipeline<a class="headerlink" href="#release-pipeline" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Generate an EdDSA keypair <strong>once</strong> with <code>Sparkle.app/Contents/MacOS/generate_keys</code>. Store the private key in the macOS keychain (or 1Password). Bake the public key into <code>Info.plist</code>.</li>
+<li>Add a release step in <code>.github/workflows/release.yml</code>:</li>
+<li>Build <code>.app</code> and DMG (existing).</li>
+<li>Run <code>sign_update &lt;DMG&gt; -f &lt;private-key&gt;</code> to produce the EdDSA signature.</li>
+<li>Generate / append an appcast entry referencing the signed DMG.</li>
+<li>Commit the updated appcast to <code>gh-pages</code> (or upload as a release asset alongside the DMG).</li>
+<li>The private key MUST live in a CI secret (<code>SPARKLE_ED_PRIVATE_KEY</code>). Document the rotation procedure in <code>docs/development/release.md</code>.</li>
+</ul>
+<h2 id="appcast-feed">Appcast Feed<a class="headerlink" href="#appcast-feed" title="Permanent link">&para;</a></h2>
+<p>Host at <code>https://wu-hongjun.github.io/InstantLink/appcast.xml</code> (already served via <code>mkdocs gh-deploy</code>) so we do not need a separate web property.</p>
+<p>Schema (per Sparkle 2 docs):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">&lt;rss</span><span class="w"> </span><span class="na">version=</span><span class="s">&quot;2.0&quot;</span><span class="w"> </span><span class="na">xmlns:sparkle=</span><span class="s">&quot;http://www.andymatuschak.org/xml-namespaces/sparkle&quot;</span><span class="nt">&gt;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&lt;channel&gt;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">&lt;title&gt;</span>InstantLink<span class="w"> </span>Updates<span class="nt">&lt;/title&gt;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">&lt;item&gt;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">&lt;title&gt;</span>Version<span class="w"> </span>0.2.0<span class="nt">&lt;/title&gt;</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">&lt;pubDate&gt;</span>Fri,<span class="w"> </span>02<span class="w"> </span>May<span class="w"> </span>2026<span class="w"> </span>00:00:00<span class="w"> </span>+0000<span class="nt">&lt;/pubDate&gt;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">&lt;enclosure</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="na">url=</span><span class="s">&quot;https://github.com/wu-hongjun/InstantLink/releases/download/v0.2.0/InstantLink-0.2.0.dmg&quot;</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="na">sparkle:version=</span><span class="s">&quot;0.2.0&quot;</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="na">sparkle:edSignature=</span><span class="s">&quot;...&quot;</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="na">length=</span><span class="s">&quot;12345678&quot;</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="na">type=</span><span class="s">&quot;application/octet-stream&quot;</span><span class="nt">/&gt;</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nt">&lt;/item&gt;</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nt">&lt;/channel&gt;</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="nt">&lt;/rss&gt;</span>
+</code></pre></div>
+<h2 id="migration-strategy">Migration Strategy<a class="headerlink" href="#migration-strategy" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Co-existence release</strong> (<code>0.1.7</code>):</li>
+<li>Ship Sparkle bundled but disabled (<code>SUEnableAutomaticChecks=NO</code>).</li>
+<li>Keep the legacy <code>AppUpdateService</code> as the active updater.</li>
+<li>This release lays down the public key in the install base, so 0.1.8+ can rely on it.</li>
+<li><strong>Cutover release</strong> (<code>0.1.8</code>):</li>
+<li>Enable Sparkle (<code>SUEnableAutomaticChecks=YES</code>).</li>
+<li>Strip <code>AppUpdateService</code> and the legacy code paths.</li>
+<li>Publish the first signed appcast entry.</li>
+<li><strong>Cleanup release</strong> (<code>0.1.9</code>):</li>
+<li>Remove the dead code paths kept in step 2 for safety.</li>
+<li>Delete the <code>update_error_*</code> localized strings.</li>
+</ol>
+<p>This three-step rollout protects against a Sparkle bug bricking auto-update — if 0.1.8 misbehaves, users on 0.1.7 still get updates via the legacy code, and we can cut 0.1.7.1 with a fix.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<h3 id="manual">Manual<a class="headerlink" href="#manual" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Local appcast served via <code>python3 -m http.server</code>; point <code>SUFeedURL</code> at it. Verify:</li>
+<li>matching signature → installs</li>
+<li>tampered DMG → rejected with explicit error</li>
+<li>tampered appcast (signature stripped) → rejected</li>
+<li>skip-version → version remembered across launches</li>
+<li>Verify the UI looks correct in both light and dark mode, RTL (Arabic, Hebrew) layouts, and at large accessibility text sizes.</li>
+</ul>
+<h3 id="automated">Automated<a class="headerlink" href="#automated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A CI step that runs <code>sparkle-validator</code> (or <code>Sparkle.app/Contents/MacOS/sign_update -p</code> to verify a signature against a known-good DMG) on every appcast push.</li>
+<li>Existing localization check script needs an update: any <code>update_error_*</code> keys we drop should not flag as missing.</li>
+</ul>
+<h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Build complexity:</strong> moving away from a pure <code>swiftc</code> invocation is a one-way door. Plan time to update <code>build-app.sh</code> and the release workflow, and budget for the first release taking longer than expected.</li>
+<li><strong>Private-key custody:</strong> if the EdDSA private key is lost, the install base cannot receive future updates without an out-of-band public-key rotation. Store it in two locations (1Password vault + offline backup) before the first signed release.</li>
+<li><strong>Sparkle XPC services:</strong> these run as separate processes and need to be ad-hoc-signed (or, eventually, Developer ID-signed) consistently with the host app. Mismatched signatures cause silent update failures.</li>
+<li><strong>Appcast hosting:</strong> if <code>gh-pages</code> is rate-limited or blocked, updates stall silently. Mitigate by also publishing the appcast as a release asset.</li>
+</ul>
+<h2 id="rollout-order">Rollout Order<a class="headerlink" href="#rollout-order" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Generate the EdDSA keypair; store the private key in 1Password and a CI secret.</li>
+<li>Migrate <code>build-app.sh</code> to bundle the Sparkle XCFramework + XPC services.</li>
+<li>Add Sparkle to the Swift code path behind <code>SUEnableAutomaticChecks=NO</code>.</li>
+<li>Cut 0.1.7 with Sparkle dormant.</li>
+<li>Stand up the appcast feed and the <code>sign_update</code> step in <code>.github/workflows/release.yml</code>.</li>
+<li>Cut 0.1.8 with Sparkle live and the legacy updater removed.</li>
+<li>Cut 0.1.9 to clean up dead code and stale localization keys.</li>
+</ol>
+<h2 id="exit-criteria">Exit Criteria<a class="headerlink" href="#exit-criteria" title="Permanent link">&para;</a></h2>
+<ul>
+<li>An attacker who controls the GitHub release page but not the EdDSA private key cannot ship a malicious update.</li>
+<li>Auto-update no longer relies on hand-rolled <code>hdiutil</code>/<code>cp -R</code> logic.</li>
+<li>Update UI is feature-complete (skip version, install on quit, manual check) without our maintaining it.</li>
+<li>The release workflow signs every artifact with EdDSA and publishes a matching appcast entry.</li>
+<li>Key rotation, appcast hosting, and signing prerequisites are documented in <code>docs/development/release.md</code>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

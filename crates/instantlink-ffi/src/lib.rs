@@ -43,6 +43,18 @@ fn get_device_lock() -> &'static DeviceLock {
     DEVICE.get_or_init(|| Mutex::new(None))
 }
 
+/// Disconnect a printer device and wait for the underlying BLE transport to tear down.
+///
+/// # Racing semantics
+///
+/// Callers accept responsibility for any races with in-flight operations. The `DeviceArc`
+/// passed here may still be held (cloned) by `print_with_progress_internal` or other
+/// concurrent tasks at the moment this function is called. `disconnect_device` tears down
+/// the underlying BLE transport unconditionally — it does not wait for in-flight prints
+/// to finish. Concurrent tasks that still hold a clone of the Arc will observe transport
+/// errors on their next BLE interaction. This is the intended, documented behavior: the
+/// caller is responsible for ensuring no concurrent print is running before disconnecting,
+/// or for tolerating the resulting error codes.
 fn disconnect_device(rt: &tokio::runtime::Runtime, device: DeviceArc) -> Result<(), PrinterError> {
     rt.block_on(async {
         tokio::time::timeout(DISCONNECT_TIMEOUT, device.disconnect())

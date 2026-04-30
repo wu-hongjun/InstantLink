@@ -261,7 +261,42 @@ enum AppUpdateService {
                 return
             }
 
-            installDownloadedApp(fromDMGAt: dmgPath, onProgress: onProgress, onFailure: onFailure)
+            // Close the TOCTOU window: atomically move the verified DMG into a
+            // private staging directory (mode 0700) that only this process owns,
+            // then pass the new path to hdiutil attach.  The staging directory is
+            // removed on every exit path via defer.
+            let fm = FileManager.default
+            let cacheDir = fm.urls(for: .cachesDirectory, in: .userDomainMask).first?.path
+                ?? NSTemporaryDirectory()
+            let stagingDir = (cacheDir as NSString).appendingPathComponent(
+                "InstantLink-update-\(UUID().uuidString)")
+            let dmgFilename = (dmgPath as NSString).lastPathComponent
+            let safeDmgPath = (stagingDir as NSString).appendingPathComponent(dmgFilename)
+
+            do {
+                try fm.createDirectory(
+                    atPath: stagingDir,
+                    withIntermediateDirectories: false,
+                    attributes: [.posixPermissions: 0o700])
+            } catch {
+                try? fm.removeItem(atPath: dmgPath)
+                reportFailure("Failed to create staging directory: \(error.localizedDescription)",
+                              onFailure: onFailure)
+                return
+            }
+
+            defer { try? fm.removeItem(atPath: stagingDir) }
+
+            do {
+                try fm.moveItem(atPath: dmgPath, toPath: safeDmgPath)
+            } catch {
+                try? fm.removeItem(atPath: dmgPath)
+                reportFailure("Failed to isolate DMG: \(error.localizedDescription)",
+                              onFailure: onFailure)
+                return
+            }
+
+            installDownloadedApp(fromDMGAt: safeDmgPath, onProgress: onProgress, onFailure: onFailure)
         }
         checksumTask.resume()
     }

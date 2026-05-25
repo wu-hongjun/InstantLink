@@ -57,6 +57,7 @@ INSTANTLINK_FIT_CONTAIN = 1
 INSTANTLINK_FIT_STRETCH = 2
 DEFAULT_SCAN_DURATION_S = 5
 STRING_BUFFER_SIZE = 4096
+FFI_CANCEL_GRACE_S = 5.0
 
 _PRINT_PROGRESS_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_uint32, ctypes.c_uint32)
 _T = TypeVar("_T")
@@ -251,7 +252,15 @@ class InstantLinkBackend:
                 return await asyncio.shield(task)
             except asyncio.CancelledError:
                 LOGGER.warning("instantlink.%s_cancel_waiting_for_worker", operation)
-                await task
+                try:
+                    await asyncio.wait_for(asyncio.shield(task), timeout=FFI_CANCEL_GRACE_S)
+                except TimeoutError:
+                    LOGGER.critical(
+                        "instantlink.%s_cancel_worker_stuck restarting_process grace_s=%.1f",
+                        operation,
+                        FFI_CANCEL_GRACE_S,
+                    )
+                    os._exit(1)
                 raise
 
     def _scan_blocking(self, timeout_s: float) -> list[str]:

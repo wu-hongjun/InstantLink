@@ -1,0 +1,35 @@
+# InstantLink Bridge Raspberry Pi boot configuration fragment.
+#
+# Merge these settings into /boot/firmware/config.txt on each target Pi image.
+
+dtparam=i2c_arm=on
+dtparam=spi=on
+dtparam=audio=off
+
+# Dedicated bridge image: skip camera/display probing and HDMI/KMS setup. The
+# Waveshare ST7789 framebuffer below is the only display path.
+camera_auto_detect=0
+display_auto_detect=0
+auto_initramfs=0
+max_framebuffers=1
+
+arm_64bit=1
+disable_overscan=1
+arm_boost=1
+
+[all]
+enable_uart=1
+gpio=6,19,5,26,13,21,20,16=pu
+
+# Waveshare 1.3" LCD HAT, ST7789VW 240x240 on SPI0 CE0.
+# This creates /dev/fb0 as fb_st7789v during kernel/device init so the LCD
+# shows Linux console output before Python userspace starts.
+dtoverlay=fbtft,spi0-0,st7789v,width=240,height=240,dc_pin=25,reset_pin=27,led_pin=24,rotate=270,speed=40000000,fps=30
+
+# InstantLink Bridge USB Ethernet gadget.
+dtoverlay=dwc2,dr_mode=peripheral
+
+disable_splash=1
+boot_delay=0
+initial_turbo=30
+gpu_mem=16

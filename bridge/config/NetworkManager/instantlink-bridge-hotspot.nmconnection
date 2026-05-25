@@ -1,0 +1,26 @@
+[connection]
+id=InstantLink Bridge-Hotspot
+type=wifi
+interface-name=wlan0
+autoconnect=false
+
+[wifi]
+mode=ap
+ssid=InstBrdg-SETUP
+band=bg
+channel=6
+
+[wifi-security]
+key-mgmt=wpa-psk
+proto=rsn
+pairwise=ccmp
+group=ccmp
+psk=change-me-please
+
+[ipv4]
+method=shared
+address1=192.168.8.1/24
+never-default=true
+
+[ipv6]
+method=disabled

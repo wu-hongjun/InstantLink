@@ -1,0 +1,18 @@
+[Unit]
+Description=InstantLink Bridge early LCD boot splash
+DefaultDependencies=no
+After=local-fs.target systemd-udev-settle.service
+Before=basic.target instantlink-bridge.service
+ConditionPathExists=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge-splash
+
+[Service]
+Type=oneshot
+User=ib
+Group=ib
+SupplementaryGroups=gpio spi i2c video
+WorkingDirectory=/opt/InstantLinkBridge
+ExecStart=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge-splash --config /etc/InstantLinkBridge/config.toml --hold 0.25
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

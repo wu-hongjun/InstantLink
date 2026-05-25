@@ -143,12 +143,16 @@ fn extracted_printer_serial(name: &str) -> Option<String> {
 }
 
 fn select_matching_result<T>(results: Vec<(T, String)>, device_name: &str) -> Result<(T, String)> {
-    let mut exact_matches = Vec::new();
+    let target_name = device_name.trim();
+    let mut exact_name_matches = Vec::new();
+    let mut normalized_matches = Vec::new();
     let mut partial_matches = Vec::new();
 
     for result in results {
-        if printer_name_matches(&result.1, device_name) {
-            exact_matches.push(result);
+        if result.1.trim() == target_name {
+            exact_name_matches.push(result);
+        } else if printer_name_matches(&result.1, device_name) {
+            normalized_matches.push(result);
         } else if normalized_printer_name(&result.1).contains(&normalized_printer_name(device_name))
             || normalized_printer_name(device_name).contains(&normalized_printer_name(&result.1))
         {
@@ -156,16 +160,62 @@ fn select_matching_result<T>(results: Vec<(T, String)>, device_name: &str) -> Re
         }
     }
 
-    let matches = if exact_matches.is_empty() {
+    let target_has_platform_suffix = has_platform_suffix(target_name);
+    if target_has_platform_suffix && exact_name_matches.len() == 1 {
+        return Ok(exact_name_matches
+            .into_iter()
+            .next()
+            .expect("one match must exist"));
+    }
+    if target_has_platform_suffix && exact_name_matches.len() > 1 {
+        return select_preferred_advertisement(exact_name_matches);
+    }
+
+    let matches = if exact_name_matches.is_empty() && normalized_matches.is_empty() {
         partial_matches
     } else {
-        exact_matches
+        exact_name_matches.append(&mut normalized_matches);
+        exact_name_matches
     };
 
     match matches.len() {
         0 => Err(PrinterError::PrinterNotFound),
         1 => Ok(matches.into_iter().next().expect("one match must exist")),
-        count => Err(PrinterError::MultiplePrinters { count }),
+        _count => select_preferred_advertisement(matches),
+    }
+}
+
+fn has_platform_suffix(name: &str) -> bool {
+    let upper = name.to_ascii_uppercase();
+    upper.ends_with("(IOS)") || upper.ends_with("(ANDROID)")
+}
+
+fn select_preferred_advertisement<T>(mut matches: Vec<(T, String)>) -> Result<(T, String)> {
+    matches.sort_by_key(|(_, name)| advertisement_priority(name));
+    let best_priority = matches
+        .first()
+        .map(|(_, name)| advertisement_priority(name))
+        .ok_or(PrinterError::PrinterNotFound)?;
+    let same_priority_count = matches
+        .iter()
+        .filter(|(_, name)| advertisement_priority(name) == best_priority)
+        .count();
+    if same_priority_count == 1 {
+        return Ok(matches.remove(0));
+    }
+    Err(PrinterError::MultiplePrinters {
+        count: matches.len(),
+    })
+}
+
+fn advertisement_priority(name: &str) -> u8 {
+    let upper = name.to_ascii_uppercase();
+    if upper.ends_with("(IOS)") {
+        0
+    } else if upper.ends_with("(ANDROID)") {
+        1
+    } else {
+        2
     }
 }
 
@@ -265,13 +315,25 @@ mod tests {
     }
 
     #[test]
-    fn select_matching_result_returns_multiple_printers_for_multiple_exact_matches() {
+    fn select_matching_result_prefers_ios_when_serial_has_multiple_advertisements() {
         let results = vec![
             (1, "INSTAX-12345678".to_string()),
             (2, "INSTAX-12345678 (iOS)".to_string()),
         ];
-        let err = select_matching_result(results, "INSTAX-12345678").unwrap_err();
-        assert!(matches!(err, PrinterError::MultiplePrinters { count: 2 }));
+        let (matched, name) = select_matching_result(results, "INSTAX-12345678").unwrap();
+        assert_eq!(matched, 2);
+        assert_eq!(name, "INSTAX-12345678 (iOS)");
+    }
+
+    #[test]
+    fn select_matching_result_prefers_exact_platform_suffix() {
+        let results = vec![
+            (1, "INSTAX-12345678 (ANDROID)".to_string()),
+            (2, "INSTAX-12345678 (iOS)".to_string()),
+        ];
+        let (matched, name) = select_matching_result(results, "INSTAX-12345678 (ANDROID)").unwrap();
+        assert_eq!(matched, 1);
+        assert_eq!(name, "INSTAX-12345678 (ANDROID)");
     }
 
     #[test]

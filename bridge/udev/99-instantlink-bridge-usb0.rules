@@ -1,0 +1,2 @@
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="usb0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="instantlink-bridge-usb0-rearm.service"
+SUBSYSTEM=="net", ACTION=="remove", KERNEL=="usb0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="instantlink-bridge-usb0-lost.service"

@@ -1,0 +1,57 @@
+[ftp]
+# v1 camera FTP is hotspot-first. Use "hotspot" for the bridge AP, or "peer" for
+# an explicitly configured same-Wi-Fi network. Legacy values "auto" and "wired"
+# must not make USB gadget FTP a supported camera mode.
+mode = "hotspot"
+# USB gadget address for admin/SSH/diagnostics only. Keep this on its own subnet.
+host = "192.168.7.1"
+# Bridge-owned Wi-Fi AP FTP address for portable/giftable mode.
+hotspot_host = "192.168.8.1"
+port = 21
+username = "ib"
+# Provisioning replaces this sentinel with an 8-digit numeric password.
+password = "change-me"
+incoming_dir = "/var/lib/InstantLinkBridge/incoming"
+# Optional router-reserved same-Wi-Fi address shown on the LCD. Leave unset until
+# the router reservation is actually configured. The LCD still shows the actual
+# DHCP address as `Same Wi-Fi FTP`.
+# preferred_wifi_host = "192.168.5.7"
+
+[printer]
+# "auto" detects from printer image-support info. Explicit options:
+# "mini", "mini_link3", "square", "wide"
+model = "auto"
+# "auto" center-crops Square; Mini/Wide rotate portrait/landscape mismatches before crop.
+# Explicit options: "crop", "contain", "stretch".
+fit = "auto"
+quality = 100
+print_option = 0
+device_name = ""
+# Poll status this often while a selected printer is online. This intentionally keeps
+# the printer awake and refreshes film/battery on the LCD.
+keepalive_interval_s = 10
+
+[workflow]
+# Allowed values:
+# - 0 prints immediately after FTP receive.
+# - 5 shows editable preview for 5 seconds before printing.
+# - "off" shows editable preview until K1/joystick press prints.
+auto_print_delay_s = 5
+# Testing escape hatch. When true, the bridge sends print jobs even if the printer reports 0 film.
+allow_print_without_film = false
+
+[power]
+# Current hardware is the SupTronics/Geekworm X306 18650 UPS shield. It has a hardware
+# power path, charging LEDs, and a push button, but no host-readable fuel gauge.
+# Other allowed values: "pisugar" for the legacy PiSugar socket backend, "none".
+backend = "x306"
+battery_poll_interval_s = 30
+battery_warning_threshold_percent = 20
+battery_safe_shutdown_threshold_percent = 10
+idle_dim_after_s = 30
+idle_screen_off_after_s = 90
+idle_deep_after_s = 300
+idle_poweroff_after_s = 600
+# X306 exposes no host battery percentage, and unexpected poweroff looks like a crash during use.
+# Keep automatic poweroff off unless explicitly enabled from Settings > System.
+idle_poweroff_enabled = false

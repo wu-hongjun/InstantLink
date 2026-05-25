@@ -2,6 +2,15 @@
 **/target/
 **/*.rs.bk
 
+# Python bridge
+**/__pycache__/
+**/*.py[cod]
+bridge/.venv/
+bridge/.mypy_cache/
+bridge/.pytest_cache/
+bridge/.ruff_cache/
+bridge/*.egg-info/
+
 # macOS
 .DS_Store
 *.swp

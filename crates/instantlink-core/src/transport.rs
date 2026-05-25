@@ -75,6 +75,9 @@ pub const DEFAULT_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Timeout to wait for the listener task to exit gracefully after cancellation.
 const LISTENER_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
+/// Timeout for the Linux bluetoothctl fallback used when btleplug connect races BlueZ discovery.
+#[cfg(target_os = "linux")]
+const BLUETOOTHCTL_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Trait for BLE transport operations (enables mocking in tests).
 #[async_trait]
@@ -188,20 +191,53 @@ impl BleTransport {
         peripheral: Peripheral,
         progress: Option<&ConnectProgressCallback>,
     ) -> Result<Self> {
-        if peripheral.is_connected().await.unwrap_or(false) {
-            Self::disconnect_quietly(&peripheral, None).await;
+        let already_connected = peripheral.is_connected().await.unwrap_or(false);
+        if !already_connected {
+            emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
+            if let Err(error) = peripheral.connect().await {
+                if !peripheral.is_connected().await.unwrap_or(false) {
+                    let _ = connect_with_bluez_cli(&peripheral).await;
+                }
+                if peripheral.is_connected().await.unwrap_or(false) {
+                    log::debug!(
+                        "BLE connect returned an error after BlueZ marked the device connected: {}",
+                        error
+                    );
+                } else {
+                    return Err(PrinterError::Ble(format!("connect failed: {error}")));
+                }
+            }
+        } else {
+            log::debug!("BLE peripheral already connected; reusing existing BlueZ link");
         }
-
-        emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
-        peripheral
-            .connect()
-            .await
-            .map_err(|e| PrinterError::Ble(format!("connect failed: {e}")))?;
 
         emit_connect_progress(progress, ConnectStage::ServiceDiscovery, None::<String>);
         if let Err(e) = peripheral.discover_services().await {
+            log::debug!("Initial service discovery failed: {}", e);
             Self::disconnect_quietly(&peripheral, None).await;
-            return Err(PrinterError::Ble(format!("service discovery failed: {e}")));
+            emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
+            if let Err(connect_error) = peripheral.connect().await {
+                if !peripheral.is_connected().await.unwrap_or(false) {
+                    let _ = connect_with_bluez_cli(&peripheral).await;
+                }
+                if peripheral.is_connected().await.unwrap_or(false) {
+                    log::debug!(
+                        "BLE reconnect returned an error after BlueZ marked the device connected: {}",
+                        connect_error
+                    );
+                } else {
+                    return Err(PrinterError::Ble(format!(
+                        "connect failed after service discovery retry: {connect_error}"
+                    )));
+                }
+            }
+            emit_connect_progress(progress, ConnectStage::ServiceDiscovery, None::<String>);
+            if let Err(retry_error) = peripheral.discover_services().await {
+                Self::disconnect_quietly(&peripheral, None).await;
+                return Err(PrinterError::Ble(format!(
+                    "service discovery failed: {retry_error}"
+                )));
+            }
         }
 
         let chars = peripheral.characteristics();
@@ -358,6 +394,62 @@ impl BleTransport {
             }
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+async fn connect_with_bluez_cli(peripheral: &Peripheral) -> bool {
+    let device_id = bluetoothctl_device_id(peripheral);
+    let output = tokio::time::timeout(
+        BLUETOOTHCTL_CONNECT_TIMEOUT,
+        tokio::process::Command::new("bluetoothctl")
+            .arg("connect")
+            .arg(&device_id)
+            .output(),
+    )
+    .await;
+
+    match output {
+        Ok(Ok(output)) if output.status.success() => {
+            log::debug!("bluetoothctl connected BLE device {}", device_id);
+            true
+        }
+        Ok(Ok(output)) => {
+            log::debug!(
+                "bluetoothctl connect failed for {}: status={} stdout={} stderr={}",
+                device_id,
+                output.status,
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            false
+        }
+        Ok(Err(error)) => {
+            log::debug!(
+                "failed to run bluetoothctl connect for {}: {}",
+                device_id,
+                error
+            );
+            false
+        }
+        Err(_) => {
+            log::debug!("bluetoothctl connect timed out for {}", device_id);
+            false
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn bluetoothctl_device_id(peripheral: &Peripheral) -> String {
+    let id = peripheral.id().to_string();
+    if let Some((_prefix, address)) = id.rsplit_once("dev_") {
+        return address.replace('_', ":");
+    }
+    id
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn connect_with_bluez_cli(_peripheral: &Peripheral) -> bool {
+    false
 }
 
 impl Drop for BleTransport {

@@ -16,5 +16,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio-util = { workspace = true }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+# Enables vendored libdbus for Linux cross-builds from macOS. Without this, libdbus-sys
+# requires a target-specific dbus-1.pc sysroot just to build the BlueZ backend.
+libdbus-sys = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

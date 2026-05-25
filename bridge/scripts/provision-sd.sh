@@ -114,6 +114,22 @@ enable_service() {
   systemctl --root="${ROOT%/}" enable instantlink-bridge.service instantlink-bridge-boot-splash.service
 }
 
+disable_legacy_instantbridge_services() {
+  local legacy_units=(
+    instantbridge.service
+    instantbridge-boot-splash.service
+    instantbridge-usb0-rearm.service
+    instantbridge-usb0-lost.service
+  )
+
+  if [[ "${LIVE_ROOT}" -eq 1 ]]; then
+    systemctl disable --now "${legacy_units[@]}" >/dev/null 2>&1 || true
+    return
+  fi
+
+  systemctl --root="${ROOT%/}" disable "${legacy_units[@]}" >/dev/null 2>&1 || true
+}
+
 remove_slow_boot_display_defaults() {
   local config_txt="$1"
   local tmp
@@ -134,6 +150,7 @@ remove_slow_boot_display_defaults() {
 
 echo "Installing InstantLink Bridge USB gadget config into ${ROOT}"
 ensure_runtime_identity
+disable_legacy_instantbridge_services
 install_file config/g_ether.conf /etc/modprobe.d/g_ether.conf
 install_file config/10-usb0.network /etc/systemd/network/10-usb0.network
 install_file config/dnsmasq-bridge.conf /etc/dnsmasq.d/instantlink-bridge.conf

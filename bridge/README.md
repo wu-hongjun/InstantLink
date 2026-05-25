@@ -33,8 +33,8 @@ helpers for the current vertical slice.
 
 ## Current Status
 
-- Last verified on hardware: 2026-05-25, deployed commit
-  `c1f016a04234afb5a32104e3a11b2b76f7895772`.
+- Last verified on hardware: 2026-05-25, runtime baseline
+  `fa9d969c7d2c98161a74fd7d452d4a97d0c08378`.
 - The Pi service starts the LCD UI, Bridge Wi-Fi FTP, advanced Same Wi-Fi FTP,
   printer discovery/status keepalive, and the FTP-received-image auto-print flow.
 - The LCD Settings menu can pair/forget a printer, explicitly choose Wi-Fi mode options, and persist

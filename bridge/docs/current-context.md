@@ -28,8 +28,8 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- Source commit: `c1f016a04234afb5a32104e3a11b2b76f7895772`
-- Parent InstantBridge submodule pointer: `fc9378e`
+- Hardware-verified runtime baseline: `fa9d969c7d2c98161a74fd7d452d4a97d0c08378`
+- Parent InstantBridge `main` should point at this submodule commit or newer.
 - Service: `instantlink-bridge.service`
 - Install root: `/opt/InstantLinkBridge`
 - Config root: `/etc/InstantLinkBridge`

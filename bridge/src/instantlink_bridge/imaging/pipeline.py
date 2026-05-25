@@ -505,24 +505,26 @@ def _open_raw_image(
 
 
 def _open_raw_preview(
-    raw: _RawImage,
-    rawpy_module: _RawPyModule,
+    raw: object,
+    rawpy_module: object,
     working_size: tuple[int, int],
     minimum_source_edge: int,
 ) -> Image.Image | None:
+    raw_image = cast(_RawImage, raw)
+    thumb_format = cast(_RawPyModule, rawpy_module).ThumbFormat
     try:
-        thumbnail = raw.extract_thumb()
+        thumbnail = raw_image.extract_thumb()
     except Exception:
         return None
 
     image: Image.Image | None = None
     try:
-        if thumbnail.format == rawpy_module.ThumbFormat.JPEG:
+        if thumbnail.format == thumb_format.JPEG:
             preview_data = cast(bytes, thumbnail.data)
             with Image.open(BytesIO(preview_data)) as preview:
                 preview.draft("RGB", working_size)
                 image = preview.copy()
-        elif thumbnail.format == rawpy_module.ThumbFormat.BITMAP:
+        elif thumbnail.format == thumb_format.BITMAP:
             image = Image.fromarray(cast(Any, thumbnail.data)).convert("RGB")
         else:
             return None
@@ -555,14 +557,14 @@ def _ensure_fallback_decode_size(size: tuple[int, int]) -> None:
         raise ImageTooLargeError(pixels, MAX_FALLBACK_DECODE_PIXELS, "pixels")
 
 
-def _ensure_raw_fallback_decode_size(raw: _RawImage) -> None:
+def _ensure_raw_fallback_decode_size(raw: object) -> None:
     size = _raw_source_size(raw)
     if size is None:
         raise UnsupportedImageError("RAW fallback requires bounded preview or source dimensions")
     _ensure_fallback_decode_size(size)
 
 
-def _raw_source_size(raw: _RawImage) -> tuple[int, int] | None:
+def _raw_source_size(raw: object) -> tuple[int, int] | None:
     sizes = getattr(raw, "sizes", None)
     for width_name, height_name in (
         ("width", "height"),

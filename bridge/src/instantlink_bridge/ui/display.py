@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, cast
@@ -311,7 +312,7 @@ def _rgb565_bytes(image: Image.Image) -> bytes:
     rgb = image.convert("RGB")
     output = bytearray(rgb.width * rgb.height * 2)
     index = 0
-    for red, green, blue in rgb.getdata():
+    for red, green, blue in cast(Iterable[tuple[int, int, int]], rgb.getdata()):
         value = ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3)
         output[index] = value & 0xFF
         output[index + 1] = value >> 8

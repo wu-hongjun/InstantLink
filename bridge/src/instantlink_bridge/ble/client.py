@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from instantlink_bridge.ble import protocol
 from instantlink_bridge.ble.instax import InstaxProtocolClient
@@ -44,10 +44,10 @@ _DISCOVERED_DEVICE_CACHE: dict[str, object] = {}
 
 
 class _BleakClientProtocol(Protocol):
-    async def connect(self) -> bool:
+    async def connect(self, **kwargs: object) -> object:
         """Connect to the BLE device."""
 
-    async def disconnect(self) -> bool:
+    async def disconnect(self) -> object:
         """Disconnect from the BLE device."""
 
     async def read_gatt_char(self, char_specifier: str) -> bytearray:
@@ -235,7 +235,7 @@ async def connect_instax_printer(
         name or "",
         cached_device is not None,
     )
-    client = BleakClient(client_target, services=[INSTAX_SERVICE_UUID])
+    client = BleakClient(cast(Any, client_target), services=[INSTAX_SERVICE_UUID])
     transport: BleakInstaxTransport | None = None
     try:
         await asyncio.wait_for(client.connect(), timeout=timeout_s)

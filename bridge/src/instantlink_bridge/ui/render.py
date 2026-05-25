@@ -579,7 +579,7 @@ def _font(size: int) -> Font:
 
 def _text_width(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
     left, _top, right, _bottom = draw.textbbox((0, 0), text, font=font)
-    return right - left
+    return int(right - left)
 
 
 def _fit_text_to_width(

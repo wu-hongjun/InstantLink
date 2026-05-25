@@ -14,6 +14,7 @@ RUNTIME_PACKAGES_ARTIFACT="${INSTANTLINK_BRIDGE_RUNTIME_PACKAGES_ARTIFACT:-${DEP
 RUNTIME_APT_PACKAGES_ARTIFACT="${INSTANTLINK_BRIDGE_RUNTIME_APT_PACKAGES_ARTIFACT:-${DEPLOY_METADATA_DIR}/runtime-apt-packages.txt}"
 RUNTIME_DEPS_MANIFEST="${INSTANTLINK_BRIDGE_RUNTIME_DEPS_MANIFEST:-${DEPLOY_METADATA_DIR}/runtime-deps-manifest.json}"
 INSTANTLINK_ARTIFACTS_MANIFEST="${INSTANTLINK_BRIDGE_ARTIFACTS_MANIFEST:-${DEPLOY_METADATA_DIR}/instantlink-artifacts-manifest.json}"
+LOCAL_INSTANTLINK_ARTIFACTS_MANIFEST_NAME="${INSTANTLINK_BRIDGE_ARTIFACTS_MANIFEST_NAME:-instantlink-artifacts-manifest.json}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 TARGET_PYTHON_BIN="${TARGET_PYTHON_BIN:-python3}"
 SSH_BIN="${SSH_BIN:-ssh}"
@@ -45,6 +46,8 @@ Environment overrides:
   INSTANTLINK_BRIDGE_INSTANTLINK_ARTIFACT_DIR
                        Local directory containing cross-built InstantLink Linux arm64 artifacts,
                        default ../target/aarch64-unknown-linux-gnu/release
+  INSTANTLINK_BRIDGE_LOCAL_ARTIFACTS_MANIFEST
+                       Local build-time artifact manifest, default artifact dir/instantlink-artifacts-manifest.json
   SSHPASS              Optional SSH password. When set, ssh/scp are invoked via
                        sshpass -e for Pi setups that do not yet have keys.
   SSH_BIN              SSH command, default ssh
@@ -405,8 +408,7 @@ install_instantlink_artifacts_on_pi() {
   local artifacts_dir="$1"
   local lib_source="${artifacts_dir}/libinstantlink_ffi.so"
   local cli_source="${artifacts_dir}/instantlink"
-  local workspace_root="${ROOT}/.."
-  local artifact_manifest
+  local artifact_manifest="${INSTANTLINK_BRIDGE_LOCAL_ARTIFACTS_MANIFEST:-${artifacts_dir}/${LOCAL_INSTANTLINK_ARTIFACTS_MANIFEST_NAME}}"
   local remote_lib="/tmp/libinstantlink_ffi.so"
   local remote_cli="/tmp/instantlink"
   local remote_manifest="/tmp/instantlink-bridge-artifacts-manifest.json"
@@ -421,14 +423,16 @@ install_instantlink_artifacts_on_pi() {
     echo "Run scripts/build-instantlink-artifacts.sh first or set INSTANTLINK_BRIDGE_INSTANTLINK_ARTIFACT_DIR." >&2
     exit 1
   fi
+  if [[ ! -f "${artifact_manifest}" ]]; then
+    echo "ERROR: missing build-time artifact manifest: ${artifact_manifest}" >&2
+    echo "Run scripts/build-instantlink-artifacts.sh before deploying --instantlink-artifacts." >&2
+    exit 1
+  fi
 
-  artifact_manifest="$(mktemp -t instantlink-bridge-artifacts.XXXXXX.json)"
-  render_instantlink_artifacts_manifest \
+  verify_instantlink_artifacts_manifest \
     "${artifact_manifest}" \
-    "${artifacts_dir}" \
     "${lib_source}" \
-    "${cli_source}" \
-    "${workspace_root}"
+    "${cli_source}"
 
   "${SCP_CMD[@]}" -q "${lib_source}" "${USER}@${HOST}:${remote_lib}"
   "${SCP_CMD[@]}" -q "${cli_source}" "${USER}@${HOST}:${remote_cli}"
@@ -438,86 +442,58 @@ install_instantlink_artifacts_on_pi() {
      sudo install -D -m 0755 -o '${OWNER}' -g '${GROUP}' '${remote_cli}' '${TARGET}/bin/instantlink' && \
      sudo install -D -m 0644 -o '${OWNER}' -g '${GROUP}' '${remote_manifest}' '${INSTANTLINK_ARTIFACTS_MANIFEST}' && \
      rm -f '${remote_lib}' '${remote_cli}' '${remote_manifest}'"
-  rm -f "${artifact_manifest}"
 }
 
-render_instantlink_artifacts_manifest() {
-  local output_path="$1"
-  local artifacts_dir="$2"
-  local lib_source="$3"
-  local cli_source="$4"
-  local workspace_root="$5"
+verify_instantlink_artifacts_manifest() {
+  local manifest_path="$1"
+  local lib_source="$2"
+  local cli_source="$3"
   local lib_sha
   local cli_sha
-  local commit_sha=""
-  local branch=""
-  local dirty="unknown"
 
   lib_sha="$(sha256_file "${lib_source}")"
   cli_sha="$(sha256_file "${cli_source}")"
-  if git -C "${workspace_root}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    commit_sha="$(git -C "${workspace_root}" rev-parse --verify HEAD)"
-    branch="$(git_branch_name "${workspace_root}")"
-    if git_worktree_dirty "${workspace_root}"; then
-      dirty=true
-    else
-      dirty=false
-    fi
-  fi
-
   "${PYTHON_BIN}" - \
-    "${output_path}" \
-    "$(utc_now)" \
-    "${artifacts_dir}" \
+    "${manifest_path}" \
     "${lib_source}" \
     "${lib_sha}" \
     "${cli_source}" \
-    "${cli_sha}" \
-    "${commit_sha}" \
-    "${branch}" \
-    "${dirty}" <<'PY'
+    "${cli_sha}" <<'PY'
 import json
 import pathlib
 import sys
 
 (
-    output_path,
-    recorded_at,
-    artifacts_dir,
+    manifest_path,
     lib_source,
     lib_sha,
     cli_source,
     cli_sha,
-    commit_sha,
-    branch,
-    dirty,
 ) = sys.argv[1:]
 
-manifest = {
-    "schema_version": 1,
-    "recorded_at_utc": recorded_at,
-    "artifacts_dir": artifacts_dir,
-    "instantlink_workspace": {
-        "commit_sha": commit_sha or None,
-        "branch": branch or None,
-        "dirty": None if dirty == "unknown" else dirty == "true",
-    },
-    "artifacts": {
-        "libinstantlink_ffi.so": {
-            "source_path": lib_source,
-            "sha256": lib_sha or None,
-        },
-        "instantlink": {
-            "source_path": cli_source,
-            "sha256": cli_sha or None,
-        },
-    },
-}
+manifest = json.loads(pathlib.Path(manifest_path).read_text(encoding="utf-8"))
+if manifest.get("schema_version") != 1:
+    raise SystemExit(f"ERROR: unsupported artifact manifest schema in {manifest_path}")
+if not manifest.get("built_at_utc"):
+    raise SystemExit(f"ERROR: artifact manifest lacks build-time provenance: {manifest_path}")
 
-pathlib.Path(output_path).write_text(
-    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-)
+artifacts = manifest.get("artifacts")
+if not isinstance(artifacts, dict):
+    raise SystemExit(f"ERROR: artifact manifest lacks artifacts map: {manifest_path}")
+
+expected = {
+    "libinstantlink_ffi.so": (lib_source, lib_sha),
+    "instantlink": (cli_source, cli_sha),
+}
+for name, (source_path, sha256) in expected.items():
+    item = artifacts.get(name)
+    if not isinstance(item, dict):
+        raise SystemExit(f"ERROR: artifact manifest lacks {name}: {manifest_path}")
+    if item.get("sha256") != sha256:
+        raise SystemExit(
+            f"ERROR: artifact manifest SHA mismatch for {name}; "
+            f"manifest={item.get('sha256')} actual={sha256} source={source_path}"
+        )
 PY
 }
 

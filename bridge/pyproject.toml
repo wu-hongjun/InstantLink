@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "instantlink-bridge"
+version = "0.1.0"
+description = "Camera FTP appliance for InstantLink printers"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "See the parent InstantLink repository license" }
+authors = [{ name = "InstantLink Bridge contributors" }]
+dependencies = [
+  "aiohttp>=3.10",
+  "bleak>=1.1.1",
+  "dbus-fast>=2.21",
+  "gpiozero>=2.0",
+  "lgpio>=0.2.2.0",
+  "luma.lcd>=2.13",
+  "Pillow>=11.0",
+  "pillow-heif>=1.3.0",
+  "pyftpdlib>=2.2.0",
+  "rawpy>=0.27.0",
+  "sdnotify>=0.3.2",
+  "spidev>=3.8",
+]
+
+[project.scripts]
+instantlink-bridge = "instantlink_bridge.app:main"
+instantlink-bridge-splash = "instantlink_bridge.boot_splash:main"
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.11,<2.0",
+  "pytest>=9.0,<10.0",
+  "pytest-asyncio>=1.3,<2.0",
+  "pytest-cov>=7.1,<8.0",
+  "ruff>=0.15,<0.16",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["third-party"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ANN", "ASYNC", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+disallow_untyped_defs = true
+warn_return_any = true
+exclude = ["third-party/"]
+
+[[tool.mypy.overrides]]
+module = [
+  "bleak",
+  "gpiozero",
+  "gpiozero.pins.*",
+  "luma.*",
+  "pillow_heif",
+  "pyftpdlib.*",
+  "rawpy",
+  "sdnotify",
+]
+ignore_missing_imports = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/instantlink_bridge"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

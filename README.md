@@ -11,11 +11,12 @@ The Instax Link BLE protocol was reverse-engineered by the open-source community
 
 ## What's Included
 
-| Crate | Description |
+| Component | Description |
 |-------|-------------|
 | **instantlink-core** | Core library — BLE protocol, image processing, device communication |
 | **instantlink-cli** (`instantlink` binary) | Command-line tool to scan, query, and print |
 | **instantlink-ffi** | C FFI bindings for building native GUIs (Swift, etc.) |
+| **bridge** | Raspberry Pi camera FTP appliance using the InstantLink FFI backend |
 
 ## Install
 
@@ -90,6 +91,7 @@ The printer model is auto-detected after connecting.
   - Auto-update via GitHub releases
   - Localized in 12 languages
 - C FFI (22 exported functions: see `docs/reference/ffi.md`) for building native UIs, including connection-stage callbacks
+- Raspberry Pi bridge appliance for receiving camera FTP uploads over a local hotspot and printing through the InstantLink FFI backend
 
 ## Project Structure
 
@@ -102,9 +104,17 @@ InstantLink/
 │   ├── instantlink-core/          # Core library
 │   ├── instantlink-cli/           # CLI binary
 │   └── instantlink-ffi/           # C FFI
+├── bridge/                        # Raspberry Pi camera FTP appliance
 └── macos/                        # Native macOS app (SwiftUI)
     └── InstantLink/
 ```
+
+## Bridge Appliance
+
+`bridge/` contains the Raspberry Pi runtime, LCD UI, FTP receive service, network-mode
+helpers, systemd units, and deployment scripts for a self-contained camera-to-printer appliance.
+It deliberately reuses `instantlink-ffi` for printer discovery, status, and print transport instead
+of maintaining a second BLE protocol implementation.
 
 ## macOS App
 

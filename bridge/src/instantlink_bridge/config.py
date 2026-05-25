@@ -1,0 +1,600 @@
+"""Configuration loading for InstantLink Bridge."""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import tomllib
+from collections.abc import Iterable
+from dataclasses import dataclass
+from enum import StrEnum
+from ipaddress import IPv4Address, IPv4Network, ip_address
+from itertools import pairwise
+from math import isfinite
+from pathlib import Path
+
+from instantlink_bridge.ble.models import PrinterModel, parse_printer_model
+from instantlink_bridge.imaging.pipeline import FitMode, parse_fit_mode
+
+DEFAULT_CONFIG_PATH = Path("/etc/InstantLinkBridge/config.toml")
+FTP_SUBNET_PREFIX_LEN = 24
+
+
+class FtpReceiveMode(StrEnum):
+    """Configured FTP receive policy.
+
+    ``AUTO`` and ``WIRED`` are retained for legacy config parsing only. USB gadget clients are
+    admin/diagnostics traffic and are not accepted for camera print uploads in v1.
+    """
+
+    AUTO = "auto"
+    WIRED = "wired"
+    HOTSPOT = "hotspot"
+    PEER = "peer"
+
+
+class FtpSourceKind(StrEnum):
+    """Classified FTP client source network."""
+
+    INVALID = "invalid"
+    LINK_LOCAL = "link_local"
+    USB = "usb"
+    HOTSPOT = "hotspot"
+    PEER = "peer"
+
+
+class PowerBackend(StrEnum):
+    """Bridge power hardware backend."""
+
+    X306 = "x306"
+    PISUGAR = "pisugar"
+    NONE = "none"
+
+
+@dataclass(frozen=True, slots=True)
+class FtpSourceDecision:
+    """Result of applying FTP receive-mode source policy."""
+
+    allowed: bool
+    source: FtpSourceKind
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class FtpConfig:
+    """FTP receive configuration."""
+
+    mode: FtpReceiveMode = FtpReceiveMode.HOTSPOT
+    bind_host: str = "0.0.0.0"
+    host: str = "192.168.7.1"
+    hotspot_host: str = "192.168.8.1"
+    port: int = 21
+    username: str = "ib"
+    password: str = "change-me"
+    incoming_dir: Path = Path("/var/lib/InstantLinkBridge/incoming")
+    preferred_wifi_host: str | None = None
+
+
+def ftp_config_source_decision(
+    config: FtpConfig,
+    remote_ip: str,
+    *,
+    active_peer_hosts: Iterable[str] | None = None,
+) -> FtpSourceDecision:
+    """Return whether a remote FTP source is allowed by a full FTP config."""
+
+    if active_peer_hosts is None:
+        peer_hosts: Iterable[str] = (
+            (config.preferred_wifi_host,) if config.preferred_wifi_host is not None else ()
+        )
+    else:
+        peer_hosts = active_peer_hosts
+    return ftp_source_decision(
+        config.mode,
+        remote_ip,
+        usb_host=config.host,
+        hotspot_host=config.hotspot_host,
+        active_peer_hosts=peer_hosts,
+    )
+
+
+def ftp_source_decision(
+    mode: FtpReceiveMode,
+    remote_ip: str,
+    *,
+    usb_host: str,
+    hotspot_host: str,
+    active_peer_hosts: Iterable[str] = (),
+) -> FtpSourceDecision:
+    """Return whether a remote FTP source is allowed for the selected mode."""
+
+    try:
+        source_ip = IPv4Address(remote_ip)
+    except ValueError:
+        return FtpSourceDecision(False, FtpSourceKind.INVALID, "remote_ip_not_ipv4")
+
+    if source_ip.is_link_local:
+        return FtpSourceDecision(False, FtpSourceKind.LINK_LOCAL, "link_local_rejected")
+    if source_ip.is_loopback or source_ip.is_multicast or source_ip.is_unspecified:
+        return FtpSourceDecision(False, FtpSourceKind.INVALID, "non_client_ipv4_rejected")
+
+    try:
+        source_kind = _classify_ftp_source(source_ip, usb_host, hotspot_host)
+    except ValueError:
+        return FtpSourceDecision(False, FtpSourceKind.INVALID, "configured_subnet_invalid")
+
+    if source_kind is FtpSourceKind.PEER:
+        try:
+            peer_networks = active_peer_ipv4_networks(
+                active_peer_hosts,
+                usb_host=usb_host,
+                hotspot_host=hotspot_host,
+            )
+        except ValueError:
+            return FtpSourceDecision(False, FtpSourceKind.INVALID, "configured_subnet_invalid")
+        if not _ipv4_in_any_network(source_ip, peer_networks):
+            return FtpSourceDecision(
+                False,
+                source_kind,
+                "peer_source_outside_active_networks",
+            )
+
+    if source_kind is FtpSourceKind.USB:
+        return FtpSourceDecision(False, source_kind, "usb_source_admin_only")
+    if mode is FtpReceiveMode.AUTO:
+        return FtpSourceDecision(True, source_kind, "allowed")
+    if mode is FtpReceiveMode.WIRED:
+        return FtpSourceDecision(False, source_kind, "wired_mode_disabled_for_v1")
+    if mode is FtpReceiveMode.HOTSPOT and source_kind is FtpSourceKind.HOTSPOT:
+        return FtpSourceDecision(True, source_kind, "allowed")
+    if mode is FtpReceiveMode.PEER and source_kind is FtpSourceKind.PEER:
+        return FtpSourceDecision(True, source_kind, "allowed")
+    return FtpSourceDecision(
+        False,
+        source_kind,
+        f"{mode.value}_mode_rejects_{source_kind.value}_source",
+    )
+
+
+def _classify_ftp_source(
+    source_ip: IPv4Address,
+    usb_host: str,
+    hotspot_host: str,
+) -> FtpSourceKind:
+    if source_ip in ipv4_24_network(usb_host):
+        return FtpSourceKind.USB
+    if source_ip in ipv4_24_network(hotspot_host):
+        return FtpSourceKind.HOTSPOT
+    return FtpSourceKind.PEER
+
+
+def active_peer_ipv4_networks(
+    active_peer_hosts: Iterable[str],
+    *,
+    usb_host: str,
+    hotspot_host: str,
+) -> tuple[IPv4Network, ...]:
+    """Return active peer /24 networks, excluding reserved USB and hotspot subnets."""
+
+    usb_network = ipv4_24_network(usb_host)
+    hotspot_network = ipv4_24_network(hotspot_host)
+    networks: list[IPv4Network] = []
+    for host in active_peer_hosts:
+        host_ip = IPv4Address(host)
+        if _is_non_peer_host(host_ip):
+            continue
+        network = ipv4_24_network(str(host_ip))
+        if network in {usb_network, hotspot_network} or network in networks:
+            continue
+        networks.append(network)
+    return tuple(networks)
+
+
+def _ipv4_in_any_network(address: IPv4Address, networks: Iterable[IPv4Network]) -> bool:
+    return any(address in network for network in networks)
+
+
+def _is_non_peer_host(address: IPv4Address) -> bool:
+    return (
+        address.is_link_local
+        or address.is_loopback
+        or address.is_multicast
+        or address.is_unspecified
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class PrinterConfig:
+    """Printer selection and image-prep configuration."""
+
+    model: PrinterModel | None = None
+    fit: FitMode = FitMode.AUTO
+    quality: int = 100
+    print_option: int = 0
+    device_name: str | None = None
+    keepalive_interval_s: float = 10.0
+
+
+@dataclass(frozen=True, slots=True)
+class WorkflowConfig:
+    """Image receive and print workflow configuration."""
+
+    auto_print_delay_s: float | None = 5.0
+    allow_print_without_film: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class PowerConfig:
+    """Bridge battery and idle power configuration."""
+
+    backend: PowerBackend = PowerBackend.X306
+    battery_poll_interval_s: float = 30.0
+    battery_warning_threshold_percent: float = 20.0
+    battery_safe_shutdown_threshold_percent: float = 10.0
+    idle_dim_after_s: float = 30.0
+    idle_screen_off_after_s: float = 90.0
+    idle_deep_after_s: float = 300.0
+    idle_poweroff_after_s: float = 600.0
+    idle_poweroff_enabled: bool = False
+
+    def __post_init__(self) -> None:
+        idle_thresholds = (
+            self.idle_dim_after_s,
+            self.idle_screen_off_after_s,
+            self.idle_deep_after_s,
+            self.idle_poweroff_after_s,
+        )
+        if any(not isfinite(value) or value <= 0 for value in idle_thresholds):
+            raise ValueError("[power] idle thresholds must be finite positive values")
+        if any(previous >= current for previous, current in pairwise(idle_thresholds)):
+            raise ValueError("[power] idle thresholds must be strictly increasing")
+        if self.battery_safe_shutdown_threshold_percent > self.battery_warning_threshold_percent:
+            raise ValueError(
+                "[power].battery_safe_shutdown_threshold_percent must be <= "
+                "[power].battery_warning_threshold_percent"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class BridgeConfig:
+    """Top-level bridge configuration."""
+
+    ftp: FtpConfig = FtpConfig()
+    printer: PrinterConfig = PrinterConfig()
+    workflow: WorkflowConfig = WorkflowConfig()
+    power: PowerConfig = PowerConfig()
+
+
+def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
+    """Load config from TOML, returning defaults if the file is missing."""
+
+    if not path.exists():
+        return BridgeConfig()
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    return BridgeConfig(
+        ftp=_load_ftp_config(data.get("ftp", {})),
+        printer=_load_printer_config(data.get("printer", {})),
+        workflow=_load_workflow_config(data.get("workflow", {})),
+        power=_load_power_config(data.get("power", {})),
+    )
+
+
+def write_config(config: BridgeConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    """Persist config to TOML using an atomic replace."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = render_config(config)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+            tmp_file.write(text)
+            tmp_file.flush()
+            os.fsync(tmp_file.fileno())
+        if path.exists():
+            tmp_path.chmod(path.stat().st_mode & 0o777)
+        else:
+            tmp_path.chmod(0o660)
+        os.replace(tmp_path, path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def render_config(config: BridgeConfig) -> str:
+    """Render a complete TOML config file."""
+
+    preferred_wifi = (
+        f"preferred_wifi_host = {_toml_string(config.ftp.preferred_wifi_host)}"
+        if config.ftp.preferred_wifi_host is not None
+        else '# preferred_wifi_host = "192.168.5.7"'
+    )
+    model = config.printer.model.value if config.printer.model is not None else "auto"
+    device_name = config.printer.device_name or ""
+    return "\n".join(
+        [
+            "[ftp]",
+            f"mode = {_toml_string(config.ftp.mode.value)}",
+            f"bind_host = {_toml_string(config.ftp.bind_host)}",
+            f"host = {_toml_string(config.ftp.host)}",
+            f"hotspot_host = {_toml_string(config.ftp.hotspot_host)}",
+            f"port = {config.ftp.port}",
+            f"username = {_toml_string(config.ftp.username)}",
+            f"password = {_toml_string(config.ftp.password)}",
+            f"incoming_dir = {_toml_string(str(config.ftp.incoming_dir))}",
+            preferred_wifi,
+            "",
+            "[printer]",
+            f"model = {_toml_string(model)}",
+            f"fit = {_toml_string(config.printer.fit.value)}",
+            f"quality = {config.printer.quality}",
+            f"print_option = {config.printer.print_option}",
+            f"device_name = {_toml_string(device_name)}",
+            f"keepalive_interval_s = {_format_float(config.printer.keepalive_interval_s)}",
+            "",
+            "[workflow]",
+            f"auto_print_delay_s = {_format_auto_print_delay(config.workflow.auto_print_delay_s)}",
+            f"allow_print_without_film = {_toml_bool(config.workflow.allow_print_without_film)}",
+            "",
+            "[power]",
+            f"backend = {_toml_string(config.power.backend.value)}",
+            f"battery_poll_interval_s = {_format_float(config.power.battery_poll_interval_s)}",
+            "battery_warning_threshold_percent = "
+            f"{_format_float(config.power.battery_warning_threshold_percent)}",
+            "battery_safe_shutdown_threshold_percent = "
+            f"{_format_float(config.power.battery_safe_shutdown_threshold_percent)}",
+            f"idle_dim_after_s = {_format_float(config.power.idle_dim_after_s)}",
+            f"idle_screen_off_after_s = {_format_float(config.power.idle_screen_off_after_s)}",
+            f"idle_deep_after_s = {_format_float(config.power.idle_deep_after_s)}",
+            f"idle_poweroff_after_s = {_format_float(config.power.idle_poweroff_after_s)}",
+            f"idle_poweroff_enabled = {_toml_bool(config.power.idle_poweroff_enabled)}",
+            "",
+        ]
+    )
+
+
+def _load_ftp_config(data: object) -> FtpConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[ftp] must be a TOML table")
+    host = _ipv4_str(data.get("host", "192.168.7.1"), "[ftp].host")
+    hotspot_host = _ipv4_str(data.get("hotspot_host", "192.168.8.1"), "[ftp].hotspot_host")
+    preferred_wifi_host = _optional_ipv4_str(
+        data.get("preferred_wifi_host"),
+        "[ftp].preferred_wifi_host",
+    )
+    _validate_not_usb_subnet(hotspot_host, "[ftp].hotspot_host", host)
+    if preferred_wifi_host is not None:
+        _validate_not_usb_subnet(preferred_wifi_host, "[ftp].preferred_wifi_host", host)
+        _validate_not_hotspot_subnet(
+            preferred_wifi_host,
+            "[ftp].preferred_wifi_host",
+            hotspot_host,
+        )
+    return FtpConfig(
+        mode=parse_ftp_receive_mode(data.get("mode", "hotspot")),
+        bind_host=str(data.get("bind_host", "0.0.0.0")),
+        host=host,
+        hotspot_host=hotspot_host,
+        port=int(data.get("port", 21)),
+        username=str(data.get("username", "ib")),
+        password=str(data.get("password", "change-me")),
+        incoming_dir=Path(str(data.get("incoming_dir", "/var/lib/InstantLinkBridge/incoming"))),
+        preferred_wifi_host=preferred_wifi_host,
+    )
+
+
+def _load_printer_config(data: object) -> PrinterConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[printer] must be a TOML table")
+    raw_model = data.get("model")
+    model = None if raw_model in {None, "auto"} else parse_printer_model(str(raw_model))
+    quality = int(data.get("quality", 100))
+    if not 1 <= quality <= 100:
+        raise ValueError("[printer].quality must be between 1 and 100")
+    keepalive_interval_s = float(data.get("keepalive_interval_s", 10.0))
+    if not isfinite(keepalive_interval_s) or keepalive_interval_s <= 0:
+        raise ValueError("[printer].keepalive_interval_s must be a finite value greater than 0")
+    return PrinterConfig(
+        model=model,
+        fit=parse_fit_mode(str(data.get("fit", "auto"))),
+        quality=quality,
+        print_option=int(data.get("print_option", 0)),
+        device_name=_optional_str(data.get("device_name")),
+        keepalive_interval_s=keepalive_interval_s,
+    )
+
+
+def _load_workflow_config(data: object) -> WorkflowConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[workflow] must be a TOML table")
+    auto_print_delay_s = _parse_auto_print_delay(data.get("auto_print_delay_s", 5.0))
+    allow_print_without_film = _parse_bool(
+        data.get("allow_print_without_film", False),
+        "[workflow].allow_print_without_film",
+    )
+    return WorkflowConfig(
+        auto_print_delay_s=auto_print_delay_s,
+        allow_print_without_film=allow_print_without_film,
+    )
+
+
+def _load_power_config(data: object) -> PowerConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[power] must be a TOML table")
+    return PowerConfig(
+        backend=parse_power_backend(data.get("backend", PowerBackend.X306.value)),
+        battery_poll_interval_s=_positive_float(
+            data.get("battery_poll_interval_s", 30.0),
+            "[power].battery_poll_interval_s",
+        ),
+        battery_warning_threshold_percent=_percent_float(
+            data.get("battery_warning_threshold_percent", 20.0),
+            "[power].battery_warning_threshold_percent",
+        ),
+        battery_safe_shutdown_threshold_percent=_percent_float(
+            data.get("battery_safe_shutdown_threshold_percent", 10.0),
+            "[power].battery_safe_shutdown_threshold_percent",
+        ),
+        idle_dim_after_s=_positive_float(
+            data.get("idle_dim_after_s", 30.0),
+            "[power].idle_dim_after_s",
+        ),
+        idle_screen_off_after_s=_positive_float(
+            data.get("idle_screen_off_after_s", 90.0),
+            "[power].idle_screen_off_after_s",
+        ),
+        idle_deep_after_s=_positive_float(
+            data.get("idle_deep_after_s", 300.0),
+            "[power].idle_deep_after_s",
+        ),
+        idle_poweroff_after_s=_positive_float(
+            data.get("idle_poweroff_after_s", 600.0),
+            "[power].idle_poweroff_after_s",
+        ),
+        idle_poweroff_enabled=_parse_bool(
+            data.get("idle_poweroff_enabled", False),
+            "[power].idle_poweroff_enabled",
+        ),
+    )
+
+
+def parse_ftp_receive_mode(value: object) -> FtpReceiveMode:
+    """Parse a configured FTP receive mode."""
+
+    text = str(value).strip().lower()
+    try:
+        return FtpReceiveMode(text)
+    except ValueError as exc:
+        allowed = ", ".join(mode.value for mode in FtpReceiveMode)
+        raise ValueError(f"[ftp].mode must be one of: {allowed}") from exc
+
+
+def parse_power_backend(value: object) -> PowerBackend:
+    """Parse a configured bridge power backend."""
+
+    text = str(value).strip().lower()
+    try:
+        return PowerBackend(text)
+    except ValueError as exc:
+        allowed = ", ".join(backend.value for backend in PowerBackend)
+        raise ValueError(f"[power].backend must be one of: {allowed}") from exc
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _optional_ipv4_str(value: object, field_name: str) -> str | None:
+    text = _optional_str(value)
+    if text is None:
+        return None
+    return _ipv4_str(text, field_name)
+
+
+def _ipv4_str(value: object, field_name: str) -> str:
+    text = str(value).strip()
+    try:
+        parsed = ip_address(text)
+    except ValueError as exc:
+        raise ValueError(f"{field_name} must be an IPv4 address") from exc
+    if parsed.version != 4:
+        raise ValueError(f"{field_name} must be an IPv4 address")
+    return text
+
+
+def _validate_not_usb_subnet(value: str, field_name: str, usb_host: str) -> None:
+    usb_network = ipv4_24_network(usb_host)
+    if IPv4Address(value) in usb_network:
+        raise ValueError(f"{field_name} must not be inside USB subnet {usb_network}")
+
+
+def _validate_not_hotspot_subnet(value: str, field_name: str, hotspot_host: str) -> None:
+    hotspot_network = ipv4_24_network(hotspot_host)
+    if IPv4Address(value) in hotspot_network:
+        raise ValueError(f"{field_name} must not be inside hotspot subnet {hotspot_network}")
+
+
+def ipv4_24_network(host: str) -> IPv4Network:
+    """Return the InstantLink Bridge /24 network containing an IPv4 host address."""
+
+    return IPv4Network(f"{host}/{FTP_SUBNET_PREFIX_LEN}", strict=False)
+
+
+def ipv4_in_24_subnet(address: str, host: str) -> bool:
+    """Return whether an IPv4 address is in the /24 network containing host."""
+
+    return IPv4Address(address) in ipv4_24_network(host)
+
+
+def is_link_local_ipv4(address: str) -> bool:
+    """Return whether an IPv4 address is link-local."""
+
+    try:
+        return IPv4Address(address).is_link_local
+    except ValueError:
+        return False
+
+
+def _toml_string(value: str) -> str:
+    return json.dumps(value)
+
+
+def _toml_bool(value: bool) -> str:
+    return "true" if value else "false"
+
+
+def _format_float(value: float) -> str:
+    return f"{value:g}"
+
+
+def _format_auto_print_delay(value: float | None) -> str:
+    if value is None:
+        return _toml_string("off")
+    return _format_float(value)
+
+
+def _parse_auto_print_delay(value: object) -> float | None:
+    if isinstance(value, str) and value.strip().lower() in {"off", "false", "none"}:
+        return None
+    if not isinstance(value, str | int | float):
+        raise ValueError("[workflow].auto_print_delay_s must be off, 0, or 5")
+    auto_print_delay_s = float(value)
+    if not isfinite(auto_print_delay_s) or auto_print_delay_s < 0:
+        raise ValueError("[workflow].auto_print_delay_s must be off, 0, or 5")
+    if auto_print_delay_s == 0 or auto_print_delay_s == 5:
+        return auto_print_delay_s
+    return 5.0
+
+
+def _positive_float(value: object, field_name: str) -> float:
+    if not isinstance(value, str | int | float):
+        raise ValueError(f"{field_name} must be a finite value greater than 0")
+    parsed = float(value)
+    if not isfinite(parsed) or parsed <= 0:
+        raise ValueError(f"{field_name} must be a finite value greater than 0")
+    return parsed
+
+
+def _percent_float(value: object, field_name: str) -> float:
+    if not isinstance(value, str | int | float):
+        raise ValueError(f"{field_name} must be between 0 and 100")
+    parsed = float(value)
+    if not isfinite(parsed) or not 0 <= parsed <= 100:
+        raise ValueError(f"{field_name} must be between 0 and 100")
+    return parsed
+
+
+def _parse_bool(value: object, field_name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "yes", "on", "1"}:
+            return True
+        if normalized in {"false", "no", "off", "0"}:
+            return False
+    raise ValueError(f"{field_name} must be a boolean")

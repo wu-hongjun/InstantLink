@@ -16,11 +16,12 @@ log = "0.4"
 env_logger = "0.11"
 
 # Async runtime
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1", features = ["macros", "process", "rt-multi-thread", "sync", "time"] }
 async-trait = "0.1"
 
 # BLE
 btleplug = "0.11"
+libdbus-sys = { version = "0.2.7", features = ["vendored"] }
 
 # Images
 image = "0.25"

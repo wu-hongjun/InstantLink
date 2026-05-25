@@ -1,0 +1,4 @@
+ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-wifi-mode status
+ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-wifi-mode hotspot
+ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-wifi-mode home-saved
+ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-wifi-mode off

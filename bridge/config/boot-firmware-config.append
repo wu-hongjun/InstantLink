@@ -1,0 +1,15 @@
+# InstantLink Bridge USB gadget and boot-time settings.
+dtparam=i2c_arm=on
+dtparam=spi=on
+camera_auto_detect=0
+display_auto_detect=0
+auto_initramfs=0
+max_framebuffers=1
+gpio=6,19,5,26,13,21,20,16=pu
+dtoverlay=fbtft,spi0-0,st7789v,width=240,height=240,dc_pin=25,reset_pin=27,led_pin=24,rotate=270,speed=40000000,fps=30
+dtoverlay=dwc2,dr_mode=peripheral
+disable_splash=1
+boot_delay=0
+initial_turbo=30
+gpu_mem=16
+dtparam=audio=off

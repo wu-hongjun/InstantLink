@@ -1,0 +1,6 @@
+[Unit]
+Description=InstantLink Bridge USB camera link attached
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/logger -t instantlink-bridge-usb0 "usb0 added"

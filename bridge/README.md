@@ -1,0 +1,48 @@
+# InstantLink Bridge
+
+InstantLink Bridge is the Raspberry Pi appliance runtime for camera FTP receive plus InstantLink
+printing. It receives selected JPEG/HIF/RAW-capable stills over the bridge hotspot FTP path,
+prepares them for the detected printer format, and prints through the parent repository's
+`instantlink-ffi` backend with a small LCD/joystick interface.
+
+This folder contains the Pi service code, tests, setup docs, system configuration, and deployment
+helpers for the current vertical slice.
+
+## Read First
+
+- [CLAUDE.md](CLAUDE.md) is the persistent context anchor for future Claude Code sessions.
+- [ARCHITECTURE.md](ARCHITECTURE.md) describes data flow, state, and asyncio task topology.
+- [HARDWARE.md](HARDWARE.md) records BOM, pinout, wiring, assembly, and enclosure notes.
+- [DECISIONS.md](DECISIONS.md) contains ADRs for the major architectural choices.
+- [ROADMAP.md](ROADMAP.md) stages v1, v1.5, and v2 work.
+
+## Repo Layout
+
+```text
+.
+|-- docs/                 # Setup notes and operational reference
+|-- src/instantlink_bridge/    # Python service code
+|-- systemd/              # Service units
+|-- udev/                 # Cable/event rules
+|-- config/               # Config templates and Pi system snippets
+|-- scripts/              # Provisioning/deploy helpers
+`-- tests/                # Unit tests for the bridge runtime
+```
+
+## Current Status
+
+- The Pi service starts the LCD UI, Bridge Wi-Fi FTP, advanced Same Wi-Fi FTP,
+  printer discovery/status keepalive, and the FTP-received-image auto-print flow.
+- The LCD Settings menu can pair/forget a printer, explicitly choose Wi-Fi mode options, and persist
+  printer, image-prep, keepalive, and auto-print settings.
+- The runtime supports model-specific Mini, Mini Link 3, Square, and Wide image preparation.
+- Provisioning and deployment helpers are tracked in `scripts/`, `config/`, `systemd/`, and `udev/`.
+
+## Target Device
+
+Raspberry Pi Zero 2 W running Raspberry Pi OS Lite 64-bit Trixie, advertising a bridge hotspot at
+`192.168.8.1`, optionally joining an existing Wi-Fi network for advanced Same Wi-Fi FTP, receiving
+camera uploads, and printing to a bonded Mini, Mini Link 3, Square, or Wide Link printer over BLE.
+The USB gadget network at `192.168.7.1` remains available for admin, SSH, firmware update, and
+diagnostics only; direct camera USB-LAN is unsupported for v1 after the Mac-proven cable/camera
+retest.

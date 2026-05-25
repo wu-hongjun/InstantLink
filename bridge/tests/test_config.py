@@ -1,0 +1,367 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from instantlink_bridge.ble.models import PrinterModel
+from instantlink_bridge.config import (
+    BridgeConfig,
+    FtpConfig,
+    FtpReceiveMode,
+    PowerBackend,
+    PowerConfig,
+    PrinterConfig,
+    WorkflowConfig,
+    ipv4_24_network,
+    ipv4_in_24_subnet,
+    is_link_local_ipv4,
+    load_config,
+    write_config,
+)
+from instantlink_bridge.imaging.pipeline import FitMode
+
+
+def test_ftp_bind_host_defaults_to_all_interfaces(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[ftp]",
+                'host = "192.168.7.1"',
+                "port = 21",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.ftp.bind_host == "0.0.0.0"
+    assert config.ftp.host == "192.168.7.1"
+    assert config.ftp.hotspot_host == "192.168.8.1"
+    assert config.ftp.username == "ib"
+    assert config.ftp.mode is FtpReceiveMode.HOTSPOT
+    assert config.printer.quality == 100
+    assert config.power.backend is PowerBackend.X306
+    assert not config.power.idle_poweroff_enabled
+
+
+def test_ipv4_24_subnet_helpers_detect_transport_membership() -> None:
+    assert str(ipv4_24_network("192.168.7.1")) == "192.168.7.0/24"
+    assert ipv4_in_24_subnet("192.168.7.42", "192.168.7.1")
+    assert not ipv4_in_24_subnet("192.168.8.42", "192.168.7.1")
+    assert is_link_local_ipv4("169.254.44.2")
+    assert not is_link_local_ipv4("192.168.5.20")
+    assert not is_link_local_ipv4("not-an-ip")
+
+
+def test_ftp_receive_mode_can_be_configured(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[ftp]\nmode = "hotspot"\n', encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.ftp.mode is FtpReceiveMode.HOTSPOT
+
+
+def test_ftp_receive_mode_must_be_known(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[ftp]\nmode = "bluetooth"\n', encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[ftp].mode" in str(exc)
+    else:
+        raise AssertionError("expected invalid FTP receive mode to fail")
+
+
+def test_ftp_bind_host_can_be_overridden(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[ftp]",
+                'bind_host = "127.0.0.1"',
+                'host = "192.168.7.1"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.ftp.bind_host == "127.0.0.1"
+
+
+def test_ftp_preferred_wifi_host_can_be_configured(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[ftp]",
+                'preferred_wifi_host = "192.168.5.7"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.ftp.preferred_wifi_host == "192.168.5.7"
+
+
+def test_ftp_preferred_wifi_host_must_be_ipv4(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[ftp]\npreferred_wifi_host = "not-an-ip"\n', encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[ftp].preferred_wifi_host" in str(exc)
+    else:
+        raise AssertionError("expected invalid preferred Wi-Fi host to fail")
+
+
+def test_ftp_hotspot_host_can_be_configured(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[ftp]\nhotspot_host = "192.168.8.1"\n', encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.ftp.hotspot_host == "192.168.8.1"
+
+
+def test_ftp_hotspot_host_must_not_overlap_usb_subnet(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[ftp]",
+                'host = "192.168.7.1"',
+                'hotspot_host = "192.168.7.2"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[ftp].hotspot_host" in str(exc)
+        assert "192.168.7.0/24" in str(exc)
+    else:
+        raise AssertionError("expected overlapping hotspot subnet to fail")
+
+
+def test_ftp_preferred_wifi_host_must_not_overlap_usb_subnet(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[ftp]",
+                'host = "192.168.7.1"',
+                'preferred_wifi_host = "192.168.7.2"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[ftp].preferred_wifi_host" in str(exc)
+    else:
+        raise AssertionError("expected overlapping preferred Wi-Fi subnet to fail")
+
+
+def test_ftp_preferred_wifi_host_must_not_overlap_hotspot_subnet(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[ftp]",
+                'hotspot_host = "192.168.8.1"',
+                'preferred_wifi_host = "192.168.8.42"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[ftp].preferred_wifi_host" in str(exc)
+        assert "192.168.8.0/24" in str(exc)
+    else:
+        raise AssertionError("expected overlapping preferred Wi-Fi subnet to fail")
+
+
+def test_printer_keepalive_defaults_to_ten_seconds(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[printer]\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.printer.keepalive_interval_s == 10.0
+
+
+def test_power_backend_and_idle_policy_can_be_configured(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[power]",
+                'backend = "pisugar"',
+                "battery_poll_interval_s = 15",
+                "idle_dim_after_s = 10",
+                "idle_screen_off_after_s = 20",
+                "idle_deep_after_s = 30",
+                "idle_poweroff_after_s = 40",
+                "idle_poweroff_enabled = false",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.power.backend is PowerBackend.PISUGAR
+    assert config.power.battery_poll_interval_s == 15.0
+    assert not config.power.idle_poweroff_enabled
+
+
+def test_power_backend_must_be_known(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[power]\nbackend = "battery-mystery"\n', encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[power].backend" in str(exc)
+    else:
+        raise AssertionError("expected invalid power backend to fail")
+
+
+def test_printer_fit_defaults_to_auto(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[printer]\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.printer.fit is FitMode.AUTO
+
+
+def test_printer_keepalive_can_be_overridden(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[printer]\nkeepalive_interval_s = 15\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.printer.keepalive_interval_s == 15.0
+
+
+def test_printer_keepalive_must_be_positive(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[printer]\nkeepalive_interval_s = 0\n", encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[printer].keepalive_interval_s" in str(exc)
+    else:
+        raise AssertionError("expected invalid keepalive interval to fail")
+
+
+def test_printer_keepalive_must_be_finite(tmp_path: Path) -> None:
+    for invalid in ("nan", "inf"):
+        config_path = tmp_path / f"{invalid}.toml"
+        config_path.write_text(
+            f"[printer]\nkeepalive_interval_s = {invalid}\n",
+            encoding="utf-8",
+        )
+
+        try:
+            load_config(config_path)
+        except ValueError as exc:
+            assert "[printer].keepalive_interval_s" in str(exc)
+        else:
+            raise AssertionError(f"expected {invalid} keepalive interval to fail")
+
+
+def test_workflow_auto_print_delay_can_be_configured(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[workflow]\nauto_print_delay_s = 5\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.workflow.auto_print_delay_s == 5.0
+
+
+def test_workflow_can_allow_print_without_film(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[workflow]\nallow_print_without_film = true\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.workflow.allow_print_without_film
+
+
+def test_workflow_auto_print_delay_can_be_off_or_zero(tmp_path: Path) -> None:
+    off_path = tmp_path / "off.toml"
+    off_path.write_text('[workflow]\nauto_print_delay_s = "off"\n', encoding="utf-8")
+    zero_path = tmp_path / "zero.toml"
+    zero_path.write_text("[workflow]\nauto_print_delay_s = 0\n", encoding="utf-8")
+
+    assert load_config(off_path).workflow.auto_print_delay_s is None
+    assert load_config(zero_path).workflow.auto_print_delay_s == 0.0
+
+
+def test_workflow_legacy_auto_print_delay_maps_to_preview_delay(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[workflow]\nauto_print_delay_s = 1.5\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.workflow.auto_print_delay_s == 5.0
+
+
+def test_workflow_auto_print_delay_must_not_be_negative(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[workflow]\nauto_print_delay_s = -1\n", encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[workflow].auto_print_delay_s" in str(exc)
+    else:
+        raise AssertionError("expected invalid auto-print delay to fail")
+
+
+def test_write_config_round_trips_runtime_settings(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config = BridgeConfig(
+        ftp=FtpConfig(mode=FtpReceiveMode.PEER),
+        printer=PrinterConfig(
+            model=PrinterModel.WIDE,
+            fit=FitMode.CONTAIN,
+            quality=95,
+            print_option=2,
+            keepalive_interval_s=15,
+        ),
+        workflow=WorkflowConfig(auto_print_delay_s=5, allow_print_without_film=True),
+        power=PowerConfig(backend=PowerBackend.X306, idle_poweroff_after_s=900),
+    )
+
+    write_config(config, config_path)
+    round_tripped = load_config(config_path)
+
+    assert round_tripped.ftp.mode is FtpReceiveMode.PEER
+    assert round_tripped.printer.model == PrinterModel.WIDE
+    assert round_tripped.printer.fit == FitMode.CONTAIN
+    assert round_tripped.printer.quality == 95
+    assert round_tripped.printer.print_option == 2
+    assert round_tripped.printer.keepalive_interval_s == 15
+    assert round_tripped.workflow.auto_print_delay_s == 5
+    assert round_tripped.workflow.allow_print_without_film
+    assert round_tripped.power.backend is PowerBackend.X306
+    assert round_tripped.power.idle_poweroff_after_s == 900

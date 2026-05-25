@@ -1,0 +1,26 @@
+[Unit]
+Description=InstantLink Bridge camera FTP service
+# Start the LCD/UI as soon as the system bus is available. Network, DHCP, and
+# Bluetooth are wanted but intentionally not ordered before this unit; the app
+# reports those subsystems as they come online.
+After=dbus.service
+Wants=bluetooth.service systemd-networkd.service dnsmasq.service NetworkManager.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=ib
+Group=ib
+SupplementaryGroups=bluetooth gpio spi i2c plugdev video
+WorkingDirectory=/opt/InstantLinkBridge
+ExecStart=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml
+Restart=on-failure
+RestartSec=2
+WatchdogSec=30
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+# Wi-Fi mode switching is limited through /etc/sudoers.d/instantlink-bridge-wifi.
+# Do not restrict CapabilityBoundingSet or set NoNewPrivileges=yes; sudo cannot run the
+# root-owned NetworkManager helper if setuid/setgid capabilities are stripped.
+
+[Install]
+WantedBy=multi-user.target

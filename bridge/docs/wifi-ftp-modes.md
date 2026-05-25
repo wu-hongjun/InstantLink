@@ -32,7 +32,7 @@ scripts/wifi-mode.sh hotspot
 Or from the LCD:
 
 ```text
-KEY1 -> Camera FTP -> Advanced path -> Bridge Wi-Fi -> KEY1
+KEY1 -> Camera FTP -> FTP mode -> Bridge Wi-Fi -> KEY1
 ```
 
 The camera setup values are visible together on `Settings -> Camera FTP`: `Bridge Wi-Fi`,
@@ -88,10 +88,10 @@ scripts/wifi-mode.sh home-saved
 The LCD path is:
 
 ```text
-Settings -> Camera FTP -> Advanced path -> Same Wi-Fi adv -> KEY1
+Settings -> Camera FTP -> FTP mode -> Same Wi-Fi adv -> KEY1
 ```
 
-The `Advanced path` row opens an explicit option list. It does not cycle hidden values:
+The `FTP mode` row opens an explicit option list. It does not cycle hidden values:
 
 - `Bridge Wi-Fi`: start the bridge-created Wi-Fi AP and accept only hotspot-subnet FTP clients. The
   bridge Wi-Fi name, PIN, FTP host, and FTP credentials are shown under `Settings -> Camera FTP`.

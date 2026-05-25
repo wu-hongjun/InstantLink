@@ -38,6 +38,22 @@ helpers for the current vertical slice.
 - The runtime supports model-specific Mini, Mini Link 3, Square, and Wide image preparation.
 - Provisioning and deployment helpers are tracked in `scripts/`, `config/`, `systemd/`, and `udev/`.
 
+## Hotspot-Only Pi Deployment
+
+When a Pi is already in Bridge Wi-Fi mode it may have no outbound internet. Use the offline deps path
+with a known-good seed virtualenv from an earlier install:
+
+```bash
+INSTANTLINK_BRIDGE_HOST=192.168.7.1 \
+INSTANTLINK_BRIDGE_USER=hongjunwu \
+INSTANTLINK_BRIDGE_OFFLINE_DEPS=1 \
+INSTANTLINK_BRIDGE_SEED_VENV=/opt/InstantBridge/.venv \
+scripts/deploy-to-pi.sh --system --instantlink-artifacts --deps --restart
+```
+
+This still records deployment metadata, installed Python packages, apt package state, and native
+InstantLink artifact hashes under `/opt/InstantLinkBridge/.deployment/`.
+
 ## Target Device
 
 Raspberry Pi Zero 2 W running Raspberry Pi OS Lite 64-bit Trixie, advertising a bridge hotspot at

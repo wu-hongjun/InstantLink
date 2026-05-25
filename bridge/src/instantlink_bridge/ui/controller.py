@@ -810,7 +810,7 @@ class BridgeUi:
             UiMode.NEEDS_PAIRING,
             UiMode.PAIR_FAILED,
         }:
-            next_index = 0 if self._snapshot.selected_index == 1 else 1
+            next_index = 0 if self._snapshot.mode is UiMode.NEEDS_PAIRING else 1
             if self._snapshot.mode is UiMode.PAIR_FAILED:
                 next_index = 0
             self._snapshot = self._build_snapshot(
@@ -823,7 +823,10 @@ class BridgeUi:
             return
         if action is UiAction.SELECT:
             if self._snapshot.mode in {UiMode.NEEDS_PAIRING, UiMode.PAIR_FAILED}:
-                if self._snapshot.selected_index == 0:
+                if (
+                    self._snapshot.mode is UiMode.NEEDS_PAIRING
+                    or self._snapshot.selected_index == 0
+                ):
                     await self._start_pairing()
                 else:
                     await self.refresh_printer_status()
@@ -971,6 +974,9 @@ class BridgeUi:
         option = options[self._snapshot.selected_index]
         updated = config_with_setting_value(self._config, key, option.value)
         if updated == self._config:
+            if key is SettingKey.FTP_RECEIVE_MODE:
+                await self._set_ftp_receive_mode(updated)
+                return
             self._show_settings("Already selected")
             return
         if key is SettingKey.FTP_RECEIVE_MODE:

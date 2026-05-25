@@ -7,6 +7,7 @@ from typing import Any, cast
 import pytest
 
 from instantlink_bridge.ble.client import DiscoveredPrinter
+from instantlink_bridge.ble.instantlink import ERROR_NO_FILM, InstantLinkBackend
 from instantlink_bridge.ble.instax import PrinterStatus
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.ble.session import (
@@ -29,6 +30,50 @@ from instantlink_bridge.ui.status import (
 )
 
 
+class _FakeInstantLinkStatusLibrary:
+    def __init__(self, *, film_rc: int = 0) -> None:
+        self.film_rc = film_rc
+        self.connect_calls = 0
+        self.status_calls = 0
+
+    def instantlink_connect_named(self, _name: bytes, _duration: int) -> int:
+        self.connect_calls += 1
+        return 0
+
+    def instantlink_battery(self) -> int:
+        return 35
+
+    def instantlink_film_and_charging(self, out_film: object, out_charging: object) -> int:
+        if self.film_rc != 0:
+            return self.film_rc
+        cast(Any, out_film)._obj.value = 7
+        cast(Any, out_charging)._obj.value = 1
+        return 0
+
+    def instantlink_status(
+        self,
+        _out_battery: object,
+        _out_film: object,
+        _out_charging: object,
+        _out_print_count: object,
+    ) -> int:
+        self.status_calls += 1
+        raise AssertionError("bridge status should not require print history")
+
+    def instantlink_device_name(self, out: object, _out_len: int) -> int:
+        buffer = cast(Any, out)
+        buffer.value = b"INSTAX-1N034655"
+        return len(buffer.value)
+
+    def instantlink_device_model(self, out: object, _out_len: int) -> int:
+        buffer = cast(Any, out)
+        buffer.value = b"Square Link"
+        return len(buffer.value)
+
+    def instantlink_disconnect(self) -> int:
+        return 0
+
+
 def test_select_status_target_prefers_ios_advertisement_for_same_printer() -> None:
     selected = PairedPrinter(address="88:B4:36:51:CC:E2", name="INSTAX-1N034655")
     candidates = [
@@ -39,6 +84,35 @@ def test_select_status_target_prefers_ios_advertisement_for_same_printer() -> No
     target = select_status_target(selected, candidates)
 
     assert target == PairedPrinter(address="FA:AB:BC:51:CC:E2", name="INSTAX-1N034655")
+
+
+@pytest.mark.asyncio
+async def test_instantlink_status_does_not_require_print_history() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    status = await backend.status("INSTAX-1N034655")
+
+    assert status.name == "INSTAX-1N034655"
+    assert status.model is PrinterModel.SQUARE
+    assert status.battery == 35
+    assert status.film_remaining == 7
+    assert status.is_charging is True
+    assert status.print_count is None
+    assert library.status_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_instantlink_status_maps_no_film_to_zero_remaining() -> None:
+    library = _FakeInstantLinkStatusLibrary(film_rc=ERROR_NO_FILM)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    status = await backend.status("INSTAX-1N034655")
+
+    assert status.film_remaining == 0
+    assert status.print_count is None
 
 
 def test_select_status_target_falls_back_to_selected_when_not_visible() -> None:

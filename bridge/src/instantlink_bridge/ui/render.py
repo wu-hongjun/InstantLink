@@ -294,11 +294,10 @@ def _needs_pairing(
     font_body: Font,
     font_small: Font,
 ) -> None:
-    _center_lines(draw, ["No printer", "selected"], 52, font_large, TEXT)
-    _menu_item(draw, 112, "Find printer", selected=snapshot.selected_index == 0, font=font_body)
-    _menu_item(draw, 141, "Status", selected=snapshot.selected_index == 1, font=font_body)
-    _text(draw, 18, 171, "Turn on printer first", font_small, MUTED)
-    _text(draw, 18, 185, "Bridge saves first INSTAX-*", font_small, MUTED)
+    _center_lines(draw, ["No printer", "selected"], 58, font_large, TEXT)
+    _menu_item(draw, 124, "Find printer", selected=True, font=font_body)
+    _text(draw, 18, 164, "Turn on printer first", font_small, MUTED)
+    _text(draw, 18, 178, "Then press KEY1", font_small, MUTED)
 
 
 def _settings(
@@ -432,8 +431,8 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
         return (("", "Starting", ""),)
     if snapshot.mode is UiMode.SETTINGS:
         return (
-            ("Up/Dn", "KEY1/Right", "KEY3 Help"),
-            ("Move", "OK", "KEY2 Back"),
+            ("Up/Dn", "KEY1 OK", "KEY3 Help"),
+            ("Move", "Left Back", "KEY2 Back"),
         )
     if snapshot.mode is UiMode.NEEDS_PAIRING:
         return (("Up/Dn", "KEY1 Select", "Hold KEY3"),)
@@ -444,6 +443,8 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
     if snapshot.mode is UiMode.AWAITING_CONFIRM:
         if snapshot.preview_tool == "crop":
             return (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
+        if snapshot.preview_tool == "rotate":
+            return (("Left/Right", "KEY1 Print", "KEY2 Cancel"),)
         return (("Up/Dn Edit", "KEY1 Print", "KEY2 Cancel"),)
     if snapshot.mode is UiMode.PRINTING:
         return (("", "Printing", ""),)

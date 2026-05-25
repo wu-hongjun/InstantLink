@@ -10,6 +10,8 @@ RUNTIME_PACKAGES_ARTIFACT="${INSTANTLINK_BRIDGE_RUNTIME_PACKAGES_ARTIFACT:-${DEP
 RUNTIME_APT_PACKAGES_ARTIFACT="${INSTANTLINK_BRIDGE_RUNTIME_APT_PACKAGES_ARTIFACT:-${DEPLOY_METADATA_DIR}/runtime-apt-packages.txt}"
 RUNTIME_DEPS_MANIFEST="${INSTANTLINK_BRIDGE_RUNTIME_DEPS_MANIFEST:-${DEPLOY_METADATA_DIR}/runtime-deps-manifest.json}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+OFFLINE="${INSTANTLINK_BRIDGE_OFFLINE:-0}"
+SEED_VENV="${INSTANTLINK_BRIDGE_SEED_VENV:-}"
 
 APT_PACKAGES=(
   bluez
@@ -75,10 +77,36 @@ if not ((3, 11) <= sys.version_info[:2] < (3, 14)):
 PY
 }
 
+is_truthy() {
+  local value
+  value="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "${value}" in
+    1|true|yes|on)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 ensure_virtualenv() {
-  if [[ ! -x "${TARGET}/.venv/bin/python" ]]; then
-    sudo -u "${OWNER}" "${PYTHON_BIN}" -m venv "${TARGET}/.venv"
+  if [[ -x "${TARGET}/.venv/bin/python" ]]; then
+    return 0
   fi
+
+  if [[ -n "${SEED_VENV}" ]]; then
+    if [[ ! -x "${SEED_VENV}/bin/python" ]]; then
+      echo "ERROR: INSTANTLINK_BRIDGE_SEED_VENV lacks bin/python: ${SEED_VENV}" >&2
+      exit 1
+    fi
+    install -d -m 0755 "${TARGET}"
+    cp -a "${SEED_VENV}" "${TARGET}/.venv"
+    chown -R "${OWNER}:${GROUP}" "${TARGET}/.venv"
+    return 0
+  fi
+
+  sudo -u "${OWNER}" "${PYTHON_BIN}" -m venv "${TARGET}/.venv"
 }
 
 pip_install() {
@@ -164,8 +192,8 @@ record_apt_packages() {
   local packages_tmp
   packages_tmp="$(mktemp -t instantlink-bridge-runtime-apt-packages.XXXXXX)"
 
-  dpkg-query -W -f='${binary:Package}=${Version}\n' "${APT_PACKAGES[@]}" |
-    LC_ALL=C sort > "${packages_tmp}"
+  dpkg-query -W -f='${binary:Package}=${Version}\n' "${APT_PACKAGES[@]}" 2>/dev/null |
+    LC_ALL=C sort > "${packages_tmp}" || true
   sudo install -D -m 0644 -o "${OWNER}" "${packages_tmp}" "${RUNTIME_APT_PACKAGES_ARTIFACT}"
   rm -f "${packages_tmp}"
 }
@@ -235,14 +263,22 @@ main() {
   ensure_constraints_file
   ensure_python_version
 
-  sudo apt-get update
-  sudo apt-get install -y "${APT_PACKAGES[@]}"
+  if is_truthy "${OFFLINE}"; then
+    echo "Offline dependency mode enabled; skipping apt-get update/install."
+  else
+    sudo apt-get update
+    sudo apt-get install -y "${APT_PACKAGES[@]}"
+  fi
   record_apt_packages
 
   ensure_virtualenv
 
-  pip_install "${venv_python}" --upgrade pip setuptools wheel hatchling editables
-  pip_install "${venv_python}" --no-build-isolation -e "${TARGET}"
+  if is_truthy "${OFFLINE}"; then
+    pip_install "${venv_python}" --no-index --no-deps --no-build-isolation -e "${TARGET}"
+  else
+    pip_install "${venv_python}" --upgrade pip setuptools wheel hatchling editables
+    pip_install "${venv_python}" --no-build-isolation -e "${TARGET}"
+  fi
   build_instantlink_backend
   record_installed_packages "${venv_python}"
 }

@@ -358,7 +358,7 @@ class BlockingConnectBleakClient:
         type(self).instances.append(self)
         type(self).created.set()
 
-    async def connect(self) -> bool:
+    async def connect(self, **_kwargs: object) -> bool:
         self.connect_started.set()
         await self._never_connected.wait()
         return True
@@ -390,7 +390,7 @@ class DisconnectingClient:
     def __init__(self) -> None:
         self.disconnect_calls = 0
 
-    async def connect(self) -> bool:
+    async def connect(self, **_kwargs: object) -> bool:
         return True
 
     async def disconnect(self) -> bool:

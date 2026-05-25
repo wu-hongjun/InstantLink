@@ -17,6 +17,8 @@ INSTANTLINK_ARTIFACTS_MANIFEST="${INSTANTLINK_BRIDGE_ARTIFACTS_MANIFEST:-${DEPLO
 LOCAL_INSTANTLINK_ARTIFACTS_MANIFEST_NAME="${INSTANTLINK_BRIDGE_ARTIFACTS_MANIFEST_NAME:-instantlink-artifacts-manifest.json}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 TARGET_PYTHON_BIN="${TARGET_PYTHON_BIN:-python3}"
+OFFLINE_DEPS="${INSTANTLINK_BRIDGE_OFFLINE_DEPS:-0}"
+SEED_VENV="${INSTANTLINK_BRIDGE_SEED_VENV:-}"
 SSH_BIN="${SSH_BIN:-ssh}"
 SCP_BIN="${SCP_BIN:-scp}"
 RESTART=0
@@ -53,6 +55,12 @@ Environment overrides:
   SSH_BIN              SSH command, default ssh
   SCP_BIN              SCP command, default scp
   TARGET_PYTHON_BIN    Pi runtime Python command for --deps, default python3
+  INSTANTLINK_BRIDGE_OFFLINE_DEPS
+                       Set to 1 to skip network dependency installation on the Pi and install
+                       the bridge package with --no-index --no-deps.
+  INSTANTLINK_BRIDGE_SEED_VENV
+                       Existing Pi virtualenv to copy if TARGET/.venv is absent; useful for
+                       hotspot-only devices with no outbound internet.
 
 By default this refuses dirty working trees and deploys a git archive of the committed bridge
 source without .git metadata. With --allow-dirty it copies the current working tree and records
@@ -91,6 +99,28 @@ require_deploy_target() {
     echo "ERROR: set INSTANTLINK_BRIDGE_HOST and INSTANTLINK_BRIDGE_USER before deploying" >&2
     exit 2
   fi
+}
+
+bootstrap_remote_runtime_identity() {
+  "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+    "sudo env INSTANTLINK_BRIDGE_OWNER='${OWNER}' INSTANTLINK_BRIDGE_GROUP='${GROUP}' sh -s" <<'SH'
+set -eu
+owner="${INSTANTLINK_BRIDGE_OWNER}"
+group="${INSTANTLINK_BRIDGE_GROUP}"
+
+if ! getent group "${group}" >/dev/null 2>&1; then
+  groupadd --system "${group}"
+fi
+if ! id -u "${owner}" >/dev/null 2>&1; then
+  useradd --system --gid "${group}" --home-dir /var/lib/InstantLinkBridge \
+    --no-create-home --shell /usr/sbin/nologin "${owner}"
+fi
+for supplementary in bluetooth gpio spi i2c plugdev video; do
+  if getent group "${supplementary}" >/dev/null 2>&1; then
+    usermod -aG "${supplementary}" "${owner}"
+  fi
+done
+SH
 }
 
 sha256_file() {
@@ -536,6 +566,8 @@ install_runtime_deps_on_pi() {
        INSTANTLINK_BRIDGE_RUNTIME_PACKAGES_ARTIFACT='${RUNTIME_PACKAGES_ARTIFACT}' \
        INSTANTLINK_BRIDGE_RUNTIME_APT_PACKAGES_ARTIFACT='${RUNTIME_APT_PACKAGES_ARTIFACT}' \
        INSTANTLINK_BRIDGE_RUNTIME_DEPS_MANIFEST='${RUNTIME_DEPS_MANIFEST}' \
+       INSTANTLINK_BRIDGE_OFFLINE='${OFFLINE_DEPS}' \
+       INSTANTLINK_BRIDGE_SEED_VENV='${SEED_VENV}' \
        PYTHON_BIN='${TARGET_PYTHON_BIN}' \
        '${TARGET}/scripts/install-runtime-deps.sh'"
 }
@@ -656,6 +688,9 @@ main() {
   fi
 
   require_deploy_target
+  if [[ "${SYSTEM}" -eq 1 ]]; then
+    bootstrap_remote_runtime_identity
+  fi
 
   CONSTRAINTS_SOURCE="${ROOT}/${CONSTRAINTS_RELATIVE_PATH}"
   if [[ ! -f "${CONSTRAINTS_SOURCE}" ]]; then

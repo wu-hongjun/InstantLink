@@ -301,7 +301,7 @@ def test_settings_row_kind_is_inferred_from_hint() -> None:
 def test_settings_footer_includes_key2_back() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.SETTINGS, ftp_host="192.168.7.1"))
 
-    assert ("Move", "OK", "KEY2 Back") in lines
+    assert ("Move", "Left Back", "KEY2 Back") in lines
 
 
 def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:

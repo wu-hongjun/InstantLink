@@ -9,6 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = REPO_ROOT / "scripts" / "deploy-to-pi.sh"
+INSTALL_RUNTIME_DEPS_SCRIPT = REPO_ROOT / "scripts" / "install-runtime-deps.sh"
 
 
 def run(
@@ -162,3 +163,40 @@ def test_render_deployment_manifest_records_provenance_and_dependency_hashes(
             "sha256": hashlib.sha256(provision_script.read_bytes()).hexdigest(),
         },
     ]
+
+
+def test_install_runtime_deps_exposes_offline_mode_helpers() -> None:
+    result = run(
+        [
+            "bash",
+            "-c",
+            (
+                'source "${INSTALL_RUNTIME_DEPS_SCRIPT}"; '
+                'is_truthy "1"; '
+                'is_truthy "true"; '
+                '! is_truthy "0"; '
+                '! is_truthy ""'
+            ),
+        ],
+        REPO_ROOT,
+        {"INSTALL_RUNTIME_DEPS_SCRIPT": str(INSTALL_RUNTIME_DEPS_SCRIPT)},
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_deploy_script_documents_offline_dependency_forwarding() -> None:
+    text = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "INSTANTLINK_BRIDGE_OFFLINE_DEPS" in text
+    assert "INSTANTLINK_BRIDGE_SEED_VENV" in text
+    assert "INSTANTLINK_BRIDGE_OFFLINE='${OFFLINE_DEPS}'" in text
+
+
+def test_deploy_bootstraps_runtime_identity_before_copy_for_system_installs() -> None:
+    text = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    main = text[text.index("main() {") :]
+
+    assert "bootstrap_remote_runtime_identity()" in text
+    assert main.index("bootstrap_remote_runtime_identity") < main.index("deploy_working_tree_to_pi")
+    assert main.index("bootstrap_remote_runtime_identity") < main.index("deploy_archive_to_pi")

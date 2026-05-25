@@ -48,7 +48,7 @@ server profile:
 | Password | LCD `Settings -> Camera FTP -> FTP pass` |
 
 Set `Cnct. Method` to Wi-Fi for this profile.
-On the bridge, use `Settings -> Camera FTP -> Advanced path -> Bridge Wi-Fi -> KEY1`.
+On the bridge, use `Settings -> Camera FTP -> FTP mode -> Bridge Wi-Fi -> KEY1`.
 
 ## Unsupported Direct USB-LAN
 
@@ -74,7 +74,7 @@ current live bridge, that address is:
 Use port `21`, directory `/`, and TLS off. Enter the LCD `FTP user` and
 `FTP pass` values from `Settings -> Camera FTP`. Do not use a router-reserved address such as
 `192.168.5.7` until the LCD actually shows that address.
-On the bridge, use `Settings -> Camera FTP -> Advanced path -> Same Wi-Fi adv -> KEY1`; Bridge
+On the bridge, use `Settings -> Camera FTP -> FTP mode -> Same Wi-Fi adv -> KEY1`; Bridge
 Wi-Fi mode rejects this upload source.
 
 Do not use `192.168.7.2` for Wi-Fi while the USB diagnostic link remains `192.168.7.1/24`; that

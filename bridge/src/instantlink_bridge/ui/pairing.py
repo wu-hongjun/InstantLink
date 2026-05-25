@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Protocol
 
 from instantlink_bridge.ble.instantlink import (
-    InstantLinkBackend,
     default_instantlink_backend,
     normalize_printer_name,
     stable_instantlink_address,
@@ -45,6 +44,16 @@ class PrinterPairer(Protocol):
 
     async def forget_selected(self) -> None:
         """Forget the selected printer and matching BlueZ cache entries."""
+
+
+class InstantLinkSelectionBackend(Protocol):
+    """Subset of the InstantLink backend needed by the printer-selection UI."""
+
+    async def scan(self, timeout_s: float = 1.0) -> list[str]:
+        """Return visible printer names."""
+
+    async def disconnect(self) -> None:
+        """Disconnect any cached printer session."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,7 +271,7 @@ class InstantLinkPrinterSelector:
         self,
         scan_seconds: int = 30,
         store: SelectedPrinterStore | None = None,
-        backend: InstantLinkBackend | None = None,
+        backend: InstantLinkSelectionBackend | None = None,
     ) -> None:
         self._scan_seconds = scan_seconds
         self._store = store if store is not None else SelectedPrinterStore()

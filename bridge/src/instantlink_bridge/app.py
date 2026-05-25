@@ -65,6 +65,7 @@ LOGGER = logging.getLogger(__name__)
 AUTO_PRINT_DELAY_S = 5.0
 IMAGE_QUEUE_MAXSIZE = 100
 PRINT_JOB_TIMEOUT_S = 120.0
+PRINT_JOB_HARD_TIMEOUT_S = 300.0
 PRINT_TARGET_SCAN_TIMEOUT_S = 1.0
 PRINT_TARGET_SCAN_ATTEMPTS = 5
 POWEROFF_HELPER = "/usr/local/sbin/instantlink-bridge-poweroff"
@@ -394,6 +395,7 @@ async def handle_received_image(
             ui=ui,
             received=received,
             slow_after_s=PRINT_JOB_TIMEOUT_S,
+            hard_after_s=PRINT_JOB_HARD_TIMEOUT_S,
         )
         accepting_progress = False
         await drain_print_progress(progress_tasks)
@@ -430,6 +432,7 @@ async def await_print_sender_without_cancelling_on_timeout(
     ui: PrintUi,
     received: ReceivedImage,
     slow_after_s: float | None,
+    hard_after_s: float | None = None,
 ) -> None:
     """Wait for one print send while keeping an over-time hardware job serialized."""
 
@@ -445,7 +448,22 @@ async def await_print_sender_without_cancelling_on_timeout(
         await ui.print_progress(
             PrintProgress(PrintStage.FINISHING, "Still printing", "Waiting for printer")
         )
-        await send_task
+        if hard_after_s is None or slow_after_s is None:
+            await send_task
+            return
+        remaining_s = max(1.0, hard_after_s - slow_after_s)
+        try:
+            await asyncio.wait_for(asyncio.shield(send_task), timeout=remaining_s)
+        except TimeoutError:
+            LOGGER.critical(
+                "bridge.print_hard_timeout path=%s hard_timeout_s=%s",
+                received.path,
+                hard_after_s,
+            )
+            await ui.print_progress(
+                PrintProgress(PrintStage.FINISHING, "Print stalled", "Restarting bridge")
+            )
+            os._exit(1)
 
 
 async def drain_print_progress(

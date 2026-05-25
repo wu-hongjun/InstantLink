@@ -24,7 +24,7 @@ class FakeInstantLinkBackend:
         self.scans = scans
         self.disconnect_calls = 0
 
-    async def scan(self, _timeout_s: float) -> list[str]:
+    async def scan(self, _timeout_s: float = 1.0) -> list[str]:
         return self.scans.pop(0) if self.scans else []
 
     async def disconnect(self) -> None:

@@ -18,7 +18,9 @@ import re
 import tempfile
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
+from typing import TypeVar
 
 from instantlink_bridge.ble.instax import (
     CoverOpenError,
@@ -57,6 +59,7 @@ DEFAULT_SCAN_DURATION_S = 5
 STRING_BUFFER_SIZE = 4096
 
 _PRINT_PROGRESS_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_uint32, ctypes.c_uint32)
+_T = TypeVar("_T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,7 +71,7 @@ class InstantLinkStatus:
     battery: int
     film_remaining: int
     is_charging: bool
-    print_count: int
+    print_count: int | None
 
 
 class InstantLinkError(RuntimeError):
@@ -187,8 +190,10 @@ class InstantLinkBackend:
     async def scan(self, timeout_s: float = DEFAULT_SCAN_DURATION_S) -> list[str]:
         """Return normalized visible Instax printer names."""
 
-        async with self._lock:
-            return await asyncio.to_thread(self._scan_blocking, timeout_s)
+        return await self._run_blocking_serialized(
+            "scan",
+            partial(self._scan_blocking, timeout_s),
+        )
 
     async def status(
         self,
@@ -198,8 +203,10 @@ class InstantLinkBackend:
     ) -> InstantLinkStatus:
         """Connect if needed and return current printer status."""
 
-        async with self._lock:
-            return await asyncio.to_thread(self._status_blocking, name, scan_duration_s)
+        return await self._run_blocking_serialized(
+            "status",
+            partial(self._status_blocking, name, scan_duration_s),
+        )
 
     async def print_file(
         self,
@@ -215,32 +222,37 @@ class InstantLinkBackend:
     ) -> None:
         """Prepare an edited image and send it through InstantLink."""
 
-        async with self._lock:
-            print_task = asyncio.ensure_future(
-                asyncio.to_thread(
-                    self._print_file_blocking,
-                    name,
-                    image_path,
-                    fit,
-                    quality,
-                    edit,
-                    print_option,
-                    model_override,
-                    progress,
-                )
-            )
-            try:
-                await asyncio.shield(print_task)
-            except asyncio.CancelledError:
-                LOGGER.warning("instantlink.print_cancel_waiting_for_worker name=%s", name)
-                await print_task
-                raise
+        await self._run_blocking_serialized(
+            "print",
+            partial(
+                self._print_file_blocking,
+                name,
+                image_path,
+                fit,
+                quality,
+                edit,
+                print_option,
+                model_override,
+                progress,
+            ),
+        )
 
     async def disconnect(self) -> None:
         """Disconnect the current InstantLink device."""
 
+        await self._run_blocking_serialized("disconnect", self._disconnect_blocking)
+
+    async def _run_blocking_serialized(self, operation: str, worker: Callable[[], _T]) -> _T:
+        """Run one synchronous FFI call while preserving serialization through cancellation."""
+
         async with self._lock:
-            await asyncio.to_thread(self._disconnect_blocking)
+            task = asyncio.ensure_future(asyncio.to_thread(worker))
+            try:
+                return await asyncio.shield(task)
+            except asyncio.CancelledError:
+                LOGGER.warning("instantlink.%s_cancel_waiting_for_worker", operation)
+                await task
+                raise
 
     def _scan_blocking(self, timeout_s: float) -> list[str]:
         duration = max(1, round(timeout_s))
@@ -265,31 +277,33 @@ class InstantLinkBackend:
     def _status_blocking(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
         self._ensure_connected_blocking(name, scan_duration_s=scan_duration_s)
 
-        battery = ctypes.c_int()
         film = ctypes.c_int()
         charging = ctypes.c_int()
-        print_count = ctypes.c_int()
+        battery_value = int(self._library().instantlink_battery())
+        if battery_value < 0:
+            _raise_for_code(battery_value, "status battery failed")
+
         rc = int(
-            self._library().instantlink_status(
-                ctypes.byref(battery),
+            self._library().instantlink_film_and_charging(
                 ctypes.byref(film),
                 ctypes.byref(charging),
-                ctypes.byref(print_count),
             )
         )
-        if rc < 0:
-            self._disconnect_blocking()
-            _raise_for_code(rc, "status failed")
+        if rc == ERROR_NO_FILM:
+            film.value = 0
+            charging.value = 0
+        elif rc < 0:
+            _raise_for_code(rc, "status film failed")
 
         model = self._device_model_blocking()
         connected_name = self._device_name_blocking() or normalize_printer_name(name)
         return InstantLinkStatus(
             name=connected_name,
             model=model,
-            battery=battery.value,
+            battery=battery_value,
             film_remaining=film.value,
             is_charging=bool(charging.value),
-            print_count=print_count.value,
+            print_count=None,
         )
 
     def _print_file_blocking(
@@ -502,6 +516,13 @@ def _configure_library(lib: ctypes.CDLL) -> None:
         ctypes.POINTER(ctypes.c_int),
     ]
     lib.instantlink_status.restype = ctypes.c_int
+    lib.instantlink_battery.argtypes = []
+    lib.instantlink_battery.restype = ctypes.c_int
+    lib.instantlink_film_and_charging.argtypes = [
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    lib.instantlink_film_and_charging.restype = ctypes.c_int
     lib.instantlink_device_name.argtypes = [ctypes.c_char_p, ctypes.c_int]
     lib.instantlink_device_name.restype = ctypes.c_int
     lib.instantlink_device_model.argtypes = [ctypes.c_char_p, ctypes.c_int]

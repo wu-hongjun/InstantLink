@@ -349,7 +349,7 @@ def test_write_config_round_trips_runtime_settings(tmp_path: Path) -> None:
             keepalive_interval_s=15,
         ),
         workflow=WorkflowConfig(auto_print_delay_s=5, allow_print_without_film=True),
-        power=PowerConfig(backend=PowerBackend.X306, idle_poweroff_after_s=900),
+        power=PowerConfig(backend=PowerBackend.X306, idle_poweroff_after_s=9000),
     )
 
     write_config(config, config_path)
@@ -364,4 +364,4 @@ def test_write_config_round_trips_runtime_settings(tmp_path: Path) -> None:
     assert round_tripped.workflow.auto_print_delay_s == 5
     assert round_tripped.workflow.allow_print_without_film
     assert round_tripped.power.backend is PowerBackend.X306
-    assert round_tripped.power.idle_poweroff_after_s == 900
+    assert round_tripped.power.idle_poweroff_after_s == 9000

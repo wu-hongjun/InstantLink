@@ -115,8 +115,14 @@ Expected healthy state:
   - `/opt/InstantLinkBridge/lib/libinstantlink_ffi.so` loaded successfully.
   - The old BlueZ bond for `INSTAX-52006924 (IOS)` was removed after native connects failed with
     BlueZ `InProgress`, `le-connection-abort-by-local`, and `Timeout waiting for reply`.
-  - After removing the stale bond, InstantLink scans did not see the printer. The LCD should show
-    the no-printer/pairing flow until the printer is power-cycled and paired again from the bridge.
+  - A 2026-05-25 follow-up saw both `INSTAX-52006924 (ANDROID)` and `INSTAX-52006924 (IOS)`, then
+    native connect reached GATT but failed with `write characteristic not found`. Commit `9a54b4f`
+    retries Linux BLE characteristic discovery and fresh ARM64 artifacts were deployed from it.
+  - After the failed connect attempts, the printer stopped advertising in both InstantLink and
+    BlueZ scans. The LCD should show the no-printer/pairing flow until the printer is power-cycled
+    and paired again from the bridge.
+  - Runtime idle display timers were lengthened on the test Pi and in source defaults:
+    dim after 300 s, screen off after 1800 s, deep idle after 3600 s, poweroff after 7200 s.
 - Physical printing is still the remaining hardware validation step after successful re-pairing.
 
 ## Local Development Checks

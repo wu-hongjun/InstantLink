@@ -232,10 +232,10 @@ class PowerConfig:
     battery_poll_interval_s: float = 30.0
     battery_warning_threshold_percent: float = 20.0
     battery_safe_shutdown_threshold_percent: float = 10.0
-    idle_dim_after_s: float = 30.0
-    idle_screen_off_after_s: float = 90.0
-    idle_deep_after_s: float = 300.0
-    idle_poweroff_after_s: float = 600.0
+    idle_dim_after_s: float = 300.0
+    idle_screen_off_after_s: float = 1800.0
+    idle_deep_after_s: float = 3600.0
+    idle_poweroff_after_s: float = 7200.0
     idle_poweroff_enabled: bool = False
 
     def __post_init__(self) -> None:
@@ -437,19 +437,19 @@ def _load_power_config(data: object) -> PowerConfig:
             "[power].battery_safe_shutdown_threshold_percent",
         ),
         idle_dim_after_s=_positive_float(
-            data.get("idle_dim_after_s", 30.0),
+            data.get("idle_dim_after_s", 300.0),
             "[power].idle_dim_after_s",
         ),
         idle_screen_off_after_s=_positive_float(
-            data.get("idle_screen_off_after_s", 90.0),
+            data.get("idle_screen_off_after_s", 1800.0),
             "[power].idle_screen_off_after_s",
         ),
         idle_deep_after_s=_positive_float(
-            data.get("idle_deep_after_s", 300.0),
+            data.get("idle_deep_after_s", 3600.0),
             "[power].idle_deep_after_s",
         ),
         idle_poweroff_after_s=_positive_float(
-            data.get("idle_poweroff_after_s", 600.0),
+            data.get("idle_poweroff_after_s", 7200.0),
             "[power].idle_poweroff_after_s",
         ),
         idle_poweroff_enabled=_parse_bool(

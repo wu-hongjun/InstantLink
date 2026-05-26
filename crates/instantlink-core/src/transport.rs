@@ -240,8 +240,23 @@ impl BleTransport {
             }
         }
 
-        let chars = peripheral.characteristics();
+        let mut chars = peripheral.characteristics();
         emit_connect_progress(progress, ConnectStage::CharacteristicLookup, None::<String>);
+        if !has_instax_characteristics(&chars) {
+            log::debug!(
+                "Instax characteristics missing after discovery; retrying characteristic lookup. chars={}",
+                format_characteristic_uuids(&chars)
+            );
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            if let Err(error) = peripheral.discover_services().await {
+                log::debug!("Characteristic lookup rediscovery failed: {}", error);
+            }
+            chars = peripheral.characteristics();
+            log::debug!(
+                "Instax characteristic retry result. chars={}",
+                format_characteristic_uuids(&chars)
+            );
+        }
 
         let write_char = match chars.iter().find(|c| c.uuid == WRITE_CHAR_UUID).cloned() {
             Some(characteristic) => characteristic,
@@ -394,6 +409,22 @@ impl BleTransport {
             }
         }
     }
+}
+
+fn has_instax_characteristics(chars: &std::collections::BTreeSet<Characteristic>) -> bool {
+    chars.iter().any(|c| c.uuid == WRITE_CHAR_UUID)
+        && chars.iter().any(|c| c.uuid == NOTIFY_CHAR_UUID)
+}
+
+fn format_characteristic_uuids(chars: &std::collections::BTreeSet<Characteristic>) -> String {
+    if chars.is_empty() {
+        return "none".to_string();
+    }
+    chars
+        .iter()
+        .map(|c| c.uuid.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 #[cfg(target_os = "linux")]

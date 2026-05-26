@@ -125,6 +125,18 @@ int32_t instantlink_film_remaining(void);
 int32_t instantlink_film_and_charging(int32_t *out_film, int32_t *out_charging);
 
 /**
+ * Send a one-shot keepalive/status request to the connected printer.
+ */
+int32_t instantlink_keepalive(void);
+
+/**
+ * Configure the background keepalive interval.
+ *
+ * Pass 0 to disable background keepalive. Positive values are seconds.
+ */
+int32_t instantlink_set_keepalive_interval(int32_t seconds);
+
+/**
  * Get total print count. Returns negative error code on failure.
  */
 int32_t instantlink_print_count(void);

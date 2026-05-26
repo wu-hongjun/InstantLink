@@ -45,6 +45,11 @@ pub trait PrinterDevice: Send + Sync {
     /// Get remaining film count and charging state.
     async fn film_and_charging(&self) -> Result<(u8, bool)>;
 
+    /// Keep the printer awake with a lightweight status request.
+    async fn keep_alive(&self) -> Result<()> {
+        self.film_and_charging().await.map(|_| ())
+    }
+
     /// Get remaining film count.
     async fn film_remaining(&self) -> Result<u8> {
         self.film_and_charging().await.map(|(f, _)| f)
@@ -817,6 +822,18 @@ mod tests {
         assert_eq!(battery.payload, vec![INFO_BATTERY]);
         assert_eq!(printer_function.payload, vec![INFO_PRINTER_FUNCTION]);
         assert_eq!(history.payload, vec![INFO_PRINT_HISTORY]);
+    }
+
+    #[tokio::test]
+    async fn keep_alive_uses_printer_function_info_query() {
+        let (device, state) =
+            make_device(PrinterModel::Mini, vec![printer_function_packet(7, false)]).await;
+
+        device.keep_alive().await.unwrap();
+
+        let sent = &state.lock().unwrap().sent;
+        let printer_function = protocol::parse_packet(&sent[1]).unwrap();
+        assert_eq!(printer_function.payload, vec![INFO_PRINTER_FUNCTION]);
     }
 
     #[tokio::test]

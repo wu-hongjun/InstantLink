@@ -529,6 +529,11 @@ class InstantLinkPrinterStatusProvider:
 
         return None
 
+    async def configure_keepalive(self, interval_s: float | None) -> None:
+        """Configure InstantLink core's background keepalive loop."""
+
+        await self._backend.configure_keepalive(interval_s)
+
     async def close_cached_session(self) -> None:
         """Close the cached InstantLink session."""
 

@@ -10,6 +10,7 @@ import pytest
 from instantlink_bridge.ble.client import DiscoveredPrinter
 from instantlink_bridge.ble.instantlink import (
     ERROR_NO_FILM,
+    ERROR_PRINT_REJECTED,
     InstantLinkBackend,
     InstantLinkBleError,
 )
@@ -25,6 +26,7 @@ from instantlink_bridge.ui.models import PairedPrinter
 from instantlink_bridge.ui.status import (
     BlePrinterStatusProvider,
     ConnectedInstaxPrinter,
+    InstantLinkPrinterStatusProvider,
     PrinterStatusUnavailableError,
     PrinterStatusUnavailableReason,
     has_matching_status_target,
@@ -36,12 +38,21 @@ from instantlink_bridge.ui.status import (
 
 
 class _FakeInstantLinkStatusLibrary:
-    def __init__(self, *, film_rc: int = 0, battery_rc: int = 35) -> None:
-        self.film_rc = film_rc
+    def __init__(
+        self,
+        *,
+        status_rc: int = 0,
+        split_film_rc: int = 0,
+        battery_rc: int = 35,
+    ) -> None:
+        self.status_rc = status_rc
+        self.split_film_rc = split_film_rc
         self.battery_rc = battery_rc
         self.connect_calls = 0
         self.disconnect_calls = 0
         self.status_calls = 0
+        self.keepalive_calls = 0
+        self.keepalive_interval_calls: list[int] = []
 
     def instantlink_connect_named(self, _name: bytes, _duration: int) -> int:
         self.connect_calls += 1
@@ -51,21 +62,27 @@ class _FakeInstantLinkStatusLibrary:
         return self.battery_rc
 
     def instantlink_film_and_charging(self, out_film: object, out_charging: object) -> int:
-        if self.film_rc != 0:
-            return self.film_rc
+        if self.split_film_rc != 0:
+            return self.split_film_rc
         cast(Any, out_film)._obj.value = 7
         cast(Any, out_charging)._obj.value = 1
         return 0
 
     def instantlink_status(
         self,
-        _out_battery: object,
-        _out_film: object,
-        _out_charging: object,
-        _out_print_count: object,
+        out_battery: object,
+        out_film: object,
+        out_charging: object,
+        out_print_count: object,
     ) -> int:
         self.status_calls += 1
-        raise AssertionError("bridge status should not require print history")
+        if self.status_rc != 0:
+            return self.status_rc
+        cast(Any, out_battery)._obj.value = self.battery_rc
+        cast(Any, out_film)._obj.value = 7
+        cast(Any, out_charging)._obj.value = 1
+        cast(Any, out_print_count)._obj.value = 123
+        return 0
 
     def instantlink_device_name(self, out: object, _out_len: int) -> int:
         buffer = cast(Any, out)
@@ -81,6 +98,21 @@ class _FakeInstantLinkStatusLibrary:
         self.disconnect_calls += 1
         return 0
 
+    def instantlink_keepalive(self) -> int:
+        self.keepalive_calls += 1
+        return 0
+
+    def instantlink_set_keepalive_interval(self, seconds: int) -> int:
+        self.keepalive_interval_calls.append(seconds)
+        return 0
+
+
+class _FakeInstantLinkScanLibrary:
+    def instantlink_scan(self, _duration: int, out_json: object, _out_len: int) -> int:
+        payload = b'["INSTAX-52006924 (ANDROID)","INSTAX-52006924 (IOS)"]'
+        cast(Any, out_json).value = payload
+        return len(payload)
+
 
 def test_select_status_target_prefers_ios_advertisement_for_same_printer() -> None:
     selected = PairedPrinter(address="88:B4:36:51:CC:E2", name="INSTAX-1N034655")
@@ -95,7 +127,15 @@ def test_select_status_target_prefers_ios_advertisement_for_same_printer() -> No
 
 
 @pytest.mark.asyncio
-async def test_instantlink_status_does_not_require_print_history() -> None:
+async def test_instantlink_scan_filters_android_spp_advertisements() -> None:
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, _FakeInstantLinkScanLibrary())
+
+    assert await backend.scan(1) == ["INSTAX-52006924"]
+
+
+@pytest.mark.asyncio
+async def test_instantlink_status_uses_combined_status_call() -> None:
     library = _FakeInstantLinkStatusLibrary()
     backend = InstantLinkBackend()
     backend._lib = cast(Any, library)
@@ -107,13 +147,39 @@ async def test_instantlink_status_does_not_require_print_history() -> None:
     assert status.battery == 35
     assert status.film_remaining == 7
     assert status.is_charging is True
-    assert status.print_count is None
-    assert library.status_calls == 0
+    assert status.print_count == 123
+    assert library.status_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_instantlink_backend_configures_core_keepalive() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    await backend.configure_keepalive(10.4)
+    await backend.configure_keepalive(None)
+    await backend.keepalive_once()
+
+    assert library.keepalive_interval_calls == [10, 0]
+    assert library.keepalive_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_instantlink_status_provider_configures_core_keepalive() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+
+    await provider.configure_keepalive(15)
+
+    assert library.keepalive_interval_calls == [15]
 
 
 @pytest.mark.asyncio
 async def test_instantlink_status_maps_no_film_to_zero_remaining() -> None:
-    library = _FakeInstantLinkStatusLibrary(film_rc=ERROR_NO_FILM)
+    library = _FakeInstantLinkStatusLibrary(status_rc=ERROR_NO_FILM)
     backend = InstantLinkBackend()
     backend._lib = cast(Any, library)
 
@@ -125,11 +191,11 @@ async def test_instantlink_status_maps_no_film_to_zero_remaining() -> None:
 
 @pytest.mark.asyncio
 async def test_instantlink_status_disconnects_stale_session_after_status_failure() -> None:
-    library = _FakeInstantLinkStatusLibrary(battery_rc=-3)
+    library = _FakeInstantLinkStatusLibrary(status_rc=ERROR_PRINT_REJECTED)
     backend = InstantLinkBackend()
     backend._lib = cast(Any, library)
 
-    with pytest.raises(InstantLinkBleError, match="status battery failed"):
+    with pytest.raises(InstantLinkBleError, match="status failed"):
         await backend.status("INSTAX-1N034655")
 
     assert library.disconnect_calls == 1
@@ -139,13 +205,13 @@ async def test_instantlink_status_disconnects_stale_session_after_status_failure
 async def test_instantlink_status_failure_logs_are_rate_limited(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    library = _FakeInstantLinkStatusLibrary(battery_rc=-3)
+    library = _FakeInstantLinkStatusLibrary(status_rc=ERROR_PRINT_REJECTED)
     backend = InstantLinkBackend()
     backend._lib = cast(Any, library)
     caplog.set_level(logging.WARNING, logger="instantlink_bridge.ble.instantlink")
 
     for _ in range(3):
-        with pytest.raises(InstantLinkBleError, match="status battery failed"):
+        with pytest.raises(InstantLinkBleError, match="status failed"):
             await backend.status("INSTAX-1N034655")
 
     warning_messages = [

@@ -62,6 +62,20 @@ FFI_CANCEL_GRACE_S = 5.0
 STATUS_FAILURE_LOG_INTERVAL_S = 30.0
 
 _PRINT_PROGRESS_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_uint32, ctypes.c_uint32)
+_CONNECT_PROGRESS_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_int32, ctypes.c_char_p)
+CONNECT_STAGE_NAMES = {
+    0: "scan_started",
+    1: "scan_finished",
+    2: "device_matched",
+    3: "ble_connecting",
+    4: "service_discovery",
+    5: "characteristic_lookup",
+    6: "notification_subscribe",
+    7: "model_detecting",
+    8: "status_fetching",
+    9: "connected",
+    10: "failed",
+}
 _T = TypeVar("_T")
 
 
@@ -247,6 +261,19 @@ class InstantLinkBackend:
 
         await self._run_blocking_serialized("disconnect", self._disconnect_blocking)
 
+    async def configure_keepalive(self, interval_s: float | None) -> None:
+        """Configure InstantLink core's background keepalive loop."""
+
+        await self._run_blocking_serialized(
+            "configure_keepalive",
+            partial(self._configure_keepalive_blocking, interval_s),
+        )
+
+    async def keepalive_once(self) -> None:
+        """Send one explicit InstantLink keepalive/status request."""
+
+        await self._run_blocking_serialized("keepalive", self._keepalive_blocking)
+
     async def _run_blocking_serialized(self, operation: str, worker: Callable[[], _T]) -> _T:
         """Run one synchronous FFI call while preserving serialization through cancellation."""
 
@@ -283,7 +310,7 @@ class InstantLinkBackend:
         names = [
             normalize_printer_name(value)
             for value in values
-            if isinstance(value, str) and value.strip()
+            if isinstance(value, str) and value.strip() and not _is_android_advertisement(value)
         ]
         return _dedupe_names(names)
 
@@ -329,34 +356,57 @@ class InstantLinkBackend:
     def _status_blocking_connected(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
         self._ensure_connected_blocking(name, scan_duration_s=scan_duration_s)
 
+        battery = ctypes.c_int()
         film = ctypes.c_int()
         charging = ctypes.c_int()
-        battery_value = int(self._library().instantlink_battery())
-        if battery_value < 0:
-            _raise_for_code(battery_value, "status battery failed")
-
-        rc = int(
-            self._library().instantlink_film_and_charging(
-                ctypes.byref(film),
-                ctypes.byref(charging),
+        print_count = ctypes.c_int()
+        if hasattr(self._library(), "instantlink_status"):
+            rc = int(
+                self._library().instantlink_status(
+                    ctypes.byref(battery),
+                    ctypes.byref(film),
+                    ctypes.byref(charging),
+                    ctypes.byref(print_count),
+                )
             )
-        )
-        if rc == ERROR_NO_FILM:
-            film.value = 0
-            charging.value = 0
-        elif rc < 0:
-            _raise_for_code(rc, "status film failed")
+            if rc == ERROR_NO_FILM:
+                battery.value = self._battery_value_for_no_film_status()
+                film.value = 0
+                charging.value = 0
+                print_count.value = -1
+            elif rc < 0:
+                _raise_for_code(rc, "status failed")
+        else:
+            battery.value = self._battery_value_for_no_film_status()
+            print_count.value = -1
+            rc = int(
+                self._library().instantlink_film_and_charging(
+                    ctypes.byref(film),
+                    ctypes.byref(charging),
+                )
+            )
+            if rc == ERROR_NO_FILM:
+                film.value = 0
+                charging.value = 0
+            elif rc < 0:
+                _raise_for_code(rc, "status film failed")
 
         model = self._device_model_blocking()
         connected_name = self._device_name_blocking() or normalize_printer_name(name)
         return InstantLinkStatus(
             name=connected_name,
             model=model,
-            battery=battery_value,
+            battery=battery.value,
             film_remaining=film.value,
             is_charging=bool(charging.value),
-            print_count=None,
+            print_count=print_count.value if print_count.value >= 0 else None,
         )
+
+    def _battery_value_for_no_film_status(self) -> int:
+        battery_value = int(self._library().instantlink_battery())
+        if battery_value < 0:
+            _raise_for_code(battery_value, "status battery failed")
+        return battery_value
 
     def _print_file_blocking(
         self,
@@ -440,18 +490,27 @@ class InstantLinkBackend:
         *,
         scan_duration_s: int,
     ) -> None:
-        target_name = normalize_printer_name(name)
+        target_name = _connect_target_name(name)
         connected_name = self._device_name_blocking()
         if connected_name is not None and _printer_names_match(connected_name, target_name):
             return
-        rc = int(
-            self._library().instantlink_connect_named(
-                target_name.encode("utf-8"),
-                max(1, scan_duration_s),
-            )
-        )
+        rc = self._connect_named_blocking(target_name, scan_duration_s)
         if rc < 0:
             _raise_for_code(rc, "connect failed")
+
+    def _connect_named_blocking(self, target_name: str, scan_duration_s: int) -> int:
+        library = self._library()
+        duration = max(1, scan_duration_s)
+        if hasattr(library, "instantlink_connect_named_with_progress"):
+            callback = _connect_progress_logger(target_name)
+            return int(
+                library.instantlink_connect_named_with_progress(
+                    target_name.encode("utf-8"),
+                    duration,
+                    callback,
+                )
+            )
+        return int(library.instantlink_connect_named(target_name.encode("utf-8"), duration))
 
     def _device_name_blocking(self) -> str | None:
         return self._string_result("instantlink_device_name", missing_ok=True)
@@ -469,6 +528,28 @@ class InstantLinkBackend:
         if rc in {0, ERROR_PRINTER_NOT_FOUND}:
             return
         LOGGER.warning("instantlink.disconnect_failed code=%s", rc)
+
+    def _configure_keepalive_blocking(self, interval_s: float | None) -> None:
+        library = self._library()
+        configure = getattr(library, "instantlink_set_keepalive_interval", None)
+        if configure is None:
+            LOGGER.debug("instantlink.keepalive_config_unsupported")
+            return
+        seconds = 0 if interval_s is None or interval_s <= 0 else max(1, round(interval_s))
+        rc = int(configure(seconds))
+        if rc < 0:
+            _raise_for_code(rc, "set keepalive failed")
+        LOGGER.info("instantlink.keepalive_configured interval_s=%s", seconds)
+
+    def _keepalive_blocking(self) -> None:
+        library = self._library()
+        keepalive = getattr(library, "instantlink_keepalive", None)
+        if keepalive is None:
+            LOGGER.debug("instantlink.keepalive_unsupported")
+            return
+        rc = int(keepalive())
+        if rc < 0:
+            _raise_for_code(rc, "keepalive failed")
 
     def _string_result(self, function_name: str, *, missing_ok: bool) -> str | None:
         buf = ctypes.create_string_buffer(STRING_BUFFER_SIZE)
@@ -559,6 +640,13 @@ def _configure_library(lib: ctypes.CDLL) -> None:
     lib.instantlink_scan.restype = ctypes.c_int
     lib.instantlink_connect_named.argtypes = [ctypes.c_char_p, ctypes.c_int]
     lib.instantlink_connect_named.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_connect_named_with_progress"):
+        lib.instantlink_connect_named_with_progress.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_int,
+            _CONNECT_PROGRESS_CALLBACK,
+        ]
+        lib.instantlink_connect_named_with_progress.restype = ctypes.c_int
     lib.instantlink_disconnect.argtypes = []
     lib.instantlink_disconnect.restype = ctypes.c_int
     lib.instantlink_status.argtypes = [
@@ -575,6 +663,12 @@ def _configure_library(lib: ctypes.CDLL) -> None:
         ctypes.POINTER(ctypes.c_int),
     ]
     lib.instantlink_film_and_charging.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_keepalive"):
+        lib.instantlink_keepalive.argtypes = []
+        lib.instantlink_keepalive.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_set_keepalive_interval"):
+        lib.instantlink_set_keepalive_interval.argtypes = [ctypes.c_int]
+        lib.instantlink_set_keepalive_interval.restype = ctypes.c_int
     lib.instantlink_device_name.argtypes = [ctypes.c_char_p, ctypes.c_int]
     lib.instantlink_device_name.restype = ctypes.c_int
     lib.instantlink_device_model.argtypes = [ctypes.c_char_p, ctypes.c_int]
@@ -611,7 +705,9 @@ def _raise_for_code(code: int, context: str) -> None:
     if code == ERROR_PRINTER_BUSY:
         raise PrinterBusyError("printer is busy")
     if code == ERROR_PRINT_REJECTED:
-        raise PrintRejectedError("print rejected")
+        if context.startswith("print"):
+            raise PrintRejectedError("print rejected")
+        raise InstantLinkBleError(f"{context}: unexpected printer response", code=code)
     raise InstantLinkError(f"{context}: InstantLink error {code}", code=code)
 
 
@@ -667,6 +763,35 @@ def _extract_serial(name: str) -> str | None:
         return None
     serial = "".join(ch for ch in normalized.removeprefix("INSTAX-") if ch.isalnum())
     return serial or None
+
+
+def _is_android_advertisement(name: str) -> bool:
+    return name.strip().upper().endswith("(ANDROID)")
+
+
+def _connect_target_name(name: str) -> str:
+    if _has_platform_suffix(name):
+        return name.strip()
+    return normalize_printer_name(name)
+
+
+def _has_platform_suffix(name: str) -> bool:
+    upper = name.strip().upper()
+    return upper.endswith("(IOS)") or upper.endswith("(ANDROID)")
+
+
+def _connect_progress_logger(target_name: str) -> Callable[[int, bytes | None], None]:
+    def emit(stage: int, detail: bytes | None) -> None:
+        stage_name = CONNECT_STAGE_NAMES.get(stage, "unknown")
+        detail_text = detail.decode("utf-8", errors="replace") if detail else ""
+        LOGGER.info(
+            "instantlink.connect_progress target=%s stage=%s detail=%s",
+            target_name,
+            stage_name,
+            detail_text,
+        )
+
+    return _CONNECT_PROGRESS_CALLBACK(emit)
 
 
 def _dedupe_names(names: Iterable[str]) -> list[str]:

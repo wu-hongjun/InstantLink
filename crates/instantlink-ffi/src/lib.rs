@@ -24,11 +24,16 @@ use instantlink_core::error::PrinterError;
 
 type DeviceArc = Arc<Box<dyn instantlink_core::PrinterDevice>>;
 type DeviceLock = Mutex<Option<DeviceArc>>;
+type KeepaliveIntervalLock = Mutex<Option<Duration>>;
+type KeepaliveTaskLock = Mutex<Option<tokio::task::JoinHandle<()>>>;
 
 static INIT: Once = Once::new();
 static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static DEVICE: OnceLock<DeviceLock> = OnceLock::new();
+static KEEPALIVE_INTERVAL: OnceLock<KeepaliveIntervalLock> = OnceLock::new();
+static KEEPALIVE_TASK: OnceLock<KeepaliveTaskLock> = OnceLock::new();
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+const DEFAULT_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 fn get_runtime() -> &'static tokio::runtime::Runtime {
     RUNTIME.get_or_init(|| {
@@ -41,6 +46,68 @@ fn get_runtime() -> &'static tokio::runtime::Runtime {
 
 fn get_device_lock() -> &'static DeviceLock {
     DEVICE.get_or_init(|| Mutex::new(None))
+}
+
+fn get_keepalive_interval_lock() -> &'static KeepaliveIntervalLock {
+    KEEPALIVE_INTERVAL.get_or_init(|| Mutex::new(Some(DEFAULT_KEEPALIVE_INTERVAL)))
+}
+
+fn get_keepalive_task_lock() -> &'static KeepaliveTaskLock {
+    KEEPALIVE_TASK.get_or_init(|| Mutex::new(None))
+}
+
+fn configured_keepalive_interval() -> Option<Duration> {
+    get_keepalive_interval_lock()
+        .lock()
+        .map(|guard| *guard)
+        .unwrap_or(Some(DEFAULT_KEEPALIVE_INTERVAL))
+}
+
+fn set_configured_keepalive_interval(interval: Option<Duration>) -> Result<(), i32> {
+    get_keepalive_interval_lock()
+        .lock()
+        .map(|mut guard| {
+            *guard = interval;
+        })
+        .map_err(|_| -3)
+}
+
+fn stop_keepalive_task() {
+    if let Ok(mut guard) = get_keepalive_task_lock().lock()
+        && let Some(handle) = guard.take()
+    {
+        handle.abort();
+    }
+}
+
+fn start_keepalive_task(rt: &tokio::runtime::Runtime, device: DeviceArc) {
+    stop_keepalive_task();
+    let Some(interval) = configured_keepalive_interval() else {
+        return;
+    };
+    let handle = rt.spawn(async move {
+        loop {
+            tokio::time::sleep(interval).await;
+            match device.keep_alive().await {
+                Ok(()) => log::debug!(
+                    "instantlink.keepalive_ok name={} interval_s={}",
+                    device.name(),
+                    interval.as_secs()
+                ),
+                Err(error) => log::warn!(
+                    "instantlink.keepalive_failed name={} interval_s={} error={}",
+                    device.name(),
+                    interval.as_secs(),
+                    error
+                ),
+            }
+        }
+    });
+    if let Ok(mut guard) = get_keepalive_task_lock().lock() {
+        *guard = Some(handle);
+    } else {
+        handle.abort();
+    }
 }
 
 /// Disconnect a printer device and wait for the underlying BLE transport to tear down.
@@ -121,6 +188,7 @@ fn connect_named_internal(
     progress: Option<Box<dyn Fn(ConnectProgressEvent) + Send + Sync>>,
 ) -> i32 {
     let rt = get_runtime();
+    stop_keepalive_task();
     let old_device = {
         let lock = get_device_lock();
         if let Ok(mut guard) = lock.lock() {
@@ -142,9 +210,11 @@ fn connect_named_internal(
         progress_ref,
     )) {
         Ok(device) => {
+            let device = Arc::new(device);
             let lock = get_device_lock();
             if let Ok(mut guard) = lock.lock() {
-                *guard = Some(Arc::new(device));
+                *guard = Some(Arc::clone(&device));
+                start_keepalive_task(rt, device);
                 0
             } else {
                 -3
@@ -286,6 +356,7 @@ pub unsafe extern "C" fn instantlink_scan(
 pub extern "C" fn instantlink_connect() -> i32 {
     std::panic::catch_unwind(|| {
         let rt = get_runtime();
+        stop_keepalive_task();
         let old_device = {
             let lock = get_device_lock();
             if let Ok(mut guard) = lock.lock() {
@@ -300,9 +371,11 @@ pub extern "C" fn instantlink_connect() -> i32 {
 
         match rt.block_on(instantlink_core::printer::connect_any(None)) {
             Ok(device) => {
+                let device = Arc::new(device);
                 let lock = get_device_lock();
                 if let Ok(mut guard) = lock.lock() {
-                    *guard = Some(Arc::new(device));
+                    *guard = Some(Arc::clone(&device));
+                    start_keepalive_task(rt, device);
                     0
                 } else {
                     -3
@@ -336,6 +409,7 @@ pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration
             None
         };
         let rt = get_runtime();
+        stop_keepalive_task();
         let old_device = {
             let lock = get_device_lock();
             if let Ok(mut guard) = lock.lock() {
@@ -350,9 +424,11 @@ pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration
 
         match rt.block_on(instantlink_core::printer::connect(s, dur)) {
             Ok(device) => {
+                let device = Arc::new(device);
                 let lock = get_device_lock();
                 if let Ok(mut guard) = lock.lock() {
-                    *guard = Some(Arc::new(device));
+                    *guard = Some(Arc::clone(&device));
+                    start_keepalive_task(rt, device);
                     0
                 } else {
                     -3
@@ -445,6 +521,7 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress_ctx(
 #[unsafe(no_mangle)]
 pub extern "C" fn instantlink_disconnect() -> i32 {
     std::panic::catch_unwind(|| {
+        stop_keepalive_task();
         let lock = get_device_lock();
         if let Ok(mut guard) = lock.lock() {
             if let Some(device) = guard.take() {
@@ -554,6 +631,68 @@ pub unsafe extern "C" fn instantlink_film_and_charging(
             Err(e) => error_code(&e),
         }
     }))
+    .unwrap_or(-3)
+}
+
+/// Send a one-shot keepalive/status request to the connected printer.
+#[unsafe(no_mangle)]
+pub extern "C" fn instantlink_keepalive() -> i32 {
+    std::panic::catch_unwind(|| {
+        let device = {
+            let lock = get_device_lock();
+            let guard = match lock.lock() {
+                Ok(g) => g,
+                Err(_) => return -3,
+            };
+            match guard.as_ref() {
+                Some(d) => Arc::clone(d),
+                None => return -1,
+            }
+        };
+        let rt = get_runtime();
+        match rt.block_on(device.keep_alive()) {
+            Ok(()) => 0,
+            Err(e) => error_code(&e),
+        }
+    })
+    .unwrap_or(-3)
+}
+
+/// Configure the background keepalive interval.
+///
+/// Pass 0 to disable background keepalive. Positive values are seconds.
+#[unsafe(no_mangle)]
+pub extern "C" fn instantlink_set_keepalive_interval(seconds: i32) -> i32 {
+    std::panic::catch_unwind(|| {
+        if seconds < 0 {
+            return -5;
+        }
+        let interval = if seconds == 0 {
+            None
+        } else {
+            Some(Duration::from_secs(seconds as u64))
+        };
+        if let Err(code) = set_configured_keepalive_interval(interval) {
+            return code;
+        }
+
+        let device = {
+            let lock = get_device_lock();
+            let guard = match lock.lock() {
+                Ok(g) => g,
+                Err(_) => return -3,
+            };
+            guard.as_ref().map(Arc::clone)
+        };
+        match device {
+            Some(device) => {
+                let rt = get_runtime();
+                start_keepalive_task(rt, device);
+            }
+            None => stop_keepalive_task(),
+        }
+        0
+    })
     .unwrap_or(-3)
 }
 
@@ -827,10 +966,13 @@ mod tests {
     struct TestDeviceGuard<'a> {
         _lock: MutexGuard<'a, ()>,
         previous: Option<Arc<Box<dyn PrinterDevice>>>,
+        previous_keepalive_interval: Option<Duration>,
     }
 
     impl Drop for TestDeviceGuard<'_> {
         fn drop(&mut self) {
+            stop_keepalive_task();
+            set_configured_keepalive_interval(self.previous_keepalive_interval).unwrap();
             let lock = get_device_lock();
             let mut guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
             *guard = self.previous.take();
@@ -841,6 +983,8 @@ mod tests {
         let lock_guard = ffi_test_lock()
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        stop_keepalive_task();
+        let previous_keepalive_interval = configured_keepalive_interval();
         let lock = get_device_lock();
         let mut guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         let previous = guard.take();
@@ -849,6 +993,7 @@ mod tests {
         TestDeviceGuard {
             _lock: lock_guard,
             previous,
+            previous_keepalive_interval,
         }
     }
 
@@ -880,6 +1025,7 @@ mod tests {
         led_calls: Arc<StdMutex<Vec<(u8, u8, u8, u8)>>>,
         shutdown_calls: Arc<AtomicU32>,
         reset_calls: Arc<AtomicU32>,
+        film_and_charging_calls: Arc<AtomicU32>,
         failures: Arc<StdMutex<FakeFailures>>,
     }
 
@@ -900,6 +1046,7 @@ mod tests {
                 led_calls: Arc::new(StdMutex::new(Vec::new())),
                 shutdown_calls: Arc::new(AtomicU32::new(0)),
                 reset_calls: Arc::new(AtomicU32::new(0)),
+                film_and_charging_calls: Arc::new(AtomicU32::new(0)),
                 failures: Arc::new(StdMutex::new(FakeFailures::default())),
             }
         }
@@ -954,6 +1101,7 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
+            self.film_and_charging_calls.fetch_add(1, Ordering::SeqCst);
             let result = self
                 .failures
                 .lock()
@@ -1260,6 +1408,46 @@ mod tests {
         let (mut film, mut charging) = (0, 0);
         let code = unsafe { instantlink_film_and_charging(&mut film, &mut charging) };
         assert_eq!(code, -1);
+    }
+
+    #[test]
+    fn ffi_keepalive_uses_connected_device() {
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::MiniLink3);
+        let film_and_charging_calls = Arc::clone(&device.film_and_charging_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+
+        assert_eq!(instantlink_keepalive(), 0);
+        assert_eq!(film_and_charging_calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn ffi_keepalive_requires_connected_device_and_maps_errors() {
+        {
+            let _guard = install_test_device(None);
+            assert_eq!(instantlink_keepalive(), -1);
+        }
+
+        let device =
+            FakeDevice::new("INSTAX-12345678", PrinterModel::Mini).with_failures(FakeFailures {
+                film_and_charging: Some(PrinterError::NoFilm),
+                ..FakeFailures::default()
+            });
+        let _guard = install_test_device(Some(Box::new(device)));
+        assert_eq!(instantlink_keepalive(), -8);
+    }
+
+    #[test]
+    fn ffi_keepalive_interval_can_be_configured_or_disabled() {
+        let _guard = install_test_device(None);
+
+        assert_eq!(instantlink_set_keepalive_interval(-1), -5);
+        assert_eq!(instantlink_set_keepalive_interval(0), 0);
+        assert_eq!(configured_keepalive_interval(), None);
+        assert_eq!(instantlink_set_keepalive_interval(12), 0);
+        assert_eq!(
+            configured_keepalive_interval(),
+            Some(Duration::from_secs(12))
+        );
     }
 
     #[test]

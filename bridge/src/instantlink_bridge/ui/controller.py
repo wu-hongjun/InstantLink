@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol, cast
 
 from PIL import Image
 
@@ -108,6 +108,13 @@ STATUS_VISIBLE_MODES = {
     UiMode.PRINTER_OFFLINE,
     UiMode.SETTINGS,
 }
+
+
+class KeepaliveConfigurableStatusProvider(Protocol):
+    """Optional status provider hook for native printer keepalive."""
+
+    async def configure_keepalive(self, interval_s: float | None) -> None:
+        """Configure native printer keepalive interval."""
 
 
 def _default_printer_pairer() -> PrinterPairer:
@@ -221,6 +228,7 @@ class BridgeUi:
         self._network_task = asyncio.create_task(self._run_network_status())
         if self._config.ftp.mode is not FtpReceiveMode.AUTO:
             self._ftp_mode_task = asyncio.create_task(self._apply_configured_ftp_mode_at_start())
+        await self._configure_printer_keepalive()
         await self.refresh_printer_status()
 
     async def stop(self) -> None:
@@ -1027,10 +1035,13 @@ class BridgeUi:
                 self._show_settings("Save failed")
                 return False
         previous_ftp = self._config.ftp
+        previous_keepalive = self._config.printer.keepalive_interval_s
         self._config = config
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         if config.ftp != previous_ftp:
             self._notify_ftp_config_applied(config.ftp)
+        if config.printer.keepalive_interval_s != previous_keepalive:
+            await self._configure_printer_keepalive()
         self._snapshot = replace(
             self._snapshot,
             ftp_receive_mode=config.ftp.mode.value,
@@ -1046,6 +1057,21 @@ class BridgeUi:
             self._ftp_config_applied_callback(config)
         except Exception:
             LOGGER.exception("ui.ftp_config_applied_callback_failed")
+
+    async def _configure_printer_keepalive(self) -> None:
+        configure = getattr(self._status_provider, "configure_keepalive", None)
+        if not callable(configure):
+            return
+        try:
+            await cast(
+                KeepaliveConfigurableStatusProvider,
+                self._status_provider,
+            ).configure_keepalive(self._printer_keepalive_interval_s)
+        except Exception:
+            LOGGER.exception(
+                "ui.printer_keepalive_config_failed interval_s=%s",
+                self._printer_keepalive_interval_s,
+            )
 
     async def _set_ftp_receive_mode(self, config: BridgeConfig) -> None:
         mode = config.ftp.mode

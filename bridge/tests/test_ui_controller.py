@@ -1014,6 +1014,29 @@ async def test_settings_save_failure_keeps_runtime_config(
 
 
 @pytest.mark.asyncio
+async def test_printer_keepalive_setting_configures_status_provider() -> None:
+    status_provider = _FakeStatusProvider()
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(printer=PrinterConfig(keepalive_interval_s=10)),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    await ui._configure_printer_keepalive()
+    updated = replace(
+        ui.config,
+        printer=replace(ui.config.printer, keepalive_interval_s=15),
+    )
+    assert await ui._set_config(updated, message="Saved")
+
+    assert status_provider.keepalive_interval_calls == [10.0, 15.0]
+
+
+@pytest.mark.asyncio
 async def test_upload_ftp_help_describes_sender_wifi() -> None:
     display = _FakeDisplay()
     ui = BridgeUi(
@@ -1991,6 +2014,7 @@ class _FakeStatusProvider:
         self.fetch_calls = 0
         self.close_calls = 0
         self.close_cached_calls = 0
+        self.keepalive_interval_calls: list[float | None] = []
 
     async def fetch(self, _printer: PairedPrinter) -> PrinterStatusSnapshot:
         self.fetch_calls += 1
@@ -2006,6 +2030,9 @@ class _FakeStatusProvider:
 
     async def close_cached_session(self) -> None:
         self.close_cached_calls += 1
+
+    async def configure_keepalive(self, interval_s: float | None) -> None:
+        self.keepalive_interval_calls.append(interval_s)
 
 
 async def _unused_wifi_mode_setter(mode: WifiMode) -> str:

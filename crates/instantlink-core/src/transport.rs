@@ -16,6 +16,9 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+#[cfg(target_os = "linux")]
+use std::process::Stdio;
+
 use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::error::{PrinterError, Result};
 use crate::protocol::{self, PacketAssembler};
@@ -156,12 +159,19 @@ pub async fn scan(adapter: &Adapter, duration: Duration) -> Result<Vec<(Peripher
                     .local_name
                     .clone()
                     .unwrap_or_else(|| p.id().to_string());
+                if is_android_advertisement(&display_name) {
+                    continue;
+                }
                 results.push((p, display_name));
             }
         }
     }
 
     Ok(results)
+}
+
+fn is_android_advertisement(name: &str) -> bool {
+    name.trim().to_ascii_uppercase().ends_with("(ANDROID)")
 }
 
 /// Real BLE transport backed by btleplug.
@@ -287,11 +297,11 @@ impl BleTransport {
             ConnectStage::NotificationSubscribe,
             None::<String>,
         );
-        if let Err(e) = peripheral.subscribe(&notify_char).await {
+        Self::unsubscribe_quietly(&peripheral, &notify_char).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        if let Err(e) = Self::subscribe_with_retry(&peripheral, &notify_char).await {
             Self::disconnect_quietly(&peripheral, Some(&notify_char)).await;
-            return Err(PrinterError::Ble(format!(
-                "notification subscribe failed: {e}"
-            )));
+            return Err(e);
         }
 
         let (tx, rx) = mpsc::channel(64);
@@ -377,11 +387,7 @@ impl BleTransport {
 
     async fn disconnect_quietly(peripheral: &Peripheral, notify_char: Option<&Characteristic>) {
         if let Some(notify_char) = notify_char {
-            let _ = tokio::time::timeout(
-                DEFAULT_DISCONNECT_TIMEOUT,
-                peripheral.unsubscribe(notify_char),
-            )
-            .await;
+            Self::unsubscribe_quietly(peripheral, notify_char).await;
         }
         let is_connected =
             tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.is_connected())
@@ -393,6 +399,35 @@ impl BleTransport {
             let _ = tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.disconnect()).await;
             tokio::time::sleep(Duration::from_millis(250)).await;
         }
+    }
+
+    async fn subscribe_with_retry(
+        peripheral: &Peripheral,
+        notify_char: &Characteristic,
+    ) -> Result<()> {
+        if let Err(first_error) = peripheral.subscribe(notify_char).await {
+            let first_error_text = first_error.to_string();
+            log::debug!(
+                "notification subscribe failed once; clearing stale notify state before retry: {}",
+                first_error_text
+            );
+            Self::unsubscribe_quietly(peripheral, notify_char).await;
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            if let Err(retry_error) = peripheral.subscribe(notify_char).await {
+                return Err(PrinterError::Ble(format!(
+                    "notification subscribe failed: {retry_error}; first attempt: {first_error_text}"
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    async fn unsubscribe_quietly(peripheral: &Peripheral, notify_char: &Characteristic) {
+        let _ = tokio::time::timeout(
+            DEFAULT_DISCONNECT_TIMEOUT,
+            peripheral.unsubscribe(notify_char),
+        )
+        .await;
     }
 
     /// Cancel the listener task and wait for it to exit, aborting if it takes too long.
@@ -430,42 +465,55 @@ fn format_characteristic_uuids(chars: &std::collections::BTreeSet<Characteristic
 #[cfg(target_os = "linux")]
 async fn connect_with_bluez_cli(peripheral: &Peripheral) -> bool {
     let device_id = bluetoothctl_device_id(peripheral);
-    let output = tokio::time::timeout(
-        BLUETOOTHCTL_CONNECT_TIMEOUT,
-        tokio::process::Command::new("bluetoothctl")
-            .arg("connect")
-            .arg(&device_id)
-            .output(),
-    )
-    .await;
+    let child = tokio::process::Command::new("bluetoothctl")
+        .arg("connect")
+        .arg(&device_id)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true)
+        .spawn();
 
-    match output {
-        Ok(Ok(output)) if output.status.success() => {
-            log::debug!("bluetoothctl connected BLE device {}", device_id);
-            true
+    let output = match child {
+        Ok(child) => {
+            match tokio::time::timeout(BLUETOOTHCTL_CONNECT_TIMEOUT, child.wait_with_output()).await
+            {
+                Ok(Ok(output)) => output,
+                Ok(Err(error)) => {
+                    log::debug!(
+                        "failed to run bluetoothctl connect for {}: {}",
+                        device_id,
+                        error
+                    );
+                    return false;
+                }
+                Err(_) => {
+                    log::debug!("bluetoothctl connect timed out for {}", device_id);
+                    return false;
+                }
+            }
         }
-        Ok(Ok(output)) => {
-            log::debug!(
-                "bluetoothctl connect failed for {}: status={} stdout={} stderr={}",
-                device_id,
-                output.status,
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            );
-            false
-        }
-        Ok(Err(error)) => {
+        Err(error) => {
             log::debug!(
                 "failed to run bluetoothctl connect for {}: {}",
                 device_id,
                 error
             );
-            false
+            return false;
         }
-        Err(_) => {
-            log::debug!("bluetoothctl connect timed out for {}", device_id);
-            false
-        }
+    };
+
+    if output.status.success() {
+        log::debug!("bluetoothctl connected BLE device {}", device_id);
+        true
+    } else {
+        log::debug!(
+            "bluetoothctl connect failed for {}: status={} stdout={} stderr={}",
+            device_id,
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        false
     }
 }
 
@@ -538,11 +586,7 @@ impl Transport for BleTransport {
         // try to forward notifications after the BLE connection is gone.
         self.shutdown_listener().await;
 
-        let _ = tokio::time::timeout(
-            DEFAULT_DISCONNECT_TIMEOUT,
-            self.peripheral.unsubscribe(&self.notify_char),
-        )
-        .await;
+        Self::unsubscribe_quietly(&self.peripheral, &self.notify_char).await;
         let is_connected =
             tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, self.peripheral.is_connected())
                 .await
@@ -569,6 +613,14 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
+
+    #[test]
+    fn detects_android_spp_advertisement_names() {
+        assert!(is_android_advertisement("INSTAX-52006924 (ANDROID)"));
+        assert!(is_android_advertisement(" INSTAX-52006924(ANDROID) "));
+        assert!(!is_android_advertisement("INSTAX-52006924 (IOS)"));
+        assert!(!is_android_advertisement("INSTAX-52006924"));
+    }
 
     #[tokio::test(start_paused = true)]
     async fn receive_packet_from_channel_uses_total_deadline_across_fragments() {

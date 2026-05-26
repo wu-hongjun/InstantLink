@@ -444,7 +444,7 @@ deploy_archive_to_pi() {
     "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
       "rm -rf '${staging}' && mkdir -p '${staging}' && \
        tar -xzf '${remote_archive}' -C '${staging}' && \
-       sudo rsync -a --delete --exclude .venv --exclude .deployment '${staging}/' '${TARGET}/' && \
+       sudo rsync -a --delete --exclude .venv --exclude .deployment --exclude lib --exclude bin '${staging}/' '${TARGET}/' && \
        rm -rf '${staging}' '${remote_archive}' && \
        sudo chown -R '${OWNER}:${GROUP}' '${TARGET}' && \
        sudo find '${TARGET}' -name '._*' -delete"
@@ -464,7 +464,7 @@ deploy_working_tree_to_pi() {
     "${SSH_CMD[@]}" "${USER}@${HOST}" "rm -rf '${staging}' && mkdir -p '${staging}'"
     rsync -az --delete "${EXCLUDES[@]}" ./ "${USER}@${HOST}:${staging}/"
     "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
-      "sudo rsync -a --delete --exclude .venv --exclude .deployment '${staging}/' '${TARGET}/' && \
+      "sudo rsync -a --delete --exclude .venv --exclude .deployment --exclude lib --exclude bin '${staging}/' '${TARGET}/' && \
        rm -rf '${staging}' && \
        sudo chown -R '${OWNER}:${GROUP}' '${TARGET}' && \
        sudo find '${TARGET}' -name '._*' -delete"

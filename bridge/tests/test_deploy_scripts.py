@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -191,6 +192,18 @@ def test_deploy_script_documents_offline_dependency_forwarding() -> None:
     assert "INSTANTLINK_BRIDGE_OFFLINE_DEPS" in text
     assert "INSTANTLINK_BRIDGE_SEED_VENV" in text
     assert "INSTANTLINK_BRIDGE_OFFLINE='${OFFLINE_DEPS}'" in text
+
+
+def test_deploy_preserves_runtime_artifacts_when_syncing_source_with_delete() -> None:
+    text = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    rsync_delete_commands = re.findall(r"sudo rsync -a --delete[^\n]+", text)
+
+    assert len(rsync_delete_commands) >= 2
+    for command in rsync_delete_commands:
+        assert "--exclude .venv" in command
+        assert "--exclude .deployment" in command
+        assert "--exclude lib" in command
+        assert "--exclude bin" in command
 
 
 def test_deploy_bootstraps_runtime_identity_before_copy_for_system_installs() -> None:

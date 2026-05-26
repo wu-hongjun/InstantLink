@@ -286,12 +286,14 @@ class InstantLinkBackend:
     def _status_blocking(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
         try:
             return self._status_blocking_connected(name, scan_duration_s)
-        except (InstantLinkBleError, InstantLinkPrinterNotFoundError, TimeoutError):
+        except (InstantLinkBleError, InstantLinkPrinterNotFoundError, TimeoutError) as exc:
             LOGGER.warning(
-                "instantlink.status_failed_disconnect name=%s",
+                "instantlink.status_failed_disconnect name=%s error_type=%s error=%s",
                 normalize_printer_name(name),
-                exc_info=True,
+                type(exc).__name__,
+                exc,
             )
+            LOGGER.debug("instantlink.status_failed_disconnect_trace", exc_info=True)
             self._disconnect_blocking()
             raise
 

@@ -206,6 +206,13 @@ def test_deploy_preserves_runtime_artifacts_when_syncing_source_with_delete() ->
         assert "--exclude bin" in command
 
 
+def test_deploy_uses_noninteractive_ssh_for_remote_maintenance_commands() -> None:
+    text = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert '"${SSH_CMD[@]}" -t' not in text
+    assert '"${SSH_CMD[@]}" -T' in text
+
+
 def test_deploy_bootstraps_runtime_identity_before_copy_for_system_installs() -> None:
     text = DEPLOY_SCRIPT.read_text(encoding="utf-8")
     main = text[text.index("main() {") :]

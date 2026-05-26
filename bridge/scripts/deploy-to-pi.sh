@@ -131,7 +131,7 @@ sync_remote_clock_from_host() {
 }
 
 bootstrap_remote_runtime_identity() {
-  "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
     "sudo env INSTANTLINK_BRIDGE_OWNER='${OWNER}' INSTANTLINK_BRIDGE_GROUP='${GROUP}' sh -s" <<'SH'
 set -eu
 owner="${INSTANTLINK_BRIDGE_OWNER}"
@@ -441,7 +441,7 @@ deploy_archive_to_pi() {
 
   "${SCP_CMD[@]}" -q "${archive}" "${USER}@${HOST}:${remote_archive}"
   if "${SSH_CMD[@]}" "${USER}@${HOST}" "command -v rsync >/dev/null"; then
-    "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
       "rm -rf '${staging}' && mkdir -p '${staging}' && \
        tar -xzf '${remote_archive}' -C '${staging}' && \
        sudo rsync -a --delete --exclude .venv --exclude .deployment --exclude lib --exclude bin '${staging}/' '${TARGET}/' && \
@@ -449,7 +449,7 @@ deploy_archive_to_pi() {
        sudo chown -R '${OWNER}:${GROUP}' '${TARGET}' && \
        sudo find '${TARGET}' -name '._*' -delete"
   else
-    "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
       "sudo mkdir -p '${TARGET}' && \
        sudo tar -xzf '${remote_archive}' -C '${TARGET}' --owner='${OWNER}' --group='${GROUP}' && \
        rm '${remote_archive}' && \
@@ -463,7 +463,7 @@ deploy_working_tree_to_pi() {
     local staging="/tmp/instantlink-bridge-deploy-${USER}"
     "${SSH_CMD[@]}" "${USER}@${HOST}" "rm -rf '${staging}' && mkdir -p '${staging}'"
     rsync -az --delete "${EXCLUDES[@]}" ./ "${USER}@${HOST}:${staging}/"
-    "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
       "sudo rsync -a --delete --exclude .venv --exclude .deployment --exclude lib --exclude bin '${staging}/' '${TARGET}/' && \
        rm -rf '${staging}' && \
        sudo chown -R '${OWNER}:${GROUP}' '${TARGET}' && \
@@ -471,7 +471,7 @@ deploy_working_tree_to_pi() {
   else
     create_working_tree_archive "${ARCHIVE}"
     "${SCP_CMD[@]}" -q "${ARCHIVE}" "${USER}@${HOST}:/tmp/instantlink-bridge-deploy.tar.gz"
-    "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
       "sudo mkdir -p '${TARGET}' && \
        sudo tar -xzf /tmp/instantlink-bridge-deploy.tar.gz -C '${TARGET}' --owner='${OWNER}' --group='${GROUP}' && \
        rm /tmp/instantlink-bridge-deploy.tar.gz && \
@@ -513,7 +513,7 @@ install_instantlink_artifacts_on_pi() {
   "${SCP_CMD[@]}" -q "${lib_source}" "${USER}@${HOST}:${remote_lib}"
   "${SCP_CMD[@]}" -q "${cli_source}" "${USER}@${HOST}:${remote_cli}"
   "${SCP_CMD[@]}" -q "${artifact_manifest}" "${USER}@${HOST}:${remote_manifest}"
-  "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
     "sudo install -D -m 0755 -o '${OWNER}' -g '${GROUP}' '${remote_lib}' '${TARGET}/lib/libinstantlink_ffi.so' && \
      sudo install -D -m 0755 -o '${OWNER}' -g '${GROUP}' '${remote_cli}' '${TARGET}/bin/instantlink' && \
      sudo install -D -m 0644 -o '${OWNER}' -g '${GROUP}' '${remote_manifest}' '${INSTANTLINK_ARTIFACTS_MANIFEST}' && \
@@ -578,13 +578,13 @@ install_deployment_manifest_on_pi() {
   local remote_manifest="/tmp/instantlink-bridge-deployment-manifest.json"
 
   "${SCP_CMD[@]}" -q "${manifest}" "${USER}@${HOST}:${remote_manifest}"
-  "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
     "sudo install -D -m 0644 -o '${OWNER}' -g '${GROUP}' '${remote_manifest}' '${DEPLOY_MANIFEST_PATH}' && \
      rm '${remote_manifest}'"
 }
 
 fix_remote_config_permissions() {
-  "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
     "if [ -d '${CONFIG_DIR}' ]; then \
        sudo chgrp '${GROUP}' '${CONFIG_DIR}' && \
        sudo chmod 2770 '${CONFIG_DIR}' && \
@@ -609,7 +609,7 @@ stop_remote_bridge_service_for_update() {
     return
   fi
 
-  "${SSH_CMD[@]}" -t "${USER}@${HOST}" "sudo sh -s" <<'SH'
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" "sudo sh -s" <<'SH'
 set -eu
 if ! systemctl list-unit-files instantlink-bridge.service >/dev/null 2>&1; then
   exit 0
@@ -634,7 +634,7 @@ SH
 }
 
 install_runtime_deps_on_pi() {
-  "${SSH_CMD[@]}" -t "${USER}@${HOST}" \
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
     "sudo env \
        INSTANTLINK_BRIDGE_TARGET='${TARGET}' \
        INSTANTLINK_BRIDGE_OWNER='${OWNER}' \
@@ -811,7 +811,7 @@ main() {
   fix_remote_config_permissions
 
   if [[ "${SYSTEM}" -eq 1 ]]; then
-    "${SSH_CMD[@]}" -t "${USER}@${HOST}" "sudo '${TARGET}/scripts/provision-sd.sh' /"
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" "sudo '${TARGET}/scripts/provision-sd.sh' /"
   fi
 
   if [[ "${INSTALL_INSTANTLINK_ARTIFACTS}" -eq 1 ]]; then
@@ -826,7 +826,7 @@ main() {
   fi
 
   if [[ "${RESTART}" -eq 1 ]]; then
-    "${SSH_CMD[@]}" -t "${USER}@${HOST}" "sudo systemctl restart instantlink-bridge.service"
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" "sudo systemctl restart instantlink-bridge.service"
   fi
 }
 

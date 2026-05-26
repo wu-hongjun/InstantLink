@@ -41,6 +41,30 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeModelsTests.testDecodesAuthRequiredErrorEnvelope", {
                 try BridgeModelsTests().testDecodesAuthRequiredErrorEnvelope()
             }),
+            ("BridgeModelsTests.testDecodesPairingStatusEnvelope", {
+                try BridgeModelsTests().testDecodesPairingStatusEnvelope()
+            }),
+            ("BridgeHTTPTransportTests.testCanonicalRequestPayloadMatchesBridgeManagerContract", {
+                try BridgeHTTPTransportTests().testCanonicalRequestPayloadMatchesBridgeManagerContract()
+            }),
+            ("BridgeHTTPTransportTests.testHTTPTransportReadsHelloAndPairingStatusWithoutAuth", {
+                try await BridgeHTTPTransportTests().testHTTPTransportReadsHelloAndPairingStatusWithoutAuth()
+            }),
+            ("BridgeHTTPTransportTests.testHTTPTransportSignsAdminStatusRequest", {
+                try await BridgeHTTPTransportTests().testHTTPTransportSignsAdminStatusRequest()
+            }),
+            ("BridgeHTTPTransportTests.testCompletePairingSavesIdentityOnlyAfterServerAcceptsRequest", {
+                try await BridgeHTTPTransportTests().testCompletePairingSavesIdentityOnlyAfterServerAcceptsRequest()
+            }),
+            ("BridgeHTTPTransportTests.testCompletePairingDoesNotSaveIdentityWhenServerRouteIsNotReady", {
+                try await BridgeHTTPTransportTests().testCompletePairingDoesNotSaveIdentityWhenServerRouteIsNotReady()
+            }),
+            ("BridgeHTTPTransportTests.testForgetLocalAuthDeletesOnlyLocalIdentity", {
+                try await BridgeHTTPTransportTests().testForgetLocalAuthDeletesOnlyLocalIdentity()
+            }),
+            ("BridgeHTTPTransportTests.testStartUpdateRequiresAllowedPreflightBeforeInstall", {
+                try await BridgeHTTPTransportTests().testStartUpdateRequiresAllowedPreflightBeforeInstall()
+            }),
             ("BridgeTransportTests.testInMemoryTransportThrowsAuthRequiredForManagedEndpoints", {
                 try await BridgeTransportTests().testInMemoryTransportThrowsAuthRequiredForManagedEndpoints()
             }),

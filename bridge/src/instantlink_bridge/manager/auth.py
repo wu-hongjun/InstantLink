@@ -5,9 +5,11 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import hmac
 import json
 import os
 import re
+import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,7 +21,13 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 AUTH_SCHEMA_VERSION = 1
 CLIENT_RECORD_KIND = "instantlink_bridge_management_client"
+PAIRING_WINDOW_RECORD_KIND = "instantlink_bridge_management_pairing_window"
 REQUEST_SIGNATURE_CONTEXT = "instantlink-bridge-management-v1"
+
+DEFAULT_MANAGEMENT_DIR = Path("/var/lib/InstantLinkBridge/management")
+DEFAULT_CLIENTS_DIR = DEFAULT_MANAGEMENT_DIR / "clients"
+DEFAULT_PAIRING_WINDOW_PATH = DEFAULT_MANAGEMENT_DIR / "pairing.json"
+DEFAULT_PAIRING_EXPIRY_S = 90
 
 CLIENT_ID_HEADER = "X-Bridge-Client-Id"
 TIMESTAMP_HEADER = "X-Bridge-Timestamp"
@@ -33,10 +41,12 @@ DEFAULT_NONCE_TTL_S = DEFAULT_MAX_REQUEST_AGE_S + DEFAULT_MAX_FUTURE_SKEW_S
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _NONCE_RE = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 _BASE64URL_RE = re.compile(r"^[A-Za-z0-9_-]+={0,2}$")
+_CONFIRMATION_CODE_RE = re.compile(r"^[0-9]{6}$")
 
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 JsonObject = dict[str, JsonValue]
 NowSeconds = Callable[[], int]
+ConfirmationCodeFactory = Callable[[], str]
 
 
 class ManagementAuthError(ValueError):
@@ -115,14 +125,56 @@ class PairingWindow:
     opened_at: int
     expires_at: int
 
+    def __post_init__(self) -> None:
+        if _CONFIRMATION_CODE_RE.fullmatch(self.confirmation_code) is None:
+            raise PairingWindowError(
+                "pairing confirmation code must be six numeric digits",
+                error_code="pairing_record_invalid",
+            )
+        if self.opened_at < 0 or self.expires_at <= self.opened_at:
+            raise PairingWindowError(
+                "pairing window timestamps are invalid",
+                error_code="pairing_record_invalid",
+            )
+
+    def is_expired(self, *, now: int) -> bool:
+        return now >= self.expires_at
+
     def verify(self, confirmation_code: str, *, now: int) -> None:
-        if now > self.expires_at:
-            raise PairingWindowError("pairing window is closed", error_code="pairing_not_open")
-        if not self.confirmation_code or confirmation_code != self.confirmation_code:
+        if self.is_expired(now=now):
+            raise PairingWindowError("pairing window has expired", error_code="pairing_expired")
+        if not hmac.compare_digest(confirmation_code, self.confirmation_code):
             raise PairingWindowError(
                 "pairing confirmation code did not match",
                 error_code="pairing_code_invalid",
             )
+
+    def to_dict(self) -> JsonObject:
+        return {
+            "schema_version": AUTH_SCHEMA_VERSION,
+            "record_kind": PAIRING_WINDOW_RECORD_KIND,
+            "confirmation_code": self.confirmation_code,
+            "opened_at": self.opened_at,
+            "expires_at": self.expires_at,
+        }
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, object]) -> PairingWindow:
+        if value.get("schema_version") != AUTH_SCHEMA_VERSION:
+            raise PairingWindowError(
+                "unsupported pairing window schema version",
+                error_code="pairing_record_invalid",
+            )
+        if value.get("record_kind") != PAIRING_WINDOW_RECORD_KIND:
+            raise PairingWindowError(
+                "unsupported pairing window record kind",
+                error_code="pairing_record_invalid",
+            )
+        return cls(
+            confirmation_code=_required_pairing_str(value, "confirmation_code"),
+            opened_at=_required_int(value, "opened_at"),
+            expires_at=_required_int(value, "expires_at"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,6 +244,94 @@ class ClientStore:
                 raise ClientRecordError(f"client record must be an object: {path.name}")
             clients.append(AuthorizedClient.from_dict(value))
         return tuple(clients)
+
+
+class PairingWindowStore:
+    """Filesystem-backed Bridge management pairing window."""
+
+    def __init__(
+        self,
+        path: str | Path = DEFAULT_PAIRING_WINDOW_PATH,
+        *,
+        now_seconds: NowSeconds | None = None,
+        confirmation_code_factory: ConfirmationCodeFactory | None = None,
+    ) -> None:
+        self.path = Path(path)
+        self.now_seconds = now_seconds or current_unix_seconds
+        self.confirmation_code_factory = confirmation_code_factory or generate_confirmation_code
+
+    def open_window(self, *, ttl_s: int = DEFAULT_PAIRING_EXPIRY_S) -> PairingWindow:
+        if ttl_s <= 0:
+            raise PairingWindowError(
+                "pairing window expiry must be positive",
+                error_code="pairing_expiry_invalid",
+            )
+        opened_at = self.now_seconds()
+        window = PairingWindow(
+            confirmation_code=self.confirmation_code_factory(),
+            opened_at=opened_at,
+            expires_at=opened_at + ttl_s,
+        )
+        self._write_window(window)
+        return window
+
+    def close_window(self) -> None:
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            raise PairingWindowError(
+                "pairing window could not be closed",
+                error_code="pairing_store_unavailable",
+            ) from exc
+
+    def read_window(self) -> PairingWindow | None:
+        try:
+            value = json.loads(self.path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise PairingWindowError(
+                "pairing window record could not be read",
+                error_code="pairing_record_invalid",
+            ) from exc
+        if not isinstance(value, dict):
+            raise PairingWindowError(
+                "pairing window record must be a JSON object",
+                error_code="pairing_record_invalid",
+            )
+        return PairingWindow.from_dict(value)
+
+    def active_window(self) -> PairingWindow | None:
+        window = self.read_window()
+        if window is None or window.is_expired(now=self.now_seconds()):
+            return None
+        return window
+
+    def consume_window(self, confirmation_code: str) -> PairingWindow:
+        window = self.read_window()
+        if window is None:
+            raise PairingWindowError("pairing window is closed", error_code="pairing_not_open")
+        try:
+            window.verify(confirmation_code, now=self.now_seconds())
+        except PairingWindowError as exc:
+            if exc.error_code == "pairing_expired":
+                self.close_window()
+            raise
+        self.close_window()
+        return window
+
+    def _write_window(self, window: PairingWindow) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.path.parent, 0o700)
+        tmp_path = self.path.with_name(f".{self.path.name}.tmp-{os.getpid()}")
+        tmp_path.write_text(
+            json.dumps(window.to_dict(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        os.chmod(tmp_path, 0o600)
+        os.replace(tmp_path, self.path)
 
 
 class MemoryNonceStore:
@@ -333,7 +473,10 @@ def parse_public_key(value: str) -> ed25519.Ed25519PublicKey:
         if not isinstance(loaded, ed25519.Ed25519PublicKey):
             raise ClientRecordError("management client public key must be Ed25519")
         return loaded
-    raw = decode_base64url(text)
+    try:
+        raw = decode_base64url(text)
+    except ManagementAuthError as exc:
+        raise ClientRecordError("management client public key must be base64url") from exc
     if len(raw) != 32:
         raise ClientRecordError("management client public key must be 32 bytes")
     return ed25519.Ed25519PublicKey.from_public_bytes(raw)
@@ -356,7 +499,11 @@ def decode_base64url(value: str) -> bytes:
         padded = value + ("=" * (-len(value) % 4))
         return base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
     except (binascii.Error, ValueError) as exc:
-        raise ManagementAuthError("invalid base64url encoding") from exc
+            raise ManagementAuthError("invalid base64url encoding") from exc
+
+
+def generate_confirmation_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def current_unix_seconds() -> int:
@@ -392,6 +539,26 @@ def _required_str(value: Mapping[str, object], key: str) -> str:
     item = value.get(key)
     if not isinstance(item, str) or not item:
         raise ClientRecordError(f"client record {key} must be a non-empty string")
+    return item
+
+
+def _required_int(value: Mapping[str, object], key: str) -> int:
+    item = value.get(key)
+    if isinstance(item, bool) or not isinstance(item, int):
+        raise PairingWindowError(
+            f"pairing window {key} must be an integer",
+            error_code="pairing_record_invalid",
+        )
+    return item
+
+
+def _required_pairing_str(value: Mapping[str, object], key: str) -> str:
+    item = value.get(key)
+    if not isinstance(item, str) or not item:
+        raise PairingWindowError(
+            f"pairing window {key} must be a non-empty string",
+            error_code="pairing_record_invalid",
+        )
     return item
 
 

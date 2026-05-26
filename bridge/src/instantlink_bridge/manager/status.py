@@ -10,6 +10,7 @@ from instantlink_bridge.config import (
     BridgeConfig,
     load_config,
 )
+from instantlink_bridge.manager.auth import PairingWindowError, PairingWindowStore
 from instantlink_bridge.manager.contract import API_VERSION, SERVICE_NAME, JsonObject, JsonValue
 from instantlink_bridge.system_info import SystemInfo, read_system_info
 
@@ -26,47 +27,81 @@ class ConfigSnapshot:
     message: str | None = None
 
 
-def collect_hello_payload(config_path: Path = DEFAULT_CONFIG_PATH) -> JsonObject:
+@dataclass(frozen=True, slots=True)
+class PairingStatusSnapshot:
+    """Pairing-window metadata safe to expose over unauthenticated discovery."""
+
+    open: bool
+    expires_at: int | None
+    expires_in_seconds: int | None
+    error_code: str | None = None
+    message: str | None = None
+
+
+def collect_hello_payload(
+    config_path: Path = DEFAULT_CONFIG_PATH,
+    *,
+    pairing_store: PairingWindowStore | None = None,
+) -> JsonObject:
     """Return unauthenticated discovery metadata with no credentials or printer identifiers."""
 
     info = read_system_info()
     snapshot = read_config_snapshot(config_path)
+    pairing = read_pairing_status(pairing_store)
     return {
         "api_version": API_VERSION,
-        "device": device_payload(info),
+        "device": device_payload(info, pairing_open=pairing.open),
         "management": {
             "service": SERVICE_NAME,
-            "auth_implemented": False,
-            "admin_routes": "auth_required",
-            "pairing_open": False,
+            "auth_implemented": True,
+            "admin_routes": "signed_request_required",
+            "pairing_open": pairing.open,
             "public_key_fingerprint": None,
         },
         "network_labels": network_labels_payload(snapshot.config),
     }
 
 
-def collect_pairing_status_payload() -> JsonObject:
-    """Return Phase 1 pairing status before local authorization is implemented."""
+def collect_pairing_status_payload(
+    pairing_store: PairingWindowStore | None = None,
+) -> JsonObject:
+    """Return pairing status without exposing the physical confirmation code."""
 
     return {
-        "pairing": {
-            "open": False,
-            "auth_implemented": False,
-            "confirmation_code_required": True,
-            "expires_at": None,
-        }
+        "pairing": pairing_status_payload(read_pairing_status(pairing_store)),
     }
 
 
-def collect_status_payload(config_path: Path = DEFAULT_CONFIG_PATH) -> JsonObject:
+def pairing_status_payload(pairing: PairingStatusSnapshot) -> JsonObject:
+    """Return a JSON payload for a pairing status snapshot."""
+
+    payload: JsonObject = {
+        "open": pairing.open,
+        "auth_implemented": True,
+        "confirmation_code_required": True,
+        "expires_at": pairing.expires_at,
+        "expires_in_seconds": pairing.expires_in_seconds,
+    }
+    if pairing.error_code is not None:
+        payload["error_code"] = pairing.error_code
+        payload["message"] = pairing.message or "Pairing status could not be read."
+    return payload
+
+
+def collect_status_payload(
+    config_path: Path = DEFAULT_CONFIG_PATH,
+    *,
+    pairing_store: PairingWindowStore | None = None,
+) -> JsonObject:
     """Return local read-only status for CLI use without probing hardware."""
 
     info = read_system_info()
     snapshot = read_config_snapshot(config_path)
     config = snapshot.config
+    pairing = read_pairing_status(pairing_store)
     return {
         "api_version": API_VERSION,
-        "device": device_payload(info),
+        "device": device_payload(info, pairing_open=pairing.open),
         "runtime": {
             "python_version": info.python_version,
             "bluez_version": info.bluez_version,
@@ -85,6 +120,7 @@ def collect_status_payload(config_path: Path = DEFAULT_CONFIG_PATH) -> JsonObjec
         "config": config_payload(snapshot, config_path),
         "network": network_payload(config),
         "printer": printer_payload(config),
+        "pairing": pairing_status_payload(pairing),
     }
 
 
@@ -104,7 +140,40 @@ def read_config_snapshot(config_path: Path) -> ConfigSnapshot:
     return ConfigSnapshot(config=config, source="file" if exists else "defaults")
 
 
-def device_payload(info: SystemInfo) -> JsonObject:
+def read_pairing_status(
+    pairing_store: PairingWindowStore | None = None,
+) -> PairingStatusSnapshot:
+    """Read the pairing window without exposing the confirmation code."""
+
+    store = pairing_store or PairingWindowStore()
+    try:
+        window = store.read_window()
+    except PairingWindowError as exc:
+        return PairingStatusSnapshot(
+            open=False,
+            expires_at=None,
+            expires_in_seconds=None,
+            error_code=exc.error_code,
+            message=str(exc),
+        )
+    if window is None:
+        return PairingStatusSnapshot(open=False, expires_at=None, expires_in_seconds=None)
+    now = store.now_seconds()
+    expires_in_seconds = max(0, window.expires_at - now)
+    return PairingStatusSnapshot(
+        open=not window.is_expired(now=now),
+        expires_at=window.expires_at,
+        expires_in_seconds=expires_in_seconds,
+    )
+
+
+def current_device_id() -> str:
+    """Return the Bridge device id used to guard pairing completion."""
+
+    return read_system_info().device_id
+
+
+def device_payload(info: SystemInfo, *, pairing_open: bool = False) -> JsonObject:
     """Return stable device identity fields shared by hello and status."""
 
     return {
@@ -113,7 +182,7 @@ def device_payload(info: SystemInfo) -> JsonObject:
         "software_version": info.app_version,
         "api_version": API_VERSION,
         "management_public_key_fingerprint": None,
-        "pairing_open": False,
+        "pairing_open": pairing_open,
         "network_labels": ["Bridge Wi-Fi", "USB debug", "Same-Wi-Fi"],
         "endpoint_url": None,
         "is_paired": False,

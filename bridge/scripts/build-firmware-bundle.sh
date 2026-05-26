@@ -216,6 +216,7 @@ def project_value(name):
 
 manifest = {
     "schema_version": 1,
+    "manifest_kind": "instantlink_bridge_firmware_package_manifest",
     "package_kind": "instantlink_bridge_firmware",
     "bridge_version": version,
     "source_ref": source_ref,
@@ -327,6 +328,7 @@ import sys
 
 payload = {
     "schema_version": 1,
+    "manifest_kind": "instantlink_bridge_firmware_release_index",
     "package_kind": "instantlink_bridge_firmware",
     "bridge_version": version,
     "required_bridge_api_version": 1,

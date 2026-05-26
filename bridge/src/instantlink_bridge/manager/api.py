@@ -4,13 +4,24 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from aiohttp import web
 
 from instantlink_bridge.config import DEFAULT_CONFIG_PATH
-from instantlink_bridge.manager.auth import ManagementAuthError, SignedRequestVerifier
+from instantlink_bridge.manager import status as manager_status
+from instantlink_bridge.manager.auth import (
+    DEFAULT_CLIENTS_DIR,
+    AuthorizedClient,
+    ClientStore,
+    ManagementAuthError,
+    PairingWindowError,
+    PairingWindowStore,
+    SignedRequestVerifier,
+    utc_timestamp,
+)
 from instantlink_bridge.manager.contract import (
     ADMIN_ROUTES,
     JsonObject,
@@ -18,10 +29,6 @@ from instantlink_bridge.manager.contract import (
     error_response,
     new_request_id,
     success_response,
-)
-from instantlink_bridge.manager.status import (
-    collect_hello_payload,
-    collect_pairing_status_payload,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -32,6 +39,26 @@ RequestIdFactory = Callable[[], str]
 CONFIG_PATH_KEY = web.AppKey("instantlink_bridge.manager.config_path", Path)
 REQUEST_ID_FACTORY_KEY = web.AppKey("instantlink_bridge.manager.request_id_factory", object)
 AUTH_VERIFIER_KEY = web.AppKey("instantlink_bridge.manager.auth_verifier", SignedRequestVerifier)
+CLIENT_STORE_KEY = web.AppKey("instantlink_bridge.manager.client_store", ClientStore)
+PAIRING_STORE_KEY = web.AppKey("instantlink_bridge.manager.pairing_store", PairingWindowStore)
+
+
+@dataclass(frozen=True, slots=True)
+class PairingCompleteBody:
+    client_id: str
+    client_name: str
+    public_key: str
+    public_key_algorithm: str
+    confirmation_code: str
+    expected_device_id: str | None
+
+
+class PairingRequestError(ValueError):
+    """Raised when the pairing completion request body is invalid."""
+
+    def __init__(self, message: str, *, error_code: str = "invalid_request") -> None:
+        super().__init__(message)
+        self.error_code = error_code
 
 
 def create_app(
@@ -39,14 +66,24 @@ def create_app(
     config_path: Path = DEFAULT_CONFIG_PATH,
     request_id_factory: RequestIdFactory = new_request_id,
     auth_verifier: SignedRequestVerifier | None = None,
+    client_store: ClientStore | None = None,
+    pairing_store: PairingWindowStore | None = None,
 ) -> web.Application:
     """Create the Phase 1 Bridge management API application."""
 
     app = web.Application(middlewares=[json_error_middleware])
+    actual_client_store = client_store
+    if actual_client_store is None and auth_verifier is not None:
+        actual_client_store = auth_verifier.client_store
+    if actual_client_store is None:
+        actual_client_store = ClientStore(DEFAULT_CLIENTS_DIR)
+    actual_auth_verifier = auth_verifier or SignedRequestVerifier(actual_client_store)
+
     app[CONFIG_PATH_KEY] = config_path
     app[REQUEST_ID_FACTORY_KEY] = request_id_factory
-    if auth_verifier is not None:
-        app[AUTH_VERIFIER_KEY] = auth_verifier
+    app[CLIENT_STORE_KEY] = actual_client_store
+    app[PAIRING_STORE_KEY] = pairing_store or PairingWindowStore()
+    app[AUTH_VERIFIER_KEY] = actual_auth_verifier
     app.router.add_get("/v1/hello", handle_hello)
     app.router.add_get("/v1/pairing/status", handle_pairing_status)
     app.router.add_post("/v1/pairing/complete", handle_pairing_complete)
@@ -104,60 +141,171 @@ async def json_error_middleware(
 async def handle_hello(request: web.Request) -> web.Response:
     """Return unauthenticated discovery metadata."""
 
-    return json_success(request, collect_hello_payload(config_path_for(request)))
+    return json_success(
+        request,
+        manager_status.collect_hello_payload(
+            config_path_for(request),
+            pairing_store=pairing_store_for(request),
+        ),
+    )
 
 
 async def handle_pairing_status(request: web.Request) -> web.Response:
     """Return unauthenticated Phase 1 pairing state."""
 
-    return json_success(request, collect_pairing_status_payload())
+    return json_success(
+        request,
+        manager_status.collect_pairing_status_payload(pairing_store_for(request)),
+    )
 
 
 async def handle_pairing_complete(request: web.Request) -> web.Response:
-    """Return a stable placeholder until LCD-approved pairing is implemented."""
+    """Complete physical-code-gated local authorization."""
 
-    return json_failure(
+    try:
+        body = await read_pairing_complete_body(request)
+    except PairingRequestError as exc:
+        return json_failure(
+            request,
+            status=400,
+            error_code=exc.error_code,
+            message=str(exc),
+            recommended_action="Retry with a valid pairing request body.",
+        )
+    if body.public_key_algorithm != "ed25519":
+        return json_failure(
+            request,
+            status=400,
+            error_code="unsupported_key_algorithm",
+            message="Bridge management pairing currently requires Ed25519 client keys.",
+            recommended_action="Retry pairing with an Ed25519 client key.",
+        )
+
+    if body.expected_device_id is not None:
+        actual_device_id = manager_status.current_device_id()
+        if body.expected_device_id != actual_device_id:
+            return json_failure(
+                request,
+                status=409,
+                error_code="device_id_mismatch",
+                message="This pairing request targets a different Bridge device.",
+                recommended_action="Refresh Bridge discovery and retry pairing with this device.",
+            )
+
+    try:
+        client = AuthorizedClient(
+            client_id=body.client_id,
+            client_name=body.client_name,
+            public_key=body.public_key,
+            created_at=utc_timestamp(),
+        )
+    except ManagementAuthError as exc:
+        return json_failure(
+            request,
+            status=400,
+            error_code="invalid_request",
+            message=str(exc),
+            recommended_action="Retry with a valid client id, name, and Ed25519 public key.",
+        )
+
+    try:
+        pairing_store_for(request).consume_window(body.confirmation_code)
+    except PairingWindowError as exc:
+        return json_failure(
+            request,
+            status=status_for_pairing_error(exc),
+            error_code=exc.error_code,
+            message=str(exc),
+            recommended_action="Open Bridge access on the Bridge LCD, then retry pairing.",
+        )
+
+    client_store_for(request).save_client(client)
+    return json_success(
         request,
-        status=423,
-        error_code="pairing_not_open",
-        message="Bridge access is not open for this Mac.",
-        recommended_action="Open Bridge access on the Bridge LCD, then retry pairing.",
+        {
+            "pairing_completion": {
+                "paired": True,
+                "client_id": client.client_id,
+                "client_name": client.client_name,
+                "public_key_algorithm": body.public_key_algorithm,
+                "created_at": client.created_at,
+            },
+        },
     )
+
+
+async def read_pairing_complete_body(request: web.Request) -> PairingCompleteBody:
+    """Validate the JSON body for pairing completion."""
+
+    try:
+        value = await request.json()
+    except ValueError as exc:
+        raise PairingRequestError("Request body must be valid JSON.") from exc
+    if not isinstance(value, dict):
+        raise PairingRequestError("Request body must be a JSON object.")
+    payload = cast(dict[str, Any], value)
+    return PairingCompleteBody(
+        client_id=required_body_str(payload, "client_id"),
+        client_name=required_body_str(payload, "client_name"),
+        public_key=required_body_str(payload, "public_key"),
+        public_key_algorithm=optional_body_str(payload, "public_key_algorithm") or "ed25519",
+        confirmation_code=required_body_str(payload, "confirmation_code"),
+        expected_device_id=optional_body_str(payload, "expected_device_id"),
+    )
+
+
+def required_body_str(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise PairingRequestError(f"{key} must be a non-empty string.")
+    return value.strip()
+
+
+def optional_body_str(payload: dict[str, Any], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise PairingRequestError(f"{key} must be a non-empty string when provided.")
+    return value.strip()
+
+
+def status_for_pairing_error(exc: PairingWindowError) -> int:
+    if exc.error_code == "pairing_not_open":
+        return 423
+    if exc.error_code == "pairing_expired":
+        return 410
+    if exc.error_code == "pairing_code_invalid":
+        return 403
+    if exc.error_code == "pairing_store_unavailable":
+        return 503
+    return 500
 
 
 def auth_required_handler(route: ManagementRoute) -> Handler:
     """Return a placeholder handler for routes that will require signed auth."""
 
     async def handler(request: web.Request) -> web.Response:
-        verifier = request.app.get(AUTH_VERIFIER_KEY)
-        if verifier is not None:
-            try:
-                await verify_signed_request(request, verifier)
-            except ManagementAuthError as exc:
-                return json_failure(
-                    request,
-                    status=401,
-                    error_code=exc.error_code,
-                    message=str(exc),
-                    recommended_action="Pair this Mac with the Bridge before retrying.",
-                )
-            return json_failure(
-                request,
-                status=501,
-                error_code="not_implemented",
-                message="This management endpoint is not implemented yet.",
-                recommended_action="Install a Bridge firmware that supports this operation.",
+        try:
+            await verify_signed_request(request, request.app[AUTH_VERIFIER_KEY])
+        except ManagementAuthError as exc:
+            body = error_response(
+                exc.error_code,
+                str(exc),
+                request_id=request_id_for(request),
+                recommended_action="Pair this Mac with the Bridge before retrying.",
             )
+            body["auth_required"] = True
+            body["operation_id"] = route.operation_id
+            return web.json_response(body, status=401)
 
-        body = error_response(
-            "auth_required",
-            "Authentication is required for this management endpoint.",
-            request_id=request_id_for(request),
-            recommended_action="Pair this Mac with the Bridge before retrying.",
+        return json_failure(
+            request,
+            status=501,
+            error_code="not_implemented",
+            message="This management endpoint is not implemented yet.",
+            recommended_action="Install a Bridge firmware that supports this operation.",
         )
-        body["auth_required"] = True
-        body["operation_id"] = route.operation_id
-        return web.json_response(body, status=401)
 
     return handler
 
@@ -208,6 +356,18 @@ def config_path_for(request: web.Request) -> Path:
     """Return the app's configured Bridge config path."""
 
     return request.app[CONFIG_PATH_KEY]
+
+
+def client_store_for(request: web.Request) -> ClientStore:
+    """Return the app's management client store."""
+
+    return request.app[CLIENT_STORE_KEY]
+
+
+def pairing_store_for(request: web.Request) -> PairingWindowStore:
+    """Return the app's management pairing window store."""
+
+    return request.app[PAIRING_STORE_KEY]
 
 
 def request_id_for(request: web.Request) -> str:

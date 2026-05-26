@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
 import copy
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -29,6 +32,7 @@ BUILD_SCRIPT = BRIDGE_ROOT / "scripts" / "build-firmware-bundle.sh"
 def firmware_manifest() -> dict[str, object]:
     return {
         "schema_version": 1,
+        "manifest_kind": signing.PACKAGE_MANIFEST_KIND,
         "package_kind": "instantlink_bridge_firmware",
         "bridge_version": "0.1.0",
         "required_bridge_api_version": 1,
@@ -76,6 +80,7 @@ def firmware_manifest() -> dict[str, object]:
 def latest_manifest() -> dict[str, object]:
     return {
         "schema_version": 1,
+        "manifest_kind": signing.RELEASE_INDEX_KIND,
         "package_kind": "instantlink_bridge_firmware",
         "bridge_version": "0.1.0",
         "required_bridge_api_version": 1,
@@ -104,6 +109,86 @@ def private_key() -> PrivateKey:
 def trusted_keys(private_key: PrivateKey) -> dict[str, str]:
     key_id = signing.key_id_for_public_key(private_key)
     return {key_id: signing.public_key_text(private_key)}
+
+
+def raw_signature(
+    manifest: dict[str, object],
+    private_key: PrivateKey,
+    *,
+    key_id: str,
+) -> dict[str, object]:
+    signature = private_key.sign(signing.canonical_json_bytes(manifest))
+    metadata_kind = signing.firmware_metadata_kind(manifest)
+    return {
+        "schema_version": signing.SIGNATURE_SCHEMA_VERSION,
+        "signature_kind": signing.signature_kind_for_metadata_kind(metadata_kind),
+        "algorithm": signing.SIGNATURE_ALGORITHM,
+        "signed_payload": signing.SIGNED_PAYLOAD,
+        "key_id": key_id,
+        "signature": base64.urlsafe_b64encode(signature).decode("ascii").rstrip("="),
+    }
+
+
+def write_test_bundle(
+    tmp_path: Path,
+    private_key: PrivateKey,
+    *,
+    manifest: dict[str, object] | None = None,
+    latest_overrides: dict[str, object] | None = None,
+    allow_invalid_signed_metadata: bool = False,
+    key_id: str = "test-release-key",
+) -> tuple[Path, dict[str, str]]:
+    bundle_dir = tmp_path / "bundle"
+    bundle_dir.mkdir(parents=True)
+
+    package_manifest = copy.deepcopy(manifest if manifest is not None else firmware_manifest())
+    archive = package_manifest["archive"]
+    assert isinstance(archive, dict)
+    archive_name = archive["name"]
+    assert isinstance(archive_name, str)
+    manifest_name = f"{archive_name.removesuffix('.tar.gz')}.manifest.json"
+    checksum_name = f"{archive_name}.sha256"
+
+    archive_path = bundle_dir / archive_name
+    archive_path.write_bytes(b"firmware archive\n")
+    archive_sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+
+    checksum_path = bundle_dir / checksum_name
+    checksum_path.write_text(f"{archive_sha256}  {archive_name}\n", encoding="utf-8")
+    checksum_sha256 = hashlib.sha256(checksum_path.read_bytes()).hexdigest()
+
+    manifest_path = bundle_dir / manifest_name
+    signing.write_json_object(manifest_path, package_manifest)
+    manifest_sha256 = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+
+    latest = latest_manifest()
+    latest.update(
+        {
+            "bridge_version": package_manifest["bridge_version"],
+            "required_bridge_api_version": package_manifest["required_bridge_api_version"],
+            "archive_name": archive_name,
+            "archive_sha256": archive_sha256,
+            "manifest_name": manifest_name,
+            "manifest_sha256": manifest_sha256,
+            "checksum_name": checksum_name,
+            "checksum_sha256": checksum_sha256,
+        }
+    )
+    if latest_overrides is not None:
+        latest.update(latest_overrides)
+    latest_path = bundle_dir / "latest.json"
+    signing.write_json_object(latest_path, latest)
+
+    if allow_invalid_signed_metadata:
+        manifest_signature = raw_signature(package_manifest, private_key, key_id=key_id)
+        latest_signature = raw_signature(latest, private_key, key_id=key_id)
+    else:
+        manifest_signature = signing.sign_manifest(package_manifest, private_key, key_id=key_id)
+        latest_signature = signing.sign_manifest(latest, private_key, key_id=key_id)
+
+    signing.write_json_object(signing.default_signature_path(manifest_path), manifest_signature)
+    signing.write_json_object(signing.default_signature_path(latest_path), latest_signature)
+    return bundle_dir, {key_id: signing.public_key_text(private_key)}
 
 
 def write_private_key(path: Path, private_key: PrivateKey) -> None:
@@ -287,6 +372,198 @@ def test_dirty_release_metadata_rejected() -> None:
         signing.verify_manifest_signature(manifest, None, {}, require_signature=False)
 
 
+def test_latest_json_is_rejected_as_package_manifest() -> None:
+    with pytest.raises(signing.FirmwareManifestError, match="expected firmware manifest kind"):
+        signing.validate_firmware_manifest(latest_manifest())
+
+
+def test_release_index_signature_kind_is_distinct(private_key: PrivateKey) -> None:
+    signature = signing.sign_manifest(latest_manifest(), private_key)
+
+    assert signature["signature_kind"] == signing.RELEASE_INDEX_SIGNATURE_KIND
+
+
+def test_verify_bundle_directory_accepts_trusted_package(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    bundle_dir, trusted = write_test_bundle(tmp_path, private_key)
+
+    verification = signing.verify_firmware_bundle_directory(
+        bundle_dir,
+        signing.TrustedFirmwareKeyStore.from_mapping(trusted),
+    )
+
+    assert verification.bridge_version == "0.1.0"
+    assert verification.latest_signature.key_id == "test-release-key"
+    assert verification.manifest_signature.key_id == "test-release-key"
+
+
+def test_verify_bundle_directory_rejects_unsigned_package(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    bundle_dir, trusted = write_test_bundle(tmp_path, private_key)
+    (bundle_dir / "InstantLinkBridgeFirmware-v0.1.0-linux-aarch64.manifest.sig").unlink()
+
+    with pytest.raises(signing.FirmwareManifestError, match="package manifest signature"):
+        signing.verify_firmware_bundle_directory(bundle_dir, trusted)
+
+
+def test_verify_bundle_directory_rejects_wrong_key(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    bundle_dir, _trusted = write_test_bundle(tmp_path, private_key)
+    wrong_key = cast(PrivateKey, ed25519.Ed25519PrivateKey.generate())
+
+    with pytest.raises(signing.FirmwareSignatureError, match="untrusted firmware signing key id"):
+        signing.verify_firmware_bundle_directory(bundle_dir, trusted_keys(wrong_key))
+
+
+def test_verify_bundle_directory_rejects_wrong_target(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    manifest = firmware_manifest()
+    manifest["target"] = "darwin-aarch64"
+    bundle_dir, trusted = write_test_bundle(
+        tmp_path,
+        private_key,
+        manifest=manifest,
+        allow_invalid_signed_metadata=True,
+    )
+
+    with pytest.raises(signing.FirmwareManifestError, match="target must be linux-aarch64"):
+        signing.verify_firmware_bundle_directory(bundle_dir, trusted)
+
+
+def test_verify_bundle_directory_rejects_dirty_or_missing_provenance(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    dirty_manifest = firmware_manifest()
+    workspace = dirty_manifest["instantlink_workspace"]
+    assert isinstance(workspace, dict)
+    workspace["dirty"] = True
+    dirty_bundle, dirty_trusted = write_test_bundle(
+        tmp_path / "dirty",
+        private_key,
+        manifest=dirty_manifest,
+        allow_invalid_signed_metadata=True,
+    )
+
+    with pytest.raises(signing.FirmwareManifestError, match="clean workspace"):
+        signing.verify_firmware_bundle_directory(dirty_bundle, dirty_trusted)
+
+    missing_manifest = firmware_manifest()
+    del missing_manifest["instantlink_workspace"]
+    missing_bundle, missing_trusted = write_test_bundle(
+        tmp_path / "missing",
+        private_key,
+        manifest=missing_manifest,
+        allow_invalid_signed_metadata=True,
+    )
+
+    with pytest.raises(signing.FirmwareManifestError, match="metadata is required"):
+        signing.verify_firmware_bundle_directory(missing_bundle, missing_trusted)
+
+
+def test_verify_bundle_directory_rejects_digest_mismatch(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    bundle_dir, trusted = write_test_bundle(tmp_path, private_key)
+    archive_path = bundle_dir / "InstantLinkBridgeFirmware-v0.1.0-linux-aarch64.tar.gz"
+    archive_path.write_bytes(b"tampered archive\n")
+
+    with pytest.raises(signing.FirmwareManifestError, match="firmware archive SHA-256 mismatch"):
+        signing.verify_firmware_bundle_directory(bundle_dir, trusted)
+
+
+def test_verify_bundle_directory_rejects_unsupported_required_api(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    manifest = firmware_manifest()
+    manifest["required_bridge_api_version"] = signing.SUPPORTED_BRIDGE_API_VERSION + 1
+    bundle_dir, trusted = write_test_bundle(
+        tmp_path,
+        private_key,
+        manifest=manifest,
+        allow_invalid_signed_metadata=True,
+    )
+
+    with pytest.raises(signing.FirmwareManifestError, match="unsupported Bridge API version"):
+        signing.verify_firmware_bundle_directory(bundle_dir, trusted)
+
+
+def test_verify_bundle_directory_uses_downgrade_policy_hook(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    bundle_dir, trusted = write_test_bundle(tmp_path, private_key)
+
+    with pytest.raises(signing.FirmwareManifestError, match="downgrade"):
+        signing.verify_firmware_bundle_directory(
+            bundle_dir,
+            trusted,
+            current_bridge_version="0.2.0",
+        )
+
+    accepted = signing.verify_firmware_bundle_directory(
+        bundle_dir,
+        trusted,
+        current_bridge_version="0.2.0",
+        downgrade_policy=lambda _candidate, _current: True,
+    )
+    assert accepted.bridge_version == "0.1.0"
+
+
+def test_verify_bundle_directory_accepts_trusted_key_from_env(
+    tmp_path: Path,
+    private_key: PrivateKey,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_dir, trusted = write_test_bundle(tmp_path, private_key)
+    monkeypatch.setenv(signing.TRUSTED_PUBLIC_KEYS_ENV, json.dumps(trusted))
+
+    verification = signing.verify_firmware_bundle_directory(
+        bundle_dir,
+        config_path=tmp_path / "missing-config.toml",
+    )
+
+    assert verification.manifest_signature.key_id == "test-release-key"
+
+
+def test_verify_bundle_directory_accepts_trusted_key_from_config(
+    tmp_path: Path,
+    private_key: PrivateKey,
+) -> None:
+    bundle_dir, trusted = write_test_bundle(tmp_path, private_key)
+    key_id, public_key = next(iter(trusted.items()))
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "[firmware]",
+                "trusted_public_keys = [",
+                f'  {{ key_id = "{key_id}", public_key = "{public_key}" }},',
+                "]",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    verification = signing.verify_firmware_bundle_directory(
+        bundle_dir,
+        config_path=config_path,
+        environ={},
+    )
+
+    assert verification.latest_signature.key_id == key_id
+
+
 def test_default_signature_path_matches_release_asset_names() -> None:
     assert signing.default_signature_path(Path("firmware.manifest.json")) == Path(
         "firmware.manifest.sig"
@@ -333,6 +610,12 @@ def test_build_script_signed_mode_emits_manifest_sidecars(
         assert path.exists()
     assert (app_bundle / manifest_sig_path.name).exists()
     assert (app_bundle / latest_sig_path.name).exists()
+    assert signing.load_json_object(manifest_path)["manifest_kind"] == signing.PACKAGE_MANIFEST_KIND
+    assert signing.load_json_object(latest_path)["manifest_kind"] == signing.RELEASE_INDEX_KIND
+    assert (
+        signing.load_json_object(latest_sig_path)["signature_kind"]
+        == signing.RELEASE_INDEX_SIGNATURE_KIND
+    )
 
     trusted = {"test-release-key": signing.public_key_text(private_key)}
     assert signing.verify_manifest_file(manifest_path, manifest_sig_path, trusted).signed is True

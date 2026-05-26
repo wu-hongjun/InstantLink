@@ -11,7 +11,7 @@ BRIDGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BRIDGE_ROOT / "src"))
 
 from instantlink_bridge.update.signing import (  # noqa: E402
-    FirmwareSignatureError,
+    FirmwareSigningError,
     default_signature_path,
     key_id_for_public_key,
     load_json_object,
@@ -105,7 +105,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.signature,
                 {args.key_id: args.public_key.read_bytes()},
             )
-        except FirmwareSignatureError as exc:
+        except FirmwareSigningError as exc:
             raise SystemExit(str(exc)) from exc
         print('{"ok":true}')
         return 0

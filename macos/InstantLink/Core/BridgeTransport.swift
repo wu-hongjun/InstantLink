@@ -2,6 +2,13 @@ import Foundation
 
 protocol BridgeTransport {
     func discover() async throws -> [BridgeDevice]
+    func pairingStatus(device: BridgeDevice) async throws -> BridgePairingStatus
+    func completePairing(
+        device: BridgeDevice,
+        confirmationCode: String,
+        clientName: String
+    ) async throws -> BridgePairingCompletion
+    func forgetLocalAuth(device: BridgeDevice) async throws
     func status(device: BridgeDevice) async throws -> BridgeStatus
     func preflightUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdatePreflight
     func startUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdateState
@@ -14,6 +21,7 @@ enum BridgeTransportError: Error, Equatable {
     case updateOperationNotFound(String)
     case updateScriptEmpty
     case updatePreflightFailed
+    case localAuthNotFound(String)
 }
 
 actor InMemoryBridgeTransport: BridgeTransport {
@@ -27,6 +35,7 @@ actor InMemoryBridgeTransport: BridgeTransport {
     private var orderedDeviceIDs: [String]
     private var statuses: [String: BridgeStatus]
     private var authRequiredDeviceIDs: Set<String>
+    private var pairingStatuses: [String: BridgePairingStatus]
     private var preflights: [String: BridgeUpdatePreflight]
     private var updateScripts: [String: [BridgeUpdateState]]
     private var operations: [String: UpdateOperation]
@@ -41,6 +50,7 @@ actor InMemoryBridgeTransport: BridgeTransport {
         self.orderedDeviceIDs = devices.map(\.deviceID)
         self.statuses = statuses
         self.authRequiredDeviceIDs = authRequiredDeviceIDs
+        self.pairingStatuses = [:]
         self.preflights = [:]
         self.updateScripts = [:]
         self.operations = [:]
@@ -63,6 +73,10 @@ actor InMemoryBridgeTransport: BridgeTransport {
         }
     }
 
+    func setPairingStatus(_ pairingStatus: BridgePairingStatus, for deviceID: String) {
+        pairingStatuses[deviceID] = pairingStatus
+    }
+
     func setPreflight(_ preflight: BridgeUpdatePreflight, for deviceID: String) {
         preflights[deviceID] = preflight
     }
@@ -73,6 +87,63 @@ actor InMemoryBridgeTransport: BridgeTransport {
 
     func discover() async throws -> [BridgeDevice] {
         orderedDeviceIDs.compactMap { devices[$0] }
+    }
+
+    func pairingStatus(device: BridgeDevice) async throws -> BridgePairingStatus {
+        guard devices[device.deviceID] != nil else {
+            throw BridgeTransportError.deviceNotFound(device.deviceID)
+        }
+        return pairingStatuses[device.deviceID] ?? BridgePairingStatus(
+            open: false,
+            authImplemented: false,
+            confirmationCodeRequired: true,
+            expiresAt: nil,
+            expiresInSeconds: nil,
+            pairedClientID: devices[device.deviceID]?.isPaired == true ? "in-memory" : nil,
+            authorizedClientCount: devices[device.deviceID]?.isPaired == true ? 1 : 0
+        )
+    }
+
+    func completePairing(
+        device: BridgeDevice,
+        confirmationCode: String,
+        clientName: String
+    ) async throws -> BridgePairingCompletion {
+        guard var storedDevice = devices[device.deviceID] else {
+            throw BridgeTransportError.deviceNotFound(device.deviceID)
+        }
+        let currentStatus = try await pairingStatus(device: device)
+        guard currentStatus.open else {
+            throw BridgeAPIError(
+                requestID: "in-memory-\(UUID().uuidString)",
+                code: "pairing_not_open",
+                payload: BridgeErrorPayload(
+                    message: "Bridge access is not open for this Mac",
+                    details: ["device_id": .string(device.deviceID)]
+                )
+            )
+        }
+
+        storedDevice.isPaired = true
+        devices[device.deviceID] = storedDevice
+        authRequiredDeviceIDs.remove(device.deviceID)
+        return BridgePairingCompletion(
+            clientID: "in-memory",
+            clientName: clientName,
+            paired: true,
+            publicKeyAlgorithm: .ed25519,
+            createdAt: nil,
+            message: confirmationCode.isEmpty ? nil : "Paired"
+        )
+    }
+
+    func forgetLocalAuth(device: BridgeDevice) async throws {
+        guard var storedDevice = devices[device.deviceID] else {
+            throw BridgeTransportError.deviceNotFound(device.deviceID)
+        }
+        storedDevice.isPaired = false
+        devices[device.deviceID] = storedDevice
+        authRequiredDeviceIDs.insert(device.deviceID)
     }
 
     func status(device: BridgeDevice) async throws -> BridgeStatus {

@@ -47,6 +47,15 @@ The signature payload is deterministic canonical JSON, not the tarball bytes or 
 future macOS updater and Bridge manager must verify these signatures against embedded trusted public
 keys before upload or install.
 
+Package manifests and release indexes are intentionally separate signed document types:
+
+- Package manifests carry `manifest_kind = "instantlink_bridge_firmware_package_manifest"` and use
+  `signature_kind = "instantlink_bridge_firmware_manifest_signature"`.
+- Release indexes carry `manifest_kind = "instantlink_bridge_firmware_release_index"` and use
+  `signature_kind = "instantlink_bridge_firmware_release_index_signature"`.
+
+This prevents `latest.json` from being accepted where an installable package manifest is required.
+
 ## CI Workflows
 
 - `.github/workflows/bridge-firmware.yml` runs on `bridge-v*` tags and manual dispatch. It builds
@@ -85,6 +94,11 @@ Tagged Bridge firmware and app releases require the `BRIDGE_FIRMWARE_SIGNING_KEY
 identifier. Workflow-dispatch development builds may remain unsigned; app-side bundle discovery is
 fail-closed and ignores unsigned bundles.
 
+Bridge-side verification builds its trusted firmware key store from embedded product keys, optional
+`[firmware].trusted_public_keys` config entries, and the test/development-only
+`INSTANTLINK_BRIDGE_FIRMWARE_TRUSTED_PUBLIC_KEYS` JSON environment override. Product install paths
+must use that trust store and must not rely only on a public key supplied by the caller.
+
 For test keys only:
 
 ```bash
@@ -109,16 +123,20 @@ declarative package metadata into release slots, with backup and rollback contro
 
 The future app updater should:
 
-1. Verify `latest.json.sig` against a trusted firmware signing public key.
-2. Verify the package manifest `.manifest.sig` against the same trust store.
-3. Reject unknown key ids, invalid signatures, malformed SHA-256 digests, or artifact names that are
+1. Verify `latest.json.sig` as a release-index signature against the trusted firmware key store.
+2. Verify the package manifest `.manifest.sig` as a package-manifest signature against the same
+   trust store.
+3. Reject release indexes presented as package manifests.
+4. Reject unknown key ids, invalid signatures, malformed SHA-256 digests, or artifact names that are
    not clean relative paths/basenames.
-4. Verify the archive SHA-256 from `latest.json`.
-5. Confirm the live Bridge manager reports `auth`, `backup`, `release_slots`, `rollback`, and
+5. Verify the package manifest, archive, and checksum sidecar SHA-256 values from `latest.json`.
+6. Confirm target `linux-aarch64`, required Bridge API compatibility, clean provenance, and the
+   downgrade policy hook before install.
+7. Confirm the live Bridge manager reports `auth`, `backup`, `release_slots`, `rollback`, and
    `health_gates` capabilities.
-6. Upload and extract the bundle into a staging directory on the Bridge.
-7. Ask the Bridge manager to create a backup, install into a new release slot, restart, and verify.
-8. Mark the update good only after service, FTP, LCD, network, and printer-status checks pass.
+8. Upload and extract the bundle into a staging directory on the Bridge.
+9. Ask the Bridge manager to create a backup, install into a new release slot, restart, and verify.
+10. Mark the update good only after service, FTP, LCD, network, and printer-status checks pass.
 
 This is not yet a complete product updater. One-click updates must remain hidden until the Bridge
 management API, local authorization, signed package trust chain, automatic backup, and rollback gate

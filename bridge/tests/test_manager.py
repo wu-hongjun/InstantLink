@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import stat
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
@@ -17,6 +19,7 @@ from instantlink_bridge.manager.auth import (
     TIMESTAMP_HEADER,
     AuthorizedClient,
     ClientStore,
+    PairingWindowStore,
     SignedRequestVerifier,
     canonical_request_payload,
     encode_base64url,
@@ -30,6 +33,11 @@ from instantlink_bridge.system_info import SystemInfo
 ed25519 = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
 
 
+class SigningPrivateKey(Protocol):
+    def sign(self, data: bytes) -> bytes:
+        ...
+
+
 def test_manager_cli_hello_json_is_safe(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -38,7 +46,14 @@ def test_manager_cli_hello_json_is_safe(
     monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
 
     manager_main(
-        ["--config", str(tmp_path / "missing.toml"), "hello", "--json"],
+        [
+            "--config",
+            str(tmp_path / "missing.toml"),
+            "--pairing-window",
+            str(tmp_path / "pairing.json"),
+            "hello",
+            "--json",
+        ],
         request_id_factory=lambda: "req-cli",
     )
 
@@ -56,8 +71,8 @@ def test_manager_cli_hello_json_is_safe(
         "endpoint_url": None,
         "is_paired": False,
     }
-    assert data["management"]["auth_implemented"] is False
-    assert data["management"]["admin_routes"] == "auth_required"
+    assert data["management"]["auth_implemented"] is True
+    assert data["management"]["admin_routes"] == "signed_request_required"
     assert "change-me" not in output
     assert "password" not in output
 
@@ -86,7 +101,14 @@ def test_manager_cli_status_json_omits_credentials(
     )
 
     manager_main(
-        ["--config", str(config_path), "status", "--json"],
+        [
+            "--config",
+            str(config_path),
+            "--pairing-window",
+            str(tmp_path / "pairing.json"),
+            "status",
+            "--json",
+        ],
         request_id_factory=lambda: "req-status",
     )
 
@@ -121,7 +143,12 @@ async def test_manager_http_discovery_routes_are_unauthenticated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
-    app = create_app(config_path=tmp_path / "missing.toml", request_id_factory=lambda: "req-http")
+    pairing_store = PairingWindowStore(tmp_path / "pairing.json", now_seconds=lambda: 1000)
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-http",
+        pairing_store=pairing_store,
+    )
     client = TestClient(TestServer(app))
     await client.start_server()
     try:
@@ -136,12 +163,233 @@ async def test_manager_http_discovery_routes_are_unauthenticated(
         assert pairing.status == 200
         assert_success_envelope(pairing_data, request_id="req-http")
         assert pairing_data["pairing"]["open"] is False
-        assert pairing_data["pairing"]["auth_implemented"] is False
+        assert pairing_data["pairing"]["auth_implemented"] is True
 
-        complete = await client.post("/v1/pairing/complete")
+        private_key = ed25519.Ed25519PrivateKey.generate()
+        complete = await client.post(
+            "/v1/pairing/complete",
+            json=pairing_body(
+                public_key=public_key_text(private_key.public_key()),
+                confirmation_code="123456",
+            ),
+        )
         complete_data = cast(dict[str, Any], await complete.json())
         assert complete.status == 423
         assert_error_envelope(complete_data, error_code="pairing_not_open")
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_pairing_complete_succeeds_and_stores_client(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    client_store = ClientStore(tmp_path / "clients")
+    pairing_store = PairingWindowStore(
+        tmp_path / "pairing.json",
+        now_seconds=lambda: 1000,
+        confirmation_code_factory=lambda: "123456",
+    )
+    pairing_store.open_window()
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-pair",
+        auth_verifier=SignedRequestVerifier(client_store, now_seconds=lambda: 1000),
+        client_store=client_store,
+        pairing_store=pairing_store,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.post(
+            "/v1/pairing/complete",
+            json=pairing_body(
+                public_key=public_key_text(private_key.public_key()),
+                confirmation_code="123456",
+                expected_device_id="IB-1234ABCD",
+            ),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200
+        assert_success_envelope(data, request_id="req-pair")
+        completion = data["pairing_completion"]
+        assert completion == {
+            "paired": True,
+            "client_id": "macbook",
+            "client_name": "Test Mac",
+            "public_key_algorithm": "ed25519",
+            "created_at": completion["created_at"],
+        }
+        response_text = json.dumps(data)
+        assert "confirmation_code" not in response_text
+        assert '"public_key"' not in response_text
+        assert pairing_store.read_window() is None
+
+        stored = client_store.read_client("macbook")
+        assert stored.client_name == "Test Mac"
+        assert stored.public_key == public_key_text(private_key.public_key())
+        assert stat.S_IMODE(client_store.root.stat().st_mode) == 0o700
+        assert stat.S_IMODE(client_store.client_path("macbook").stat().st_mode) == 0o600
+
+        admin_response = await client.get("/v1/status", headers=signed_headers(private_key))
+        admin_data = cast(dict[str, Any], await admin_response.json())
+        assert admin_response.status == 501
+        assert_error_envelope(admin_data, error_code="not_implemented")
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_pairing_complete_rejects_unsupported_key_algorithm(
+    tmp_path: Path,
+) -> None:
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    client_store = ClientStore(tmp_path / "clients")
+    pairing_store = PairingWindowStore(
+        tmp_path / "pairing.json",
+        now_seconds=lambda: 1000,
+        confirmation_code_factory=lambda: "123456",
+    )
+    pairing_store.open_window()
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-bad-alg",
+        client_store=client_store,
+        pairing_store=pairing_store,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        body = pairing_body(
+            public_key=public_key_text(private_key.public_key()),
+            confirmation_code="123456",
+        )
+        body["public_key_algorithm"] = "p256_sha256"
+        response = await client.post("/v1/pairing/complete", json=body)
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 400
+        assert_error_envelope(data, error_code="unsupported_key_algorithm")
+        assert pairing_store.read_window() is not None
+        assert not client_store.client_path("macbook").exists()
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_pairing_complete_rejects_wrong_code(tmp_path: Path) -> None:
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    client_store = ClientStore(tmp_path / "clients")
+    pairing_store = PairingWindowStore(
+        tmp_path / "pairing.json",
+        now_seconds=lambda: 1000,
+        confirmation_code_factory=lambda: "123456",
+    )
+    pairing_store.open_window()
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-wrong-code",
+        client_store=client_store,
+        pairing_store=pairing_store,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.post(
+            "/v1/pairing/complete",
+            json=pairing_body(
+                public_key=public_key_text(private_key.public_key()),
+                confirmation_code="000000",
+            ),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 403
+        assert_error_envelope(data, error_code="pairing_code_invalid")
+        assert pairing_store.read_window() is not None
+        assert not client_store.client_path("macbook").exists()
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_pairing_complete_rejects_expired_window(tmp_path: Path) -> None:
+    now = 1000
+
+    def now_seconds() -> int:
+        return now
+
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    client_store = ClientStore(tmp_path / "clients")
+    pairing_store = PairingWindowStore(
+        tmp_path / "pairing.json",
+        now_seconds=now_seconds,
+        confirmation_code_factory=lambda: "123456",
+    )
+    pairing_store.open_window()
+    now = 1090
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-expired",
+        client_store=client_store,
+        pairing_store=pairing_store,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.post(
+            "/v1/pairing/complete",
+            json=pairing_body(
+                public_key=public_key_text(private_key.public_key()),
+                confirmation_code="123456",
+            ),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 410
+        assert_error_envelope(data, error_code="pairing_expired")
+        assert pairing_store.read_window() is None
+        assert not client_store.client_path("macbook").exists()
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_pairing_complete_rejects_expected_device_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    client_store = ClientStore(tmp_path / "clients")
+    pairing_store = PairingWindowStore(
+        tmp_path / "pairing.json",
+        now_seconds=lambda: 1000,
+        confirmation_code_factory=lambda: "123456",
+    )
+    pairing_store.open_window()
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-device-mismatch",
+        client_store=client_store,
+        pairing_store=pairing_store,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.post(
+            "/v1/pairing/complete",
+            json=pairing_body(
+                public_key=public_key_text(private_key.public_key()),
+                confirmation_code="123456",
+                expected_device_id="IB-DIFFERENT",
+            ),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 409
+        assert_error_envelope(data, error_code="device_id_mismatch")
+        assert pairing_store.read_window() is not None
+        assert not client_store.client_path("macbook").exists()
     finally:
         await client.close()
 
@@ -190,30 +438,82 @@ async def test_manager_http_admin_route_accepts_signed_request_then_reports_unim
     await client.start_server()
     try:
         path = "/v1/status"
-        nonce = "nonce-0001"
-        timestamp = 1000
-        body_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        signature = private_key.sign(
-            canonical_request_payload(
-                method="GET",
-                path=path,
-                body_sha256=body_sha256,
-                timestamp=timestamp,
-                nonce=nonce,
-            )
-        )
         response = await client.get(
             path,
-            headers={
-                CLIENT_ID_HEADER: "macbook",
-                TIMESTAMP_HEADER: str(timestamp),
-                NONCE_HEADER: nonce,
-                SIGNATURE_HEADER: encode_base64url(signature),
-            },
+            headers=signed_headers(private_key, path=path),
         )
         data = cast(dict[str, Any], await response.json())
         assert response.status == 501
         assert_error_envelope(data, error_code="not_implemented")
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_admin_route_rejects_replayed_signed_request(
+    tmp_path: Path,
+) -> None:
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    store = ClientStore(tmp_path / "clients")
+    store.save_client(
+        AuthorizedClient(
+            client_id="macbook",
+            client_name="Test Mac",
+            public_key=public_key_text(private_key.public_key()),
+            created_at="2026-05-26T15:30:00Z",
+        )
+    )
+    verifier = SignedRequestVerifier(store, now_seconds=lambda: 1000)
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=request_ids(),
+        auth_verifier=verifier,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        headers = signed_headers(private_key, path="/v1/status")
+        first = await client.get("/v1/status", headers=headers)
+        first_data = cast(dict[str, Any], await first.json())
+        assert first.status == 501
+        assert_error_envelope(first_data, error_code="not_implemented")
+
+        second = await client.get("/v1/status", headers=headers)
+        second_data = cast(dict[str, Any], await second.json())
+        assert second.status == 401
+        assert_error_envelope(second_data, error_code="replay")
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_admin_route_rejects_revoked_client(
+    tmp_path: Path,
+) -> None:
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    store = ClientStore(tmp_path / "clients")
+    store.save_client(
+        AuthorizedClient(
+            client_id="macbook",
+            client_name="Test Mac",
+            public_key=public_key_text(private_key.public_key()),
+            created_at="2026-05-26T15:30:00Z",
+            revoked_at="2026-05-26T16:00:00Z",
+        )
+    )
+    verifier = SignedRequestVerifier(store, now_seconds=lambda: 1000)
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-revoked",
+        auth_verifier=verifier,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.get("/v1/status", headers=signed_headers(private_key))
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 401
+        assert_error_envelope(data, error_code="client_revoked")
     finally:
         await client.close()
 
@@ -237,6 +537,47 @@ def test_manager_cli_rejects_wildcard_bind_by_default() -> None:
         validate_bind_hosts(("0.0.0.0",))
 
     validate_bind_hosts(("0.0.0.0",), allow_unsafe=True)
+
+
+def test_manager_cli_pairing_open_close_json(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pairing_path = tmp_path / "management" / "pairing.json"
+
+    manager_main(
+        [
+            "--pairing-window",
+            str(pairing_path),
+            "pairing-open",
+            "--ttl-seconds",
+            "45",
+            "--json",
+        ],
+        request_id_factory=lambda: "req-open",
+        now_seconds=lambda: 1000,
+        confirmation_code_factory=lambda: "654321",
+    )
+
+    open_data = json.loads(capsys.readouterr().out)
+    assert_success_envelope(open_data, request_id="req-open")
+    assert open_data["pairing"]["open"] is True
+    assert open_data["pairing"]["confirmation_code"] == "654321"
+    assert open_data["pairing"]["expires_at"] == 1045
+    assert stat.S_IMODE(pairing_path.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(pairing_path.stat().st_mode) == 0o600
+
+    manager_main(
+        ["--pairing-window", str(pairing_path), "pairing-close", "--json"],
+        request_id_factory=lambda: "req-close",
+        now_seconds=lambda: 1000,
+        confirmation_code_factory=lambda: "654321",
+    )
+
+    close_data = json.loads(capsys.readouterr().out)
+    assert_success_envelope(close_data, request_id="req-close")
+    assert close_data["pairing"]["open"] is False
+    assert not pairing_path.exists()
 
 
 def assert_success_envelope(data: dict[str, Any], *, request_id: str) -> None:
@@ -279,3 +620,47 @@ def request_ids() -> Callable[[], str]:
         return f"req-admin-{count}"
 
     return next_request_id
+
+
+def pairing_body(
+    *,
+    public_key: str,
+    confirmation_code: str,
+    expected_device_id: str | None = None,
+) -> dict[str, str]:
+    body = {
+        "client_id": "macbook",
+        "client_name": "Test Mac",
+        "public_key": public_key,
+        "confirmation_code": confirmation_code,
+    }
+    if expected_device_id is not None:
+        body["expected_device_id"] = expected_device_id
+    return body
+
+
+def signed_headers(
+    private_key: SigningPrivateKey,
+    *,
+    method: str = "GET",
+    path: str = "/v1/status",
+    body: bytes = b"",
+    timestamp: int = 1000,
+    nonce: str = "nonce-0001",
+    client_id: str = "macbook",
+) -> dict[str, str]:
+    signature = private_key.sign(
+        canonical_request_payload(
+            method=method,
+            path=path,
+            body_sha256=hashlib.sha256(body).hexdigest(),
+            timestamp=timestamp,
+            nonce=nonce,
+        )
+    )
+    return {
+        CLIENT_ID_HEADER: client_id,
+        TIMESTAMP_HEADER: str(timestamp),
+        NONCE_HEADER: nonce,
+        SIGNATURE_HEADER: encode_base64url(signature),
+    }

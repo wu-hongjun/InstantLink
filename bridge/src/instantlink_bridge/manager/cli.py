@@ -15,7 +15,16 @@ from aiohttp import web
 
 from instantlink_bridge.config import DEFAULT_CONFIG_PATH
 from instantlink_bridge.manager.api import RequestIdFactory, create_app
-from instantlink_bridge.manager.auth import ClientStore, SignedRequestVerifier
+from instantlink_bridge.manager.auth import (
+    DEFAULT_CLIENTS_DIR,
+    DEFAULT_PAIRING_EXPIRY_S,
+    DEFAULT_PAIRING_WINDOW_PATH,
+    ClientStore,
+    ConfirmationCodeFactory,
+    NowSeconds,
+    PairingWindowStore,
+    SignedRequestVerifier,
+)
 from instantlink_bridge.manager.contract import (
     DEFAULT_BIND_HOSTS,
     DEFAULT_PORT,
@@ -36,15 +45,22 @@ def main(
     argv: Sequence[str] | None = None,
     *,
     request_id_factory: RequestIdFactory = new_request_id,
+    now_seconds: NowSeconds | None = None,
+    confirmation_code_factory: ConfirmationCodeFactory | None = None,
 ) -> None:
     """Run the manager CLI."""
 
     parser = build_parser()
     args = parser.parse_args(argv)
+    pairing_store = pairing_store_from_args(
+        args,
+        now_seconds=now_seconds,
+        confirmation_code_factory=confirmation_code_factory,
+    )
     if args.command == "hello":
         emit_json(
             success_response(
-                collect_hello_payload(args.config),
+                collect_hello_payload(args.config, pairing_store=pairing_store),
                 request_id=request_id_factory(),
             )
         )
@@ -52,13 +68,38 @@ def main(
     if args.command == "status":
         emit_json(
             success_response(
-                collect_status_payload(args.config),
+                collect_status_payload(args.config, pairing_store=pairing_store),
                 request_id=request_id_factory(),
             )
         )
         return
     if args.command == "api-routes":
         emit_json(success_response(routes_payload(), request_id=request_id_factory()))
+        return
+    if args.command == "pairing-open":
+        window = pairing_store.open_window(ttl_s=args.ttl_seconds)
+        emit_json(
+            success_response(
+                {
+                    "pairing": {
+                        "open": True,
+                        "confirmation_code": window.confirmation_code,
+                        "expires_at": window.expires_at,
+                        "expires_in_seconds": window.expires_at - window.opened_at,
+                    }
+                },
+                request_id=request_id_factory(),
+            )
+        )
+        return
+    if args.command == "pairing-close":
+        pairing_store.close_window()
+        emit_json(
+            success_response(
+                {"pairing": {"open": False}},
+                request_id=request_id_factory(),
+            )
+        )
         return
     if args.command == "serve":
         configure_logging(args.log_level)
@@ -70,6 +111,7 @@ def main(
                 hosts=hosts,
                 port=args.port,
                 clients_dir=args.clients_dir,
+                pairing_store=pairing_store,
                 request_id_factory=request_id_factory,
             )
         )
@@ -87,10 +129,42 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_CONFIG_PATH,
         help=f"config file path (default: {DEFAULT_CONFIG_PATH})",
     )
+    parser.add_argument(
+        "--pairing-window",
+        type=Path,
+        default=DEFAULT_PAIRING_WINDOW_PATH,
+        help=f"pairing window file path (default: {DEFAULT_PAIRING_WINDOW_PATH})",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_json_command(subparsers, "hello", "emit discovery metadata")
     add_json_command(subparsers, "status", "emit local read-only status")
     add_json_command(subparsers, "api-routes", "emit the management route catalog")
+
+    pairing_open_parser = subparsers.add_parser(
+        "pairing-open",
+        help="open local management pairing and emit the confirmation code",
+    )
+    pairing_open_parser.add_argument(
+        "--ttl-seconds",
+        type=int,
+        default=DEFAULT_PAIRING_EXPIRY_S,
+        help=f"pairing window lifetime (default: {DEFAULT_PAIRING_EXPIRY_S})",
+    )
+    pairing_open_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit JSON; accepted for CLI parity and currently always enabled",
+    )
+
+    pairing_close_parser = subparsers.add_parser(
+        "pairing-close",
+        help="close local management pairing",
+    )
+    pairing_close_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit JSON; accepted for CLI parity and currently always enabled",
+    )
 
     serve_parser = subparsers.add_parser("serve", help="run the HTTP management API")
     serve_parser.add_argument(
@@ -106,7 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument(
         "--clients-dir",
         type=Path,
-        default=Path("/var/lib/InstantLinkBridge/management/clients"),
+        default=DEFAULT_CLIENTS_DIR,
         help="management client record directory",
     )
     serve_parser.add_argument(
@@ -157,6 +231,21 @@ def emit_json(payload: JsonObject) -> None:
     print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
 
 
+def pairing_store_from_args(
+    args: argparse.Namespace,
+    *,
+    now_seconds: NowSeconds | None,
+    confirmation_code_factory: ConfirmationCodeFactory | None,
+) -> PairingWindowStore:
+    """Build the pairing store used by local CLI commands and the API server."""
+
+    return PairingWindowStore(
+        args.pairing_window,
+        now_seconds=now_seconds,
+        confirmation_code_factory=confirmation_code_factory,
+    )
+
+
 def configure_logging(log_level: str) -> None:
     """Configure process logging for the HTTP server."""
 
@@ -172,6 +261,7 @@ async def serve(
     hosts: Sequence[str],
     port: int,
     clients_dir: Path,
+    pairing_store: PairingWindowStore,
     request_id_factory: RequestIdFactory = new_request_id,
 ) -> None:
     """Run the aiohttp manager app until SIGINT or SIGTERM."""
@@ -181,6 +271,7 @@ async def serve(
         config_path=config_path,
         request_id_factory=request_id_factory,
         auth_verifier=auth_verifier,
+        pairing_store=pairing_store,
     )
     runner = web.AppRunner(app)
     await runner.setup()

@@ -257,6 +257,21 @@ class PowerConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class FirmwareTrustedPublicKeyConfig:
+    """Configured firmware release signing public key."""
+
+    key_id: str
+    public_key: str
+
+
+@dataclass(frozen=True, slots=True)
+class FirmwareUpdateConfig:
+    """Firmware update trust configuration."""
+
+    trusted_public_keys: tuple[FirmwareTrustedPublicKeyConfig, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class BridgeConfig:
     """Top-level bridge configuration."""
 
@@ -264,6 +279,7 @@ class BridgeConfig:
     printer: PrinterConfig = PrinterConfig()
     workflow: WorkflowConfig = WorkflowConfig()
     power: PowerConfig = PowerConfig()
+    firmware: FirmwareUpdateConfig = FirmwareUpdateConfig()
 
 
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
@@ -277,6 +293,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
         printer=_load_printer_config(data.get("printer", {})),
         workflow=_load_workflow_config(data.get("workflow", {})),
         power=_load_power_config(data.get("power", {})),
+        firmware=_load_firmware_config(data.get("firmware", {})),
     )
 
 
@@ -312,46 +329,58 @@ def render_config(config: BridgeConfig) -> str:
     )
     model = config.printer.model.value if config.printer.model is not None else "auto"
     device_name = config.printer.device_name or ""
-    return "\n".join(
-        [
-            "[ftp]",
-            f"mode = {_toml_string(config.ftp.mode.value)}",
-            f"bind_host = {_toml_string(config.ftp.bind_host)}",
-            f"host = {_toml_string(config.ftp.host)}",
-            f"hotspot_host = {_toml_string(config.ftp.hotspot_host)}",
-            f"port = {config.ftp.port}",
-            f"username = {_toml_string(config.ftp.username)}",
-            f"password = {_toml_string(config.ftp.password)}",
-            f"incoming_dir = {_toml_string(str(config.ftp.incoming_dir))}",
-            preferred_wifi,
-            "",
-            "[printer]",
-            f"model = {_toml_string(model)}",
-            f"fit = {_toml_string(config.printer.fit.value)}",
-            f"quality = {config.printer.quality}",
-            f"print_option = {config.printer.print_option}",
-            f"device_name = {_toml_string(device_name)}",
-            f"keepalive_interval_s = {_format_float(config.printer.keepalive_interval_s)}",
-            "",
-            "[workflow]",
-            f"auto_print_delay_s = {_format_auto_print_delay(config.workflow.auto_print_delay_s)}",
-            f"allow_print_without_film = {_toml_bool(config.workflow.allow_print_without_film)}",
-            "",
-            "[power]",
-            f"backend = {_toml_string(config.power.backend.value)}",
-            f"battery_poll_interval_s = {_format_float(config.power.battery_poll_interval_s)}",
-            "battery_warning_threshold_percent = "
-            f"{_format_float(config.power.battery_warning_threshold_percent)}",
-            "battery_safe_shutdown_threshold_percent = "
-            f"{_format_float(config.power.battery_safe_shutdown_threshold_percent)}",
-            f"idle_dim_after_s = {_format_float(config.power.idle_dim_after_s)}",
-            f"idle_screen_off_after_s = {_format_float(config.power.idle_screen_off_after_s)}",
-            f"idle_deep_after_s = {_format_float(config.power.idle_deep_after_s)}",
-            f"idle_poweroff_after_s = {_format_float(config.power.idle_poweroff_after_s)}",
-            f"idle_poweroff_enabled = {_toml_bool(config.power.idle_poweroff_enabled)}",
-            "",
-        ]
-    )
+    lines = [
+        "[ftp]",
+        f"mode = {_toml_string(config.ftp.mode.value)}",
+        f"bind_host = {_toml_string(config.ftp.bind_host)}",
+        f"host = {_toml_string(config.ftp.host)}",
+        f"hotspot_host = {_toml_string(config.ftp.hotspot_host)}",
+        f"port = {config.ftp.port}",
+        f"username = {_toml_string(config.ftp.username)}",
+        f"password = {_toml_string(config.ftp.password)}",
+        f"incoming_dir = {_toml_string(str(config.ftp.incoming_dir))}",
+        preferred_wifi,
+        "",
+        "[printer]",
+        f"model = {_toml_string(model)}",
+        f"fit = {_toml_string(config.printer.fit.value)}",
+        f"quality = {config.printer.quality}",
+        f"print_option = {config.printer.print_option}",
+        f"device_name = {_toml_string(device_name)}",
+        f"keepalive_interval_s = {_format_float(config.printer.keepalive_interval_s)}",
+        "",
+        "[workflow]",
+        f"auto_print_delay_s = {_format_auto_print_delay(config.workflow.auto_print_delay_s)}",
+        f"allow_print_without_film = {_toml_bool(config.workflow.allow_print_without_film)}",
+        "",
+        "[power]",
+        f"backend = {_toml_string(config.power.backend.value)}",
+        f"battery_poll_interval_s = {_format_float(config.power.battery_poll_interval_s)}",
+        "battery_warning_threshold_percent = "
+        f"{_format_float(config.power.battery_warning_threshold_percent)}",
+        "battery_safe_shutdown_threshold_percent = "
+        f"{_format_float(config.power.battery_safe_shutdown_threshold_percent)}",
+        f"idle_dim_after_s = {_format_float(config.power.idle_dim_after_s)}",
+        f"idle_screen_off_after_s = {_format_float(config.power.idle_screen_off_after_s)}",
+        f"idle_deep_after_s = {_format_float(config.power.idle_deep_after_s)}",
+        f"idle_poweroff_after_s = {_format_float(config.power.idle_poweroff_after_s)}",
+        f"idle_poweroff_enabled = {_toml_bool(config.power.idle_poweroff_enabled)}",
+        "",
+        "[firmware]",
+    ]
+    if config.firmware.trusted_public_keys:
+        lines.append("trusted_public_keys = [")
+        for record in config.firmware.trusted_public_keys:
+            lines.append(
+                "  { key_id = "
+                f"{_toml_string(record.key_id)}, public_key = {_toml_string(record.public_key)}"
+                " },"
+            )
+        lines.append("]")
+    else:
+        lines.append("trusted_public_keys = []")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _load_ftp_config(data: object) -> FtpConfig:
@@ -459,6 +488,32 @@ def _load_power_config(data: object) -> PowerConfig:
     )
 
 
+def _load_firmware_config(data: object) -> FirmwareUpdateConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[firmware] must be a TOML table")
+
+    raw_keys = data.get("trusted_public_keys", ())
+    if raw_keys is None:
+        raw_keys = ()
+    if not isinstance(raw_keys, list | tuple):
+        raise ValueError("[firmware].trusted_public_keys must be a list")
+
+    records: list[FirmwareTrustedPublicKeyConfig] = []
+    seen_key_ids: set[str] = set()
+    for index, raw_record in enumerate(raw_keys):
+        field = f"[firmware].trusted_public_keys[{index}]"
+        if not isinstance(raw_record, dict):
+            raise ValueError(f"{field} must be a TOML table")
+        key_id = _required_non_empty_str(raw_record.get("key_id"), f"{field}.key_id")
+        public_key = _required_non_empty_str(raw_record.get("public_key"), f"{field}.public_key")
+        if key_id in seen_key_ids:
+            raise ValueError(f"{field}.key_id must be unique")
+        seen_key_ids.add(key_id)
+        records.append(FirmwareTrustedPublicKeyConfig(key_id=key_id, public_key=public_key))
+
+    return FirmwareUpdateConfig(trusted_public_keys=tuple(records))
+
+
 def parse_ftp_receive_mode(value: object) -> FtpReceiveMode:
     """Parse a configured FTP receive mode."""
 
@@ -486,6 +541,12 @@ def _optional_str(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _required_non_empty_str(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value.strip()
 
 
 def _optional_ipv4_str(value: object, field_name: str) -> str | None:

@@ -19,7 +19,9 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Core/AppModels.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeFirmwareBundle.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeModels.swift"
+  "$REPO_ROOT/macos/InstantLink/Core/BridgeAuth.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeTransport.swift"
+  "$REPO_ROOT/macos/InstantLink/Core/BridgeHTTPTransport.swift"
   "$REPO_ROOT/macos/InstantLink/Core/AppRuntimeServices.swift"
   "$REPO_ROOT/macos/InstantLink/Core/QueueEditCoordinator.swift"
   "$REPO_ROOT/macos/InstantLink/Core/PrinterConnectionCoordinator.swift"
@@ -30,6 +32,7 @@ TESTS=(
   "$REPO_ROOT/macos/Tests/AppModelsTests.swift"
   "$REPO_ROOT/macos/Tests/BridgeFirmwareBundleTests.swift"
   "$REPO_ROOT/macos/Tests/BridgeModelsTests.swift"
+  "$REPO_ROOT/macos/Tests/BridgeHTTPTransportTests.swift"
   "$REPO_ROOT/macos/Tests/BridgeTransportTests.swift"
   "$REPO_ROOT/macos/Tests/AppRuntimeServicesTests.swift"
   "$REPO_ROOT/macos/Tests/QueueEditCoordinatorTests.swift"
@@ -48,6 +51,7 @@ swiftc \
   "${TESTS[@]}" \
   -framework AppKit \
   -framework SwiftUI \
+  -framework Security \
   -framework CoreText
 
 "$TEST_BIN"

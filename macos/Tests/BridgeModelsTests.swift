@@ -100,4 +100,36 @@ final class BridgeModelsTests {
             try expectEqual(error.payload.retryAfterSeconds, 90)
         }
     }
+
+    func testDecodesPairingStatusEnvelope() throws {
+        let data = Data(
+            """
+            {
+              "schema_version": 1,
+              "request_id": "req-pairing-1",
+              "ok": true,
+              "pairing": {
+                "open": true,
+                "auth_implemented": true,
+                "confirmation_code_required": true,
+                "expires_at": 1780500690,
+                "expires_in_seconds": 90,
+                "paired_client_id": "macbook",
+                "authorized_client_count": 1
+              }
+            }
+            """.utf8
+        )
+
+        let envelope = try JSONDecoder().decode(BridgeAPIEnvelope.self, from: data)
+        let pairing = try envelope.requirePairingStatus()
+
+        try expectTrue(pairing.open)
+        try expectTrue(pairing.authImplemented)
+        try expectTrue(pairing.confirmationCodeRequired)
+        try expectEqual(pairing.expiresAt, 1780500690)
+        try expectEqual(pairing.expiresInSeconds, 90)
+        try expectEqual(pairing.pairedClientID, "macbook")
+        try expectEqual(pairing.authorizedClientCount, 1)
+    }
 }

@@ -55,3 +55,8 @@ idle_poweroff_after_s = 7200
 # X306 exposes no host battery percentage, and unexpected poweroff looks like a crash during use.
 # Keep automatic poweroff off unless explicitly enabled from Settings > System.
 idle_poweroff_enabled = false
+
+[firmware]
+# Optional local test or staged release trust anchors. Product builds also use the embedded
+# firmware signing key list compiled into the Bridge manager.
+trusted_public_keys = []

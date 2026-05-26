@@ -12,6 +12,10 @@ struct BridgeAPIEnvelope: Codable, Equatable {
     var device: BridgeDevice?
     var devices: [BridgeDevice]?
     var status: BridgeStatus?
+    var management: BridgeManagementInfo?
+    var networkLabels: [BridgeNetworkLabel]?
+    var pairing: BridgePairingStatus?
+    var pairingCompletion: BridgePairingCompletion?
     var preflight: BridgeUpdatePreflight?
     var update: BridgeUpdateState?
     var event: BridgeUpdateEvent?
@@ -25,6 +29,10 @@ struct BridgeAPIEnvelope: Codable, Equatable {
         case device
         case devices
         case status
+        case management
+        case networkLabels = "network_labels"
+        case pairing
+        case pairingCompletion = "pairing_completion"
         case preflight
         case update
         case event
@@ -64,6 +72,22 @@ struct BridgeAPIEnvelope: Codable, Equatable {
         return status
     }
 
+    func requirePairingStatus() throws -> BridgePairingStatus {
+        try requireOK()
+        guard let pairing else {
+            throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "pairing")
+        }
+        return pairing
+    }
+
+    func requirePairingCompletion() throws -> BridgePairingCompletion {
+        try requireOK()
+        guard let pairingCompletion else {
+            throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "pairing_completion")
+        }
+        return pairingCompletion
+    }
+
     func requirePreflight() throws -> BridgeUpdatePreflight {
         try requireOK()
         guard let preflight else {
@@ -79,9 +103,47 @@ struct BridgeAPIEnvelope: Codable, Equatable {
         }
         return update
     }
+
+    func requireUpdateEvent() throws -> BridgeUpdateEvent {
+        try requireOK()
+        guard let event else {
+            throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "event")
+        }
+        return event
+    }
 }
 
 // MARK: - Devices And Status
+
+struct BridgeManagementInfo: Codable, Equatable {
+    var service: String?
+    var authImplemented: Bool
+    var adminRoutes: String?
+    var pairingOpen: Bool
+    var publicKeyFingerprint: String?
+
+    enum CodingKeys: String, CodingKey {
+        case service
+        case authImplemented = "auth_implemented"
+        case adminRoutes = "admin_routes"
+        case pairingOpen = "pairing_open"
+        case publicKeyFingerprint = "public_key_fingerprint"
+    }
+}
+
+struct BridgeNetworkLabel: Codable, Equatable {
+    var key: String
+    var label: String
+    var address: String?
+    var enabled: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case key
+        case label
+        case address
+        case enabled
+    }
+}
 
 struct BridgeDevice: Codable, Equatable, Identifiable {
     var id: String { deviceID }
@@ -223,6 +285,71 @@ struct BridgeUploadRecord: Codable, Equatable {
         case receivedAt = "received_at"
         case printedAt = "printed_at"
         case status
+    }
+}
+
+// MARK: - Pairing And Local Management Auth
+
+enum BridgeClientKeyAlgorithm: String, Codable, Equatable {
+    case ed25519
+    case p256SHA256 = "p256_sha256"
+}
+
+struct BridgePairingStatus: Codable, Equatable {
+    var open: Bool
+    var authImplemented: Bool
+    var confirmationCodeRequired: Bool
+    var expiresAt: Int?
+    var expiresInSeconds: Int?
+    var pairedClientID: String?
+    var authorizedClientCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case open
+        case authImplemented = "auth_implemented"
+        case confirmationCodeRequired = "confirmation_code_required"
+        case expiresAt = "expires_at"
+        case expiresInSeconds = "expires_in_seconds"
+        case pairedClientID = "paired_client_id"
+        case authorizedClientCount = "authorized_client_count"
+    }
+}
+
+struct BridgePairingCompleteRequest: Codable, Equatable {
+    var clientID: String
+    var clientName: String
+    var publicKey: String
+    var publicKeyAlgorithm: BridgeClientKeyAlgorithm
+    var confirmationCode: String
+    var expectedDeviceID: String?
+    var expectedManagementPublicKeyFingerprint: String?
+
+    enum CodingKeys: String, CodingKey {
+        case clientID = "client_id"
+        case clientName = "client_name"
+        case publicKey = "public_key"
+        case publicKeyAlgorithm = "public_key_algorithm"
+        case confirmationCode = "confirmation_code"
+        case expectedDeviceID = "expected_device_id"
+        case expectedManagementPublicKeyFingerprint = "expected_management_public_key_fingerprint"
+    }
+}
+
+struct BridgePairingCompletion: Codable, Equatable {
+    var clientID: String
+    var clientName: String?
+    var paired: Bool
+    var publicKeyAlgorithm: BridgeClientKeyAlgorithm?
+    var createdAt: String?
+    var message: String?
+
+    enum CodingKeys: String, CodingKey {
+        case clientID = "client_id"
+        case clientName = "client_name"
+        case paired
+        case publicKeyAlgorithm = "public_key_algorithm"
+        case createdAt = "created_at"
+        case message
     }
 }
 

@@ -16,6 +16,7 @@ import os
 import platform
 import re
 import tempfile
+import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import partial
@@ -58,6 +59,7 @@ INSTANTLINK_FIT_STRETCH = 2
 DEFAULT_SCAN_DURATION_S = 5
 STRING_BUFFER_SIZE = 4096
 FFI_CANCEL_GRACE_S = 5.0
+STATUS_FAILURE_LOG_INTERVAL_S = 30.0
 
 _PRINT_PROGRESS_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_uint32, ctypes.c_uint32)
 _T = TypeVar("_T")
@@ -187,6 +189,8 @@ class InstantLinkBackend:
         self._library_path = library_path
         self._lib: ctypes.CDLL | None = None
         self._lock = asyncio.Lock()
+        self._last_status_failure_log_at = -float("inf")
+        self._last_status_failure_signature: tuple[str, str, str] | None = None
 
     async def scan(self, timeout_s: float = DEFAULT_SCAN_DURATION_S) -> list[str]:
         """Return normalized visible Instax printer names."""
@@ -285,17 +289,42 @@ class InstantLinkBackend:
 
     def _status_blocking(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
         try:
-            return self._status_blocking_connected(name, scan_duration_s)
+            status = self._status_blocking_connected(name, scan_duration_s)
+            self._clear_status_failure_log_state()
+            return status
         except (InstantLinkBleError, InstantLinkPrinterNotFoundError, TimeoutError) as exc:
+            self._log_status_failure(name, exc)
+            self._disconnect_blocking()
+            raise
+
+    def _log_status_failure(self, name: str, exc: BaseException) -> None:
+        normalized_name = normalize_printer_name(name)
+        signature = (normalized_name, type(exc).__name__, str(exc))
+        now = time.monotonic()
+        if (
+            signature != self._last_status_failure_signature
+            or now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
+        ):
             LOGGER.warning(
                 "instantlink.status_failed_disconnect name=%s error_type=%s error=%s",
-                normalize_printer_name(name),
+                normalized_name,
                 type(exc).__name__,
                 exc,
             )
             LOGGER.debug("instantlink.status_failed_disconnect_trace", exc_info=True)
-            self._disconnect_blocking()
-            raise
+            self._last_status_failure_signature = signature
+            self._last_status_failure_log_at = now
+        else:
+            LOGGER.debug(
+                "instantlink.status_failed_disconnect_suppressed name=%s error_type=%s error=%s",
+                normalized_name,
+                type(exc).__name__,
+                exc,
+            )
+
+    def _clear_status_failure_log_state(self) -> None:
+        self._last_status_failure_signature = None
+        self._last_status_failure_log_at = -float("inf")
 
     def _status_blocking_connected(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
         self._ensure_connected_blocking(name, scan_duration_s=scan_duration_s)

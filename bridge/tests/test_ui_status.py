@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Sequence
 from typing import Any, cast
 
@@ -132,6 +133,28 @@ async def test_instantlink_status_disconnects_stale_session_after_status_failure
         await backend.status("INSTAX-1N034655")
 
     assert library.disconnect_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_instantlink_status_failure_logs_are_rate_limited(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    library = _FakeInstantLinkStatusLibrary(battery_rc=-3)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    caplog.set_level(logging.WARNING, logger="instantlink_bridge.ble.instantlink")
+
+    for _ in range(3):
+        with pytest.raises(InstantLinkBleError, match="status battery failed"):
+            await backend.status("INSTAX-1N034655")
+
+    warning_messages = [
+        record.getMessage()
+        for record in caplog.records
+        if record.getMessage().startswith("instantlink.status_failed_disconnect")
+    ]
+    assert len(warning_messages) == 1
+    assert library.disconnect_calls == 3
 
 
 def test_select_status_target_falls_back_to_selected_when_not_visible() -> None:

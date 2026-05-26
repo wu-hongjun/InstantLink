@@ -858,6 +858,7 @@ async def test_repeated_unavailable_printer_status_escalates_offline() -> None:
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_OFFLINE
     assert display.snapshots[-1].printer_status_message == "Hold K3 to re-pair"
+    assert ui._printer_status_retry_delay(False) == 5.0
 
 
 @pytest.mark.asyncio

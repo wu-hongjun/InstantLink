@@ -80,6 +80,7 @@ from instantlink_bridge.ui.status import (
 
 LOGGER = logging.getLogger(__name__)
 OFFLINE_STATUS_RETRY_S = 1.0
+OFFLINE_STATUS_BACKOFF_RETRY_S = 5.0
 RESTART_PRINTER_RETRY_S = 5.0
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
@@ -1732,6 +1733,8 @@ class BridgeUi:
             return self._printer_keepalive_interval_s
         if self._snapshot.printer_status_message == "Restart printer":
             return RESTART_PRINTER_RETRY_S
+        if self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
+            return OFFLINE_STATUS_BACKOFF_RETRY_S
         return OFFLINE_STATUS_RETRY_S
 
     def _apply_printer_status(

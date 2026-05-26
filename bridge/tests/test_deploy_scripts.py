@@ -223,6 +223,14 @@ def test_wifi_mode_helper_does_not_log_wifi_secrets_through_nested_sudo() -> Non
     assert "sudo tee" not in text
 
 
+def test_wifi_mode_helper_cleans_legacy_hotspot_profiles() -> None:
+    text = WIFI_MODE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "delete_stale_hotspot_profiles()" in text
+    assert '"InstantBridge-Hotspot"' in text
+    assert "run_root nmcli connection delete uuid" in text
+
+
 def test_deploy_bootstraps_runtime_identity_before_copy_for_system_installs() -> None:
     text = DEPLOY_SCRIPT.read_text(encoding="utf-8")
     main = text[text.index("main() {") :]

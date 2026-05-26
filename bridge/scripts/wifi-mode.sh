@@ -131,6 +131,26 @@ valid_hotspot_psk() {
   [[ "$1" =~ ^[0-9]{8}$ ]]
 }
 
+delete_stale_hotspot_profiles() {
+  local active_hotspot_uuid=""
+  active_hotspot_uuid="$(
+    nmcli -t -f NAME,UUID,TYPE,DEVICE connection show --active |
+      awk -F: -v name="${HOTSPOT_CONNECTION}" \
+        '$1 == name && $3 == "802-11-wireless" && $4 == "wlan0" { print $2; exit }'
+  )"
+
+  nmcli -t -f NAME,UUID,TYPE,DEVICE connection show |
+    while IFS=: read -r name uuid type device; do
+      [[ "${type}" == "802-11-wireless" ]] || continue
+      if [[ "${name}" == "InstantBridge-Hotspot" ]]; then
+        run_root nmcli connection delete uuid "${uuid}" >/dev/null 2>&1 || true
+      elif [[ "${name}" == "${HOTSPOT_CONNECTION}" && -n "${active_hotspot_uuid}" &&
+        "${uuid}" != "${active_hotspot_uuid}" && -z "${device}" ]]; then
+        run_root nmcli connection delete uuid "${uuid}" >/dev/null 2>&1 || true
+      fi
+    done
+}
+
 read_hotspot_psk() {
   if [[ ! -r "${PSK_FILE}" ]]; then
     return 1
@@ -187,6 +207,7 @@ configure_hotspot() {
     ipv4.never-default yes \
     ipv6.method disabled
   run_root nmcli connection up "${HOTSPOT_CONNECTION}"
+  delete_stale_hotspot_profiles
   echo "Hotspot active: SSID=${ssid} FTP=${host}"
 }
 

@@ -920,6 +920,10 @@ class BridgeUi:
             self._pair_return_page = self._settings_page
             await self._start_pairing()
             return
+        if key is SettingKey.RESET_PRINTER_LINK:
+            self._forget_confirm_pending = False
+            await self._reset_printer_link_from_settings()
+            return
         if key is SettingKey.FORGET_PRINTER:
             await self._confirm_or_forget_selected_printer()
             return
@@ -1163,6 +1167,8 @@ class BridgeUi:
             return SettingsRow("System", "")
         if key is SettingKey.PAIR_PRINTER:
             return SettingsRow("Find printer", printer_name)
+        if key is SettingKey.RESET_PRINTER_LINK:
+            return SettingsRow("Reset BLE link", "run")
         if key is SettingKey.FORGET_PRINTER:
             return SettingsRow(
                 "Forget printer",
@@ -1441,6 +1447,25 @@ class BridgeUi:
         )
         await self._schedule_printer_status_refresh()
         self._show_settings("Status refreshed", page=page)
+
+    async def _reset_printer_link_from_settings(self) -> None:
+        page = self._settings_page
+        if self._snapshot.paired_printer is None:
+            self._show_settings("No printer saved", page=page)
+            return
+        self._show_settings("Resetting BLE link", page=page)
+        await self._cancel_status_refresh()
+        await self._close_cached_printer_session()
+        self._printer_status_misses = 0
+        self._snapshot = replace(
+            self._snapshot,
+            film_remaining=None,
+            printer_battery=None,
+            printer_is_charging=None,
+            printer_status_message="Looking for printer",
+        )
+        await self._schedule_printer_status_refresh()
+        self._show_settings("BLE link reset", page=page)
 
     async def _start_pairing(self) -> None:
         if self._pairing_task is not None and not self._pairing_task.done():

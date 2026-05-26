@@ -37,6 +37,7 @@ class SettingKey(StrEnum):
     AUTO_PRINT_DELAY = "auto_print_delay"
     ALLOW_PRINT_WITHOUT_FILM = "allow_print_without_film"
     KEEPALIVE = "keepalive"
+    RESET_PRINTER_LINK = "reset_printer_link"
     FORGET_PRINTER = "forget_printer"
     SYSTEM_DEVICE_ID = "system_device_id"
     SYSTEM_APP_VERSION = "system_app_version"
@@ -87,6 +88,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     ),
     SettingsPage.PRINTER: (
         SettingKey.PAIR_PRINTER,
+        SettingKey.RESET_PRINTER_LINK,
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
         SettingKey.KEEPALIVE,
@@ -172,6 +174,7 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
 ACTION_SETTING_KEYS: frozenset[SettingKey] = frozenset(
     {
         SettingKey.PAIR_PRINTER,
+        SettingKey.RESET_PRINTER_LINK,
         SettingKey.FORGET_PRINTER,
         SettingKey.REFRESH_STATUS,
     }
@@ -235,6 +238,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_SYSTEM: "Device info and power",
     SettingKey.FTP_RECEIVE_MODE: "Choose Bridge or Same-Wi-Fi FTP",
     SettingKey.PAIR_PRINTER: "Scan and save one printer",
+    SettingKey.RESET_PRINTER_LINK: "Disconnect and retry saved printer",
     SettingKey.FORGET_PRINTER: "Remove saved printer",
     SettingKey.FTP_MODE_INFO: "Active FTP Wi-Fi path",
     SettingKey.FTP_HOST_INFO: "FTP host to enter",

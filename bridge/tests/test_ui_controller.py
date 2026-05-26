@@ -999,7 +999,7 @@ async def test_settings_save_failure_keeps_runtime_config(
 
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(3):
+    for _ in range(4):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.RIGHT)
@@ -1008,8 +1008,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     assert ui.config.printer.keepalive_interval_s == 10.0
     assert load_config(config_path).printer.keepalive_interval_s == 10.0
     assert display.snapshots[-1].settings_message == "Config not writable"
-    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[3].value == "10s"
+    assert display.snapshots[-1].settings_rows[4].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[4].value == "10s"
 
 
 @pytest.mark.asyncio
@@ -1105,11 +1105,11 @@ async def test_settings_rows_show_action_specific_hints() -> None:
     assert display.snapshots[-1].settings_rows[0].hint == "Right/KEY1 open"
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(3):
+    for _ in range(4):
         await ui._handle_action(UiAction.DOWN)
 
-    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[3].hint == "Right/KEY1 choose"
+    assert display.snapshots[-1].settings_rows[4].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[4].hint == "Right/KEY1 choose"
 
 
 @pytest.mark.asyncio
@@ -1428,6 +1428,48 @@ async def test_settings_system_refresh_stays_in_settings() -> None:
 
 
 @pytest.mark.asyncio
+async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _FakeStatusProvider(
+        snapshot=PrinterStatusSnapshot(
+            film_remaining=3,
+            battery=90,
+            is_charging=False,
+            model=PrinterModel.SQUARE,
+        )
+    )
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(
+        mode=UiMode.READY,
+        paired_printer=printer,
+        film_remaining=2,
+        printer_battery=88,
+    )
+
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+    await asyncio.sleep(0)
+
+    assert status_provider.close_calls >= 1
+    assert status_provider.close_cached_calls == 1
+    assert display.snapshots[-1].mode is UiMode.SETTINGS
+    assert display.snapshots[-1].settings_title == "Printer"
+    assert display.snapshots[-1].settings_message == "BLE link reset"
+    assert display.snapshots[-1].paired_printer == replace(printer, model=PrinterModel.SQUARE)
+    await ui._cancel_status_refresh()
+
+
+@pytest.mark.asyncio
 async def test_settings_system_page_shows_device_and_versions() -> None:
     display = _FakeDisplay()
     ui = BridgeUi(
@@ -1515,6 +1557,7 @@ async def test_forget_printer_requires_second_confirmation() -> None:
 
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
 
@@ -1946,6 +1989,7 @@ class _FakeStatusProvider:
         self.fetch_started = asyncio.Event()
         self.fetch_calls = 0
         self.close_calls = 0
+        self.close_cached_calls = 0
 
     async def fetch(self, _printer: PairedPrinter) -> PrinterStatusSnapshot:
         self.fetch_calls += 1
@@ -1958,6 +2002,9 @@ class _FakeStatusProvider:
 
     async def close(self) -> None:
         self.close_calls += 1
+
+    async def close_cached_session(self) -> None:
+        self.close_cached_calls += 1
 
 
 async def _unused_wifi_mode_setter(mode: WifiMode) -> str:

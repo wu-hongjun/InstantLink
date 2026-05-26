@@ -397,11 +397,28 @@ create_commit_archive() {
   git -C "${top}" archive --format=tar "${commit_sha}" -- "${prefix}" |
     tar -xf - -C "${temp_dir}"
   if [[ -n "${prefix}" ]]; then
-    COPYFILE_DISABLE=1 tar -C "${temp_dir}/${prefix%/}" -czf "${archive}" .
+    create_clean_tar_from_dir "${temp_dir}/${prefix%/}" "${archive}"
   else
-    COPYFILE_DISABLE=1 tar -C "${temp_dir}" -czf "${archive}" .
+    create_clean_tar_from_dir "${temp_dir}" "${archive}"
   fi
   rm -rf "${temp_dir}"
+}
+
+create_clean_tar_from_dir() {
+  local source_dir="$1"
+  local archive="$2"
+
+  if COPYFILE_DISABLE=1 tar --no-xattrs --disable-copyfile -C "${source_dir}" -czf "${archive}" . \
+    2>/dev/null; then
+    return 0
+  fi
+  rm -f "${archive}"
+  if COPYFILE_DISABLE=1 tar --disable-copyfile -C "${source_dir}" -czf "${archive}" . \
+    2>/dev/null; then
+    return 0
+  fi
+  rm -f "${archive}"
+  COPYFILE_DISABLE=1 tar -C "${source_dir}" -czf "${archive}" .
 }
 
 create_working_tree_archive() {

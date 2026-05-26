@@ -1,5 +1,5 @@
 [Unit]
-Description=InstantLink Bridge USB camera link removed
+Description=InstantLink Bridge USB admin link removed
 
 [Service]
 Type=oneshot

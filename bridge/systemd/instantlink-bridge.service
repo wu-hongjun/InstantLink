@@ -1,5 +1,5 @@
 [Unit]
-Description=InstantLink Bridge camera FTP service
+Description=InstantLink Bridge FTP receive service
 # Start the LCD/UI as soon as the system bus is available. Network, DHCP, and
 # Bluetooth are wanted but intentionally not ordered before this unit; the app
 # reports those subsystems as they come online.

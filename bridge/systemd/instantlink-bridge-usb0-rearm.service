@@ -1,5 +1,5 @@
 [Unit]
-Description=InstantLink Bridge USB camera link attached
+Description=InstantLink Bridge USB admin link attached
 
 [Service]
 Type=oneshot

@@ -1,4 +1,4 @@
-"""InstantLink Bridge camera FTP appliance."""
+"""InstantLink Bridge FTP-to-printer appliance."""
 
 __all__ = ["__version__"]
 

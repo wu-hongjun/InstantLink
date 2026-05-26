@@ -8,6 +8,7 @@ from pathlib import Path
 from instantlink_bridge.config import (
     DEFAULT_CONFIG_PATH,
     BridgeConfig,
+    FtpReceiveMode,
     load_config,
 )
 from instantlink_bridge.manager.auth import PairingWindowError, PairingWindowStore
@@ -124,6 +125,60 @@ def collect_status_payload(
     }
 
 
+def collect_http_status_payload(
+    config_path: Path = DEFAULT_CONFIG_PATH,
+) -> JsonObject:
+    """Return the BridgeStatus-shaped payload used by the macOS management API."""
+
+    info = read_system_info()
+    snapshot = read_config_snapshot(config_path)
+    config = snapshot.config
+    upload_mode = bridge_upload_mode(config.ftp.mode)
+    return {
+        "status": {
+            "device_id": info.device_id,
+            "display_name": DISPLAY_NAME,
+            "bridge_version": info.app_version,
+            "api_version": API_VERSION,
+            "readiness": "needs_attention" if snapshot.error_code is not None else "ready",
+            "active_upload_mode": upload_mode,
+            "uptime_seconds": None,
+            "network": {
+                "mode": upload_mode,
+                "label": bridge_upload_label(config.ftp.mode),
+                "address": bridge_upload_address(config),
+                "connected": snapshot.error_code is None,
+            },
+            "printer": {
+                "display_name": config.printer.device_name,
+                "model": config.printer.model.value if config.printer.model is not None else None,
+                "film_remaining": None,
+                "battery_percent": None,
+                "connected": False,
+                "busy": False,
+                "last_error": None,
+            },
+            "update": {
+                "current_version": info.app_version,
+                "available_version": None,
+                "can_update": False,
+                "operation_id": None,
+                "phase": "idle",
+            },
+            "last_upload": None,
+            "last_error": (
+                {
+                    "message": snapshot.message or "Config could not be loaded.",
+                    "recommended_action": "Fix the Bridge config file and restart the manager.",
+                    "details": {"error_code": snapshot.error_code},
+                }
+                if snapshot.error_code is not None
+                else None
+            ),
+        }
+    }
+
+
 def read_config_snapshot(config_path: Path) -> ConfigSnapshot:
     """Load config or return defaults with sanitized error metadata."""
 
@@ -138,6 +193,42 @@ def read_config_snapshot(config_path: Path) -> ConfigSnapshot:
             message=str(exc),
         )
     return ConfigSnapshot(config=config, source="file" if exists else "defaults")
+
+
+def bridge_upload_mode(mode: FtpReceiveMode) -> str:
+    """Map Bridge FTP receive config to the management API upload-mode vocabulary."""
+
+    if mode is FtpReceiveMode.HOTSPOT:
+        return "bridge_wifi"
+    if mode is FtpReceiveMode.PEER:
+        return "same_wifi"
+    if mode is FtpReceiveMode.WIRED:
+        return "usb_debug"
+    return "unknown"
+
+
+def bridge_upload_label(mode: FtpReceiveMode) -> str:
+    """Return the user-facing label for a configured upload mode."""
+
+    if mode is FtpReceiveMode.HOTSPOT:
+        return "Bridge Wi-Fi"
+    if mode is FtpReceiveMode.PEER:
+        return "Same-Wi-Fi"
+    if mode is FtpReceiveMode.WIRED:
+        return "USB debug"
+    return "Auto"
+
+
+def bridge_upload_address(config: BridgeConfig) -> str | None:
+    """Return the primary configured address for the active upload mode."""
+
+    if config.ftp.mode is FtpReceiveMode.HOTSPOT:
+        return config.ftp.hotspot_host
+    if config.ftp.mode is FtpReceiveMode.PEER:
+        return config.ftp.preferred_wifi_host
+    if config.ftp.mode is FtpReceiveMode.WIRED:
+        return config.ftp.host
+    return None
 
 
 def read_pairing_status(

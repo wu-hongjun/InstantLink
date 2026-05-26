@@ -236,8 +236,10 @@ async def test_manager_http_pairing_complete_succeeds_and_stores_client(
 
         admin_response = await client.get("/v1/status", headers=signed_headers(private_key))
         admin_data = cast(dict[str, Any], await admin_response.json())
-        assert admin_response.status == 501
-        assert_error_envelope(admin_data, error_code="not_implemented")
+        assert admin_response.status == 200
+        assert_success_envelope(admin_data, request_id="req-pair")
+        assert admin_data["status"]["device_id"] == "IB-1234ABCD"
+        assert admin_data["status"]["active_upload_mode"] == "bridge_wifi"
     finally:
         await client.close()
 
@@ -415,9 +417,11 @@ async def test_manager_http_admin_routes_are_auth_required(
 
 
 @pytest.mark.asyncio
-async def test_manager_http_admin_route_accepts_signed_request_then_reports_unimplemented(
+async def test_manager_http_admin_status_route_accepts_signed_request(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
     private_key = ed25519.Ed25519PrivateKey.generate()
     store = ClientStore(tmp_path / "clients")
     store.save_client(
@@ -443,8 +447,21 @@ async def test_manager_http_admin_route_accepts_signed_request_then_reports_unim
             headers=signed_headers(private_key, path=path),
         )
         data = cast(dict[str, Any], await response.json())
-        assert response.status == 501
-        assert_error_envelope(data, error_code="not_implemented")
+        assert response.status == 200
+        assert_success_envelope(data, request_id="req-signed")
+        assert data["status"]["device_id"] == "IB-1234ABCD"
+        assert data["status"]["display_name"] == "InstantLink Bridge"
+        assert data["status"]["bridge_version"] == "9.8.7"
+        assert data["status"]["api_version"] == "v1"
+        assert data["status"]["readiness"] == "ready"
+        assert data["status"]["active_upload_mode"] == "bridge_wifi"
+        assert data["status"]["network"] == {
+            "mode": "bridge_wifi",
+            "label": "Bridge Wi-Fi",
+            "address": "192.168.8.1",
+            "connected": True,
+        }
+        assert data["status"]["update"]["phase"] == "idle"
     finally:
         await client.close()
 
@@ -475,8 +492,8 @@ async def test_manager_http_admin_route_rejects_replayed_signed_request(
         headers = signed_headers(private_key, path="/v1/status")
         first = await client.get("/v1/status", headers=headers)
         first_data = cast(dict[str, Any], await first.json())
-        assert first.status == 501
-        assert_error_envelope(first_data, error_code="not_implemented")
+        assert first.status == 200
+        assert_success_envelope(first_data, request_id="req-admin-1")
 
         second = await client.get("/v1/status", headers=headers)
         second_data = cast(dict[str, Any], await second.json())

@@ -283,7 +283,7 @@ def status_for_pairing_error(exc: PairingWindowError) -> int:
 
 
 def auth_required_handler(route: ManagementRoute) -> Handler:
-    """Return a placeholder handler for routes that will require signed auth."""
+    """Return a signed admin handler for one management route."""
 
     async def handler(request: web.Request) -> web.Response:
         try:
@@ -298,6 +298,12 @@ def auth_required_handler(route: ManagementRoute) -> Handler:
             body["auth_required"] = True
             body["operation_id"] = route.operation_id
             return web.json_response(body, status=401)
+
+        if route.operation_id == "status":
+            return json_success(
+                request,
+                manager_status.collect_http_status_payload(config_path_for(request)),
+            )
 
         return json_failure(
             request,

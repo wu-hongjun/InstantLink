@@ -28,9 +28,9 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- Hardware-verified runtime baseline: `504ecdac6e515324894b11a02fed25c14ec660ca`
-- Parent InstantBridge `main` should point at submodule commit `504ecdac6e515324894b11a02fed25c14ec660ca`
-  or newer. Parent commit `f0289ab` records this pointer.
+- Hardware-verified runtime baseline: `8860be68dbb688093722acafa0ac128ba060d889`
+- Parent InstantBridge `main` should point at submodule commit `8860be68dbb688093722acafa0ac128ba060d889`
+  or newer.
 - Service: `instantlink-bridge.service`
 - Install root: `/opt/InstantLinkBridge`
 - Config root: `/etc/InstantLinkBridge`
@@ -117,7 +117,8 @@ Expected healthy state:
     BlueZ `InProgress`, `le-connection-abort-by-local`, and `Timeout waiting for reply`.
   - A 2026-05-25 follow-up saw both `INSTAX-52006924 (ANDROID)` and `INSTAX-52006924 (IOS)`, then
     native connect reached GATT but failed with `write characteristic not found`. Commit `9a54b4f`
-    retries Linux BLE characteristic discovery and fresh ARM64 artifacts were deployed from it.
+    retries Linux BLE characteristic discovery; commit `8860be6` includes that fix plus display idle
+    defaults. Fresh ARM64 artifacts were deployed from `8860be6`.
   - After the failed connect attempts, the printer stopped advertising in both InstantLink and
     BlueZ scans. The LCD should show the no-printer/pairing flow until the printer is power-cycled
     and paired again from the bridge.

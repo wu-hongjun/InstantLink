@@ -115,6 +115,12 @@ _GENERIC_SEARCHING_MESSAGES = frozenset({"Looking for printer", "Searching for p
 # `_render` keeps this cheap and prevents render-spam.
 RENDER_TICK_S = 0.35
 USB_STATUS_POLL_S = 1.0
+# Readiness freshness gate: "Ready to print" must be backed by a printer status that succeeded
+# recently, not just stale cached film/mode. If the printer powers off, status polls fail and the
+# last success ages out past this TTL, so the display leaves "Ready" even if a PRINTER_SEARCHING
+# mode transition was dropped. The effective TTL is a small multiple of the keepalive interval so a
+# few missed polls do not flip readiness, but a genuinely off printer downgrades within ~30 s.
+PRINTER_STATUS_FRESH_TTL_S = 30.0
 PREVIEW_BUILD_TIMEOUT_S = 20.0
 RETURN_HOME_DELAY_S = 2.0
 WIFI_MODE_HELPER = Path(
@@ -214,6 +220,9 @@ class BridgeUi:
         self._auto_rebond_task: asyncio.Task[None] | None = None
         self._last_printer_status_warning_at = -math.inf
         self._last_printer_status_warning_signature: tuple[str, ...] | None = None
+        # Monotonic timestamp of the last successful printer status. Readiness ("Ready to print")
+        # is only asserted while this is within PRINTER_STATUS_FRESH_TTL_S; -inf means never proven.
+        self._last_printer_status_ok_at: float = float("-inf")
         self._actions: asyncio.Queue[UiAction] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
@@ -475,6 +484,7 @@ class BridgeUi:
                 printer_model=printer.model,
             )
         self._printer_status_misses = 0
+        self._last_printer_status_ok_at = self._monotonic()
         self._apply_printer_status(printer, status)
         return status.model or self._known_printer_model()
 
@@ -1687,6 +1697,7 @@ class BridgeUi:
             printer_battery_minutes_remaining=self._battery_minutes_remaining,
             printer_model=printer_model,
             printer_status_message=printer_status_message,
+            printer_status_fresh=self._printer_status_is_fresh(),
             bridge_battery_percent=self._bridge_battery_percent,
             bridge_power_model=self._bridge_power_model,
             bridge_power_status=self._bridge_power_status,
@@ -1794,6 +1805,7 @@ class BridgeUi:
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at.pop(_auto_rebond_key(printer), None)
         self._clear_printer_status_warning_state()
+        self._last_printer_status_ok_at = self._monotonic()
         estimate = self._feed_battery_estimator(status)
         LOGGER.info(
             "ui.printer_status film_remaining=%s battery=%s charging=%s model=%s "
@@ -1908,6 +1920,23 @@ class BridgeUi:
     def _monotonic(self) -> float:
         return asyncio.get_running_loop().time()
 
+    def _printer_status_fresh_ttl_s(self) -> float:
+        """Return the readiness freshness TTL: a small multiple of the keepalive interval."""
+
+        return max(PRINTER_STATUS_FRESH_TTL_S, 3.0 * self._printer_keepalive_interval_s)
+
+    def _printer_status_is_fresh(self) -> bool:
+        """Return whether a printer status succeeded within the freshness TTL.
+
+        Never-proven state (``-inf``) is reported stale without consulting the clock so this is
+        safe to call before the event loop is running (e.g. the BOOTING snapshot in ``__init__``).
+        """
+
+        if self._last_printer_status_ok_at == float("-inf"):
+            return False
+        age = self._monotonic() - self._last_printer_status_ok_at
+        return age < self._printer_status_fresh_ttl_s()
+
     def _offline_backoff_delay(self) -> float:
         """Return an exponentially backed-off retry delay for an offline printer.
 
@@ -1963,6 +1992,7 @@ class BridgeUi:
             printer_battery_minutes_remaining=self._battery_minutes_remaining,
             printer_model=printer_model,
             printer_status_message=status.message,
+            printer_status_fresh=True,
             allow_print_without_film=self._config.workflow.allow_print_without_film,
         )
         if self._snapshot.mode is UiMode.SETTINGS:
@@ -2012,6 +2042,7 @@ class BridgeUi:
             self._snapshot = replace(
                 self._snapshot,
                 printer_status_message=message,
+                printer_status_fresh=False,
                 film_remaining=None,
                 printer_battery=None,
                 printer_is_charging=None,
@@ -2024,6 +2055,7 @@ class BridgeUi:
             self._snapshot = replace(
                 self._snapshot,
                 printer_status_message=message,
+                printer_status_fresh=False,
                 film_remaining=None,
                 printer_battery=None,
                 printer_is_charging=None,
@@ -2034,6 +2066,7 @@ class BridgeUi:
             self._snapshot,
             mode=mode,
             printer_status_message=message,
+            printer_status_fresh=False,
             film_remaining=None,
             printer_battery=None,
             printer_is_charging=None,
@@ -2127,6 +2160,8 @@ class BridgeUi:
         # history so a stale pre-disconnect trend cannot pollute the next estimate.
         self._battery_estimator.reset()
         self._battery_minutes_remaining = None
+        # A closed session means the next status is a fresh connect; readiness must not survive it.
+        self._last_printer_status_ok_at = float("-inf")
         close_cached_session = getattr(self._status_provider, "close_cached_session", None)
         if close_cached_session is None:
             return
@@ -2143,6 +2178,13 @@ class BridgeUi:
 
         while True:
             await asyncio.sleep(RENDER_TICK_S)
+            # Age out readiness: if no status succeeded within the TTL, downgrade the cached
+            # snapshot so a stale "Ready to print" leaves the screen even when no explicit failure
+            # arrived (e.g. a dropped PRINTER_SEARCHING transition). The snapshot short-circuit in
+            # _render still suppresses re-rendering an unchanged frame.
+            fresh = self._printer_status_is_fresh()
+            if fresh != self._snapshot.printer_status_fresh:
+                self._snapshot = replace(self._snapshot, printer_status_fresh=fresh)
             self._render()
 
     async def _run_network_status(self) -> None:

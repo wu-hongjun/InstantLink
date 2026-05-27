@@ -87,6 +87,7 @@ class UiSnapshot:
     printer_battery_minutes_remaining: int | None = None
     printer_model: PrinterModel | None = None
     printer_status_message: str | None = None
+    printer_status_fresh: bool = False
     bridge_battery_percent: int | None = None
     bridge_power_model: str | None = None
     bridge_power_status: str | None = None

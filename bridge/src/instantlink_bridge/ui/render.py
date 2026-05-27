@@ -864,7 +864,8 @@ def printer_ready(snapshot: UiSnapshot) -> bool:
     }:
         return False
     return (
-        snapshot.paired_printer is not None
+        snapshot.printer_status_fresh
+        and snapshot.paired_printer is not None
         and snapshot.film_remaining is not None
         and (snapshot.film_remaining > 0 or snapshot.allow_print_without_film)
     )

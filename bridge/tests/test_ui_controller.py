@@ -54,6 +54,7 @@ from instantlink_bridge.ui.controller import (
 )
 from instantlink_bridge.ui.input import NullInput
 from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiMode, UiSnapshot
+from instantlink_bridge.ui.render import can_accept_images
 from instantlink_bridge.ui.settings import (
     HANDLED_SETTING_KEYS,
     SETTING_HELP_TEXT,
@@ -2511,3 +2512,167 @@ class _BlockingStatusProvider:
 
 async def _unused_wifi_mode_setter(mode: WifiMode) -> str:
     raise AssertionError(f"unexpected Wi-Fi mode change: {mode}")
+
+
+@pytest.mark.asyncio
+async def test_successful_status_marks_snapshot_fresh_and_stamps_clock() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _FakeStatusProvider(
+        snapshot=PrinterStatusSnapshot(
+            film_remaining=8,
+            battery=70,
+            is_charging=False,
+            model=PrinterModel.SQUARE,
+            message="Ready",
+        )
+    )
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+    assert not ui._snapshot.printer_status_fresh
+
+    assert await ui._refresh_printer_status_in_background(printer)
+
+    assert ui._snapshot.printer_status_fresh
+    assert ui._last_printer_status_ok_at != float("-inf")
+    assert can_accept_images(replace(ui._snapshot, camera_receive_ready=True))
+
+
+@pytest.mark.asyncio
+async def test_render_tick_downgrades_freshness_after_ttl_then_success_restores() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _FakeStatusProvider(
+        snapshot=PrinterStatusSnapshot(
+            film_remaining=8,
+            battery=70,
+            is_charging=False,
+            model=PrinterModel.SQUARE,
+            message="Ready",
+        )
+    )
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+
+    fake_now = {"t": 1000.0}
+    ui._monotonic = lambda: fake_now["t"]  # type: ignore[method-assign]
+    ttl = ui._printer_status_fresh_ttl_s()
+
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui._snapshot.printer_status_fresh
+
+    tick_task = asyncio.create_task(ui._run_render_tick())
+    try:
+        # Within the TTL the snapshot stays fresh.
+        fake_now["t"] = 1000.0 + ttl - 1.0
+        await asyncio.sleep(RENDER_TICK_S * 2)
+        assert ui._snapshot.printer_status_fresh
+
+        # Past the TTL with no new success the tick downgrades readiness.
+        fake_now["t"] = 1000.0 + ttl + 1.0
+        for _ in range(50):
+            if not ui._snapshot.printer_status_fresh:
+                break
+            await asyncio.sleep(RENDER_TICK_S)
+        assert not ui._snapshot.printer_status_fresh
+
+        # A subsequent successful status restores freshness.
+        assert await ui._refresh_printer_status_in_background(printer)
+        assert ui._snapshot.printer_status_fresh
+    finally:
+        tick_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await tick_task
+
+
+@pytest.mark.asyncio
+async def test_ready_downgrades_when_no_status_succeeds_for_ttl() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _FakeStatusProvider(
+        snapshot=PrinterStatusSnapshot(
+            film_remaining=8,
+            battery=70,
+            is_charging=False,
+            model=PrinterModel.SQUARE,
+            message="Ready",
+        )
+    )
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+
+    fake_now = {"t": 5000.0}
+    ui._monotonic = lambda: fake_now["t"]  # type: ignore[method-assign]
+    ttl = ui._printer_status_fresh_ttl_s()
+
+    # Connected -> ready.
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui._snapshot.mode is UiMode.READY
+    ready_with_camera = replace(ui._snapshot, camera_receive_ready=True)
+    assert can_accept_images(ready_with_camera)
+
+    # No successful status for longer than the TTL: even though the cached mode is still READY and
+    # film_remaining is still set, the printer-off display must leave "ready to print".
+    fake_now["t"] = 5000.0 + ttl + 1.0
+    ui._snapshot = replace(ui._snapshot, printer_status_fresh=ui._printer_status_is_fresh())
+    assert not ui._snapshot.printer_status_fresh
+    assert not can_accept_images(replace(ui._snapshot, camera_receive_ready=True))
+
+
+@pytest.mark.asyncio
+async def test_apply_printer_searching_clears_freshness() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = replace(
+        ui._build_snapshot(mode=UiMode.READY, paired_printer=printer, film_remaining=8),
+        printer_status_fresh=True,
+    )
+
+    ui._apply_printer_searching(printer, "Searching for printer")
+
+    assert ui._snapshot.mode is UiMode.PRINTER_SEARCHING
+    assert not ui._snapshot.printer_status_fresh
+
+
+@pytest.mark.asyncio
+async def test_close_cached_printer_session_resets_freshness_clock() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._last_printer_status_ok_at = 1234.0
+
+    await ui._close_cached_printer_session()
+
+    assert ui._last_printer_status_ok_at == float("-inf")
+    assert not ui._printer_status_is_fresh()

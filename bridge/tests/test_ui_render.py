@@ -570,6 +570,7 @@ def test_can_accept_images_requires_usb_or_wifi_path() -> None:
             paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
             film_remaining=0,
             allow_print_without_film=True,
+            printer_status_fresh=True,
         )
     )
     assert can_accept_images(
@@ -581,6 +582,7 @@ def test_can_accept_images_requires_usb_or_wifi_path() -> None:
             camera_transport_message="Same Wi-Fi adv 192.168.5.149",
             paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
             film_remaining=7,
+            printer_status_fresh=True,
         )
     )
     assert can_accept_images(
@@ -590,6 +592,7 @@ def test_can_accept_images_requires_usb_or_wifi_path() -> None:
             camera_receive_ready=True,
             paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
             film_remaining=7,
+            printer_status_fresh=True,
         )
     )
 
@@ -603,6 +606,7 @@ def test_readiness_texts_show_camera_and_printer_state() -> None:
         camera_transport_message="Bridge FTP 192.168.8.1",
         paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
         film_remaining=6,
+        printer_status_fresh=True,
     )
 
     assert camera_link_text(snapshot) == "FTP: Bridge FTP 192.168.8.1"
@@ -683,3 +687,46 @@ def test_printer_specific_error_copy_is_actionable() -> None:
     assert error_copy_for_message("printer battery too low")[0] == "Printer battery low"
     assert error_copy_for_message("printer cover is open")[0] == "Cover open"
     assert error_copy_for_message("printer is busy")[0] == "Printer busy"
+
+
+def _ready_snapshot(**overrides: object) -> UiSnapshot:
+    base: dict[str, object] = {
+        "mode": UiMode.READY,
+        "ftp_host": "192.168.7.1",
+        "camera_receive_ready": True,
+        "paired_printer": PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        "film_remaining": 8,
+        "printer_status_fresh": True,
+    }
+    base.update(overrides)
+    return UiSnapshot(**base)  # type: ignore[arg-type]
+
+
+def test_printer_ready_requires_fresh_status_even_with_film_and_pairing() -> None:
+    stale = _ready_snapshot(printer_status_fresh=False)
+
+    assert not printer_ready(stale)
+    assert not can_accept_images(stale)
+
+
+def test_printer_ready_true_only_when_status_is_fresh() -> None:
+    fresh = _ready_snapshot(printer_status_fresh=True)
+
+    assert printer_ready(fresh)
+    assert can_accept_images(fresh)
+
+
+def test_can_accept_images_false_for_stale_validation_mode() -> None:
+    stale_validation = _ready_snapshot(mode=UiMode.VALIDATION, printer_status_fresh=False)
+
+    assert not printer_ready(stale_validation)
+    assert not can_accept_images(stale_validation)
+
+
+def test_stale_ready_snapshot_does_not_render_ready_to_print() -> None:
+    stale = _ready_snapshot(printer_status_fresh=False)
+
+    image = render_snapshot(stale)
+
+    assert image.size == (240, 240)
+    assert not can_accept_images(stale)

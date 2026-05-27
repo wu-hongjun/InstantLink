@@ -82,6 +82,12 @@ LOGGER = logging.getLogger(__name__)
 OFFLINE_STATUS_RETRY_S = 1.0
 OFFLINE_STATUS_BACKOFF_RETRY_S = 5.0
 RESTART_PRINTER_RETRY_S = 5.0
+# Exponential backoff for a genuinely-offline printer: instead of rescanning every
+# OFFLINE_STATUS_BACKOFF_RETRY_S forever, grow the delay with the consecutive-miss count so a
+# missing printer is not polled aggressively. Base applies once the "offline" threshold is hit;
+# the delay doubles per additional miss up to the cap.
+OFFLINE_BACKOFF_BASE_S = 2.0
+OFFLINE_BACKOFF_CAP_S = 30.0
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
 USB_STATUS_POLL_S = 1.0
@@ -1760,8 +1766,20 @@ class BridgeUi:
         if self._snapshot.printer_status_message == "Restart printer":
             return RESTART_PRINTER_RETRY_S
         if self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
-            return OFFLINE_STATUS_BACKOFF_RETRY_S
+            return self._offline_backoff_delay()
         return OFFLINE_STATUS_RETRY_S
+
+    def _offline_backoff_delay(self) -> float:
+        """Return an exponentially backed-off retry delay for an offline printer.
+
+        Starts at ``OFFLINE_BACKOFF_BASE_S`` once the offline threshold is reached and doubles
+        for each additional consecutive miss, capped at ``OFFLINE_BACKOFF_CAP_S`` so a missing
+        printer is not rescanned every few seconds indefinitely.
+        """
+
+        extra_misses = self._printer_status_misses - OFFLINE_MESSAGE_AFTER_MISSES
+        delay = OFFLINE_BACKOFF_BASE_S * (2.0**extra_misses)
+        return min(delay, OFFLINE_BACKOFF_CAP_S)
 
     def _apply_printer_status(
         self,

@@ -78,6 +78,12 @@ pub const DEFAULT_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Timeout to wait for the listener task to exit gracefully after cancellation.
 const LISTENER_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
+/// Maximum time to wait for the Instax GATT characteristics to be exported by
+/// the OS BLE stack after service discovery. BlueZ exports characteristics
+/// incrementally, so they may not all be present immediately after connect.
+const CHARACTERISTIC_RESOLVE_TIMEOUT: Duration = Duration::from_secs(8);
+/// Interval between characteristic-resolution poll attempts.
+const CHARACTERISTIC_RESOLVE_POLL_INTERVAL: Duration = Duration::from_millis(300);
 /// Timeout for the Linux bluetoothctl fallback used when btleplug connect races BlueZ discovery.
 #[cfg(target_os = "linux")]
 const BLUETOOTHCTL_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -104,19 +110,39 @@ pub trait Transport: Send + Sync {
     }
 }
 
+/// Process-wide cache of the BLE `Manager` and selected `Adapter`.
+///
+/// The `Manager` is cached (not just the `Adapter`) because on BlueZ each
+/// `Manager::new()` opens a fresh D-Bus connection. Creating a new manager on
+/// every scan/connect leaks D-Bus connections; after ~256 of them BlueZ refuses
+/// new connections ("max number of active connections for UID"). Holding the
+/// `Manager` for the process lifetime keeps a single D-Bus session alive and
+/// reused. `OnceCell::get_or_try_init` does NOT cache failures, so a transient
+/// init error can be retried on the next call.
+static BLE_ADAPTER: tokio::sync::OnceCell<(Manager, Adapter)> = tokio::sync::OnceCell::const_new();
+
 /// Get the default BLE adapter.
+///
+/// The underlying `Manager`/`Adapter` are created exactly once per process and
+/// reused on every call (see [`BLE_ADAPTER`]). Returns a clone of the cached
+/// `Adapter` (`Adapter: Clone`).
 pub async fn get_adapter() -> Result<Adapter> {
-    let manager = Manager::new()
-        .await
-        .map_err(|e| PrinterError::Ble(format!("failed to create BLE manager: {e}")))?;
-    let adapters = manager
-        .adapters()
-        .await
-        .map_err(|e| PrinterError::Ble(format!("failed to list BLE adapters: {e}")))?;
-    adapters
-        .into_iter()
-        .next()
-        .ok_or_else(|| PrinterError::Ble("no BLE adapter found".into()))
+    let (_manager, adapter) = BLE_ADAPTER
+        .get_or_try_init(|| async {
+            let manager = Manager::new()
+                .await
+                .map_err(|e| PrinterError::Ble(format!("failed to create BLE manager: {e}")))?;
+            let adapter = manager
+                .adapters()
+                .await
+                .map_err(|e| PrinterError::Ble(format!("failed to list BLE adapters: {e}")))?
+                .into_iter()
+                .next()
+                .ok_or_else(|| PrinterError::Ble("no BLE adapter found".into()))?;
+            Ok::<_, PrinterError>((manager, adapter))
+        })
+        .await?;
+    Ok(adapter.clone())
 }
 
 /// Scan for Instax printers.
@@ -250,20 +276,43 @@ impl BleTransport {
             }
         }
 
-        let mut chars = peripheral.characteristics();
         emit_connect_progress(progress, ConnectStage::CharacteristicLookup, None::<String>);
+        let mut chars = peripheral.characteristics();
         if !has_instax_characteristics(&chars) {
+            // BlueZ exports characteristics incrementally, so a single discovery
+            // pass can race ahead of the OS and miss the Instax characteristics.
+            // Poll service discovery on a bounded loop until both are present,
+            // the link drops, or the resolve deadline elapses.
             log::debug!(
-                "Instax characteristics missing after discovery; retrying characteristic lookup. chars={}",
+                "Instax characteristics missing after discovery; polling characteristic lookup. chars={}",
                 format_characteristic_uuids(&chars)
             );
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            if let Err(error) = peripheral.discover_services().await {
-                log::debug!("Characteristic lookup rediscovery failed: {}", error);
+            let deadline = tokio::time::Instant::now() + CHARACTERISTIC_RESOLVE_TIMEOUT;
+            while tokio::time::Instant::now() < deadline {
+                // Bail out early if the link dropped — let the upper layer reconnect.
+                if !peripheral.is_connected().await.unwrap_or(false) {
+                    log::debug!("BLE link dropped during characteristic resolution");
+                    break;
+                }
+
+                tokio::time::sleep(CHARACTERISTIC_RESOLVE_POLL_INTERVAL).await;
+
+                if let Err(error) = peripheral.discover_services().await {
+                    // A single transient discover error must not abort the loop;
+                    // BlueZ may still finish exporting on a later poll.
+                    log::debug!(
+                        "Characteristic lookup rediscovery failed (transient): {}",
+                        error
+                    );
+                }
+
+                chars = peripheral.characteristics();
+                if has_instax_characteristics(&chars) {
+                    break;
+                }
             }
-            chars = peripheral.characteristics();
             log::debug!(
-                "Instax characteristic retry result. chars={}",
+                "Instax characteristic poll result. chars={}",
                 format_characteristic_uuids(&chars)
             );
         }
@@ -613,6 +662,46 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
+
+    fn make_char(uuid: Uuid) -> Characteristic {
+        Characteristic {
+            uuid,
+            service_uuid: SERVICE_UUID,
+            properties: btleplug::api::CharPropFlags::empty(),
+            descriptors: std::collections::BTreeSet::new(),
+        }
+    }
+
+    #[test]
+    fn has_instax_characteristics_requires_both_write_and_notify() {
+        use std::collections::BTreeSet;
+
+        // Empty set: neither present.
+        let empty: BTreeSet<Characteristic> = BTreeSet::new();
+        assert!(!has_instax_characteristics(&empty));
+
+        // Only the write characteristic exported so far.
+        let mut write_only = BTreeSet::new();
+        write_only.insert(make_char(WRITE_CHAR_UUID));
+        assert!(!has_instax_characteristics(&write_only));
+
+        // Only the notify characteristic exported so far.
+        let mut notify_only = BTreeSet::new();
+        notify_only.insert(make_char(NOTIFY_CHAR_UUID));
+        assert!(!has_instax_characteristics(&notify_only));
+
+        // Unrelated characteristic only.
+        let mut other = BTreeSet::new();
+        other.insert(make_char(DIS_MODEL_NUMBER_UUID));
+        assert!(!has_instax_characteristics(&other));
+
+        // Both Instax characteristics present (plus an unrelated one).
+        let mut both = BTreeSet::new();
+        both.insert(make_char(WRITE_CHAR_UUID));
+        both.insert(make_char(NOTIFY_CHAR_UUID));
+        both.insert(make_char(DIS_MODEL_NUMBER_UUID));
+        assert!(has_instax_characteristics(&both));
+    }
 
     #[test]
     fn detects_android_spp_advertisement_names() {

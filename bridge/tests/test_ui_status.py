@@ -11,8 +11,10 @@ from instantlink_bridge.ble.client import DiscoveredPrinter
 from instantlink_bridge.ble.instantlink import (
     ERROR_NO_FILM,
     ERROR_PRINT_REJECTED,
+    ERROR_PRINTER_NOT_FOUND,
     InstantLinkBackend,
     InstantLinkBleError,
+    InstantLinkPrinterNotFoundError,
 )
 from instantlink_bridge.ble.instax import PrinterStatus
 from instantlink_bridge.ble.models import PrinterModel
@@ -190,12 +192,28 @@ async def test_instantlink_status_maps_no_film_to_zero_remaining() -> None:
 
 
 @pytest.mark.asyncio
-async def test_instantlink_status_disconnects_stale_session_after_status_failure() -> None:
+async def test_instantlink_status_keeps_connection_on_transient_ble_failure() -> None:
+    # A transient BLE error on an established connection must NOT tear the link down;
+    # the persistent connection is reused on the next poll.
     library = _FakeInstantLinkStatusLibrary(status_rc=ERROR_PRINT_REJECTED)
     backend = InstantLinkBackend()
     backend._lib = cast(Any, library)
 
     with pytest.raises(InstantLinkBleError, match="status failed"):
+        await backend.status("INSTAX-1N034655")
+
+    assert library.disconnect_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_instantlink_status_disconnects_when_printer_is_gone() -> None:
+    # A definitive printer-gone error tears down the cached connection so the next poll
+    # performs a fresh reconnect.
+    library = _FakeInstantLinkStatusLibrary(status_rc=ERROR_PRINTER_NOT_FOUND)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    with pytest.raises(InstantLinkPrinterNotFoundError):
         await backend.status("INSTAX-1N034655")
 
     assert library.disconnect_calls == 1
@@ -217,10 +235,11 @@ async def test_instantlink_status_failure_logs_are_rate_limited(
     warning_messages = [
         record.getMessage()
         for record in caplog.records
-        if record.getMessage().startswith("instantlink.status_failed_disconnect")
+        if record.getMessage().startswith("instantlink.status_failed_keep_connection")
     ]
     assert len(warning_messages) == 1
-    assert library.disconnect_calls == 3
+    # Transient failures never disconnect, even when repeated.
+    assert library.disconnect_calls == 0
 
 
 def test_select_status_target_falls_back_to_selected_when_not_visible() -> None:

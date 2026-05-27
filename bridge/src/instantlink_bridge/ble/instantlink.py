@@ -320,12 +320,32 @@ class InstantLinkBackend:
             self._clear_status_failure_log_state()
             return status
         except (InstantLinkBleError, InstantLinkPrinterNotFoundError, TimeoutError) as exc:
-            self._log_status_failure(name, exc)
-            self._disconnect_blocking()
+            # Persistent-connection policy: only tear down the cached BLE link when the
+            # printer is genuinely gone/unrecoverable. A transient BLE read or timeout on
+            # an already-established connection is left in place so the next poll can retry
+            # over the live link instead of paying a full scan + reconnect every tick. If
+            # the device really vanished, ``_ensure_connected_blocking`` will re-establish
+            # it on the next status call.
+            disconnect = self._should_disconnect_on_status_error(exc)
+            self._log_status_failure(name, exc, disconnected=disconnect)
+            if disconnect:
+                self._disconnect_blocking()
             raise
 
-    def _log_status_failure(self, name: str, exc: BaseException) -> None:
+    def _should_disconnect_on_status_error(self, exc: BaseException) -> bool:
+        """Decide whether a status error means the printer is genuinely gone.
+
+        Only ``InstantLinkPrinterNotFoundError`` indicates the device is no longer
+        present, so it is the single case that justifies dropping the cached connection.
+        Transient ``InstantLinkBleError`` / ``TimeoutError`` failures are treated as
+        recoverable: keep the connection so the next poll reuses the live link.
+        """
+
+        return isinstance(exc, InstantLinkPrinterNotFoundError)
+
+    def _log_status_failure(self, name: str, exc: BaseException, *, disconnected: bool) -> None:
         normalized_name = normalize_printer_name(name)
+        event = "status_failed_disconnect" if disconnected else "status_failed_keep_connection"
         signature = (normalized_name, type(exc).__name__, str(exc))
         now = time.monotonic()
         if (
@@ -333,17 +353,19 @@ class InstantLinkBackend:
             or now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
         ):
             LOGGER.warning(
-                "instantlink.status_failed_disconnect name=%s error_type=%s error=%s",
+                "instantlink.%s name=%s error_type=%s error=%s",
+                event,
                 normalized_name,
                 type(exc).__name__,
                 exc,
             )
-            LOGGER.debug("instantlink.status_failed_disconnect_trace", exc_info=True)
+            LOGGER.debug("instantlink.%s_trace", event, exc_info=True)
             self._last_status_failure_signature = signature
             self._last_status_failure_log_at = now
         else:
             LOGGER.debug(
-                "instantlink.status_failed_disconnect_suppressed name=%s error_type=%s error=%s",
+                "instantlink.%s_suppressed name=%s error_type=%s error=%s",
+                event,
                 normalized_name,
                 type(exc).__name__,
                 exc,

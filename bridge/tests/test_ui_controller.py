@@ -36,6 +36,11 @@ from instantlink_bridge.power.pisugar import BatteryState
 from instantlink_bridge.printing import PrintProgress, PrintStage
 from instantlink_bridge.system_info import SystemInfo
 from instantlink_bridge.ui.controller import (
+    OFFLINE_BACKOFF_BASE_S,
+    OFFLINE_BACKOFF_CAP_S,
+    OFFLINE_MESSAGE_AFTER_MISSES,
+    OFFLINE_STATUS_RETRY_S,
+    RESTART_PRINTER_RETRY_S,
     BridgeUi,
     _wifi_mode_for_ftp_receive_mode,
     bridge_power_status_text,
@@ -858,7 +863,58 @@ async def test_repeated_unavailable_printer_status_escalates_offline() -> None:
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_OFFLINE
     assert display.snapshots[-1].printer_status_message == "Hold K3 to re-pair"
-    assert ui._printer_status_retry_delay(False) == 5.0
+    # First offline tick at the miss threshold uses the backoff base, not a flat 5s.
+    assert ui._printer_status_retry_delay(False) == OFFLINE_BACKOFF_BASE_S
+
+
+def test_offline_status_retry_delay_uses_exponential_backoff_with_cap() -> None:
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    # Below the offline threshold we use the short, near-immediate retry.
+    ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES - 1
+    assert ui._printer_status_retry_delay(False) == OFFLINE_STATUS_RETRY_S
+
+    # At and beyond the threshold the delay grows geometrically: base, 2x, 4x, ...
+    expected = OFFLINE_BACKOFF_BASE_S
+    for extra in range(8):
+        ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + extra
+        delay = ui._printer_status_retry_delay(False)
+        assert delay == min(expected, OFFLINE_BACKOFF_CAP_S)
+        if delay >= OFFLINE_BACKOFF_CAP_S:
+            assert delay == OFFLINE_BACKOFF_CAP_S
+        expected *= 2
+
+    # Far beyond the threshold the delay stays pinned at the cap.
+    ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + 50
+    assert ui._printer_status_retry_delay(False) == OFFLINE_BACKOFF_CAP_S
+
+
+def test_offline_status_retry_delay_preserves_restart_special_case() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(
+        mode=UiMode.PRINTER_SEARCHING,
+        paired_printer=printer,
+        printer_status_message="Restart printer",
+    )
+    ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + 20
+
+    # Restart-printer recovery copy keeps its dedicated cadence regardless of miss count.
+    assert ui._printer_status_retry_delay(False) == RESTART_PRINTER_RETRY_S
 
 
 @pytest.mark.asyncio

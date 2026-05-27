@@ -2003,6 +2003,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#phase-0-conclusion-after-the-clean-printer-power-cycle-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0 CONCLUSION (after the clean printer power-cycle test)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2316,6 +2327,39 @@ connection gets far enough to fail at GATT/write, which this failure does not.</
    In Progress" (cancel pending + bounded retry + honest UI), which is more common than the
    rebond-wedge it was originally drawn around.</li>
 </ol>
+<h3 id="phase-0-conclusion-after-the-clean-printer-power-cycle-test">Phase 0 CONCLUSION (after the clean printer power-cycle test)<a class="headerlink" href="#phase-0-conclusion-after-the-clean-printer-power-cycle-test" title="Permanent link">&para;</a></h3>
+<p>A clean printer power-cycle did <strong>not</strong> fix it (still cycled through <code>printer not found</code> /
+<code>In Progress</code>). What <strong>did</strong> recover it — twice today, reproducibly — was a <strong>sustained active
+<code>bluetoothctl scan on</code></strong>: within seconds of active scanning, BlueZ completed the connection
+(<code>Connected: yes</code>) and the bridge immediately adopted it and resumed <code>film_remaining=4</code> status
+every 10 s. The phone app was confirmed <strong>not</strong> connected, ruling out single-slot contention.</p>
+<p>This favours <strong>P2 over P1</strong>: the printer is fine once a connection is actually initiated; the
+failure is that <strong>BlueZ's background/passive auto-connect (allowlist) for the bonded printer does
+not fire reliably on the Pi Zero 2 W controller</strong> — consistent with btmon showing <em>zero</em>
+<code>LE Create Connection</code> over 170 s (background mode armed but never firing). An <strong>active scan forces
+discovery and lets the connection complete</strong> (an active scan elicits the advertisement that triggers
+the controller's connect, and/or btleplug then issues a direct connect).</p>
+<p><strong>Confirmed root cause (Phase 0):</strong> the bridge relies, via BlueZ, on background auto-connect to the
+bonded printer; on this controller that path stalls (<code>In Progress</code> / <code>printer not found</code> / D-Bus
+<code>Connect()</code> timeout), and only sustained <strong>active scanning / a forced direct connect</strong> reliably
+establishes the link. Once connected, everything downstream (status, keepalive, freshness gate)
+works. The freshness gate (0.1.4) behaved correctly throughout — never showed "Ready" while
+disconnected. The shipped bond-removal auto-rebond (0.1.5) and silent-link-disconnect (0.1.6)
+address adjacent symptoms but <strong>not</strong> this connect-initiation stall.</p>
+<p><strong>Fix direction for implementation (supersedes §6's framing):</strong>
+1. <strong>Drive a continuous/active scan while disconnected</strong> (not 5 s bursts with idle gaps) so the
+   controller keeps seeing the advertisement and the connection can complete — mirror what the
+   manual <code>scan on</code> does. Re-check <code>transport::scan</code> duty cycle and whether <code>peripheral.connect()</code>
+   on BlueZ defers to background mode vs. issuing a direct <code>LE Create Connection</code>.
+2. <strong>Bound every failure with honest UX:</strong> never loop silent "Finding Printer"; after N failed
+   connects surface a specific, actionable state.
+3. <strong>De-prioritise bond removal</strong> as a recovery (it targets the wrong layer and previously wedged
+   the printer); keep it only as a last resort behind reconnect-first.
+4. Validate any change by the §8 acceptance bar: 5 consecutive printer power-cycles auto-recovering
+   with <strong>zero</strong> manual <code>bluetoothctl</code> intervention.</p>
+<p>State note: live probing (manual scans, disconnects, adapter/bluetoothd restarts) contaminated the
+observed state during Phase 0; the <em>reproducible</em> signal — "active scan completes the connection" —
+is the reliable takeaway. The system is currently healthy (<code>Connected: yes</code>, film 4/10).</p>
 
 
 

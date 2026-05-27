@@ -39,7 +39,6 @@ from instantlink_bridge.printing import PrintProgress, PrintStage
 from instantlink_bridge.system_info import SystemInfo
 from instantlink_bridge.ui.controller import (
     OFFLINE_MESSAGE_AFTER_MISSES,
-    PRINTER_SCAN_WINDOW_S,
     RENDER_TICK_S,
     RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
@@ -956,11 +955,8 @@ async def test_repeated_absent_printer_status_keeps_auto_searching() -> None:
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "No printer signal"
-    # No backoff: the offline retry stays at the configured search period (gap = period - window)
-    # even past the threshold.
-    assert ui._printer_status_retry_delay(False) == max(
-        0.0, ui._config.printer.search_interval_s - PRINTER_SCAN_WINDOW_S
-    )
+    # No backoff: the offline retry stays at the configured search period even past the threshold.
+    assert ui._printer_status_retry_delay(False) == ui._config.printer.search_interval_s
 
     # Even far past the threshold an absent (non-stale) printer keeps auto-searching.
     for _ in range(20):
@@ -1107,18 +1103,18 @@ def test_offline_status_retry_delay_uses_configured_search_period_without_backof
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    # The search interval is the total scan PERIOD; the gap is the period minus the scan window.
-    # The 5s option equals the window -> 0 gap (continuous scans). No backoff regardless of misses.
+    # The retry delay is the total cadence PERIOD (the poll loop subtracts each attempt's elapsed
+    # time). It equals the configured search interval with no backoff, regardless of miss count.
     for misses in (0, OFFLINE_MESSAGE_AFTER_MISSES, OFFLINE_MESSAGE_AFTER_MISSES + 50):
         ui._printer_status_misses = misses
-        assert ui._printer_status_retry_delay(False) == 0.0
+        assert ui._printer_status_retry_delay(False) == 5.0
 
-    # Larger periods insert an idle gap of (period - scan window); changes apply live.
-    for period, expected_gap in ((15.0, 10.0), (30.0, 25.0), (60.0, 55.0)):
+    # Changing the configured search period applies live.
+    for period in (15.0, 30.0, 60.0):
         ui._config = replace(
             ui._config, printer=replace(ui._config.printer, search_interval_s=period)
         )
-        assert ui._printer_status_retry_delay(False) == expected_gap
+        assert ui._printer_status_retry_delay(False) == period
 
 
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:

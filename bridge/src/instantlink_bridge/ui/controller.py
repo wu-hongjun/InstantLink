@@ -88,11 +88,6 @@ LOGGER = logging.getLogger(__name__)
 # user-configurable (config.printer.search_interval_s, Settings > Printer > Search rate) with no
 # exponential backoff, so a powered-off printer keeps being searched at the chosen rate.
 RESTART_PRINTER_RETRY_S = 5.0
-# Active-scan window (seconds) each connect attempt runs while searching; must match the status
-# provider's scan_duration_s. The configured search interval is the total scan PERIOD, so the gap
-# between attempts is the interval minus this window — the minimum 5s option (= the window) yields a
-# 0s gap, i.e. continuous back-to-back scans.
-PRINTER_SCAN_WINDOW_S = 5.0
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
 # Auto-rebond recovery: when a printer is power-cycled it clears its BLE pairing while the Pi
@@ -1745,8 +1740,15 @@ class BridgeUi:
                 if generation != self._status_generation:
                     return
                 self._show_printer_searching_if_retrying(printer, "Searching for printer")
+                attempt_start = self._monotonic()
                 online = await self._refresh_printer_status_in_background(printer, generation)
-                await asyncio.sleep(self._printer_status_retry_delay(online))
+                # The retry delay is the total cadence PERIOD (e.g. the configured search interval),
+                # measured from the start of each attempt. Subtract the time the attempt already
+                # consumed (its scan/connect) so the period holds whether the scan exited early on a
+                # match or ran the full window — and so a fast-failing connect does not hammer.
+                elapsed = self._monotonic() - attempt_start
+                period = self._printer_status_retry_delay(online)
+                await asyncio.sleep(max(0.0, period - elapsed))
         finally:
             await self._status_provider.close()
 
@@ -1864,11 +1866,11 @@ class BridgeUi:
             return self._printer_keepalive_interval_s
         if self._snapshot.printer_status_message == "Restart printer":
             return RESTART_PRINTER_RETRY_S
-        # The configured search interval is the total scan PERIOD. Each connect attempt already runs
-        # a PRINTER_SCAN_WINDOW_S active scan, so the inter-attempt gap is the remainder; the 5s
-        # option equals the window and gives a 0s gap (continuous scans). No exponential backoff, so
-        # a powered-off printer keeps being searched at the chosen period (Settings > Search rate).
-        return max(0.0, self._config.printer.search_interval_s - PRINTER_SCAN_WINDOW_S)
+        # The configured search interval is the total cadence PERIOD between attempt starts; the
+        # poll loop subtracts the time each attempt consumed. The minimum 5s option equals the scan
+        # window, so attempts run back-to-back (continuous). No exponential backoff, so a
+        # powered-off printer keeps being searched at the chosen period (Settings > Search rate).
+        return self._config.printer.search_interval_s
 
     def _maybe_auto_rebond(
         self,

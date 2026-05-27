@@ -9,6 +9,11 @@ use crate::error::{PrinterError, Result};
 use crate::image::FitMode;
 use crate::transport::{self, BleTransport, DEFAULT_SCAN_DURATION};
 
+/// Poll cadence while waiting for the target printer to appear during the active scan window.
+/// A named connect proceeds as soon as the printer is uniquely matched instead of waiting out the
+/// full scan duration, trimming several seconds off every (re)connect. See `docs/plans/031` Phase 1.
+const DISCOVERY_POLL_INTERVAL: Duration = Duration::from_millis(400);
+
 /// Information about a discovered printer (before connecting).
 #[derive(Debug, Clone)]
 pub struct DiscoveredPrinter {
@@ -82,11 +87,24 @@ async fn connect_internal(
     }
 
     let result: Result<Box<dyn PrinterDevice>> = async {
-        tokio::time::sleep(duration.unwrap_or(DEFAULT_SCAN_DURATION)).await;
-        let results = transport::collect_instax_peripherals(&adapter).await?;
+        // Poll the candidate list during the active scan and connect as soon as the target is
+        // uniquely matched, rather than always waiting out the full scan window. The scan stays
+        // active throughout (started above, stopped below). On a not-found/ambiguous result we
+        // keep polling until the deadline, then surface the last selection error.
+        let deadline = tokio::time::Instant::now() + duration.unwrap_or(DEFAULT_SCAN_DURATION);
+        let (peripheral, name) = loop {
+            let candidates = transport::collect_instax_peripherals(&adapter).await?;
+            match select_matching_result(candidates, device_name) {
+                Ok(found) => break found,
+                Err(err) => {
+                    if tokio::time::Instant::now() >= deadline {
+                        return Err(err);
+                    }
+                    tokio::time::sleep(DISCOVERY_POLL_INTERVAL).await;
+                }
+            }
+        };
         emit_connect_progress(progress, ConnectStage::ScanFinished, None::<String>);
-
-        let (peripheral, name) = select_matching_result(results, device_name)?;
 
         emit_connect_progress(progress, ConnectStage::DeviceMatched, Some(name.clone()));
 

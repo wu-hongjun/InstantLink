@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+#
+# InstantLink local pre-commit validation.
+#
+# GitHub CI (ci.yml) now runs only when tagging a release, so this hook is the
+# primary gate for day-to-day work. It is PATH-SCOPED: each suite runs only when
+# its area has staged changes, plus a few cheap global checks always run.
+#
+#   crates/ | Cargo.toml | Cargo.lock  -> cargo fmt --check, clippy -D warnings, test
+#   bridge/                            -> ruff check, mypy, pytest
+#   macos/                             -> scripts/test-macos.sh (swiftc build + tests)
+#   always                             -> git diff --check, shell syntax, py_compile
+#
+# Activate on this machine:   git config core.hooksPath scripts/git-hooks
+# Bypass once:                SKIP_HOOK=1 git commit ...    (or: git commit --no-verify)
+#
+set -uo pipefail
+
+if [ "${SKIP_HOOK:-0}" = "1" ]; then
+  echo "pre-commit: skipped (SKIP_HOOK=1)"
+  exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Staged files only, limited to added/copied/modified/renamed (not deletions).
+STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+if [ -z "$STAGED" ]; then
+  echo "pre-commit: no staged changes; nothing to check."
+  exit 0
+fi
+
+fail=0
+
+run() {
+  # run "<label>" <command...> -- runs in the current directory.
+  local label="$1"
+  shift
+  echo "▶ $label"
+  if "$@"; then
+    echo "  ✓ $label"
+  else
+    echo "  ✗ $label"
+    fail=1
+  fi
+}
+
+changed() { printf '%s\n' "$STAGED" | grep -qE "$1"; }
+
+echo "pre-commit: validating staged changes…"
+
+# ---------- Global cheap checks (always) ----------
+run "git diff --check (whitespace / conflict markers)" git diff --cached --check
+
+while IFS= read -r f; do
+  [ -n "$f" ] && [ -f "$f" ] && run "bash -n $f" bash -n "$f"
+done < <(printf '%s\n' "$STAGED" | grep -E '\.sh$' || true)
+
+while IFS= read -r f; do
+  [ -n "$f" ] && [ -f "$f" ] && run "py_compile $f" python3 -m py_compile "$f"
+done < <(printf '%s\n' "$STAGED" | grep -E '^bridge/scripts/.*\.py$' || true)
+
+# ---------- Rust workspace ----------
+if changed '^crates/|^Cargo\.(toml|lock)$'; then
+  echo "── Rust workspace (crates/ changed) ──"
+  run "cargo fmt --all -- --check" cargo fmt --all -- --check
+  run "cargo clippy --workspace -- -D warnings" cargo clippy --workspace -- -D warnings
+  run "cargo test --workspace" cargo test --workspace
+fi
+
+# ---------- Bridge Python ----------
+if changed '^bridge/'; then
+  echo "── Bridge Python (bridge/ changed) ──"
+  pushd bridge >/dev/null
+  run "ruff check src tests" python -m ruff check src tests
+  run "mypy src" python -m mypy src
+  run "pytest -q" python -m pytest -q
+  popd >/dev/null
+fi
+
+# ---------- macOS Swift ----------
+if changed '^macos/'; then
+  echo "── macOS Swift (macos/ changed) ──"
+  run "scripts/test-macos.sh" bash scripts/test-macos.sh
+fi
+
+echo
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit: FAILED — fix the items marked ✗ above."
+  echo "            (bypass once with: git commit --no-verify)"
+  exit 1
+fi
+echo "pre-commit: all checks passed."
+exit 0

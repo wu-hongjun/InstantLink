@@ -1,9 +1,12 @@
 name: CI
 
+# Runs only when tagging a release (app `v*` or bridge `bridge-v*`), or on
+# demand. Day-to-day validation runs locally via the pre-commit hook
+# (scripts/git-hooks/pre-commit); see docs/development/local-validation.md.
 on:
   push:
-    branches: [main]
-  pull_request:
+    tags: ["v*", "bridge-v*"]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always

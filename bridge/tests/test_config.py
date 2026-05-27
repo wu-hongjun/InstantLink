@@ -288,6 +288,31 @@ def test_printer_keepalive_must_be_finite(tmp_path: Path) -> None:
             raise AssertionError(f"expected {invalid} keepalive interval to fail")
 
 
+def test_printer_search_interval_defaults_and_override(tmp_path: Path) -> None:
+    default_path = tmp_path / "default.toml"
+    default_path.write_text("[printer]\nmodel = \"square\"\n", encoding="utf-8")
+    assert load_config(default_path).printer.search_interval_s == 2.0
+
+    override_path = tmp_path / "override.toml"
+    override_path.write_text("[printer]\nsearch_interval_s = 1\n", encoding="utf-8")
+    assert load_config(override_path).printer.search_interval_s == 1.0
+
+
+def test_printer_search_interval_must_be_positive_and_finite(tmp_path: Path) -> None:
+    for invalid in ("0", "-1", "nan", "inf"):
+        config_path = tmp_path / f"search-{invalid}.toml"
+        config_path.write_text(
+            f"[printer]\nsearch_interval_s = {invalid}\n",
+            encoding="utf-8",
+        )
+        try:
+            load_config(config_path)
+        except ValueError as exc:
+            assert "[printer].search_interval_s" in str(exc)
+        else:
+            raise AssertionError(f"expected {invalid} search interval to fail")
+
+
 def test_workflow_auto_print_delay_can_be_configured(tmp_path: Path) -> None:
     config_path = tmp_path / "config.toml"
     config_path.write_text("[workflow]\nauto_print_delay_s = 5\n", encoding="utf-8")
@@ -347,6 +372,7 @@ def test_write_config_round_trips_runtime_settings(tmp_path: Path) -> None:
             quality=95,
             print_option=2,
             keepalive_interval_s=15,
+            search_interval_s=5,
         ),
         workflow=WorkflowConfig(auto_print_delay_s=5, allow_print_without_film=True),
         power=PowerConfig(backend=PowerBackend.X306, idle_poweroff_after_s=9000),
@@ -361,6 +387,7 @@ def test_write_config_round_trips_runtime_settings(tmp_path: Path) -> None:
     assert round_tripped.printer.quality == 95
     assert round_tripped.printer.print_option == 2
     assert round_tripped.printer.keepalive_interval_s == 15
+    assert round_tripped.printer.search_interval_s == 5
     assert round_tripped.workflow.auto_print_delay_s == 5
     assert round_tripped.workflow.allow_print_without_film
     assert round_tripped.power.backend is PowerBackend.X306

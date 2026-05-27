@@ -38,10 +38,7 @@ from instantlink_bridge.power.pisugar import BatteryState
 from instantlink_bridge.printing import PrintProgress, PrintStage
 from instantlink_bridge.system_info import SystemInfo
 from instantlink_bridge.ui.controller import (
-    OFFLINE_BACKOFF_BASE_S,
-    OFFLINE_BACKOFF_CAP_S,
     OFFLINE_MESSAGE_AFTER_MISSES,
-    OFFLINE_STATUS_RETRY_S,
     RENDER_TICK_S,
     RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
@@ -958,8 +955,8 @@ async def test_repeated_absent_printer_status_keeps_auto_searching() -> None:
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "No printer signal"
-    # First offline tick at the miss threshold uses the backoff base, not a flat 5s.
-    assert ui._printer_status_retry_delay(False) == OFFLINE_BACKOFF_BASE_S
+    # No backoff: the offline retry stays at the configured search cadence even past the threshold.
+    assert ui._printer_status_retry_delay(False) == ui._config.printer.search_interval_s
 
     # Even far past the threshold an absent (non-stale) printer keeps auto-searching.
     for _ in range(20):
@@ -1096,9 +1093,9 @@ async def test_render_tick_re_renders_latest_snapshot() -> None:
             await tick_task
 
 
-def test_offline_status_retry_delay_uses_exponential_backoff_with_cap() -> None:
+def test_offline_status_retry_delay_uses_configured_search_interval_without_backoff() -> None:
     ui = BridgeUi(
-        BridgeConfig(),
+        BridgeConfig(printer=PrinterConfig(search_interval_s=2.0)),
         display=_FakeDisplay(),
         input_device=NullInput(),
         pairer=_FakePairer([]),
@@ -1106,23 +1103,17 @@ def test_offline_status_retry_delay_uses_exponential_backoff_with_cap() -> None:
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    # Below the offline threshold we use the short, near-immediate retry.
-    ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES - 1
-    assert ui._printer_status_retry_delay(False) == OFFLINE_STATUS_RETRY_S
+    # The offline retry stays flat at the configured search cadence — no exponential backoff —
+    # regardless of how many consecutive misses have accrued.
+    for misses in (0, OFFLINE_MESSAGE_AFTER_MISSES, OFFLINE_MESSAGE_AFTER_MISSES + 50):
+        ui._printer_status_misses = misses
+        assert ui._printer_status_retry_delay(False) == 2.0
 
-    # At and beyond the threshold the delay grows geometrically: base, 2x, 4x, ...
-    expected = OFFLINE_BACKOFF_BASE_S
-    for extra in range(8):
-        ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + extra
-        delay = ui._printer_status_retry_delay(False)
-        assert delay == min(expected, OFFLINE_BACKOFF_CAP_S)
-        if delay >= OFFLINE_BACKOFF_CAP_S:
-            assert delay == OFFLINE_BACKOFF_CAP_S
-        expected *= 2
-
-    # Far beyond the threshold the delay stays pinned at the cap.
-    ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + 50
-    assert ui._printer_status_retry_delay(False) == OFFLINE_BACKOFF_CAP_S
+    # Changing the configured search rate immediately changes the offline retry cadence.
+    ui._config = replace(ui._config, printer=replace(ui._config.printer, search_interval_s=1.0))
+    assert ui._printer_status_retry_delay(False) == 1.0
+    ui._config = replace(ui._config, printer=replace(ui._config.printer, search_interval_s=60.0))
+    assert ui._printer_status_retry_delay(False) == 60.0
 
 
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:

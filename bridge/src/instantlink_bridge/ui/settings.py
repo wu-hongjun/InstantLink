@@ -37,6 +37,7 @@ class SettingKey(StrEnum):
     AUTO_PRINT_DELAY = "auto_print_delay"
     ALLOW_PRINT_WITHOUT_FILM = "allow_print_without_film"
     KEEPALIVE = "keepalive"
+    SEARCH_INTERVAL = "search_interval"
     RESET_PRINTER_LINK = "reset_printer_link"
     FORGET_PRINTER = "forget_printer"
     SYSTEM_DEVICE_ID = "system_device_id"
@@ -92,6 +93,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
         SettingKey.KEEPALIVE,
+        SettingKey.SEARCH_INTERVAL,
     ),
     SettingsPage.CAMERA: (
         SettingKey.NETWORK_HOTSPOT_SSID_INFO,
@@ -189,6 +191,7 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.AUTO_PRINT_DELAY,
         SettingKey.ALLOW_PRINT_WITHOUT_FILM,
         SettingKey.KEEPALIVE,
+        SettingKey.SEARCH_INTERVAL,
         SettingKey.SYSTEM_IDLE_POWEROFF,
     }
 )
@@ -214,6 +217,7 @@ QUALITY_OPTIONS: tuple[int, ...] = (70, 75, 80, 85, 90, 95, 100)
 AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 5.0)
 BOOL_OPTIONS: tuple[bool, ...] = (False, True)
 KEEPALIVE_OPTIONS: tuple[float, ...] = (5.0, 10.0, 15.0, 30.0)
+SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (1.0, 2.0, 5.0, 15.0, 60.0)
 
 
 def setting_action_hint(key: SettingKey) -> str:
@@ -257,6 +261,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.AUTO_PRINT_DELAY: "Delay before print starts",
     SettingKey.ALLOW_PRINT_WITHOUT_FILM: "Test mode; ignores 0 film",
     SettingKey.KEEPALIVE: "Poll printer to keep awake",
+    SettingKey.SEARCH_INTERVAL: "How often to search when offline",
     SettingKey.SYSTEM_DEVICE_ID: "Unique bridge identifier",
     SettingKey.SYSTEM_APP_VERSION: "InstantLink Bridge software version",
     SettingKey.SYSTEM_PYTHON_VERSION: "Python runtime version",
@@ -298,6 +303,10 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.KEEPALIVE:
         return tuple(SettingOption(seconds_label(value), value) for value in KEEPALIVE_OPTIONS)
+    if key is SettingKey.SEARCH_INTERVAL:
+        return tuple(
+            SettingOption(seconds_label(value), value) for value in SEARCH_INTERVAL_OPTIONS
+        )
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     return ()
@@ -341,6 +350,8 @@ def config_with_setting_value(
         )
     if key is SettingKey.KEEPALIVE and isinstance(value, float):
         return replace(config, printer=replace(config.printer, keepalive_interval_s=value))
+    if key is SettingKey.SEARCH_INTERVAL and isinstance(value, float):
+        return replace(config, printer=replace(config.printer, search_interval_s=value))
     if key is SettingKey.SYSTEM_IDLE_POWEROFF and isinstance(value, bool):
         return replace(config, power=replace(config.power, idle_poweroff_enabled=value))
     return config
@@ -413,6 +424,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.workflow.allow_print_without_film
     if key is SettingKey.KEEPALIVE:
         return config.printer.keepalive_interval_s
+    if key is SettingKey.SEARCH_INTERVAL:
+        return config.printer.search_interval_s
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return config.power.idle_poweroff_enabled
     return None

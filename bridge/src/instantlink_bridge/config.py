@@ -214,6 +214,10 @@ class PrinterConfig:
     print_option: int = 0
     device_name: str | None = None
     keepalive_interval_s: float = 10.0
+    # How often, in seconds, to retry finding/connecting the selected printer while it is offline
+    # (the "search refresh" cadence). User-selectable in Settings; no exponential backoff so the
+    # bridge keeps scanning at this rate and reconnects promptly when the printer powers on.
+    search_interval_s: float = 2.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -348,6 +352,7 @@ def render_config(config: BridgeConfig) -> str:
         f"print_option = {config.printer.print_option}",
         f"device_name = {_toml_string(device_name)}",
         f"keepalive_interval_s = {_format_float(config.printer.keepalive_interval_s)}",
+        f"search_interval_s = {_format_float(config.printer.search_interval_s)}",
         "",
         "[workflow]",
         f"auto_print_delay_s = {_format_auto_print_delay(config.workflow.auto_print_delay_s)}",
@@ -424,6 +429,9 @@ def _load_printer_config(data: object) -> PrinterConfig:
     keepalive_interval_s = float(data.get("keepalive_interval_s", 10.0))
     if not isfinite(keepalive_interval_s) or keepalive_interval_s <= 0:
         raise ValueError("[printer].keepalive_interval_s must be a finite value greater than 0")
+    search_interval_s = float(data.get("search_interval_s", 2.0))
+    if not isfinite(search_interval_s) or search_interval_s <= 0:
+        raise ValueError("[printer].search_interval_s must be a finite value greater than 0")
     return PrinterConfig(
         model=model,
         fit=parse_fit_mode(str(data.get("fit", "auto"))),
@@ -431,6 +439,7 @@ def _load_printer_config(data: object) -> PrinterConfig:
         print_option=int(data.get("print_option", 0)),
         device_name=_optional_str(data.get("device_name")),
         keepalive_interval_s=keepalive_interval_s,
+        search_interval_s=search_interval_s,
     )
 
 

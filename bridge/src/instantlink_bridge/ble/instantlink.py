@@ -76,10 +76,18 @@ CONNECT_STAGE_NAMES = {
     9: "connected",
     10: "failed",
 }
-# Lowest connect stage that proves GATT came up far enough that an encrypted write should
-# succeed. A connect that reaches this stage (or later) and then fails with a BLE/write error is
-# the stale-bond signature: the link is up but the printer cleared its pairing after a power cycle.
+# Named connect milestone: the encrypted notify subscription succeeded.
 CONNECT_STAGE_NOTIFICATION_SUBSCRIBE = 6
+# Lowest connect stage that proves GATT came up far enough that the encrypted characteristics
+# should resolve. Reaching characteristic_lookup (stage 5) means service_discovery (stage 4) already
+# succeeded, so the link is up. A connect that reaches this stage (or later) and then fails with a
+# BLE/write error is the stale-bond signature: the printer cleared its pairing after a power cycle,
+# so either the encrypted characteristics never resolve ("write characteristic not found" at
+# characteristic_lookup) or the first encrypted write fails (notification_subscribe). Both are the
+# same fingerprint, so the boundary is characteristic_lookup, not notification_subscribe — a
+# power-cycled printer can fail at either depending on how far BlueZ gets exporting the encrypted
+# GATT table.
+CONNECT_STAGE_STALE_BOND_MIN = 5
 # Consecutive status failures that mean the cached BLE link is dead (not a one-off hiccup),
 # after which the connection is torn down so the next poll does a fresh connect (which can
 # re-establish the link and trigger auto-rebond). Tolerates a single transient failure to

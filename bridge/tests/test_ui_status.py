@@ -10,6 +10,7 @@ import pytest
 from instantlink_bridge.ble.client import DiscoveredPrinter
 from instantlink_bridge.ble.instantlink import (
     CONNECT_STAGE_NOTIFICATION_SUBSCRIBE,
+    CONNECT_STAGE_STALE_BOND_MIN,
     ERROR_BLE,
     ERROR_NO_FILM,
     ERROR_PRINT_REJECTED,
@@ -269,6 +270,26 @@ async def test_connect_failure_carries_highest_observed_stage() -> None:
 async def test_status_provider_flags_late_stage_write_failure_as_stale_bond() -> None:
     library = _FakeInstantLinkConnectLibrary(
         stages=[0, 3, 4, 5, CONNECT_STAGE_NOTIFICATION_SUBSCRIBE],
+        connect_rc=ERROR_BLE,
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+
+    with pytest.raises(PrinterStatusUnavailableError) as excinfo:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+
+    assert excinfo.value.stale_bond_suspected is True
+
+
+@pytest.mark.asyncio
+async def test_status_provider_flags_characteristic_lookup_failure_as_stale_bond() -> None:
+    # A power-cycled printer can fail one stage before notification_subscribe: service discovery
+    # succeeds (stage 4) but the encrypted write characteristic never resolves, so the connect
+    # fails at characteristic_lookup (stage 5) with "write characteristic not found". This is the
+    # same stale-bond fingerprint and must still trigger auto-rebond.
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 3, 4, CONNECT_STAGE_STALE_BOND_MIN],
         connect_rc=ERROR_BLE,
     )
     backend = InstantLinkBackend()

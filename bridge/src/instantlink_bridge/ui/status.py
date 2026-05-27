@@ -20,7 +20,7 @@ from instantlink_bridge.ble.client import (
     scan_instax_printers,
 )
 from instantlink_bridge.ble.instantlink import (
-    CONNECT_STAGE_NOTIFICATION_SUBSCRIBE,
+    CONNECT_STAGE_STALE_BOND_MIN,
     InstantLinkBackend,
     InstantLinkBleError,
     InstantLinkLibraryUnavailableError,
@@ -582,15 +582,17 @@ async def scan_bluez_instax_printers(timeout_s: float = 8.0) -> list[PairedPrint
 def _is_stale_bond_signature(exc: InstantLinkBleError | TimeoutError) -> bool:
     """Return true when a status BLE error matches the stale-bond write-failure signature.
 
-    The signature is: a connect attempt that advanced to at least the notification-subscribe
-    stage (GATT was up) but then failed with a BLE/write-initiation error. A timeout, or a
-    BLE error from an early connect stage, is treated as an ordinary transient miss.
+    The signature is: a connect attempt that advanced to at least the characteristic-lookup
+    stage (service discovery succeeded, so GATT was up) but then failed with a BLE error — either
+    the encrypted characteristics never resolved ("write characteristic not found") or the first
+    encrypted write/subscribe failed. A timeout, or a BLE error from an earlier connect stage
+    (scan/connect/service-discovery), is treated as an ordinary transient miss.
     """
 
     if not isinstance(exc, InstantLinkBleError):
         return False
     stage = exc.connect_failure_stage
-    return stage is not None and stage >= CONNECT_STAGE_NOTIFICATION_SUBSCRIBE
+    return stage is not None and stage >= CONNECT_STAGE_STALE_BOND_MIN
 
 
 def _endpoint_from_paired(printer: PairedPrinter) -> PrinterEndpoint:

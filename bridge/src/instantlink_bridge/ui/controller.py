@@ -88,6 +88,11 @@ LOGGER = logging.getLogger(__name__)
 # user-configurable (config.printer.search_interval_s, Settings > Printer > Search rate) with no
 # exponential backoff, so a powered-off printer keeps being searched at the chosen rate.
 RESTART_PRINTER_RETRY_S = 5.0
+# Active-scan window (seconds) each connect attempt runs while searching; must match the status
+# provider's scan_duration_s. The configured search interval is the total scan PERIOD, so the gap
+# between attempts is the interval minus this window — the minimum 5s option (= the window) yields a
+# 0s gap, i.e. continuous back-to-back scans.
+PRINTER_SCAN_WINDOW_S = 5.0
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
 # Auto-rebond recovery: when a printer is power-cycled it clears its BLE pairing while the Pi
@@ -1859,10 +1864,11 @@ class BridgeUi:
             return self._printer_keepalive_interval_s
         if self._snapshot.printer_status_message == "Restart printer":
             return RESTART_PRINTER_RETRY_S
-        # No exponential backoff: keep searching at the user-configured cadence
-        # (Settings > Printer > Search rate) so the bridge reconnects promptly when the printer
-        # powers back on, instead of slowing to a 30 s poll after a few misses.
-        return self._config.printer.search_interval_s
+        # The configured search interval is the total scan PERIOD. Each connect attempt already runs
+        # a PRINTER_SCAN_WINDOW_S active scan, so the inter-attempt gap is the remainder; the 5s
+        # option equals the window and gives a 0s gap (continuous scans). No exponential backoff, so
+        # a powered-off printer keeps being searched at the chosen period (Settings > Search rate).
+        return max(0.0, self._config.printer.search_interval_s - PRINTER_SCAN_WINDOW_S)
 
     def _maybe_auto_rebond(
         self,

@@ -217,7 +217,9 @@ QUALITY_OPTIONS: tuple[int, ...] = (70, 75, 80, 85, 90, 95, 100)
 AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 5.0)
 BOOL_OPTIONS: tuple[bool, ...] = (False, True)
 KEEPALIVE_OPTIONS: tuple[float, ...] = (5.0, 10.0, 15.0, 30.0)
-SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (1.0, 2.0, 5.0, 15.0, 60.0)
+# Total scan period options. The minimum (5s) equals the active-scan window, so it scans
+# continuously (0 gap); larger values insert an idle gap between scans to save power.
+SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
 
 
 def setting_action_hint(key: SettingKey) -> str:

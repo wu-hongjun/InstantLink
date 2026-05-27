@@ -39,6 +39,7 @@ from instantlink_bridge.printing import PrintProgress, PrintStage
 from instantlink_bridge.system_info import SystemInfo
 from instantlink_bridge.ui.controller import (
     OFFLINE_MESSAGE_AFTER_MISSES,
+    PRINTER_SCAN_WINDOW_S,
     RENDER_TICK_S,
     RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
@@ -955,8 +956,11 @@ async def test_repeated_absent_printer_status_keeps_auto_searching() -> None:
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "No printer signal"
-    # No backoff: the offline retry stays at the configured search cadence even past the threshold.
-    assert ui._printer_status_retry_delay(False) == ui._config.printer.search_interval_s
+    # No backoff: the offline retry stays at the configured search period (gap = period - window)
+    # even past the threshold.
+    assert ui._printer_status_retry_delay(False) == max(
+        0.0, ui._config.printer.search_interval_s - PRINTER_SCAN_WINDOW_S
+    )
 
     # Even far past the threshold an absent (non-stale) printer keeps auto-searching.
     for _ in range(20):
@@ -1093,9 +1097,9 @@ async def test_render_tick_re_renders_latest_snapshot() -> None:
             await tick_task
 
 
-def test_offline_status_retry_delay_uses_configured_search_interval_without_backoff() -> None:
+def test_offline_status_retry_delay_uses_configured_search_period_without_backoff() -> None:
     ui = BridgeUi(
-        BridgeConfig(printer=PrinterConfig(search_interval_s=2.0)),
+        BridgeConfig(printer=PrinterConfig(search_interval_s=5.0)),
         display=_FakeDisplay(),
         input_device=NullInput(),
         pairer=_FakePairer([]),
@@ -1103,17 +1107,18 @@ def test_offline_status_retry_delay_uses_configured_search_interval_without_back
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    # The offline retry stays flat at the configured search cadence — no exponential backoff —
-    # regardless of how many consecutive misses have accrued.
+    # The search interval is the total scan PERIOD; the gap is the period minus the scan window.
+    # The 5s option equals the window -> 0 gap (continuous scans). No backoff regardless of misses.
     for misses in (0, OFFLINE_MESSAGE_AFTER_MISSES, OFFLINE_MESSAGE_AFTER_MISSES + 50):
         ui._printer_status_misses = misses
-        assert ui._printer_status_retry_delay(False) == 2.0
+        assert ui._printer_status_retry_delay(False) == 0.0
 
-    # Changing the configured search rate immediately changes the offline retry cadence.
-    ui._config = replace(ui._config, printer=replace(ui._config.printer, search_interval_s=1.0))
-    assert ui._printer_status_retry_delay(False) == 1.0
-    ui._config = replace(ui._config, printer=replace(ui._config.printer, search_interval_s=60.0))
-    assert ui._printer_status_retry_delay(False) == 60.0
+    # Larger periods insert an idle gap of (period - scan window); changes apply live.
+    for period, expected_gap in ((15.0, 10.0), (30.0, 25.0), (60.0, 55.0)):
+        ui._config = replace(
+            ui._config, printer=replace(ui._config.printer, search_interval_s=period)
+        )
+        assert ui._printer_status_retry_delay(False) == expected_gap
 
 
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:

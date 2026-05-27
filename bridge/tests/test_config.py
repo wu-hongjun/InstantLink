@@ -291,11 +291,11 @@ def test_printer_keepalive_must_be_finite(tmp_path: Path) -> None:
 def test_printer_search_interval_defaults_and_override(tmp_path: Path) -> None:
     default_path = tmp_path / "default.toml"
     default_path.write_text("[printer]\nmodel = \"square\"\n", encoding="utf-8")
-    assert load_config(default_path).printer.search_interval_s == 2.0
+    assert load_config(default_path).printer.search_interval_s == 5.0
 
     override_path = tmp_path / "override.toml"
-    override_path.write_text("[printer]\nsearch_interval_s = 1\n", encoding="utf-8")
-    assert load_config(override_path).printer.search_interval_s == 1.0
+    override_path.write_text("[printer]\nsearch_interval_s = 30\n", encoding="utf-8")
+    assert load_config(override_path).printer.search_interval_s == 30.0
 
 
 def test_printer_search_interval_must_be_positive_and_finite(tmp_path: Path) -> None:

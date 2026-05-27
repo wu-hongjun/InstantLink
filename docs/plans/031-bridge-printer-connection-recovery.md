@@ -175,5 +175,62 @@ Battery/film status must keep flowing on the 10 s keepalive throughout the conne
 
 ## 11. Immediate operator note
 
-The printer is currently wedged (not advertising) from the failing run. **Power-cycle the printer**
-to clear the ghost link and restore a clean advertising state before any further testing.
+The printer is currently wedged from the failing run. **Power-cycle the printer** to restore a clean
+state before further testing.
+
+---
+
+## 12. Phase 0 findings (2026-05-27, btmon capture `14:20:57–14:23:47` local / `18:20:57Z`)
+
+**The capture did NOT reproduce the rebond→wedge in §3.** No write failure, no `auto_rebond`, no
+bond removal occurred. Instead it exposed a *different and apparently dominant* failure: **the LE
+connection never establishes at all.**
+
+### Evidence
+- **Bridge journal** (every attempt, repeating): `scan_started → scan_finished → device_matched
+  (INSTAX-52006924 (IOS)) → ble_connecting → stage=failed "BLE error: connect failed: Timeout
+  waiting for reply"`. The printer **is** discovered and matched every cycle (good RSSI −46…−72 dBm).
+  "Timeout waiting for reply" is a **D-Bus** reply timeout on BlueZ's `Connect()`.
+- **btmon (link layer), full 170 s:**
+  - Only `LE Set Scan Enable` connection-class commands. **Zero `LE Create Connection`,
+    zero `LE (Enhanced) Connection Complete`, zero `Device Connected (mgmt 0x000b)`,
+    zero `Disconnect`.** The controller was never told to connect, and no connection ever completed.
+  - Three `MGMT Event: Connect Failed (0x000d)` for `FA:AB:BC:C7:95:64`, each `Status:
+    Disconnected (0x0e)`, one per connect attempt.
+- **Isolation ladder (each tried, none recovered):**
+  1. Manual `bluetoothctl connect` → `org.bluez.Error.InProgress "In Progress"`.
+  2. `bluetoothctl disconnect` → "Disconnection successful" (cancels the stuck attempt) but the next
+     bridge attempt re-wedges to `In Progress` within seconds.
+  3. Adapter `power off/on` → still `Timeout waiting`.
+  4. Bridge process restart (fresh btleplug `Manager`/adapter) → still `In Progress`.
+  5. `bluetoothd` + bridge restart (fully fresh Pi BLE stack) → still `In Progress` / `Timeout`.
+
+### Conclusion
+The **Pi side is healthy and was reset at every layer**; the printer advertises connectable but
+**no connection ever completes**, leaving BlueZ stuck in a perpetual "connection In Progress" that
+never times out or self-cancels. This is **not** the rebond ghost-link (§3) and **not**
+"not advertising" — it is a failure to complete the LL connection to an advertising, bonded peer.
+
+### Revised hypotheses (supersede H-A…H-D as the primary target)
+| ID | Hypothesis | Decisive probe |
+|----|-----------|----------------|
+| P1 | **Printer firmware wedge:** after repeated power-cycles / bond churn the printer advertises but no longer honours connection requests; only a printer power-cycle clears it. | Clean printer power-cycle (off ≥5 s, on) with the fresh Pi stack already in place; confirm `Connection Complete` + status. |
+| P2 | **BlueZ background/allowlist auto-connect never fires** for this bonded *Static Random* address on the Pi Zero 2 W controller (explains zero `LE Create Connection`); a *direct/active* connect would work. | With bond present it stays stuck; remove bond → BlueZ falls back to direct connect → does it now issue `LE Create Connection` and succeed? |
+| P3 | **Stale LTK on the Pi:** BlueZ tries encrypt-on-connect with a key the (re-paired-cleared) printer rejects, dropping the link. | Weak: argued against by the total absence of any `Connection Complete`/`Disconnect` HCI (never gets to encryption). |
+
+P1 vs P2 is the next fork. P2, if true, is the highest-value fix: **stop relying on BlueZ
+background auto-connect; drive a direct active connection** (and/or do not keep a stale bond that
+pushes BlueZ onto the background-connect path). The shipped bond-removal auto-rebond and the
+silent-link (`disconnect when Connected`) mitigation target neither P1 nor P2 — they assume the
+connection gets far enough to fail at GATT/write, which this failure does not.
+
+### Phase 0 → revised next steps
+1. **Clean printer power-cycle** with the now-fresh Pi stack; capture btmon again. If it connects,
+   P1 is confirmed (printer wedge) and recovery must include "ask user to restart printer" UX plus a
+   bounded give-up (never silent infinite "Finding Printer").
+2. If it still fails after a clean printer power-cycle, test P2: remove the bond and watch whether a
+   **direct** connect issues `LE Create Connection` and completes. If yes, the fix is connection-path
+   (direct connect / bonding strategy), not the recovery state machine in §6.
+3. Re-scope §6: the recovery machine must first handle "connection never completes / BlueZ stuck
+   In Progress" (cancel pending + bounded retry + honest UI), which is more common than the
+   rebond-wedge it was originally drawn around.

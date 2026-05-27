@@ -324,3 +324,26 @@ rather than depending on a manual `bluetoothd` restart:
 ### Acceptance status
 §8 bar (5 consecutive printer power-cycles, zero manual intervention): **not yet met** — blocked by
 the bridge-restart wedge. Clean-state printer power-cycle recovery: **1/5 observed, passing.**
+
+### Phase 2 attempt #1 — runtime cancel-on-error: REVERTED (counterproductive)
+
+`0.1.13` added `cancel_pending_connection` (an unconditional `Device.Disconnect`) on the first
+connect error, plus the deploy stopgap. On hardware it made things **worse**: from a *clean* BlueZ
+state the printer was matched ~10× over 7 min but **never connected** — every attempt failed
+`connect failed: In Progress` and none reached `service_discovery`.
+
+Root cause of the regression: on this controller `peripheral.connect()` returns a transient error
+(`In Progress`) **while the active-scan background connect is still completing**. 0.1.12 lets that
+pending connection finish (the next poll finds it connected); the new cancel **disconnected the
+in-flight connection every cycle**, so it could never complete. Lesson: **`In Progress` is success
+in progress — never cancel it.** Reverted in `0.1.14` (restored 0.1.12 connect path; removed the
+helper). The deploy stopgap (restart `bluetooth.service` on `--restart`) is **kept** — harmless and
+gives clean deploys.
+
+Revised Phase 2 plan: do **not** cancel on a generic connect error. The genuine wedge to handle is
+only `Timeout waiting for reply` (a stuck D-Bus `Connect()`), which is distinct from `In Progress`.
+A future self-heal must (a) match that specific signature, (b) only act after several consecutive
+failures (not the first), and (c) never disconnect while a connection is `In Progress`. For now the
+deploy stopgap covers deploys; crash/watchdog-triggered wedges remain a known open item.
+
+Next: validate `0.1.14` (clean 0.1.12 connect behaviour + deploy stopgap) against the §8 5× bar.

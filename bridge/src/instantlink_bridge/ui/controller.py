@@ -217,6 +217,10 @@ class BridgeUi:
         self._battery_estimator = BatteryLifeEstimator()
         self._battery_minutes_remaining: int | None = None
         self._printer_status_misses = 0
+        # Tracks whether the previous status poll was connected. A connected->failed transition
+        # means the printer just dropped, so we re-search immediately instead of waiting a full
+        # search period (see _printer_status_retry_delay).
+        self._printer_was_online = False
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at: dict[str, float] = {}
         self._auto_rebond_task: asyncio.Task[None] | None = None
@@ -1746,8 +1750,9 @@ class BridgeUi:
                 # measured from the start of each attempt. Subtract the time the attempt already
                 # consumed (its scan/connect) so the period holds whether the scan exited early on a
                 # match or ran the full window — and so a fast-failing connect does not hammer.
-                elapsed = self._monotonic() - attempt_start
                 period = self._printer_status_retry_delay(online)
+                self._printer_was_online = online
+                elapsed = self._monotonic() - attempt_start
                 await asyncio.sleep(max(0.0, period - elapsed))
         finally:
             await self._status_provider.close()
@@ -1866,6 +1871,11 @@ class BridgeUi:
             return self._printer_keepalive_interval_s
         if self._snapshot.printer_status_message == "Restart printer":
             return RESTART_PRINTER_RETRY_S
+        if self._printer_was_online:
+            # The printer just dropped (was connected, now failing): re-search immediately rather
+            # than waiting a full search period, so a power-cycle reconnects as soon as it
+            # re-advertises instead of idling out the cadence.
+            return 0.0
         # The configured search interval is the total cadence PERIOD between attempt starts; the
         # poll loop subtracts the time each attempt consumed. The minimum 5s option equals the scan
         # window, so attempts run back-to-back (continuous). No exponential backoff, so a

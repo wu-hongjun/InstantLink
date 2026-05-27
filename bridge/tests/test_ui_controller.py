@@ -1117,6 +1117,25 @@ def test_offline_status_retry_delay_uses_configured_search_period_without_backof
         assert ui._printer_status_retry_delay(False) == period
 
 
+def test_retry_delay_is_immediate_right_after_a_connected_drop() -> None:
+    ui = BridgeUi(
+        BridgeConfig(printer=PrinterConfig(search_interval_s=30.0)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    # Just dropped from a connected state: re-search immediately, not after the 30s period.
+    ui._printer_was_online = True
+    assert ui._printer_status_retry_delay(False) == 0.0
+
+    # Once searching (no longer "was online"), fall back to the configured search period.
+    ui._printer_was_online = False
+    assert ui._printer_status_retry_delay(False) == 30.0
+
+
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:
     printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
     ui = BridgeUi(

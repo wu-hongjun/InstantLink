@@ -90,6 +90,13 @@ OFFLINE_BACKOFF_BASE_S = 2.0
 OFFLINE_BACKOFF_CAP_S = 30.0
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
+# Interchangeable generic "searching" placeholders that the live retry tick may overwrite. Specific
+# diagnostics (e.g. "No printer signal", "Restart printer") are not listed here so they survive.
+_GENERIC_SEARCHING_MESSAGES = frozenset({"Looking for printer", "Searching for printer"})
+# Periodic render cadence. A lightweight tick re-renders the latest snapshot so the LCD never
+# shows a stale frame while a coroutine is busy. The `snapshot == last_rendered` short-circuit in
+# `_render` keeps this cheap and prevents render-spam.
+RENDER_TICK_S = 0.35
 USB_STATUS_POLL_S = 1.0
 PREVIEW_BUILD_TIMEOUT_S = 20.0
 RETURN_HOME_DELAY_S = 2.0
@@ -194,6 +201,8 @@ class BridgeUi:
         self._action_task: asyncio.Task[None] | None = None
         self._pairing_task: asyncio.Task[None] | None = None
         self._status_task: asyncio.Task[None] | None = None
+        self._status_generation = 0
+        self._render_tick_task: asyncio.Task[None] | None = None
         self._network_task: asyncio.Task[None] | None = None
         self._ftp_mode_task: asyncio.Task[None] | None = None
         self._image_reset_task: asyncio.Task[None] | None = None
@@ -231,6 +240,7 @@ class BridgeUi:
             LOGGER.exception("ui.input_start_failed")
         await self._refresh_network_status()
         self._action_task = asyncio.create_task(self._run_actions())
+        self._render_tick_task = asyncio.create_task(self._run_render_tick())
         self._network_task = asyncio.create_task(self._run_network_status())
         if self._config.ftp.mode is not FtpReceiveMode.AUTO:
             self._ftp_mode_task = asyncio.create_task(self._apply_configured_ftp_mode_at_start())
@@ -244,6 +254,7 @@ class BridgeUi:
             self._action_task,
             self._pairing_task,
             self._status_task,
+            self._render_tick_task,
             self._network_task,
             self._ftp_mode_task,
             self._image_reset_task,
@@ -1675,18 +1686,25 @@ class BridgeUi:
         printer = self._snapshot.paired_printer
         if printer is None:
             return
-        self._status_task = asyncio.create_task(self._poll_printer_status(printer))
+        generation = self._status_generation
+        self._status_task = asyncio.create_task(self._poll_printer_status(printer, generation))
 
-    async def _poll_printer_status(self, printer: PairedPrinter) -> None:
+    async def _poll_printer_status(self, printer: PairedPrinter, generation: int) -> None:
         try:
             while True:
-                self._show_printer_searching_if_retrying(printer, "Looking for printer")
-                online = await self._refresh_printer_status_in_background(printer)
+                if generation != self._status_generation:
+                    return
+                self._show_printer_searching_if_retrying(printer, "Searching for printer")
+                online = await self._refresh_printer_status_in_background(printer, generation)
                 await asyncio.sleep(self._printer_status_retry_delay(online))
         finally:
             await self._status_provider.close()
 
-    async def _refresh_printer_status_in_background(self, printer: PairedPrinter) -> bool:
+    async def _refresh_printer_status_in_background(
+        self,
+        printer: PairedPrinter,
+        generation: int | None = None,
+    ) -> bool:
         try:
             status = await self._status_provider.fetch(printer)
         except asyncio.CancelledError:
@@ -1707,12 +1725,7 @@ class BridgeUi:
                     diagnostics,
                 )
             self._printer_status_misses += 1
-            message = (
-                "Hold K3 to re-pair"
-                if self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES
-                else printer_unavailable_message(exc)
-            )
-            self._apply_printer_searching(printer, message)
+            self._apply_status_failure(printer, self._unavailable_message(exc), generation)
             return False
         except TimeoutError as exc:
             if self._should_log_printer_status_warning("timeout", printer, str(exc)):
@@ -1722,9 +1735,11 @@ class BridgeUi:
                     printer.name,
                     exc,
                 )
-            self._apply_printer_searching(
+            self._printer_status_misses += 1
+            self._apply_status_failure(
                 printer,
                 self._connect_failure_message("Printer seen; connecting"),
+                generation,
             )
             return False
         except Exception as exc:
@@ -1741,11 +1756,15 @@ class BridgeUi:
                     type(exc).__name__,
                     exc,
                 )
-            self._apply_printer_searching(
+            self._printer_status_misses += 1
+            self._apply_status_failure(
                 printer,
                 self._connect_failure_message("Printer seen; connecting"),
+                generation,
             )
             return False
+        if generation is not None and generation != self._status_generation:
+            return True
         self._printer_status_misses = 0
         self._clear_printer_status_warning_state()
         LOGGER.info(
@@ -1851,7 +1870,11 @@ class BridgeUi:
     def _show_printer_searching_if_retrying(self, printer: PairedPrinter, message: str) -> None:
         if self._snapshot.mode not in {UiMode.PRINTER_SEARCHING, UiMode.PRINTER_OFFLINE}:
             return
-        if self._snapshot.printer_status_message not in {None, message}:
+        current = self._snapshot.printer_status_message
+        # Keep the live "searching" copy refreshing between fetches, but never clobber a more
+        # specific diagnostic the last fetch surfaced (e.g. "No printer signal", "Restart printer").
+        # The generic placeholders are interchangeable so the screen always reflects active work.
+        if current not in {None, message, *_GENERIC_SEARCHING_MESSAGES}:
             return
         self._apply_printer_searching(printer, message)
 
@@ -1918,32 +1941,84 @@ class BridgeUi:
         self._last_printer_status_warning_signature = None
         self._last_printer_status_warning_at = -math.inf
 
-    def _offline_message(self, default: str) -> str:
-        self._printer_status_misses += 1
-        if self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
+    def _apply_status_failure(
+        self,
+        printer: PairedPrinter,
+        message: str,
+        generation: int | None,
+    ) -> None:
+        """Apply a failure message unless the poll generation has been superseded."""
+
+        if generation is not None and generation != self._status_generation:
+            return
+        self._apply_printer_searching(printer, message)
+
+    def _unavailable_message(self, exc: PrinterStatusUnavailableError) -> str:
+        """Return live "searching" copy for an unavailable printer.
+
+        Always-auto-scanning means we keep the printer in ``PRINTER_SEARCHING`` and never flip to
+        the manual re-pair screen on a transient miss. Only a genuinely absent or stale selected
+        printer (per bridge policy, the one case re-pair is appropriate) escalates to the manual
+        ``Hold K3 to re-pair`` affordance. A printer that is visible but failing to connect stays
+        searching and, past the threshold, surfaces ``Restart printer`` recovery copy.
+        """
+
+        diagnostics = exc.diagnostics
+        printer_seen = diagnostics is not None and diagnostics.selected_visible
+        if printer_seen:
+            if self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
+                return "Restart printer"
+            return printer_unavailable_message(exc)
+        if exc.stale_selected and self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
             return "Hold K3 to re-pair"
-        return default
+        return printer_unavailable_message(exc)
 
     def _connect_failure_message(self, default: str) -> str:
-        self._printer_status_misses += 1
+        """Return live connect copy, escalating to recovery copy past the miss threshold.
+
+        The miss counter is bumped by the caller so the threshold is single-sourced; this helper
+        only maps the current miss count to a user-facing message and never routes to the manual
+        re-pair screen.
+        """
+
         if self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
             return "Restart printer"
         return default
 
     async def _cancel_status_refresh(self) -> None:
-        if self._status_task is not None:
-            task = self._status_task
-            self._status_task = None
+        """Stop the in-flight status poll without blocking the caller.
+
+        Cancellation is fire-and-forget: the poll task runs the BLE status/connect on a shielded,
+        cancel-resistant worker that can take seconds to unwind. Awaiting it here would park the
+        action loop (and therefore input/render). Instead we bump the status generation so any
+        stale result the cancelled task may still produce is ignored, drop the task reference, and
+        let the task tear down its own resources (its ``finally`` calls ``_status_provider.close``).
+        """
+
+        self._status_generation += 1
+        task = self._status_task
+        self._status_task = None
+        if task is not None:
             task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
-        await self._status_provider.close()
 
     async def _close_cached_printer_session(self) -> None:
         close_cached_session = getattr(self._status_provider, "close_cached_session", None)
         if close_cached_session is None:
             return
         await close_cached_session()
+
+    async def _run_render_tick(self) -> None:
+        """Periodically re-render the latest snapshot.
+
+        The action loop and background coroutines mutate ``self._snapshot`` and call
+        ``_render`` directly, but a busy coroutine could otherwise leave the LCD showing a stale
+        frame. This tick guarantees the screen converges on the latest snapshot. ``_render`` keeps
+        the ``snapshot == last_rendered`` short-circuit, so this is cheap and never render-spams.
+        """
+
+        while True:
+            await asyncio.sleep(RENDER_TICK_S)
+            self._render()
 
     async def _run_network_status(self) -> None:
         while True:

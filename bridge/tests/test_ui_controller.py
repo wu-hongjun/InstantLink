@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
@@ -40,6 +41,7 @@ from instantlink_bridge.ui.controller import (
     OFFLINE_BACKOFF_CAP_S,
     OFFLINE_MESSAGE_AFTER_MISSES,
     OFFLINE_STATUS_RETRY_S,
+    RENDER_TICK_S,
     RESTART_PRINTER_RETRY_S,
     BridgeUi,
     _wifi_mode_for_ftp_receive_mode,
@@ -60,6 +62,7 @@ from instantlink_bridge.ui.settings import (
 from instantlink_bridge.ui.status import (
     PrinterStatusSnapshot,
     PrinterStatusUnavailableError,
+    PrinterStatusUnavailableReason,
     scanner_diagnostics,
 )
 
@@ -839,7 +842,9 @@ def test_printer_status_with_unknown_film_shows_validation_not_searching() -> No
 
 
 @pytest.mark.asyncio
-async def test_repeated_unavailable_printer_status_escalates_offline() -> None:
+async def test_repeated_absent_printer_status_keeps_auto_searching() -> None:
+    # A printer that is simply not advertising (but not yet classified stale) must keep
+    # auto-scanning in PRINTER_SEARCHING rather than flipping to the manual re-pair screen.
     printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
     status_provider = _FakeStatusProvider(
         error=PrinterStatusUnavailableError(
@@ -858,13 +863,147 @@ async def test_repeated_unavailable_printer_status_escalates_offline() -> None:
     )
     ui._snapshot = ui._build_snapshot(mode=UiMode.PRINTER_SEARCHING, paired_printer=printer)
 
-    for _ in range(3):
+    for _ in range(OFFLINE_MESSAGE_AFTER_MISSES):
+        assert not await ui._refresh_printer_status_in_background(printer)
+
+    assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
+    assert display.snapshots[-1].printer_status_message == "No printer signal"
+    # First offline tick at the miss threshold uses the backoff base, not a flat 5s.
+    assert ui._printer_status_retry_delay(False) == OFFLINE_BACKOFF_BASE_S
+
+    # Even far past the threshold an absent (non-stale) printer keeps auto-searching.
+    for _ in range(20):
+        assert not await ui._refresh_printer_status_in_background(printer)
+    assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
+
+
+@pytest.mark.asyncio
+async def test_stale_selected_printer_offers_manual_repair() -> None:
+    # A selected printer that scans confirm is gone (stale) is the one case re-pair applies:
+    # escalate to the manual PRINTER_OFFLINE affordance once past the miss threshold.
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "stale or powered off",
+            diagnostics=scanner_diagnostics(printer, []),
+            reason=PrinterStatusUnavailableReason.STALE_SELECTED,
+        )
+    )
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.PRINTER_SEARCHING, paired_printer=printer)
+
+    for _ in range(OFFLINE_MESSAGE_AFTER_MISSES):
         assert not await ui._refresh_printer_status_in_background(printer)
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_OFFLINE
     assert display.snapshots[-1].printer_status_message == "Hold K3 to re-pair"
-    # First offline tick at the miss threshold uses the backoff base, not a flat 5s.
-    assert ui._printer_status_retry_delay(False) == OFFLINE_BACKOFF_BASE_S
+
+
+@pytest.mark.asyncio
+async def test_cancel_status_refresh_does_not_block_on_in_flight_worker() -> None:
+    # A status fetch that never returns models the shielded, cancel-resistant BLE worker.
+    # _cancel_status_refresh must return immediately rather than awaiting that worker, otherwise
+    # every input would park the action loop for seconds.
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _BlockingStatusProvider()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.PRINTER_SEARCHING, paired_printer=printer)
+
+    await ui._schedule_printer_status_refresh()
+    poll_task = ui._status_task
+    assert poll_task is not None
+    await asyncio.wait_for(status_provider.fetch_started.wait(), timeout=1)
+
+    await asyncio.wait_for(ui._cancel_status_refresh(), timeout=0.2)
+
+    # The reference is dropped without awaiting and the worker is told to stop ignoring results.
+    assert ui._status_task is None
+    assert not status_provider.released.is_set()
+
+    # Let the cancelled poll task tear itself down (its finally closes the provider).
+    status_provider.release()
+    with suppress(asyncio.CancelledError):
+        await asyncio.wait_for(poll_task, timeout=1)
+    assert status_provider.close_calls >= 1
+
+
+@pytest.mark.asyncio
+async def test_searching_text_keeps_updating_across_repeated_misses() -> None:
+    # The live "searching/connecting" copy must keep refreshing on every attempt so the LCD never
+    # freezes on a stale frame while auto-scanning continues.
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    status_provider = _FakeStatusProvider(error=TimeoutError("connect timed out"))
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=status_provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.PRINTER_SEARCHING, paired_printer=printer)
+
+    messages: list[str | None] = []
+    for _ in range(OFFLINE_MESSAGE_AFTER_MISSES):
+        assert not await ui._refresh_printer_status_in_background(printer)
+        ui._show_printer_searching_if_retrying(printer, "Searching for printer")
+        messages.append(ui._snapshot.printer_status_message)
+
+    # Each attempt stays in PRINTER_SEARCHING and surfaces live copy (connecting -> restart),
+    # never the manual re-pair screen.
+    assert all(mode is UiMode.PRINTER_SEARCHING for mode in (display.snapshots[-1].mode,))
+    assert messages[0] == "Printer seen; connecting"
+    assert messages[-1] == "Restart printer"
+    assert "Hold K3 to re-pair" not in messages
+
+
+@pytest.mark.asyncio
+async def test_render_tick_re_renders_latest_snapshot() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    tick_task = asyncio.create_task(ui._run_render_tick())
+    try:
+        # Mutate the snapshot without calling _render; the tick must converge the LCD to it.
+        ui._snapshot = ui._build_snapshot(mode=UiMode.PRINTER_SEARCHING, paired_printer=printer)
+        for _ in range(50):
+            if display.snapshots and display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING:
+                break
+            await asyncio.sleep(0.01)
+        assert display.snapshots, "render tick never rendered"
+        assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
+        render_count = len(display.snapshots)
+        # An unchanged snapshot must not be re-rendered (short-circuit keeps the tick cheap).
+        await asyncio.sleep(RENDER_TICK_S * 2)
+        assert len(display.snapshots) == render_count
+    finally:
+        tick_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await tick_task
 
 
 def test_offline_status_retry_delay_uses_exponential_backoff_with_cap() -> None:
@@ -1540,8 +1679,11 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     await ui._handle_action(UiAction.SELECT)
     await asyncio.sleep(0)
 
-    assert status_provider.close_calls >= 1
+    # BLE reset releases the cached session and schedules a fresh status poll. The provider's
+    # transient ``close`` now happens on the poll task's own teardown, not inline on the action
+    # loop, so it is no longer asserted here (the reset must never block input/render).
     assert status_provider.close_cached_calls == 1
+    assert ui._status_task is not None
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "Printer"
     assert display.snapshots[-1].settings_message == "BLE link reset"
@@ -2089,6 +2231,26 @@ class _FakeStatusProvider:
 
     async def configure_keepalive(self, interval_s: float | None) -> None:
         self.keepalive_interval_calls.append(interval_s)
+
+
+class _BlockingStatusProvider:
+    """Status provider whose fetch blocks until released, modelling the shielded BLE worker."""
+
+    def __init__(self) -> None:
+        self.fetch_started = asyncio.Event()
+        self.released = asyncio.Event()
+        self.close_calls = 0
+
+    async def fetch(self, _printer: PairedPrinter) -> PrinterStatusSnapshot:
+        self.fetch_started.set()
+        await self.released.wait()
+        raise AssertionError("fetch should be cancelled before completing")
+
+    def release(self) -> None:
+        self.released.set()
+
+    async def close(self) -> None:
+        self.close_calls += 1
 
 
 async def _unused_wifi_mode_setter(mode: WifiMode) -> str:

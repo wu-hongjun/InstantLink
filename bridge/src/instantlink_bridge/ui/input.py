@@ -122,6 +122,8 @@ def _enqueue(
     action: UiAction,
 ) -> Callable[[], None]:
     def callback() -> None:
+        LOGGER.debug("ui.input_press action=%s", action)
+
         def put_action() -> None:
             with suppress(asyncio.QueueFull):
                 queue.put_nowait(action)

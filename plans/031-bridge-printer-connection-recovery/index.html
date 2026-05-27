@@ -2053,6 +2053,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#phase-2-attempt-1-runtime-cancel-on-error-reverted-counterproductive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 attempt #1 — runtime cancel-on-error: REVERTED (counterproductive)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2443,6 +2454,24 @@ rather than depending on a manual <code>bluetoothd</code> restart:
 <h3 id="acceptance-status">Acceptance status<a class="headerlink" href="#acceptance-status" title="Permanent link">&para;</a></h3>
 <p>§8 bar (5 consecutive printer power-cycles, zero manual intervention): <strong>not yet met</strong> — blocked by
 the bridge-restart wedge. Clean-state printer power-cycle recovery: <strong>1/5 observed, passing.</strong></p>
+<h3 id="phase-2-attempt-1-runtime-cancel-on-error-reverted-counterproductive">Phase 2 attempt #1 — runtime cancel-on-error: REVERTED (counterproductive)<a class="headerlink" href="#phase-2-attempt-1-runtime-cancel-on-error-reverted-counterproductive" title="Permanent link">&para;</a></h3>
+<p><code>0.1.13</code> added <code>cancel_pending_connection</code> (an unconditional <code>Device.Disconnect</code>) on the first
+connect error, plus the deploy stopgap. On hardware it made things <strong>worse</strong>: from a <em>clean</em> BlueZ
+state the printer was matched ~10× over 7 min but <strong>never connected</strong> — every attempt failed
+<code>connect failed: In Progress</code> and none reached <code>service_discovery</code>.</p>
+<p>Root cause of the regression: on this controller <code>peripheral.connect()</code> returns a transient error
+(<code>In Progress</code>) <strong>while the active-scan background connect is still completing</strong>. 0.1.12 lets that
+pending connection finish (the next poll finds it connected); the new cancel <strong>disconnected the
+in-flight connection every cycle</strong>, so it could never complete. Lesson: <strong><code>In Progress</code> is success
+in progress — never cancel it.</strong> Reverted in <code>0.1.14</code> (restored 0.1.12 connect path; removed the
+helper). The deploy stopgap (restart <code>bluetooth.service</code> on <code>--restart</code>) is <strong>kept</strong> — harmless and
+gives clean deploys.</p>
+<p>Revised Phase 2 plan: do <strong>not</strong> cancel on a generic connect error. The genuine wedge to handle is
+only <code>Timeout waiting for reply</code> (a stuck D-Bus <code>Connect()</code>), which is distinct from <code>In Progress</code>.
+A future self-heal must (a) match that specific signature, (b) only act after several consecutive
+failures (not the first), and (c) never disconnect while a connection is <code>In Progress</code>. For now the
+deploy stopgap covers deploys; crash/watchdog-triggered wedges remain a known open item.</p>
+<p>Next: validate <code>0.1.14</code> (clean 0.1.12 connect behaviour + deploy stopgap) against the §8 5× bar.</p>
 
 
 

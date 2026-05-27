@@ -273,3 +273,54 @@ address adjacent symptoms but **not** this connect-initiation stall.
 State note: live probing (manual scans, disconnects, adapter/bluetoothd restarts) contaminated the
 observed state during Phase 0; the *reproducible* signal — "active scan completes the connection" —
 is the reliable takeaway. The system is currently healthy (`Connected: yes`, film 4/10).
+
+---
+
+## 13. Phase 1 implementation + outcome (2026-05-27, bridge .so 0.1.11 → 0.1.12)
+
+**Change (commits `4f57404`, `68892c8`):**
+- `transport::scan()` split into `start_scan` / `collect_instax_peripherals` / `stop_scan`
+  (`scan()` still composes them for the standalone scan + `connect_any` callers).
+- `connect_internal` now keeps an **active scan running across discovery AND the connect/status
+  handshake** (was: `stop_scan` before connecting, which dropped onto BlueZ's stalling
+  background-connect path), and **polls the candidate list to connect the moment the target is
+  uniquely matched** (`DISCOVERY_POLL_INTERVAL` 400 ms) instead of sleeping the full 5 s window.
+
+**Result — partial pass:**
+- ✅ **From a clean BlueZ state it works.** After a `bluetoothd` restart, 0.1.11 connected
+  autonomously in ~10 s (first time all day without a manual `scan on`), and a **printer
+  power-cycle recovered on its own (1 cycle): write-fail → auto_rebond → reconnect → status, no
+  wedge, ~58 s** (3 attempts incl. the stale-bond rebond; ~11 s `ble_connecting` per attempt is the
+  dominant cost). The poll-during-scan trims the per-attempt scan wait.
+- ❌ **New, distinct failure isolated: a *bridge restart* wedges BlueZ.** The 0.1.12 deploy restarts
+  the bridge but not `bluetoothd`; the old process, killed while a connect was pending (printer
+  asleep), left BlueZ stuck. The fresh 0.1.12 then failed **7/7** connects with
+  `connect failed: Timeout waiting for reply` over 6 min even though the printer was matched 6× —
+  cleared only by a `bluetoothd` restart. This is the same "stuck In Progress" wedge from Phase 0,
+  but its **trigger is a bridge restart** (deploy / crash / systemd `WatchdogSec` restart), which
+  the active-scan fix does not address (it helps *initiate* from a clean state; it can't clear a
+  pre-existing stuck pending connect).
+
+**So Phase 1 fixes the clean-state connect stall and the printer-power-cycle recovery, but does NOT
+satisfy the §8 acceptance bar yet** because a bridge restart can leave BlueZ wedged with no
+self-heal.
+
+### Phase 2 scope (the bridge-restart wedge)
+The bridge must self-heal from a `Timeout waiting for reply` / `org.bluez.Error.InProgress` wedge
+rather than depending on a manual `bluetoothd` restart:
+- **Runtime self-heal (preferred):** on a connect that fails with the wedge signature, cancel the
+  stuck pending connection (`peripheral.disconnect()` / BlueZ `Device.Disconnect`) before retrying;
+  the active-scan retry should then complete. Phase 0 saw a one-shot cancel re-wedge *without* the
+  active-scan fix — re-test now that the active scan is in place.
+- **Startup hygiene:** on bridge start, cancel/clear any stale pending connection for the selected
+  printer before the first connect, so a restart never inherits a wedged Device1.
+- **Operational stopgap:** have `deploy-to-pi.sh` (and/or the systemd unit ordering) restart
+  `bluetooth.service` alongside the bridge so deploys don't leave a wedge. Cheap; does not fix
+  watchdog-triggered restarts, so it is a stopgap, not the fix.
+- Investigate the **shutdown path**: the old bridge wedging BlueZ when killed mid-connect (printer
+  offline) is the trigger; a clean cancel-on-shutdown would prevent creating the wedge at all
+  (relates to the existing `TimeoutStopSec=12` note).
+
+### Acceptance status
+§8 bar (5 consecutive printer power-cycles, zero manual intervention): **not yet met** — blocked by
+the bridge-restart wedge. Clean-state printer power-cycle recovery: **1/5 observed, passing.**

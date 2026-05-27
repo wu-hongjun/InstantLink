@@ -2160,17 +2160,13 @@ async def _drain_auto_rebond(ui: BridgeUi) -> None:
 
 
 @pytest.mark.asyncio
-async def test_auto_rebond_triggers_on_repeated_late_stage_write_failures() -> None:
+async def test_auto_rebond_triggers_on_late_stage_write_failure() -> None:
     printer = PairedPrinter(address="INSTANTLINK:1N034655", name="INSTAX-1N034655")
     pairer = _FakePairer([printer])
     status_provider = _FakeStatusProvider(error=_stale_bond_error(printer))
     ui = _make_auto_rebond_ui(printer, pairer, status_provider)
 
-    assert not await ui._refresh_printer_status_in_background(printer)
-    # One signature is below the consecutive threshold: no bond removal yet.
-    assert ui._auto_rebond_task is None
-    assert pairer.removed_bonds == []
-
+    # threshold=1: the first stale-bond signature triggers the rebond immediately.
     assert not await ui._refresh_printer_status_in_background(printer)
     await _drain_auto_rebond(ui)
 
@@ -2179,24 +2175,23 @@ async def test_auto_rebond_triggers_on_repeated_late_stage_write_failures() -> N
 
 
 @pytest.mark.asyncio
-async def test_auto_rebond_streak_resets_on_non_signature_failure() -> None:
+async def test_auto_rebond_skips_non_signature_failures() -> None:
     printer = PairedPrinter(address="INSTANTLINK:1N034655", name="INSTAX-1N034655")
     pairer = _FakePairer([printer])
-    status_provider = _FakeStatusProvider(error=_stale_bond_error(printer))
+    status_provider = _FakeStatusProvider(error=_not_found_error(printer))
     ui = _make_auto_rebond_ui(printer, pairer, status_provider)
 
-    assert not await ui._refresh_printer_status_in_background(printer)
-
-    # A plain not-found failure interrupts the consecutive streak.
-    status_provider._error = _not_found_error(printer)
+    # A non-signature (not-found) failure never triggers a rebond and keeps the streak at 0.
     assert not await ui._refresh_printer_status_in_background(printer)
     assert ui._auto_rebond_task is None
+    assert ui._auto_rebond_signature_streak == 0
+    assert pairer.removed_bonds == []
 
-    # The next signature is only the first of a fresh streak, so still no rebond.
+    # A stale-bond signature then triggers immediately (threshold=1).
     status_provider._error = _stale_bond_error(printer)
     assert not await ui._refresh_printer_status_in_background(printer)
-    assert ui._auto_rebond_task is None
-    assert pairer.removed_bonds == []
+    await _drain_auto_rebond(ui)
+    assert pairer.removed_bonds == [printer]
 
 
 @pytest.mark.asyncio
@@ -2263,10 +2258,13 @@ async def test_successful_status_resets_auto_rebond_counters() -> None:
     status_provider = _FakeStatusProvider(error=_stale_bond_error(printer))
     ui = _make_auto_rebond_ui(printer, pairer, status_provider)
 
-    assert not await ui._refresh_printer_status_in_background(printer)
-    assert ui._auto_rebond_signature_streak == 1
+    # Simulate the counters a prior rebond leaves behind (a pending streak + a recorded
+    # cooldown), without depending on the fire-and-forget rebond task's rescheduled poll.
+    ui._auto_rebond_signature_streak = 1
+    ui._last_auto_rebond_at[_auto_rebond_key(printer)] = ui._monotonic()
 
-    # A successful status clears the streak and per-device cooldown.
+    # A successful status clears the streak and the per-device cooldown so a later stale bond
+    # can rebond again.
     status_provider._error = None
     status_provider._snapshot = PrinterStatusSnapshot(
         film_remaining=5,

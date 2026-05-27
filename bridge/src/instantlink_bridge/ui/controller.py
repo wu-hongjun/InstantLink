@@ -94,11 +94,13 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # keeps the stale bond key. The connection comes up (late GATT stage) but the first encrypted
 # write fails. We detect that signature and automatically remove the BlueZ bond so the
 # NoInputNoOutput agent re-bonds on reconnect. Guards keep this from thrashing:
-#   * Require the signature on this many consecutive attempts before acting (a single transient
-#     write hiccup must not trigger a bond removal).
+#   * Act as soon as the signature appears (=1): on a healthy bond the post-subscribe write
+#     succeeds, so a write failure after reaching notification_subscribe is a confident stale-bond
+#     signal. Acting on the first one keeps power-cycle recovery fast; the cooldown below bounds
+#     the cost of any rare false positive.
 #   * Allow at most one rebond per device per cooldown window; if re-pairing does not fix it the
 #     signature will recur but we fall back to normal backoff instead of looping.
-AUTO_REBOND_SIGNATURE_THRESHOLD = 2
+AUTO_REBOND_SIGNATURE_THRESHOLD = 1
 AUTO_REBOND_COOLDOWN_S = 120.0
 # Interchangeable generic "searching" placeholders that the live retry tick may overwrite. Specific
 # diagnostics (e.g. "No printer signal", "Restart printer") are not listed here so they survive.
@@ -1812,8 +1814,9 @@ class BridgeUi:
     ) -> None:
         """Trigger a background auto-rebond when the stale-bond signature is confirmed.
 
-        The signature must repeat on ``AUTO_REBOND_SIGNATURE_THRESHOLD`` consecutive attempts (a
-        single transient write hiccup resets the streak). At most one rebond runs per device per
+        The bridge rebonds as soon as the stale-bond signature appears
+        (``AUTO_REBOND_SIGNATURE_THRESHOLD`` = 1); a non-signature failure resets the streak
+        counter. At most one rebond runs per device per
         ``AUTO_REBOND_COOLDOWN_S``; if a recent rebond did not fix it the signature recurs but we
         fall back to normal searching/backoff instead of removing the bond again. The actual
         bond removal + reconnect runs fire-and-forget so the poll/action loops never block.

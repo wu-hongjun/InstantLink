@@ -1947,6 +1947,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#12-phase-0-findings-2026-05-27-btmon-capture-142057142347-local-182057z" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Phase 0 findings (2026-05-27, btmon capture 14:20:57–14:23:47 local / 18:20:57Z)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Phase 0 findings (2026-05-27, btmon capture 14:20:57–14:23:47 local / 18:20:57Z)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#revised-hypotheses-supersede-h-ah-d-as-the-primary-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revised hypotheses (supersede H-A…H-D as the primary target)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-0-revised-next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0 → revised next steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2179,8 +2240,82 @@ Battery/film status must keep flowing on the 10 s keepalive throughout the conne
   We borrow its UX contract (always searching, robust reconnect) but not its bonding mechanism.</li>
 </ul>
 <h2 id="11-immediate-operator-note">11. Immediate operator note<a class="headerlink" href="#11-immediate-operator-note" title="Permanent link">&para;</a></h2>
-<p>The printer is currently wedged (not advertising) from the failing run. <strong>Power-cycle the printer</strong>
-to clear the ghost link and restore a clean advertising state before any further testing.</p>
+<p>The printer is currently wedged from the failing run. <strong>Power-cycle the printer</strong> to restore a clean
+state before further testing.</p>
+<hr />
+<h2 id="12-phase-0-findings-2026-05-27-btmon-capture-142057142347-local-182057z">12. Phase 0 findings (2026-05-27, btmon capture <code>14:20:57–14:23:47</code> local / <code>18:20:57Z</code>)<a class="headerlink" href="#12-phase-0-findings-2026-05-27-btmon-capture-142057142347-local-182057z" title="Permanent link">&para;</a></h2>
+<p><strong>The capture did NOT reproduce the rebond→wedge in §3.</strong> No write failure, no <code>auto_rebond</code>, no
+bond removal occurred. Instead it exposed a <em>different and apparently dominant</em> failure: <strong>the LE
+connection never establishes at all.</strong></p>
+<h3 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Bridge journal</strong> (every attempt, repeating): <code>scan_started → scan_finished → device_matched
+  (INSTAX-52006924 (IOS)) → ble_connecting → stage=failed "BLE error: connect failed: Timeout
+  waiting for reply"</code>. The printer <strong>is</strong> discovered and matched every cycle (good RSSI −46…−72 dBm).
+  "Timeout waiting for reply" is a <strong>D-Bus</strong> reply timeout on BlueZ's <code>Connect()</code>.</li>
+<li><strong>btmon (link layer), full 170 s:</strong></li>
+<li>Only <code>LE Set Scan Enable</code> connection-class commands. <strong>Zero <code>LE Create Connection</code>,
+    zero <code>LE (Enhanced) Connection Complete</code>, zero <code>Device Connected (mgmt 0x000b)</code>,
+    zero <code>Disconnect</code>.</strong> The controller was never told to connect, and no connection ever completed.</li>
+<li>Three <code>MGMT Event: Connect Failed (0x000d)</code> for <code>FA:AB:BC:C7:95:64</code>, each <code>Status:
+    Disconnected (0x0e)</code>, one per connect attempt.</li>
+<li><strong>Isolation ladder (each tried, none recovered):</strong></li>
+<li>Manual <code>bluetoothctl connect</code> → <code>org.bluez.Error.InProgress "In Progress"</code>.</li>
+<li><code>bluetoothctl disconnect</code> → "Disconnection successful" (cancels the stuck attempt) but the next
+     bridge attempt re-wedges to <code>In Progress</code> within seconds.</li>
+<li>Adapter <code>power off/on</code> → still <code>Timeout waiting</code>.</li>
+<li>Bridge process restart (fresh btleplug <code>Manager</code>/adapter) → still <code>In Progress</code>.</li>
+<li><code>bluetoothd</code> + bridge restart (fully fresh Pi BLE stack) → still <code>In Progress</code> / <code>Timeout</code>.</li>
+</ul>
+<h3 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h3>
+<p>The <strong>Pi side is healthy and was reset at every layer</strong>; the printer advertises connectable but
+<strong>no connection ever completes</strong>, leaving BlueZ stuck in a perpetual "connection In Progress" that
+never times out or self-cancels. This is <strong>not</strong> the rebond ghost-link (§3) and <strong>not</strong>
+"not advertising" — it is a failure to complete the LL connection to an advertising, bonded peer.</p>
+<h3 id="revised-hypotheses-supersede-h-ah-d-as-the-primary-target">Revised hypotheses (supersede H-A…H-D as the primary target)<a class="headerlink" href="#revised-hypotheses-supersede-h-ah-d-as-the-primary-target" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Hypothesis</th>
+<th>Decisive probe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td><strong>Printer firmware wedge:</strong> after repeated power-cycles / bond churn the printer advertises but no longer honours connection requests; only a printer power-cycle clears it.</td>
+<td>Clean printer power-cycle (off ≥5 s, on) with the fresh Pi stack already in place; confirm <code>Connection Complete</code> + status.</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><strong>BlueZ background/allowlist auto-connect never fires</strong> for this bonded <em>Static Random</em> address on the Pi Zero 2 W controller (explains zero <code>LE Create Connection</code>); a <em>direct/active</em> connect would work.</td>
+<td>With bond present it stays stuck; remove bond → BlueZ falls back to direct connect → does it now issue <code>LE Create Connection</code> and succeed?</td>
+</tr>
+<tr>
+<td>P3</td>
+<td><strong>Stale LTK on the Pi:</strong> BlueZ tries encrypt-on-connect with a key the (re-paired-cleared) printer rejects, dropping the link.</td>
+<td>Weak: argued against by the total absence of any <code>Connection Complete</code>/<code>Disconnect</code> HCI (never gets to encryption).</td>
+</tr>
+</tbody>
+</table>
+<p>P1 vs P2 is the next fork. P2, if true, is the highest-value fix: <strong>stop relying on BlueZ
+background auto-connect; drive a direct active connection</strong> (and/or do not keep a stale bond that
+pushes BlueZ onto the background-connect path). The shipped bond-removal auto-rebond and the
+silent-link (<code>disconnect when Connected</code>) mitigation target neither P1 nor P2 — they assume the
+connection gets far enough to fail at GATT/write, which this failure does not.</p>
+<h3 id="phase-0-revised-next-steps">Phase 0 → revised next steps<a class="headerlink" href="#phase-0-revised-next-steps" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Clean printer power-cycle</strong> with the now-fresh Pi stack; capture btmon again. If it connects,
+   P1 is confirmed (printer wedge) and recovery must include "ask user to restart printer" UX plus a
+   bounded give-up (never silent infinite "Finding Printer").</li>
+<li>If it still fails after a clean printer power-cycle, test P2: remove the bond and watch whether a
+   <strong>direct</strong> connect issues <code>LE Create Connection</code> and completes. If yes, the fix is connection-path
+   (direct connect / bonding strategy), not the recovery state machine in §6.</li>
+<li>Re-scope §6: the recovery machine must first handle "connection never completes / BlueZ stuck
+   In Progress" (cancel pending + bounded retry + honest UI), which is more common than the
+   rebond-wedge it was originally drawn around.</li>
+</ol>
 
 
 

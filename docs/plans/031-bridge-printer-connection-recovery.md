@@ -347,3 +347,68 @@ failures (not the first), and (c) never disconnect while a connection is `In Pro
 deploy stopgap covers deploys; crash/watchdog-triggered wedges remain a known open item.
 
 Next: validate `0.1.14` (clean 0.1.12 connect behaviour + deploy stopgap) against the §8 5× bar.
+
+---
+
+## 14. Milestone — 2026-05-27 (end of day)
+
+Hardware-validated. The combination of two final changes, working together, brings the
+power-cycle reconnect from the ~25 s starting point to **~4 s active** (`scan_started → connected
+with status`), confirmed across two consecutive power-cycles with a clean trace (zero
+`write failed`, zero `auto_rebond`, zero wasted attempts).
+
+### Final state on hardware
+- **Crates `0.1.17`** (`66b95a0` hybrid connect): the fast stop-scan path with a 5 s budget tries
+  first (~0.3–1.5 s on a healthy BlueZ); on a wedge-signature error (`In Progress` /
+  `Timeout waiting for reply`) **or** the timeout firing, it forces a bounded
+  `peripheral.disconnect()` to clear any half-set-up BlueZ link and falls back to the slow
+  (~11 s) but reliable active-scan retry. Restores the speed win from `0.1.15` **and** the
+  wedge-recovery from `0.1.12`/`0.1.16` — the previous two strategies each lost one of those.
+- **Bridge `0.1.11`** (`179cf0f` always-fresh-pair): on the `_printer_was_online` True→False edge
+  the bridge proactively removes the BlueZ bond (gated `Connected=no`, double-checked at the
+  pairer), so the *next* reconnect after a power-cycle pairs fresh via the `NoInputNoOutput` agent
+  — no stale-LTK write-fail and no reactive `auto_rebond` detour. `auto_rebond` stays as a
+  dormant safety net.
+
+### Measured trace (cycle 2, representative — 03:13:42 → 03:14:02 UTC)
+```
+03:13:42  film_remaining=4                       last keepalive before drop
+03:13:53  proactive_bond_reset done=remove_bond  ← always-fresh-pair fires on drop
+03:13:58  scan_started                           ← printer back on, advertising
+03:13:59  device_matched                          (~0.5 s into scan)
+03:13:59  ble_connecting
+03:14:00  service_discovery                      ← FAST PATH: 1.5 s (was ~11 s)
+03:14:02  connected
+03:14:02  film_remaining=4
+```
+Both cycles landed within ~100 ms of each other on the active reconnect interval.
+
+### Eliminated costs vs. the ~25 s starting point
+| Cost | Before | After | How |
+|------|--------|-------|-----|
+| ~10 s detect-drop gap | yes | gone | `_printer_was_online`-aware 0 s retry on connected→failed edge |
+| ~5.6 s write-fail attempt (stale bond) | yes | gone | proactive bond removal on drop edge |
+| ~5.6 s wasted post-rebond `service_discovery` retry | yes | gone | no rebond → no wasted retry; hybrid fallback only on wedge |
+| ~11 s `ble_connecting → service_discovery` | yes | ~1.5 s | hybrid fast path: stop scan before connect |
+| `In Progress` wedge → stuck forever | regression in `0.1.15` | recovers in ~11 s | hybrid active-scan fallback + bounded disconnect |
+
+### Pipeline used
+Architect (read-only design) → executor (implementation) → codex (review) → I integrated
+findings and ran the hardware deploy/test loop. Architect's **Rec 1 (always-fresh-pair)** shipped
+in `0.1.11`; the **hybrid** answered the speed-vs-recovery tradeoff that surfaced after the `0.1.15`
+regression. Codex flagged one HIGH (cancellation-safety on timeout) + one LOW (5 s budget) on the
+hybrid; both fixed before deploy.
+
+### Still open / worth iterating
+- §8 acceptance bar (5× consecutive auto-recovery): **2/5 verified** today; user is "iterating."
+- The recurring BlueZ "In Progress" wedge root cause is still untraced at the controller layer; the
+  hybrid recovers from it (slow path), so the bar moved from "blocker" to "tolerated cost."
+- The Instax's own ~2–3 s boot/settle before it advertises is inherent and not addressable here —
+  this sets the practical floor for an immediate-power-cycle reconnect at ~5–6 s end-to-end.
+- Codex `is_wedge_signature` substring match (LOW): pragmatic, cost of a false-positive is ~11 s
+  spurious fallback — accepted.
+
+### Knobs left in for ops
+- Settings > Printer > **Search rate**: 5 s (continuous) / 15 s / 30 s / 60 s, no backoff.
+- Settings > Printer > Keepalive: 5 s / 10 s / 15 s / 30 s (unchanged).
+- `deploy-to-pi.sh --restart` restarts `bluetoothd` first (deploy-time wedge stopgap).

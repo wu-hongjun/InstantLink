@@ -133,3 +133,86 @@ Likely-effective levers, once measured:
 2. **Q2** (lazy-load) — one focused refactor, executor + codex, expect ~11.5 s after Q1+Q3+Q5.
 3. **Q4** (disable tailscaled / GitHub runner / sshswitch / rpi-eeprom-update at boot) — declare appliance defaults; expect tiny crit-path win, but cleans up steady state.
 4. Re-measure; decide whether to chase **M1–M3**.
+
+---
+
+## 10. Sprint outcome (2026-05-28)
+
+Q1+Q3+Q5 shipped, Q2 attempted and reverted, splash slimmed, M3 implemented. Final
+measurement on hardware: **~15.0 s power-on → bridge `Started` (scan_started ~20 ms before).**
+**Net save: ~3 s** (18.1 s → 15.0 s).
+
+### What's deployed
+- **Bridge `0.1.16`** (commit `5cdf729`). FFI `libinstantlink_ffi.so` is crates **`0.1.17`** (commit
+  `66b95a0`, hybrid connect; unchanged this sprint).
+- **Q1 boot-splash** (`bridge/systemd/instantlink-bridge-boot-splash.service`): `Before=` dropped
+  from the bridge critical path; `WantedBy=sysinit.target` so it still activates early.
+- **Q3 no serial console / Q5 quiet boot** (`bridge/boot/firmware/{config.txt,cmdline.example.txt}`):
+  applied to the Pi's `/boot/firmware/cmdline.txt` and `config.txt` (backups at `*.bak.032`).
+  Kernel boot **5.19 s → 2.62 s**.
+- **Splash slim** (`bridge/src/instantlink_bridge/boot_splash.py`): rewritten to stdlib-only,
+  writes a solid RGB565 colour to `/dev/fb1`. Splash unit time **3.7 s → ~1 s**.
+- **M3 parallel BLE/FTP setup** (`bridge/src/instantlink_bridge/app.py`): `run_ftp_receive_slice`
+  uses `asyncio.gather(start_ftp_service, start_ble_stack)` and `asyncio.to_thread` for the entire
+  FTP setup including the pyftpdlib import. Codex-reviewed (HIGH + 2 MEDIUM fixes folded in).
+
+### What got reverted and why (read before retrying)
+- **Q2 lazy-load** (commit `92f93a6` reverted `0cec5a6`): deferring pyftpdlib / imaging.pipeline
+  out of `app.py` module-load *without* parallelising the consumer just moves the same cost into
+  the bridge's serial startup. Measured +1.7 s consistent across 3 boots — not cold cache.
+  Lesson: the lazy-load only helps when paired with parallelism (M3). M3 now keeps the deferred
+  import inside the to_thread call so its cost overlaps with BLE setup.
+- **`0.1.15` stop-scan-before-connect** (Rust, reverted `d035bf6` ↦ restored `4f57404`-style
+  active-scan during connect): unrelated to this plan but documented in plan 031 §13 — the
+  hybrid `0.1.17` is what currently ships and it preserves both fast and recovery paths.
+
+### Why M3 saved less than the spec predicted (honest)
+The journal across cold reboots shows FTP and BLE branches finishing within ~100 ms of each other
+at ~3 s into the bridge process — so the gather IS parallel. But:
+- ~2 s of pre-gather work (Python imports, `BridgeUi` construction, `build_power_monitor`) is on
+  the critical path before `gather` starts.
+- ~1 s of post-gather work (FFI library load, ui startup tail) is between `gather` completing and
+  `READY=1` firing.
+- Both gather branches take ~3 s, so `max(branch_a, branch_b)` doesn't save much vs serial because
+  pre-/post-gather already dominate.
+
+Result: scan_started fires only **~20 ms before READY=1**, not the predicted 0.5–1 s. M3 is
+*structurally correct* (parallel setup) but speed-neutral on this architecture. Keeping it for the
+cleaner control flow.
+
+### Measurement evidence (cold reboot, 2026-05-28)
+```
+[10.10s] systemd: Starting instantlink-bridge.service
+[13.19s] ftp.server_started        ← FTP branch finished
+[13.29s] bluetooth.agent_registered ← BLE branch finished (100 ms later)
+[14.27s] instantlink.library_loaded ← FFI lib load (post-gather)
+[15.02s] bridge.ready
+[15.04s] stage=scan_started
+[15.08s] systemd: Started instantlink-bridge.service
+```
+Kernel: 2.62 s. Userspace to bridge `Started`: 12.46 s. Power-on → scanning: ~15.0 s.
+
+### Remaining levers (in cost order)
+1. **`dd`-splash** (replace Python boot_splash with a pre-rendered framebuffer blob shipped in the
+   repo + `ExecStart=/usr/bin/dd if=… of=/dev/fb1`). Splash ~1 s → ~0.05 s. **Expected: ~14.0 s.**
+2. **Lazy FFI library load** (defer `libinstantlink_ffi.so` `dlopen` until first BLE poll instead
+   of during `BridgeUi` construction). Saves ~1 s. **Expected: ~13.0 s.** Risk: lifecycle.
+3. **Bytecode pre-compile + warm `__pycache__`** at provision time. ~0.5–1 s. **Expected: ~12.5 s.**
+4. **§5 M1 — zram off the critical path** (defer to post-`local-fs.target`). ~0.5–1 s.
+5. Custom init (Buildroot/Yocto), pre-linked native bridge — out of v1 scope.
+
+### Hard floor
+With current Python entry + RPi OS Lite + Pi Zero 2 W, **~12 s is the practical floor**. The
+kernel + sysinit chain alone is ~6 s. Anything below ~10 s on this hardware needs a non-Python
+bridge or a custom init.
+
+### Open items / lessons for the next session
+- The deploy script does **not** sync `bridge/systemd/*.service` — unit changes require manual
+  `scp` + `daemon-reload`. **One-line fix in `bridge/scripts/deploy-to-pi.sh`** would prevent this
+  trap.
+- Python interpreter cold start on the Pi Zero 2 W is ~0.7–1 s; this is the floor for any
+  Python-based splash or helper. Replacing with `dd` / shell / native binary is the only way to
+  beat it.
+- "Q2 was a regression" diagnosis (in §13's earlier draft) was partially wrong — Q2 alone
+  regresses, Q2 *with* M3 doesn't. Future maintainers: don't try Q2 again without the M3 thread
+  parallelism in place.

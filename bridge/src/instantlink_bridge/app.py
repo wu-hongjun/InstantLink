@@ -12,7 +12,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future as ThreadFuture
 from contextlib import suppress
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from instantlink_bridge.ble.client import (
     DiscoveredPrinter,
@@ -36,7 +36,6 @@ from instantlink_bridge.ble.instax import (
     PrinterBusyError,
     PrintRejectedError,
 )
-from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
 from instantlink_bridge.config import (
     DEFAULT_CONFIG_PATH,
     BridgeConfig,
@@ -65,6 +64,20 @@ from instantlink_bridge.ui.pairing import BluetoothctlPrinterPairer, PrinterPair
 from instantlink_bridge.ui.status import scan_bluez_instax_printers, status_target_for_visible_match
 from instantlink_bridge.watchdog import WatchdogNotifier, run_watchdog_heartbeat
 
+if TYPE_CHECKING:
+    from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
+
+    # Full signature visible to type-checkers (ReceivedImage is importable here).
+    PrinterSender = Callable[
+        [PairedPrinter, ReceivedImage, BridgeConfig, PrintEdit, PrintProgressCallback],
+        Awaitable[None],
+    ]
+else:
+    # At runtime PrinterSender resolves to a generic callable so `typing.get_type_hints()` on a
+    # function annotated with `PrinterSender` does NOT need to evaluate a forward reference to
+    # `ReceivedImage` (codex finding 3 — keeps the TYPE_CHECKING-only `camera.ftp` import safe).
+    PrinterSender = Callable[..., Awaitable[None]]
+
 LOGGER = logging.getLogger(__name__)
 AUTO_PRINT_DELAY_S = 5.0
 IMAGE_QUEUE_MAXSIZE = 100
@@ -73,11 +86,6 @@ PRINT_JOB_HARD_TIMEOUT_S = 300.0
 PRINT_TARGET_SCAN_TIMEOUT_S = 1.0
 PRINT_TARGET_SCAN_ATTEMPTS = 5
 POWEROFF_HELPER = "/usr/local/sbin/instantlink-bridge-poweroff"
-
-PrinterSender = Callable[
-    [PairedPrinter, ReceivedImage, BridgeConfig, PrintEdit, PrintProgressCallback],
-    Awaitable[None],
-]
 
 
 class PrintJobError(RuntimeError):
@@ -181,17 +189,55 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         ui_event_tasks.add(task)
         task.add_done_callback(ui_event_tasks.discard)
 
-    service = FtpReceiveService(
-        config.ftp,
-        queue,
-        loop,
-        activity_tracker=ftp_activity,
-        queue_overflow_callback=notify_queue_overflow,
-    )
-    service.start()
-    try:
-        bluez_agent = await start_bluez_agent_if_needed()
+    async def start_ftp_service() -> FtpReceiveService:
+        # Deferred so pyftpdlib (and its transitive deps in camera.ftp) load off the
+        # app.py module-import path and run concurrently with BLE setup below.
+        from instantlink_bridge.camera.ftp import FtpReceiveService
+
+        ftp_service = FtpReceiveService(
+            config.ftp,
+            queue,
+            loop,
+            activity_tracker=ftp_activity,
+            queue_overflow_callback=notify_queue_overflow,
+        )
+        # FtpReceiveService.start() is blocking (it waits for the FTP thread's
+        # bind+listen). Run it on the default executor so it does not stall the
+        # event loop while BLE setup is in flight.
+        await asyncio.to_thread(ftp_service.start)
+        return ftp_service
+
+    async def start_ble_stack() -> AsyncStopService | None:
+        agent = await start_bluez_agent_if_needed()
         await ui.start()
+        return agent
+
+    try:
+        # Run FTP-server startup and BLE/UI startup concurrently. Use
+        # return_exceptions so a failure in one branch does not prevent us from
+        # capturing the other branch's already-constructed resources (FTP server,
+        # BlueZ agent), which the outer finally still needs to tear down cleanly.
+        ftp_result, ble_result = await asyncio.gather(
+            start_ftp_service(),
+            start_ble_stack(),
+            return_exceptions=True,
+        )
+        if not isinstance(ftp_result, BaseException):
+            service = ftp_result
+        if not isinstance(ble_result, BaseException):
+            bluez_agent = ble_result
+        # If BOTH branches failed, log the secondary failure before re-raising the primary so
+        # the second exception is never silently dropped (codex finding 1).
+        failures = [
+            exc for exc in (ftp_result, ble_result) if isinstance(exc, BaseException)
+        ]
+        for exc in failures[1:]:
+            LOGGER.error("bridge.startup_secondary_failure", exc_info=exc)
+        if failures:
+            raise failures[0]
+        # Robust runtime guard (not just `assert`, which would be stripped under `python -O`).
+        if service is None:
+            raise RuntimeError("BUG: FTP service not assigned after successful gather")
         notifier.ready()
         watchdog_task = asyncio.create_task(run_watchdog_heartbeat(stop_event, notifier))
         power_task = asyncio.create_task(power_monitor.run(stop_event))
@@ -260,7 +306,8 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             await bluez_agent.stop()
         await close_default_ble_session_manager()
         await close_default_image_preparation_worker()
-        service.stop()
+        if service is not None:
+            service.stop()
 
 
 async def start_bluez_agent_if_needed() -> AsyncStopService | None:

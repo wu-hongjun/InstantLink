@@ -16,7 +16,7 @@ User=ib
 Group=ib
 SupplementaryGroups=gpio spi i2c video
 WorkingDirectory=/opt/InstantLinkBridge
-ExecStart=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge-splash --config /etc/InstantLinkBridge/config.toml --hold 0.25
+ExecStart=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge-splash --config /etc/InstantLinkBridge/config.toml --hold 0
 RemainAfterExit=yes
 
 [Install]

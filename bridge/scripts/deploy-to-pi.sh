@@ -841,6 +841,29 @@ main() {
     verify_remote_runtime_deps_current
   fi
 
+  # Pre-bake .pyc bytecode as the runtime user so first-import compilation is skipped on cold boot
+  # (plan 033 §6.2 / L3). Placed AFTER install_runtime_deps_on_pi so the venv is guaranteed to
+  # exist. The venv-existence guard makes this non-fatal on the rare deploy paths where the venv
+  # was skipped (e.g. --no-deps on a fresh target); the warning is stderr-routed so legitimate
+  # failures (e.g. a newly-introduced .py syntax error) are still visible.
+  #
+  # The deploy lands ${TARGET}/src/ owned by the deploy user (e.g. hongjunwu:staff via rsync),
+  # but compileall runs as ${OWNER} (ib) and needs write access to create __pycache__ subdirs.
+  # Chown src/ to the runtime user before compileall; this also covers any pre-existing
+  # root-owned __pycache__ from out-of-band compileall runs. Then sweep stale __pycache__
+  # belt-and-suspenders so a bytecode-version mismatch from a prior Python install cannot
+  # leave a broken cache behind.
+  echo "Pre-baking Python bytecode on ${HOST}..."
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
+    "if [ -x '${TARGET}/.venv/bin/python' ]; then \
+       sudo chown -R '${OWNER}:${GROUP}' '${TARGET}/src'; \
+       sudo find '${TARGET}/src' -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true; \
+       sudo -u '${OWNER}' '${TARGET}/.venv/bin/python' -m compileall -q '${TARGET}/src' \
+         || echo 'warning: compileall failed (non-fatal)' >&2; \
+     else \
+       echo 'warning: skipping compileall, ${TARGET}/.venv/bin/python not found' >&2; \
+     fi"
+
   if [[ "${RESTART}" -eq 1 ]]; then
     # Stopgap (docs/plans/031 Phase 2): the bridge can wedge BlueZ when it is killed mid-connect
     # (printer offline), leaving a stuck "connection in progress" that a fresh bridge inherits and

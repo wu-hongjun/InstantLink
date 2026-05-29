@@ -272,7 +272,7 @@ def _ready(
         _validation(draw, snapshot, fonts)
         return
 
-    _center_lines(draw, ["Ready", "to print"], 60, fonts["large"], TEXT)
+    _center_lines(draw, ["Ready"], 75, fonts["large"], TEXT)
     # Body: waiting for upload + FTP address
     _text(draw, 18, 120, "Waiting for upload", fonts["body"], TEXT)
     ftp_line = _ready_ftp_line(snapshot)
@@ -291,8 +291,8 @@ def _validation(
     accepting = can_accept_images(snapshot)
     _center_lines(
         draw,
-        ["Ready to print" if accepting else "Setup needed"],
-        62,
+        ["Ready" if accepting else "Setup needed"],
+        75,
         fonts["large"],
         TEXT,
     )

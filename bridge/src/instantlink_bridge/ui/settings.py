@@ -13,11 +13,10 @@ from instantlink_bridge.imaging.pipeline import FitMode
 class SettingKey(StrEnum):
     """Settings rows in LCD order."""
 
-    OPEN_PRINTER = "open_printer"
-    OPEN_CAMERA = "open_camera"
-    OPEN_NETWORK = "open_network"
     OPEN_PRINT = "open_print"
+    OPEN_NETWORK = "open_network"
     OPEN_SYSTEM = "open_system"
+    OPEN_ACCESSIBILITY = "open_accessibility"
     FTP_RECEIVE_MODE = "ftp_receive_mode"
     PAIR_PRINTER = "pair_printer"
     FTP_MODE_INFO = "ftp_mode_info"
@@ -59,15 +58,20 @@ class SettingKey(StrEnum):
 
 
 class SettingsPage(StrEnum):
-    """Settings menu pages."""
+    """Settings menu pages.
+
+    PRINTER (pairing/print options) and CAMERA (FTP credentials) merged
+    into PRINT and NETWORK respectively; the obsolete enum values were
+    removed. MAIN now has four top-level entries: Print, Network, System,
+    Accessibility.
+    """
 
     MAIN = "main"
-    PRINTER = "printer"
-    CAMERA = "camera"
     NETWORK = "network"
     PRINT = "print"
     SYSTEM = "system"
     ABOUT = "about"
+    ACCESSIBILITY = "accessibility"
 
 
 class WifiMode(StrEnum):
@@ -88,63 +92,53 @@ class SettingOption:
 
 SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     SettingsPage.MAIN: (
-        SettingKey.OPEN_PRINTER,
-        SettingKey.OPEN_CAMERA,
-        SettingKey.OPEN_NETWORK,
         SettingKey.OPEN_PRINT,
+        SettingKey.OPEN_NETWORK,
         SettingKey.OPEN_SYSTEM,
+        SettingKey.OPEN_ACCESSIBILITY,
     ),
-    SettingsPage.PRINTER: (
-        # Info row at the top so the user can confirm what's saved without
-        # accidentally triggering a scan/forget.
+    # PRINT subsumes the old Printer page. Printer-pairing rows come first
+    # (Serial, Find printer, Reset BLE, Forget & re-pair, Forget, Printer
+    # type) so the user can confirm/recover the bonded printer before
+    # tweaking print-time options. Keepalive and Search rate are advanced
+    # knobs at the bottom.
+    SettingsPage.PRINT: (
         SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.PAIR_PRINTER,
         SettingKey.RESET_PRINTER_LINK,
-        # Atomic recovery: wipe pairing AND start a fresh scan in one action.
-        # The plain FORGET_PRINTER row stays for the "just forget" case.
         SettingKey.FORGET_AND_REPAIR,
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
+        SettingKey.AUTO_PRINT_DELAY,
+        SettingKey.IMAGE_FIT,
+        SettingKey.JPEG_QUALITY,
+        SettingKey.ALLOW_PRINT_WITHOUT_FILM,
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
     ),
-    SettingsPage.CAMERA: (
+    # NETWORK subsumes the old Connect (camera FTP) page. Wi-Fi mode leads
+    # because picking it changes how every row below behaves; the hotspot
+    # SSID + Wi-Fi PIN come next (most-asked questions), then the FTP
+    # credentials the camera needs to enter, then the diagnostic rows.
+    # RESET_CREDENTIALS is last — destructive escape hatch.
+    SettingsPage.NETWORK: (
+        SettingKey.FTP_RECEIVE_MODE,
         SettingKey.NETWORK_HOTSPOT_SSID_INFO,
         SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
         SettingKey.FTP_HOST_INFO,
         SettingKey.FTP_USERNAME_INFO,
         SettingKey.FTP_PASSWORD_INFO,
-        SettingKey.FTP_RECEIVE_MODE,
-        # CAMERA_SETUP_INFO ("Upload note") removed — its value was just a
-        # restatement of the FTP_RECEIVE_MODE picker ("join bridge", "Wi-Fi
-        # profile") so it added confusion instead of guidance.
-        SettingKey.RESET_CREDENTIALS,
-    ),
-    SettingsPage.NETWORK: (
-        SettingKey.NETWORK_HOTSPOT_INFO,
-        # Hotspot SSID + password live on the Upload FTP page where the user is
-        # actively setting up the camera; deliberately not duplicated here.
         SettingKey.NETWORK_BLUETOOTH_INFO,
         SettingKey.NETWORK_WIFI_INFO,
         SettingKey.NETWORK_ETHERNET_INFO,
-    ),
-    SettingsPage.PRINT: (
-        SettingKey.AUTO_PRINT_DELAY,
-        SettingKey.IMAGE_FIT,
-        SettingKey.JPEG_QUALITY,
-        SettingKey.ALLOW_PRINT_WITHOUT_FILM,
+        SettingKey.RESET_CREDENTIALS,
     ),
     SettingsPage.SYSTEM: (
-        # Operational/adjustable rows only. The static device/version info
-        # ("Python 3.13", "BlueZ 5.79", etc.) lives behind the OPEN_ABOUT
-        # row so the System page stays scannable.
+        # Operational rows only. Version info lives behind OPEN_ABOUT.
+        # FONT_SIZE + LANGUAGE moved to the new Accessibility page.
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
-        SettingKey.FONT_SIZE,
-        # LANGUAGE will move to a dedicated Accessibility sub-page once that
-        # menu restructure ships; lives on System for now so it's discoverable.
-        SettingKey.LANGUAGE,
         SettingKey.REFRESH_STATUS,
         SettingKey.OPEN_ABOUT,
     ),
@@ -155,30 +149,32 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.SYSTEM_BLUEZ_VERSION,
         SettingKey.SYSTEM_OS_VERSION,
     ),
+    SettingsPage.ACCESSIBILITY: (
+        SettingKey.FONT_SIZE,
+        SettingKey.LANGUAGE,
+    ),
 }
 
 PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.MAIN: "Settings",
-    SettingsPage.PRINTER: "Printer",
-    SettingsPage.CAMERA: "Connect",
     SettingsPage.NETWORK: "Network",
     SettingsPage.PRINT: "Print",
     SettingsPage.SYSTEM: "System",
     SettingsPage.ABOUT: "About",
+    SettingsPage.ACCESSIBILITY: "Accessibility",
 }
 
 PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
-    SettingKey.OPEN_PRINTER: SettingsPage.PRINTER,
-    SettingKey.OPEN_CAMERA: SettingsPage.CAMERA,
     SettingKey.OPEN_NETWORK: SettingsPage.NETWORK,
     SettingKey.OPEN_PRINT: SettingsPage.PRINT,
     SettingKey.OPEN_SYSTEM: SettingsPage.SYSTEM,
     SettingKey.OPEN_ABOUT: SettingsPage.ABOUT,
+    SettingKey.OPEN_ACCESSIBILITY: SettingsPage.ACCESSIBILITY,
 }
 
-# Parent for each sub-page when the user presses BACK/LEFT. Top-level sub-pages
-# (PRINTER, CAMERA, etc.) are not listed because the controller defaults to
-# MAIN; only nested pages need an explicit override.
+# Parent for each sub-page when the user presses BACK/LEFT. Only pages nested
+# below a non-MAIN parent need an explicit entry; everything else defaults to
+# MAIN in the controller back-nav branch.
 SETTINGS_PARENT_PAGE: dict[SettingsPage, SettingsPage] = {
     SettingsPage.ABOUT: SettingsPage.SYSTEM,
 }
@@ -278,12 +274,11 @@ def setting_action_hint(key: SettingKey) -> str:
 
 
 SETTING_HELP_TEXT: dict[SettingKey, str] = {
-    SettingKey.OPEN_PRINTER: "Printer pairing and status",
-    SettingKey.OPEN_CAMERA: "Wi-Fi mode and FTP credentials",
-    SettingKey.OPEN_NETWORK: "Wi-Fi, Bluetooth, USB info",
-    SettingKey.OPEN_PRINT: "Photo size and print options",
-    SettingKey.OPEN_SYSTEM: "Device info and power",
+    SettingKey.OPEN_NETWORK: "Wi-Fi, FTP credentials, Bluetooth, USB",
+    SettingKey.OPEN_PRINT: "Pairing and photo/print options",
+    SettingKey.OPEN_SYSTEM: "Bridge health and updates",
     SettingKey.OPEN_ABOUT: "Versions and device identity",
+    SettingKey.OPEN_ACCESSIBILITY: "Text size, language, and appearance",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Scan and remember one Instax printer",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",

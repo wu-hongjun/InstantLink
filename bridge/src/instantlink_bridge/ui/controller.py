@@ -981,7 +981,7 @@ class BridgeUi:
                 await self._start_pairing()
                 return
             if self._snapshot.paired_printer is not None:
-                self._show_settings("Wi-Fi + FTP credentials", page=SettingsPage.CAMERA)
+                self._show_settings("Wi-Fi + FTP credentials", page=SettingsPage.NETWORK)
                 return
             return
         if action is UiAction.BACK:
@@ -1509,21 +1509,19 @@ class BridgeUi:
         return self._setting_picker_rows(key, self._snapshot.selected_index)
 
     def _settings_default_message(self) -> str | None:
-        if self._settings_page is SettingsPage.CAMERA:
+        if self._settings_page is SettingsPage.NETWORK:
             return None
         return None
 
     def _settings_row_for_key(self, key: SettingKey, printer_name: str) -> SettingsRow:
-        if key is SettingKey.OPEN_PRINTER:
-            return SettingsRow("Printer", "")
-        if key is SettingKey.OPEN_CAMERA:
-            return SettingsRow("Connect", "")
-        if key is SettingKey.OPEN_NETWORK:
-            return SettingsRow("Network", "")
         if key is SettingKey.OPEN_PRINT:
             return SettingsRow("Print", "")
+        if key is SettingKey.OPEN_NETWORK:
+            return SettingsRow("Network", "")
         if key is SettingKey.OPEN_SYSTEM:
             return SettingsRow("System", "")
+        if key is SettingKey.OPEN_ACCESSIBILITY:
+            return SettingsRow("Accessibility", "")
         if key is SettingKey.OPEN_ABOUT:
             return SettingsRow("About", "")
         if key is SettingKey.PRINTER_SERIAL_INFO:
@@ -1710,16 +1708,14 @@ class BridgeUi:
             return "Remove the saved printer"
         if key is SettingKey.REFRESH_STATUS:
             return "Re-check printer and FTP now"
-        if key is SettingKey.OPEN_PRINTER:
-            return "Printer pairing and status"
-        if key is SettingKey.OPEN_CAMERA:
-            return "Wi-Fi mode and FTP credentials"
         if key is SettingKey.OPEN_NETWORK:
-            return "Wi-Fi, Bluetooth, USB info"
+            return "Wi-Fi, FTP credentials, Bluetooth, USB"
         if key is SettingKey.OPEN_PRINT:
-            return "Photo size and print options"
+            return "Pairing and photo/print options"
         if key is SettingKey.OPEN_SYSTEM:
-            return "Device info and power"
+            return "Bridge health and updates"
+        if key is SettingKey.OPEN_ACCESSIBILITY:
+            return "Text size, language, and appearance"
         return setting_help_text(key)
 
     def _system_info_snapshot(self) -> SystemInfo:
@@ -2029,7 +2025,7 @@ class BridgeUi:
             )
             await self._schedule_printer_status_refresh()
             if first_pairing:
-                self._show_settings("Enter these on sender", page=SettingsPage.CAMERA)
+                self._show_settings("Enter these on sender", page=SettingsPage.NETWORK)
         finally:
             if self._pairing_task is asyncio.current_task():
                 self._pairing_task = None

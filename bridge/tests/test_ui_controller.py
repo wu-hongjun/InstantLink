@@ -1289,10 +1289,15 @@ async def test_settings_menu_persists_adjusted_image_fit(tmp_path: Path) -> None
     )
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(3):
-        await ui._handle_action(UiAction.DOWN)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 0 DOWNs lands on Print; SELECT enters it.
     await ui._handle_action(UiAction.SELECT)
-    await ui._handle_action(UiAction.DOWN)
+    # PRINT page row order: 0 Serial  1 Find printer  2 Reset BLE  3 Forget&re-pair
+    #   4 Forget  5 Printer type  6 Auto print  7 Image fit  8 JPEG quality
+    #   9 No-film test  10 Keepalive  11 Search rate.
+    # 7 DOWNs lands on Image fit.
+    for _ in range(7):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     assert _printer_fit(ui) is FitMode.CROP
     assert display.snapshots[-1].settings_title == "Image fit"
@@ -1334,13 +1339,15 @@ async def test_settings_save_failure_keeps_runtime_config(
     )
 
     await ui._handle_action(UiAction.SELECT)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 0 DOWNs; SELECT enters the Print page.
     await ui._handle_action(UiAction.SELECT)
-    # PRINTER page row order is now:
-    #   0 PRINTER_SERIAL_INFO  1 PAIR_PRINTER  2 RESET_PRINTER_LINK
-    #   3 FORGET_AND_REPAIR    4 FORGET_PRINTER  5 PRINTER_MODEL
-    #   6 KEEPALIVE            7 SEARCH_INTERVAL
-    # Six DOWN presses from PRINTER_SERIAL_INFO lands on KEEPALIVE.
-    for _ in range(6):
+    # PRINT page row order:
+    #   0 Serial  1 Find printer  2 Reset BLE  3 Forget&re-pair  4 Forget
+    #   5 Printer type  6 Auto print  7 Image fit  8 JPEG quality
+    #   9 No-film test  10 KEEPALIVE  11 Search rate
+    # Ten DOWN presses from Serial lands on KEEPALIVE.
+    for _ in range(10):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.RIGHT)
@@ -1349,8 +1356,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     assert ui.config.printer.keepalive_interval_s == 10.0
     assert load_config(config_path).printer.keepalive_interval_s == 10.0
     assert display.snapshots[-1].settings_message == "Config not writable"
-    assert display.snapshots[-1].settings_rows[6].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[6].value == "10s"
+    assert display.snapshots[-1].settings_rows[10].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[10].value == "10s"
 
 
 @pytest.mark.asyncio
@@ -1388,11 +1395,16 @@ async def test_upload_ftp_help_describes_sender_wifi() -> None:
     )
 
     await ui._handle_action(UiAction.SELECT)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 1 DOWN lands on Network; SELECT enters it.
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
+    # NETWORK row 0 = Wi-Fi Mode; row 1 = SSID ("Bridge Wi-Fi name to join from camera").
+    # 1 DOWN moves to SSID before pressing HELP.
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Connect"
+    assert display.snapshots[-1].settings_title == "Network"
     assert display.snapshots[-1].settings_message == "Bridge Wi-Fi name to join from camera"
 
 
@@ -1417,18 +1429,21 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     await ui._handle_action(UiAction.SELECT)
 
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
-        "Printer",
-        "Connect",
-        "Network",
         "Print",
+        "Network",
         "System",
+        "Accessibility",
     ]
 
+    # 1 DOWN lands on Network; SELECT enters it.
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(5):
-        await ui._handle_action(UiAction.DOWN)
+    # NETWORK page row order: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host
+    #   4 FTP user  5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP
+    #   9 Reset credentials.
+    # Wi-Fi Mode is at row 0; RIGHT opens the picker immediately.
     await ui._handle_action(UiAction.RIGHT)
 
     assert calls == []
@@ -1445,13 +1460,13 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     assert calls == [WifiMode.HOTSPOT]
     assert _ftp_mode(ui) is FtpReceiveMode.HOTSPOT
-    assert display.snapshots[-1].settings_title == "Connect"
-    assert display.snapshots[-1].settings_rows[0].label == "SSID"
-    assert display.snapshots[-1].settings_rows[2].label == "FTP host"
-    assert display.snapshots[-1].settings_rows[2].value == "192.168.8.1"
-    assert display.snapshots[-1].settings_rows[3].label == "FTP user"
-    assert display.snapshots[-1].settings_rows[4].label == "FTP PIN"
-    assert display.snapshots[-1].settings_rows[5].label == "Wi-Fi Mode"
+    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_rows[1].label == "SSID"
+    assert display.snapshots[-1].settings_rows[3].label == "FTP host"
+    assert display.snapshots[-1].settings_rows[3].value == "192.168.8.1"
+    assert display.snapshots[-1].settings_rows[4].label == "FTP user"
+    assert display.snapshots[-1].settings_rows[5].label == "FTP PIN"
+    assert display.snapshots[-1].settings_rows[0].label == "Wi-Fi Mode"
     # The "Bridge Wi-Fi ready" status string lives in the runtime-health
     # transport-message channel and is intentionally NOT renamed alongside
     # the picker/row labels — it describes a network state, not the menu.
@@ -1474,15 +1489,18 @@ async def test_settings_rows_show_action_specific_hints() -> None:
 
     assert display.snapshots[-1].settings_rows[0].hint == "Right/KEY1 open"
 
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # SELECT enters Print (row 0).
     await ui._handle_action(UiAction.SELECT)
-    # PRINTER page rows: 0 SERIAL  1 PAIR  2 RESET BLE  3 FORGET&RE-PAIR
-    #                    4 FORGET  5 MODEL  6 KEEPALIVE  7 SEARCH RATE.
-    # Six DOWN presses lands on KEEPALIVE (an adjustable picker row).
-    for _ in range(6):
+    # PRINT page rows: 0 Serial  1 Find printer  2 Reset BLE  3 Forget&re-pair
+    #   4 Forget  5 Printer type  6 Auto print  7 Image fit  8 JPEG quality
+    #   9 No-film test  10 KEEPALIVE  11 Search rate.
+    # Ten DOWN presses lands on KEEPALIVE (an adjustable picker row).
+    for _ in range(10):
         await ui._handle_action(UiAction.DOWN)
 
-    assert display.snapshots[-1].settings_rows[6].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[6].hint == "Right/KEY1 choose"
+    assert display.snapshots[-1].settings_rows[10].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[10].hint == "Right/KEY1 choose"
 
 
 @pytest.mark.asyncio
@@ -1501,15 +1519,17 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
     assert display.snapshots[-1].settings_title == "Settings"
     assert display.snapshots[-1].settings_message is None
     assert all(row.value == "" for row in display.snapshots[-1].settings_rows)
-    assert display.snapshots[-1].settings_rows[0].help == "Printer pairing and status"
+    # MAIN row 0 = Print; help text describes pairing and print options.
+    assert display.snapshots[-1].settings_rows[0].help == "Pairing and photo/print options"
 
     await ui._handle_action(UiAction.DOWN)
 
+    # MAIN row 1 = Network.
     assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].label == (
-        "Connect"
+        "Network"
     )
     assert display.snapshots[-1].settings_message is None
-    assert display.snapshots[-1].settings_rows[1].help == "Wi-Fi mode and FTP credentials"
+    assert display.snapshots[-1].settings_rows[1].help == "Wi-Fi, FTP credentials, Bluetooth, USB"
 
     await ui._handle_action(UiAction.HELP)
 
@@ -1545,15 +1565,19 @@ async def test_key3_help_explains_selected_settings_row() -> None:
     )
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(3):
-        await ui._handle_action(UiAction.DOWN)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 0 DOWNs; SELECT enters Print (row 0).
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(2):
+    # PRINT page: 0 Serial  1 Find printer  2 Reset BLE  3 Forget&re-pair
+    #   4 Forget  5 Printer type  6 Auto print  7 Image fit  8 JPEG quality
+    #   9 No-film test  10 Keepalive  11 Search rate.
+    # 8 DOWNs lands on JPEG quality.
+    for _ in range(8):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.HELP)
 
     assert display.snapshots[-1].settings_title == "Print"
-    assert display.snapshots[-1].settings_rows[2].label == "JPEG quality"
+    assert display.snapshots[-1].settings_rows[8].label == "JPEG quality"
     assert display.snapshots[-1].settings_message == (
         "Trade-off: higher = bigger, sharper. Current: 100"
     )
@@ -1613,6 +1637,8 @@ async def test_settings_left_returns_from_subpage_to_main() -> None:
     )
 
     await ui._handle_action(UiAction.SELECT)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 2 DOWNs lands on System; SELECT enters it; LEFT returns to MAIN.
     for _ in range(2):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
@@ -1620,9 +1646,10 @@ async def test_settings_left_returns_from_subpage_to_main() -> None:
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "Settings"
-    assert display.snapshots[-1].settings_rows[0].label == "Printer"
+    # MAIN row 0 = Print.
+    assert display.snapshots[-1].settings_rows[0].label == "Print"
     assert display.snapshots[-1].settings_message is None
-    assert display.snapshots[-1].settings_rows[0].help == "Printer pairing and status"
+    assert display.snapshots[-1].settings_rows[0].help == "Pairing and photo/print options"
 
 
 @pytest.mark.asyncio
@@ -1637,16 +1664,17 @@ async def test_settings_menu_shows_ftp_credentials() -> None:
     )
 
     await ui._handle_action(UiAction.SELECT)
-
-    for _ in range(1):
-        await ui._handle_action(UiAction.DOWN)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 1 DOWN lands on Network; SELECT enters it.
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
+    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN ...
     rows = display.snapshots[-1].settings_rows
-    assert rows[3].label == "FTP user"
-    assert rows[3].value == "ib"
-    assert rows[4].label == "FTP PIN"
-    assert rows[4].value == "12345678"
+    assert rows[4].label == "FTP user"
+    assert rows[4].value == "ib"
+    assert rows[5].label == "FTP PIN"
+    assert rows[5].value == "12345678"
 
 
 @pytest.mark.asyncio
@@ -1671,16 +1699,19 @@ async def test_settings_menu_shows_hotspot_pin(
     )
 
     await ui._handle_action(UiAction.SELECT)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 1 DOWN lands on Network; SELECT enters it.
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
+    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host ...
     rows = display.snapshots[-1].settings_rows
-    assert rows[0].label == "SSID"
-    assert rows[0].value == "LinkBrdg-TEST1234"
-    assert rows[1].label == "Wi-Fi PIN"
-    assert rows[1].value == "12345678"
-    assert rows[2].label == "FTP host"
-    assert rows[2].value == "192.168.8.1"
+    assert rows[1].label == "SSID"
+    assert rows[1].value == "LinkBrdg-TEST1234"
+    assert rows[2].label == "Wi-Fi PIN"
+    assert rows[2].value == "12345678"
+    assert rows[3].label == "FTP host"
+    assert rows[3].value == "192.168.8.1"
 
 
 @pytest.mark.asyncio
@@ -1695,10 +1726,14 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     )
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(3):
-        await ui._handle_action(UiAction.DOWN)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 0 DOWNs; SELECT enters Print (row 0).
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(3):
+    # PRINT page: 0 Serial  1 Find printer  2 Reset BLE  3 Forget&re-pair
+    #   4 Forget  5 Printer type  6 Auto print  7 Image fit  8 JPEG quality
+    #   9 No-film test  10 Keepalive  11 Search rate.
+    # 9 DOWNs lands on No-film test.
+    for _ in range(9):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     assert not ui.config.workflow.allow_print_without_film
@@ -1707,8 +1742,8 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     assert ui.config.workflow.allow_print_without_film
-    assert display.snapshots[-1].settings_rows[3].label == "No-film test"
-    assert display.snapshots[-1].settings_rows[3].value == "On"
+    assert display.snapshots[-1].settings_rows[9].label == "No-film test"
+    assert display.snapshots[-1].settings_rows[9].value == "On"
 
 
 @pytest.mark.asyncio
@@ -1735,21 +1770,20 @@ async def test_settings_network_page_shows_connection_info() -> None:
     )
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(2):
-        await ui._handle_action(UiAction.DOWN)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 1 DOWN lands on Network; SELECT enters it.
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
+    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
+    #   5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP  9 Reset credentials
     rows = display.snapshots[-1].settings_rows
-    assert [row.label for row in rows] == [
-        "Bridge FTP",
-        "Bluetooth",
-        "Same Wi-Fi adv",
-        "USB IP",
-    ]
-    assert rows[0].value == "192.168.8.1"
-    assert rows[1].value == "connected"
-    assert rows[2].value == "192.168.5.149"
-    assert rows[3].value == "192.168.7.1"
+    assert rows[6].label == "Bluetooth"
+    assert rows[6].value == "connected"
+    assert rows[7].label == "Same Wi-Fi adv"
+    assert rows[7].value == "192.168.5.149"
+    assert rows[8].label == "USB IP"
+    assert rows[8].value == "192.168.7.1"
 
 
 @pytest.mark.asyncio
@@ -1766,13 +1800,16 @@ async def test_settings_network_page_reports_admin_usb_without_camera_wording() 
     ui._camera_transport_message = "USB IP missing"
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(2):
-        await ui._handle_action(UiAction.DOWN)
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 1 DOWN lands on Network; SELECT enters it.
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
+    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
+    #   5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP  9 Reset credentials
     rows = display.snapshots[-1].settings_rows
-    assert rows[-1].label == "USB IP"
-    assert rows[-1].value == "no IP"
+    assert rows[8].label == "USB IP"
+    assert rows[8].value == "no IP"
 
 
 @pytest.mark.asyncio
@@ -1786,8 +1823,10 @@ async def test_settings_system_refresh_stays_in_settings() -> None:
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 2 DOWNs lands on System; SELECT enters it.
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(4):
+    for _ in range(2):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     snapshot_count = len(display.snapshots)
@@ -1848,7 +1887,7 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     assert status_provider.close_cached_calls == 1
     assert ui._status_task is not None
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Printer"
+    assert display.snapshots[-1].settings_title == "Print"
     assert display.snapshots[-1].settings_message == "BLE link reset"
     assert display.snapshots[-1].paired_printer == replace(printer, model=PrinterModel.SQUARE)
     await ui._cancel_status_refresh()
@@ -1878,17 +1917,17 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
         ),
     )
 
-    # MAIN: rows are Printer, Connect, Network, Print, System.
-    # 4 DOWNs lands on System; SELECT enters the System page.
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 2 DOWNs lands on System; SELECT enters the System page.
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(4):
+    for _ in range(2):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "System"
 
-    # System rows: Battery, Idle, Idle poweroff, Text size, Language,
-    # Refresh status, About. 6 DOWNs lands on About; SELECT enters About.
-    for _ in range(6):
+    # System rows: 0 Battery  1 Idle  2 Idle poweroff  3 Refresh status  4 About.
+    # 4 DOWNs lands on About; SELECT enters About.
+    for _ in range(4):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"
@@ -1928,8 +1967,10 @@ async def test_settings_system_page_can_toggle_idle_poweroff(tmp_path: Path) -> 
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
+    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
+    # 2 DOWNs lands on System; SELECT enters it.
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(4):
+    for _ in range(2):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     while display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].label != (
@@ -2114,8 +2155,10 @@ async def test_bluetooth_settings_do_not_claim_connected_while_searching() -> No
 
     ui._show_settings(page=SettingsPage.NETWORK)
 
-    assert display.snapshots[-1].settings_rows[1].label == "Bluetooth"
-    assert display.snapshots[-1].settings_rows[1].value == "searching"
+    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
+    #   5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP  9 Reset credentials
+    assert display.snapshots[-1].settings_rows[6].label == "Bluetooth"
+    assert display.snapshots[-1].settings_rows[6].value == "searching"
 
 
 @pytest.mark.asyncio
@@ -2221,9 +2264,10 @@ async def test_key3_press_with_paired_printer_opens_upload_ftp_credentials() -> 
     await ui._handle_action(UiAction.HELP)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Connect"
+    assert display.snapshots[-1].settings_title == "Network"
     assert display.snapshots[-1].settings_message == "Wi-Fi + FTP credentials"
-    assert [row.label for row in display.snapshots[-1].settings_rows[:5]] == [
+    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN ...
+    assert [row.label for row in display.snapshots[-1].settings_rows[1:6]] == [
         "SSID",
         "Wi-Fi PIN",
         "FTP host",
@@ -2257,7 +2301,7 @@ async def test_first_printer_pairing_opens_upload_ftp_credentials() -> None:
     await ui._pair_in_background(previous_printer=None)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Connect"
+    assert display.snapshots[-1].settings_title == "Network"
     assert display.snapshots[-1].settings_message == "Enter these on sender"
     await ui._cancel_status_refresh()
 
@@ -3099,7 +3143,7 @@ async def test_reset_credentials_requires_confirmation(
     # Scroll to the last row (Reset credentials)
     from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingsPage
 
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.CAMERA]
+    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
     for _ in range(len(camera_keys) - 1):
         await ui._handle_action(UiAction.DOWN)
 
@@ -3146,7 +3190,7 @@ async def test_reset_credentials_second_select_executes(
 
     from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingsPage
 
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.CAMERA]
+    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
     for _ in range(len(camera_keys) - 1):
         await ui._handle_action(UiAction.DOWN)
 
@@ -3198,7 +3242,7 @@ async def test_reset_credentials_other_key_cancels(
 
     from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingsPage
 
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.CAMERA]
+    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
     for _ in range(len(camera_keys) - 1):
         await ui._handle_action(UiAction.DOWN)
 

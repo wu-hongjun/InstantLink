@@ -108,3 +108,4 @@ class UiSnapshot:
     settings_title: str = "Settings"
     settings_rows: tuple[SettingsRow, ...] = ()
     settings_message: str | None = None
+    font_size: str = "medium"

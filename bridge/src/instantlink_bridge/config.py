@@ -59,6 +59,14 @@ class UiSurface(StrEnum):
     HEADLESS = "headless"
 
 
+class FontSize(StrEnum):
+    """Global LCD font size."""
+
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+
+
 @dataclass(frozen=True, slots=True)
 class FtpSourceDecision:
     """Result of applying FTP receive-mode source policy."""
@@ -273,6 +281,7 @@ class UiConfig:
     """Bridge UI surface configuration."""
 
     surface: UiSurface = UiSurface.LCD
+    font_size: FontSize = FontSize.MEDIUM
 
 
 @dataclass(frozen=True, slots=True)
@@ -406,6 +415,7 @@ def render_config(config: BridgeConfig) -> str:
             "",
             "[ui]",
             f"surface = {_toml_string(config.ui.surface.value)}",
+            f"font_size = {_toml_string(config.ui.font_size.value)}",
             "",
         ]
     )
@@ -552,6 +562,7 @@ def _load_ui_config(data: object) -> UiConfig:
         raise ValueError("[ui] must be a TOML table")
     return UiConfig(
         surface=parse_ui_surface(data.get("surface", UiSurface.LCD.value)),
+        font_size=parse_font_size(data.get("font_size", FontSize.MEDIUM.value)),
     )
 
 
@@ -564,6 +575,17 @@ def parse_ui_surface(value: object) -> UiSurface:
     except ValueError as exc:
         allowed = ", ".join(s.value for s in UiSurface)
         raise ValueError(f"[ui].surface must be one of: {allowed}") from exc
+
+
+def parse_font_size(value: object) -> FontSize:
+    """Parse a configured UI font size."""
+
+    text = str(value).strip().lower()
+    try:
+        return FontSize(text)
+    except ValueError as exc:
+        allowed = ", ".join(s.value for s in FontSize)
+        raise ValueError(f"[ui].font_size must be one of: {allowed}") from exc
 
 
 def parse_ftp_receive_mode(value: object) -> FtpReceiveMode:

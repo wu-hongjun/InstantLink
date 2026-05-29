@@ -8,6 +8,7 @@ import pytest
 
 from instantlink_bridge.config import (
     BridgeConfig,
+    FontSize,
     UiConfig,
     UiSurface,
     load_config,
@@ -149,9 +150,7 @@ def test_create_display_headless_does_not_probe_framebuffer() -> None:
     # the probe on headless or the cold-boot saving silently regresses.
     from unittest.mock import patch
 
-    with patch(
-        "instantlink_bridge.ui.display._st7789_framebuffer"
-    ) as mock_probe:
+    with patch("instantlink_bridge.ui.display._st7789_framebuffer") as mock_probe:
         display = create_display(UiSurface.HEADLESS)
     assert isinstance(display, NullDisplay)
     mock_probe.assert_not_called()
@@ -194,3 +193,51 @@ def test_create_input_lcd_falls_through_to_gpio_or_null() -> None:
 
     input_device = create_input(UiSurface.LCD)
     assert isinstance(input_device, GpioUiInput | NullInput)
+
+
+# ---------------------------------------------------------------------------
+# FontSize round-trip tests
+# ---------------------------------------------------------------------------
+
+
+def test_font_size_defaults_to_medium() -> None:
+    config = BridgeConfig()
+    assert config.ui.font_size is FontSize.MEDIUM
+
+
+def test_font_size_round_trip_small(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    config_path = tmp_path / "config.toml"
+    original = replace(BridgeConfig(), ui=UiConfig(font_size=FontSize.SMALL))
+    write_config(original, config_path)
+
+    loaded = load_config(config_path)
+
+    assert loaded.ui.font_size is FontSize.SMALL
+
+
+def test_font_size_round_trip_large(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    config_path = tmp_path / "config.toml"
+    original = replace(BridgeConfig(), ui=UiConfig(font_size=FontSize.LARGE))
+    write_config(original, config_path)
+
+    loaded = load_config(config_path)
+
+    assert loaded.ui.font_size is FontSize.LARGE
+
+
+def test_render_config_includes_font_size_medium() -> None:
+    config = BridgeConfig()
+    text = render_config(config)
+    assert 'font_size = "medium"' in text
+
+
+def test_load_config_font_size_unknown_raises(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[ui]\nfont_size = "huge"\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"\[ui\]\.font_size"):
+        load_config(config_path)

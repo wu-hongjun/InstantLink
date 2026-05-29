@@ -29,17 +29,41 @@ BODY_TOP = STATUS_BAR_H + 4  # first usable body y
 TOAST_Y = 208  # settings_message toast y
 
 
+# Font-size scale tables.  MEDIUM (1.0) is the historical baseline; changing
+# these multipliers must not alter the MEDIUM render.
+_FONT_SCALES: dict[str, tuple[float, float]] = {
+    # font_size_value: (font_multiplier, row_spacing_multiplier)
+    "small": (0.85, 0.92),
+    "medium": (1.0, 1.0),
+    "large": (1.18, 1.10),
+}
+
+# Base font sizes at MEDIUM (historical values).
+_BASE_FONTS: dict[str, int] = {
+    "small": 10,
+    "body": 14,
+    "title": 17,
+    "large": 22,
+    "hint": 10,
+}
+
+# Base row height at MEDIUM (architect's spec).
+_BASE_ROW_HEIGHT = 18
+
+
+def _scale_for_snapshot(snapshot: UiSnapshot) -> tuple[float, float]:
+    """Return (font_scale, row_scale) for the snapshot's font_size."""
+    return _FONT_SCALES.get(snapshot.font_size, _FONT_SCALES["medium"])
+
+
 def render_snapshot(snapshot: UiSnapshot) -> Image.Image:
     """Render one UI frame."""
 
     image = Image.new("RGB", LCD_SIZE, BG)
     draw = ImageDraw.Draw(image)
+    font_scale, _row_scale = _scale_for_snapshot(snapshot)
     fonts: dict[str, Font] = {
-        "small": _font(10),
-        "body": _font(14),
-        "title": _font(17),
-        "large": _font(22),
-        "hint": _font(10),
+        key: _font(max(1, round(base * font_scale))) for key, base in _BASE_FONTS.items()
     }
 
     draw_status_bar(draw, snapshot, fonts)
@@ -441,19 +465,18 @@ def _settings(
         draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"])
         return
 
-    visible_count = 10
+    _font_scale, row_scale = _scale_for_snapshot(snapshot)
+    row_height = max(1, round(_BASE_ROW_HEIGHT * row_scale))
+    # Compute how many rows fit between status bar and hint bar (leaving 8px margin).
+    body_height = HINT_BAR_Y - STATUS_BAR_H - 8
+    visible_count = max(1, body_height // row_height)
+
     selected = min(snapshot.selected_index, len(rows) - 1)
     start = min(max(0, selected - 4), max(0, len(rows) - visible_count))
 
-    # Position counter (top right)
-    position = f"{selected + 1}/{len(rows)}"
-    position_width = _text_width(draw, position, font)
-    position_x = 222 - position_width
-    _text(draw, position_x, 40, position, font, MUTED)
-
     for offset, row in enumerate(rows[start : start + visible_count]):
         index = start + offset
-        y = STATUS_BAR_H + 4 + offset * 20
+        y = STATUS_BAR_H + 4 + offset * row_height
         draw_settings_row(
             draw,
             y,
@@ -463,6 +486,12 @@ def _settings(
             selected=index == selected,
             font=font,
         )
+
+    # Position counter at y=212 — just above the hint bar, outside the row area.
+    position = f"{selected + 1}/{len(rows)}"
+    position_width = _text_width(draw, position, font)
+    position_x = 232 - position_width
+    _text(draw, position_x, 212, position, font, MUTED)
 
     # Hint bar for settings (use label lines)
     hints = _mode_hints(snapshot)

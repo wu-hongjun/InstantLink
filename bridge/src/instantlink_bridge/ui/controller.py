@@ -1162,6 +1162,7 @@ class BridgeUi:
             self._snapshot,
             ftp_receive_mode=config.ftp.mode.value,
             allow_print_without_film=config.workflow.allow_print_without_film,
+            font_size=config.ui.font_size.value,
         )
         self._show_settings(message)
         return True
@@ -1780,6 +1781,7 @@ class BridgeUi:
             settings_title=settings_title,
             settings_rows=settings_rows,
             settings_message=settings_message,
+            font_size=self._config.ui.font_size.value,
         )
 
     def _cancel_image_reset(self) -> None:

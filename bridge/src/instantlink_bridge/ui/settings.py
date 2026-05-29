@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from instantlink_bridge.ble.models import PrinterModel
-from instantlink_bridge.config import BridgeConfig, FtpReceiveMode
+from instantlink_bridge.config import BridgeConfig, FontSize, FtpReceiveMode
 from instantlink_bridge.imaging.pipeline import FitMode
 
 
@@ -49,6 +49,7 @@ class SettingKey(StrEnum):
     SYSTEM_BATTERY_INFO = "system_battery_info"
     SYSTEM_IDLE_INFO = "system_idle_info"
     SYSTEM_IDLE_POWEROFF = "system_idle_poweroff"
+    FONT_SIZE = "font_size"
     REFRESH_STATUS = "refresh_status"
 
 
@@ -128,6 +129,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
+        SettingKey.FONT_SIZE,
         SettingKey.REFRESH_STATUS,
     ),
 }
@@ -193,6 +195,7 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
         SettingKey.SYSTEM_IDLE_POWEROFF,
+        SettingKey.FONT_SIZE,
     }
 )
 
@@ -217,6 +220,7 @@ QUALITY_OPTIONS: tuple[int, ...] = (70, 75, 80, 85, 90, 95, 100)
 AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 5.0)
 BOOL_OPTIONS: tuple[bool, ...] = (False, True)
 KEEPALIVE_OPTIONS: tuple[float, ...] = (5.0, 10.0, 15.0, 30.0)
+FONT_SIZE_OPTIONS: tuple[FontSize, ...] = (FontSize.SMALL, FontSize.MEDIUM, FontSize.LARGE)
 # Total scan period options. The minimum (5s) equals the active-scan window, so it scans
 # continuously (0 gap); larger values insert an idle gap between scans to save power.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
@@ -273,6 +277,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_BATTERY_INFO: "Bridge battery telemetry",
     SettingKey.SYSTEM_IDLE_INFO: "Idle dim and poweroff",
     SettingKey.SYSTEM_IDLE_POWEROFF: "Allow 10 min idle shutdown",
+    SettingKey.FONT_SIZE: "Adjust LCD text size",
     SettingKey.REFRESH_STATUS: "Check printer and FTP now",
 }
 
@@ -311,6 +316,8 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         )
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
+    if key is SettingKey.FONT_SIZE:
+        return tuple(SettingOption(value.value.capitalize(), value) for value in FONT_SIZE_OPTIONS)
     return ()
 
 
@@ -356,6 +363,8 @@ def config_with_setting_value(
         return replace(config, printer=replace(config.printer, search_interval_s=value))
     if key is SettingKey.SYSTEM_IDLE_POWEROFF and isinstance(value, bool):
         return replace(config, power=replace(config.power, idle_poweroff_enabled=value))
+    if key is SettingKey.FONT_SIZE and isinstance(value, FontSize):
+        return replace(config, ui=replace(config.ui, font_size=value))
     return config
 
 
@@ -430,4 +439,6 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.printer.search_interval_s
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return config.power.idle_poweroff_enabled
+    if key is SettingKey.FONT_SIZE:
+        return config.ui.font_size
     return None

@@ -295,29 +295,21 @@ def draw_status_bar(
     pill_w = max(60, word_w + 24)
     pill_h = 22
 
-    # In SETTINGS mode the page counter ("2/4") sits next to the pill —
-    # centre the combined block (pill + 6 px gap + counter) instead of the
-    # pill alone so the assembly stays visually centred on the bar.
-    counter = ""
-    counter_w = 0
+    # Pill always centred on x=120 regardless of mode. In SETTINGS mode the
+    # page counter ("2/4") anchors to the top-right of the bar so it never
+    # nudges the pill off-centre.
+    pill_x = 120 - pill_w // 2
+    pill_y = (STATUS_BAR_H - pill_h) // 2
+
+    draw_pill(draw, pill_x, pill_y, pill_w, pill_h, pill_bg_hex, fg_hex, word, font_body)
+
     if snapshot.mode is UiMode.SETTINGS and snapshot.settings_rows:
         selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
         counter = f"{selected + 1}/{len(snapshot.settings_rows)}"
         counter_bbox = draw.textbbox((0, 0), counter, font=font_small)
         counter_w = counter_bbox[2] - counter_bbox[0]
-
-    gap = 6 if counter else 0
-    block_w = pill_w + gap + counter_w
-    block_x = 120 - block_w // 2
-
-    pill_x = block_x
-    pill_y = (STATUS_BAR_H - pill_h) // 2
-
-    draw_pill(draw, pill_x, pill_y, pill_w, pill_h, pill_bg_hex, fg_hex, word, font_body)
-
-    if counter:
         counter_h = counter_bbox[3] - counter_bbox[1]
-        counter_x = pill_x + pill_w + gap
+        counter_x = 232 - counter_w  # right-anchored, matching READY chip margin
         counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_bbox[1]
         _text(draw, counter_x, counter_y, counter, font_small, theme.label_secondary)
 

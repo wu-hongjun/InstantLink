@@ -864,10 +864,12 @@ def _settings(
         bottom_color = theme.label_secondary
     bottom_shown = bool(bottom_text)
 
-    # Card occupies the body area; if a bottom line is shown, leave a clear
-    # gap below the card so the toast sits in its own strip.
+    # Card occupies the body area; if a bottom strip is shown, leave room
+    # for up to two lines of help text (28 px) below the card so it has
+    # space to wrap when the help string is long. Single short strings
+    # still occupy only one visible line.
     card_top = STATUS_BAR_H + 2
-    card_bottom = (HINT_BAR_Y - 16) if bottom_shown else (HINT_BAR_Y - 4)
+    card_bottom = (HINT_BAR_Y - 28) if bottom_shown else (HINT_BAR_Y - 4)
     card_h = card_bottom - card_top
 
     # Compute how many rows fit inside the card with 4 px padding top/bottom.
@@ -902,12 +904,15 @@ def _settings(
     draw_hint_bar(draw, hints, fonts["hint"], theme)
 
     if bottom_shown:
-        # Bottom toast/help strip lives BELOW the card in its own 12 px gap.
-        # 16 px left/right insets clear the card's rounded corner radius so the
-        # text never visually intersects the border.
+        # Two-line bottom strip BELOW the card. The text wraps at the first
+        # word boundary that overflows the available width (240 - 32 = 208 px
+        # with 16 px left/right insets), and any remaining text after two
+        # lines is ellipsised on line 2.
         bottom_y = card_bottom + 2
-        fitted = _fit_text_to_width(draw, bottom_text, font, 240 - 32)
-        _text(draw, 16, bottom_y, fitted, font, bottom_color)
+        max_w = 240 - 32
+        lines = _wrap_two_lines(draw, bottom_text, font, max_w)
+        for i, line in enumerate(lines):
+            _text(draw, 16, bottom_y + i * 12, line, font, bottom_color)
 
 
 def _pairing(
@@ -1010,10 +1015,10 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
         return (("", "Printing", ""),)
     if snapshot.mode is UiMode.PRINT_COMPLETE:
         if snapshot.paired_printer is not None:
-            return (("K1 Setting", "Done", "K3 FTP"),)
+            return (("K1 Setting", "Done", "K3 Network"),)
         return (("K1 Setting", "Done", "Hold K3"),)
     if snapshot.paired_printer is not None:
-        return (("K1 Setting", "K2 Refresh", "K3 FTP"),)
+        return (("K1 Setting", "K2 Refresh", "K3 Network"),)
     return (("K1 Setting", "K2 Refresh", "Hold K3"),)
 
 
@@ -1232,6 +1237,41 @@ def _text_width(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
             font = cjk_font
     left, _top, right, _bottom = draw.textbbox((0, 0), text, font=font)
     return int(right - left)
+
+
+def _wrap_two_lines(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    font: Font,
+    max_width: int,
+) -> list[str]:
+    """Wrap ``text`` into at most two lines, each fitting ``max_width``.
+
+    Single line if the whole string fits. Otherwise we greedily fill line 1
+    word by word until adding the next word would overflow, then put the
+    rest on line 2 (ellipsised if it still overflows). Whitespace is the
+    only break point — CJK strings without spaces stay on one line and get
+    ellipsised by ``_fit_text_to_width``.
+    """
+
+    if _text_width(draw, text, font) <= max_width:
+        return [text]
+    words = text.split(" ")
+    line1_words: list[str] = []
+    i = 0
+    while i < len(words):
+        candidate = " ".join([*line1_words, words[i]])
+        if _text_width(draw, candidate, font) > max_width:
+            break
+        line1_words.append(words[i])
+        i += 1
+    # Avoid an empty line 1 when the first word alone overflows: ellipsise it.
+    if not line1_words:
+        return [_fit_text_to_width(draw, text, font, max_width)]
+    line1 = " ".join(line1_words)
+    rest = " ".join(words[i:])
+    line2 = _fit_text_to_width(draw, rest, font, max_width)
+    return [line1, line2]
 
 
 def _fit_text_to_width(

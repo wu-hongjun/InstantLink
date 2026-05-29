@@ -425,7 +425,7 @@ def test_ready_footer_exposes_upload_credentials_when_printer_is_paired() -> Non
         )
     )
 
-    assert lines == (("K1 Setting", "K2 Refresh", "K3 FTP"),)
+    assert lines == (("K1 Setting", "K2 Refresh", "K3 Network"),)
 
 
 def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:

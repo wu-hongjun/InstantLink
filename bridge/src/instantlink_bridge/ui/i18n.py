@@ -148,7 +148,7 @@ _ZH_HANS: dict[str, str] = {
     "K2 Back": "K2 返回",
     "K2 Cancel": "K2 取消",
     "K2 Refresh": "K2 刷新",
-    "K3 FTP": "K3 FTP",
+    "K3 Network": "K3 网络",
     "K3 Help": "K3 帮助",
     "K3 Retry": "K3 重试",
     "Left Back": "左 返回",

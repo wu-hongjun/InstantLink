@@ -129,11 +129,13 @@ _GENERIC_SEARCHING_MESSAGES = frozenset({"Looking for printer", "Searching for p
 # shows a stale frame while a coroutine is busy. The `snapshot == last_rendered` short-circuit in
 # `_render` keeps this cheap and prevents render-spam.
 RENDER_TICK_S = 0.35
-# While the status indicator is breathing, the tick runs ~3× faster so the
-# tinted top bar advances smoothly across the 2 s breath cycle (~13 frames per
-# breath instead of ~6). The render itself short-circuits identical snapshots,
-# so a SOLID indicator costs nothing extra even if this faster tick fires.
-BREATH_TICK_S = 0.12
+# While the status indicator is breathing, the tick runs ~6× faster so the
+# tinted top bar advances smoothly across the 2 s breath cycle (~33 frames
+# per breath instead of ~16). The render itself short-circuits identical
+# snapshots, so a SOLID indicator costs nothing extra even if this faster
+# tick fires. 0.06 s (~16 fps) is a noticeable upgrade from 0.12 s without
+# saturating the Pi Zero 2 W's SPI bandwidth at full PIL rasterisation.
+BREATH_TICK_S = 0.06
 USB_STATUS_POLL_S = 1.0
 # Readiness freshness gate: "Ready to print" must be backed by a printer status that succeeded
 # recently, not just stale cached film/mode. If the printer powers off, status polls fail and the

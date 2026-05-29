@@ -2502,7 +2502,7 @@ metric to drive down via the §6.2 levers.</p>
 <p>The race resolution is <em>order-based, not state-based</em>:</p>
 <ol>
 <li><strong>If USB-tether enumerates within 8 s of boot</strong>, the bridge advertises mDNS only over <code>usb0</code>. Mac app sees it there; hotspot is suppressed until pairing completes.</li>
-<li><strong>Otherwise</strong>, the bridge brings up the Wi-Fi AP with a default SSID/password printed on the device label (e.g. <code>IL-Bridge-A1B2C3D4</code> / 8-digit password derived from <code>device_id</code>). mDNS advertises on <code>wlan0</code>.</li>
+<li><strong>Otherwise</strong>, the bridge brings up the Wi-Fi AP with a default SSID/password printed on the device label (e.g. <code>InstantLink-A1B2</code> / 8-digit password derived from <code>device_id</code>). mDNS advertises on <code>wlan0</code>.</li>
 <li>After the first successful pairing + Wi-Fi provisioning, both transports remain available but the bridge prefers the credentialed home Wi-Fi.</li>
 </ol>
 <p>The first-run flow runs on its own bench power (USB-C wall wart), not on

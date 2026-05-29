@@ -1509,7 +1509,7 @@ class BridgeUi:
         if key is SettingKey.OPEN_PRINTER:
             return SettingsRow("Printer", "")
         if key is SettingKey.OPEN_CAMERA:
-            return SettingsRow("Upload FTP", "")
+            return SettingsRow("Connect", "")
         if key is SettingKey.OPEN_NETWORK:
             return SettingsRow("Network", "")
         if key is SettingKey.OPEN_PRINT:
@@ -1553,7 +1553,7 @@ class BridgeUi:
                 seconds_label(self._config.printer.search_interval_s),
             )
         if key is SettingKey.FTP_RECEIVE_MODE:
-            return SettingsRow("FTP mode", self._ftp_receive_mode_value())
+            return SettingsRow("Wi-Fi Mode", self._ftp_receive_mode_value())
         if key is SettingKey.FTP_HOST_INFO:
             return SettingsRow("FTP host", self._camera_ftp_host_value())
         if key is SettingKey.FTP_MODE_INFO:
@@ -1561,7 +1561,7 @@ class BridgeUi:
         if key is SettingKey.FTP_USERNAME_INFO:
             return SettingsRow("FTP user", self._config.ftp.username)
         if key is SettingKey.FTP_PASSWORD_INFO:
-            return SettingsRow("FTP pass", self._config.ftp.password)
+            return SettingsRow("FTP PIN", self._config.ftp.password)
         if key is SettingKey.CAMERA_SETUP_INFO:
             return SettingsRow("Upload note", self._camera_setup_value())
         if key is SettingKey.IMAGE_FIT:
@@ -1585,7 +1585,7 @@ class BridgeUi:
         if key is SettingKey.NETWORK_HOTSPOT_INFO:
             return SettingsRow("Bridge FTP", self._hotspot_network_value())
         if key is SettingKey.NETWORK_HOTSPOT_SSID_INFO:
-            return SettingsRow("Bridge Wi-Fi", self._hotspot_ssid_value())
+            return SettingsRow("SSID", self._hotspot_ssid_value())
         if key is SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO:
             return SettingsRow("Wi-Fi PIN", self._hotspot_pin_value())
         if key is SettingKey.NETWORK_BLUETOOTH_INFO:
@@ -1701,7 +1701,7 @@ class BridgeUi:
         if key is SettingKey.OPEN_PRINTER:
             return "Printer pairing and status"
         if key is SettingKey.OPEN_CAMERA:
-            return "Camera-side FTP credentials"
+            return "Wi-Fi mode and FTP credentials"
         if key is SettingKey.OPEN_NETWORK:
             return "Wi-Fi, Bluetooth, USB-C info"
         if key is SettingKey.OPEN_PRINT:

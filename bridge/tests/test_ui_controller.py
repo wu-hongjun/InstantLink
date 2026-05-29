@@ -1392,7 +1392,7 @@ async def test_upload_ftp_help_describes_sender_wifi() -> None:
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Upload FTP"
+    assert display.snapshots[-1].settings_title == "Connect"
     assert display.snapshots[-1].settings_message == "Bridge Wi-Fi name to join from camera"
 
 
@@ -1419,7 +1419,7 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
         "Printer",
-        "Upload FTP",
+        "Connect",
         "Network",
         "Print",
         "System",
@@ -1433,22 +1433,28 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     assert calls == []
     assert _ftp_mode(ui) is FtpReceiveMode.WIRED
-    assert display.snapshots[-1].settings_title == "FTP mode"
+    # Picker title now matches the row label ("Wi-Fi Mode"), and the options
+    # use the shorter mode names so the user doesn't read both "Bridge Wi-Fi"
+    # AND a hotspot/client distinction.
+    assert display.snapshots[-1].settings_title == "Wi-Fi Mode"
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
-        "Bridge Wi-Fi",
-        "Same Wi-Fi adv",
+        "Hotspot",
+        "Client",
     ]
     await ui._handle_action(UiAction.SELECT)
 
     assert calls == [WifiMode.HOTSPOT]
     assert _ftp_mode(ui) is FtpReceiveMode.HOTSPOT
-    assert display.snapshots[-1].settings_title == "Upload FTP"
-    assert display.snapshots[-1].settings_rows[0].label == "Bridge Wi-Fi"
+    assert display.snapshots[-1].settings_title == "Connect"
+    assert display.snapshots[-1].settings_rows[0].label == "SSID"
     assert display.snapshots[-1].settings_rows[2].label == "FTP host"
     assert display.snapshots[-1].settings_rows[2].value == "192.168.8.1"
     assert display.snapshots[-1].settings_rows[3].label == "FTP user"
-    assert display.snapshots[-1].settings_rows[4].label == "FTP pass"
-    assert display.snapshots[-1].settings_rows[5].label == "FTP mode"
+    assert display.snapshots[-1].settings_rows[4].label == "FTP PIN"
+    assert display.snapshots[-1].settings_rows[5].label == "Wi-Fi Mode"
+    # The "Bridge Wi-Fi ready" status string lives in the runtime-health
+    # transport-message channel and is intentionally NOT renamed alongside
+    # the picker/row labels — it describes a network state, not the menu.
     assert display.snapshots[-1].settings_message == "Bridge Wi-Fi ready"
     assert [config.mode for config in applied_ftp_configs] == [FtpReceiveMode.HOTSPOT]
 
@@ -1500,10 +1506,10 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
     await ui._handle_action(UiAction.DOWN)
 
     assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].label == (
-        "Upload FTP"
+        "Connect"
     )
     assert display.snapshots[-1].settings_message is None
-    assert display.snapshots[-1].settings_rows[1].help == "Camera-side FTP credentials"
+    assert display.snapshots[-1].settings_rows[1].help == "Wi-Fi mode and FTP credentials"
 
     await ui._handle_action(UiAction.HELP)
 
@@ -1639,7 +1645,7 @@ async def test_settings_menu_shows_ftp_credentials() -> None:
     rows = display.snapshots[-1].settings_rows
     assert rows[3].label == "FTP user"
     assert rows[3].value == "ib"
-    assert rows[4].label == "FTP pass"
+    assert rows[4].label == "FTP PIN"
     assert rows[4].value == "12345678"
 
 
@@ -1669,7 +1675,7 @@ async def test_settings_menu_shows_hotspot_pin(
     await ui._handle_action(UiAction.SELECT)
 
     rows = display.snapshots[-1].settings_rows
-    assert rows[0].label == "Bridge Wi-Fi"
+    assert rows[0].label == "SSID"
     assert rows[0].value == "LinkBrdg-TEST1234"
     assert rows[1].label == "Wi-Fi PIN"
     assert rows[1].value == "12345678"
@@ -2196,14 +2202,14 @@ async def test_key3_press_with_paired_printer_opens_upload_ftp_credentials() -> 
     await ui._handle_action(UiAction.HELP)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Upload FTP"
+    assert display.snapshots[-1].settings_title == "Connect"
     assert display.snapshots[-1].settings_message == "Wi-Fi + FTP credentials"
     assert [row.label for row in display.snapshots[-1].settings_rows[:5]] == [
-        "Bridge Wi-Fi",
+        "SSID",
         "Wi-Fi PIN",
         "FTP host",
         "FTP user",
-        "FTP pass",
+        "FTP PIN",
     ]
 
 
@@ -2232,7 +2238,7 @@ async def test_first_printer_pairing_opens_upload_ftp_credentials() -> None:
     await ui._pair_in_background(previous_printer=None)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Upload FTP"
+    assert display.snapshots[-1].settings_title == "Connect"
     assert display.snapshots[-1].settings_message == "Enter these on sender"
     await ui._cancel_status_refresh()
 

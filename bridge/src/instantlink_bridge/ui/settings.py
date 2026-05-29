@@ -112,7 +112,9 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.FTP_USERNAME_INFO,
         SettingKey.FTP_PASSWORD_INFO,
         SettingKey.FTP_RECEIVE_MODE,
-        SettingKey.CAMERA_SETUP_INFO,
+        # CAMERA_SETUP_INFO ("Upload note") removed — its value was just a
+        # restatement of the FTP_RECEIVE_MODE picker ("join bridge", "Wi-Fi
+        # profile") so it added confusion instead of guidance.
         SettingKey.RESET_CREDENTIALS,
     ),
     SettingsPage.NETWORK: (
@@ -151,7 +153,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
 PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.MAIN: "Settings",
     SettingsPage.PRINTER: "Printer",
-    SettingsPage.CAMERA: "Upload FTP",
+    SettingsPage.CAMERA: "Connect",
     SettingsPage.NETWORK: "Network",
     SettingsPage.PRINT: "Print",
     SettingsPage.SYSTEM: "System",
@@ -259,11 +261,11 @@ def setting_action_hint(key: SettingKey) -> str:
 
 SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_PRINTER: "Printer pairing and status",
-    SettingKey.OPEN_CAMERA: "Camera-side FTP credentials",
+    SettingKey.OPEN_CAMERA: "Wi-Fi mode and FTP credentials",
     SettingKey.OPEN_NETWORK: "Wi-Fi, Bluetooth, USB-C info",
     SettingKey.OPEN_PRINT: "Photo size and print options",
     SettingKey.OPEN_SYSTEM: "Device info and power",
-    SettingKey.FTP_RECEIVE_MODE: "How camera reaches bridge",
+    SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Scan and remember one Instax printer",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
     SettingKey.FORGET_PRINTER: "Remove the saved printer (no re-pair)",
@@ -272,7 +274,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.FTP_MODE_INFO: "Path the camera actually used",
     SettingKey.FTP_HOST_INFO: "Enter as FTP server in camera",
     SettingKey.FTP_USERNAME_INFO: "Enter as FTP user in camera",
-    SettingKey.FTP_PASSWORD_INFO: "Enter as FTP password in camera",
+    SettingKey.FTP_PASSWORD_INFO: "PIN: enter as FTP password in camera",
     SettingKey.CAMERA_SETUP_INFO: "Any FTP client works (camera, app, scp)",
     SettingKey.NETWORK_ETHERNET_INFO: "USB-C network to Mac (setup, updates)",
     SettingKey.NETWORK_WIFI_INFO: "Advanced: bridge on existing Wi-Fi",
@@ -313,8 +315,10 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
 
     if key is SettingKey.FTP_RECEIVE_MODE:
         return (
-            SettingOption("Bridge Wi-Fi", FtpReceiveMode.HOTSPOT),
-            SettingOption("Same Wi-Fi adv", FtpReceiveMode.PEER),
+            # "Hotspot" = bridge runs its own Wi-Fi the camera joins.
+            # "Client" = bridge joins your existing Wi-Fi alongside the camera.
+            SettingOption("Hotspot", FtpReceiveMode.HOTSPOT),
+            SettingOption("Client", FtpReceiveMode.PEER),
         )
     if key is SettingKey.PRINTER_MODEL:
         return tuple(SettingOption(model_label(value), value) for value in MODEL_OPTIONS)
@@ -420,8 +424,8 @@ def ftp_receive_mode_label(mode: FtpReceiveMode) -> str:
     labels = {
         FtpReceiveMode.AUTO: "Advanced",
         FtpReceiveMode.WIRED: "USB IP",
-        FtpReceiveMode.HOTSPOT: "Bridge Wi-Fi",
-        FtpReceiveMode.PEER: "Same Wi-Fi adv",
+        FtpReceiveMode.HOTSPOT: "Hotspot",
+        FtpReceiveMode.PEER: "Client",
     }
     return labels[mode]
 

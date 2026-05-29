@@ -810,6 +810,22 @@ main() {
   install_deployment_manifest_on_pi "${MANIFEST}"
   fix_remote_config_permissions
 
+  # Install systemd unit files from the deployed source tree and reload the daemon (plan 032 §10).
+  # nullglob+array form guards against the unguarded-empty-glob trap that would otherwise abort the
+  # deploy when systemd/ exists but is empty; set -euo pipefail mirrors the contract used by every
+  # other multi-step remote block.
+  echo "Installing systemd unit files on ${HOST}..."
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
+    "set -euo pipefail; \
+     shopt -s nullglob; \
+     if [ -d '${TARGET}/systemd' ]; then \
+       units=('${TARGET}/systemd/'*.service); \
+       if [ \${#units[@]} -gt 0 ]; then \
+         sudo cp \"\${units[@]}\" /etc/systemd/system/ && \
+         sudo systemctl daemon-reload; \
+       fi; \
+     fi"
+
   if [[ "${SYSTEM}" -eq 1 ]]; then
     "${SSH_CMD[@]}" -T "${USER}@${HOST}" "sudo '${TARGET}/scripts/provision-sd.sh' /"
   fi

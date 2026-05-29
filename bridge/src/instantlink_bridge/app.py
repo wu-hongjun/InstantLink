@@ -168,6 +168,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         if service is not None:
             service.set_config(ftp_config)
 
+    ready_event = asyncio.Event()
     ui = BridgeUi(
         config,
         config_path=config_path,
@@ -175,6 +176,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         ftp_activity=ftp_activity,
         power_activity_callback=record_power_activity,
         ftp_config_applied_callback=apply_runtime_ftp_config,
+        ready_event=ready_event,
     )
     power_monitor = build_power_monitor(config, ui=ui)
 
@@ -217,10 +219,18 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         return agent
 
     try:
-        # Run FTP-server startup and BLE/UI startup concurrently. Use
-        # return_exceptions so a failure in one branch does not prevent us from
-        # capturing the other branch's already-constructed resources (FTP server,
-        # BlueZ agent), which the outer finally still needs to tear down cleanly.
+        # Run FTP-server startup and BLE/UI startup concurrently. Use return_exceptions
+        # so a failure in one branch does not prevent us from capturing the other
+        # branch's already-constructed resources (FTP server, BlueZ agent), which the
+        # outer finally still needs to tear down cleanly.
+        #
+        # Plan 033 Sprint 6 attempted a third "BLE warmup" branch here to pre-load the
+        # FFI library in parallel; both gather-blocked (v1) and fire-and-forget (v2)
+        # variants regressed bridge.ready by 2 s, because the warmup's 2 s scan held
+        # InstantLinkBackend._lock during ui.start()'s configure_printer_keepalive call.
+        # Reverted 2026-05-28. The Sprint 3 deferred status poll already moves the FFI
+        # load off the critical path post-ready_event; Phase 6 (FTP-as-signal) absorbs
+        # the remaining gap from the user's perspective via Sony's 4xx auto-retry.
         ftp_result, ble_result = await asyncio.gather(
             start_ftp_service(),
             start_ble_stack(),
@@ -230,11 +240,9 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             service = ftp_result
         if not isinstance(ble_result, BaseException):
             bluez_agent = ble_result
-        # If BOTH branches failed, log the secondary failure before re-raising the primary so
-        # the second exception is never silently dropped (codex finding 1).
-        failures = [
-            exc for exc in (ftp_result, ble_result) if isinstance(exc, BaseException)
-        ]
+        # If BOTH primary branches failed, log the secondary failure before re-raising the
+        # primary so the second exception is never silently dropped (codex finding 1).
+        failures = [exc for exc in (ftp_result, ble_result) if isinstance(exc, BaseException)]
         for exc in failures[1:]:
             LOGGER.error("bridge.startup_secondary_failure", exc_info=exc)
         if failures:
@@ -243,6 +251,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         if service is None:
             raise RuntimeError("BUG: FTP service not assigned after successful gather")
         notifier.ready()
+        ready_event.set()
         watchdog_task = asyncio.create_task(run_watchdog_heartbeat(stop_event, notifier))
         power_task = asyncio.create_task(power_monitor.run(stop_event))
         LOGGER.info(

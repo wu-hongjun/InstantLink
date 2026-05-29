@@ -184,6 +184,7 @@ class BridgeUi:
         power_activity_callback: PowerActivityCallback | None = None,
         ftp_config_applied_callback: FtpConfigAppliedCallback | None = None,
         system_info: SystemInfo | None = None,
+        ready_event: asyncio.Event | None = None,
     ) -> None:
         self._config = config
         self._config_path = config_path
@@ -207,6 +208,7 @@ class BridgeUi:
         self._power_activity_callback = power_activity_callback
         self._ftp_config_applied_callback = ftp_config_applied_callback
         self._system_info = system_info
+        self._ready_event = ready_event
         self._bridge_battery_percent: int | None = None
         self._bridge_power_model: str | None = power_backend_label(config.power.backend)
         self._bridge_power_status: str | None = None
@@ -249,6 +251,7 @@ class BridgeUi:
         self._network_task: asyncio.Task[None] | None = None
         self._ftp_mode_task: asyncio.Task[None] | None = None
         self._image_reset_task: asyncio.Task[None] | None = None
+        self._initial_status_task: asyncio.Task[None] | None = None
         self._network_refresh_lock = asyncio.Lock()
         self._settings_operation_pending = False
         self._settings_picker_key: SettingKey | None = None
@@ -288,7 +291,7 @@ class BridgeUi:
         if self._config.ftp.mode is not FtpReceiveMode.AUTO:
             self._ftp_mode_task = asyncio.create_task(self._apply_configured_ftp_mode_at_start())
         await self._configure_printer_keepalive()
-        await self.refresh_printer_status()
+        self._initial_status_task = asyncio.create_task(self._deferred_initial_status())
 
     async def stop(self) -> None:
         """Stop background UI tasks."""
@@ -304,6 +307,7 @@ class BridgeUi:
             self._auto_rebond_task,
             self._silent_link_recovery_task,
             self._proactive_bond_reset_task,
+            self._initial_status_task,
         ):
             if task is not None:
                 task.cancel()
@@ -313,6 +317,45 @@ class BridgeUi:
         await self._close_cached_printer_session()
         await self._status_provider.close()
         self._display.close()
+
+    async def _deferred_initial_status(self) -> None:
+        """Run the first printer status poll AFTER BridgeUi.start() returns.
+
+        Deferring the trigger (not the dlopen itself) moves the ~1 s FFI
+        dlopen+init cost out of the critical path to ``READY=1``.  The
+        InstantLinkBackend already uses a lazy ``_library()`` pattern; the
+        only change here is that ``app.notifier.ready()`` in ``app.py`` fires
+        before the first call that exercises that lazy load.
+
+        When ``_ready_event`` is set (production path), we wait for it
+        explicitly so the ordering is an invariant rather than a CPython
+        event-loop implementation detail.  Without it (test / backward-compat
+        path) a cooperative yield is used as a best-effort fallback.
+
+        The outer ``except Exception`` block is the safety net for programming
+        errors that escape ``refresh_printer_status``.  Routine failures (BLE
+        lookup failures, printer offline, etc.) are handled and rendered by
+        ``refresh_printer_status`` itself; anything that reaches HERE is
+        unexpected and logged at CRITICAL so it stands out from the routine
+        ``ui.paired_printer_lookup_failed`` path.
+
+        Plan 033 L2 / Sprint 3.
+        """
+        if self._ready_event is not None:
+            await self._ready_event.wait()
+        else:
+            # Backward-compat / test path: best-effort ordering via cooperative yield.
+            await asyncio.sleep(0)
+        try:
+            await self.refresh_printer_status()
+        except asyncio.CancelledError:
+            raise  # let stop() cancellation propagate
+        except Exception:
+            # refresh_printer_status normally handles its own errors and renders ERROR mode;
+            # anything that reaches HERE is an unexpected escape (programming bug). Log it
+            # distinctly so it does not get confused with the routine
+            # 'ui.paired_printer_lookup_failed' path inside refresh_printer_status.
+            LOGGER.critical("ui.deferred_initial_status_unexpected_exception", exc_info=True)
 
     async def refresh_printer_status(self) -> None:
         """Detect whether an Instax printer is already paired."""

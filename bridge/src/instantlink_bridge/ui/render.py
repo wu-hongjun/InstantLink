@@ -456,8 +456,12 @@ def draw_hint_bar(
         tw1 = _text_width(draw, fitted1, font)
         tw2 = _text_width(draw, fitted2, font)
 
-        pill_w = max(tw1, tw2) + 14  # 7 px padding each side
-        pill_w = max(pill_w, 28)
+        # Generous horizontal padding around the text — 7 px each side felt
+        # cramped at small font where the text hugged the rounded edge.
+        # 12 px each side gives the chip room for the text to breathe;
+        # the 80 px zone budget can still hold the widest two-line hint.
+        pill_w = max(tw1, tw2) + 24
+        pill_w = max(pill_w, 36)
         pill_x = cx - pill_w // 2
         pill_y = HINT_BAR_Y + (HINT_BAR_H - pill_h) // 2
 

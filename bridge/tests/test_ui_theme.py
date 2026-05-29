@@ -8,9 +8,9 @@ from instantlink_bridge.config import UiAppearance, parse_ui_appearance
 from instantlink_bridge.ui.theme import (
     AUTO_DARK_START_HOUR,
     AUTO_LIGHT_START_HOUR,
-    Appearance,
     DARK_THEME,
     LIGHT_THEME,
+    Appearance,
     resolve_auto_appearance,
     theme_for,
 )

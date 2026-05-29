@@ -47,6 +47,26 @@ exclude = ["third-party"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ANN", "ASYNC", "RUF"]
+# Confusables we ship on purpose — typography in comments/docstrings/UI
+# strings, not bugs. RUF001/002/003 still fire on anything else (Greek
+# letters mistaken for Latin, Cyrillic in identifiers, etc.).
+allowed-confusables = [
+    "×",  # MULTIPLICATION SIGN     — pixel dimensions ("240×240", "1.4×")
+    "≈",  # ALMOST EQUAL TO          — approximations in docstrings
+    "—",  # EM DASH                  — typographic dash in prose
+    "–",  # EN DASH                  — ranges ("07–19")
+    "›",  # SINGLE RIGHT GUILLEMET   — iOS-style settings disclosure chevron
+    "…",  # HORIZONTAL ELLIPSIS      — typographic ellipsis
+    "·",  # MIDDLE DOT               — inline divider / list separator
+    "□",  # WHITE SQUARE             — "tofu" glyph in CJK-fallback docs
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Chinese translations rely on fullwidth punctuation (，：？（）「」 etc.) —
+# that's correct typography for zh-Hans, not ambiguous text. Allow all
+# of RUF001 in the translation table; it would warn on every Chinese
+# sentence otherwise.
+"src/instantlink_bridge/ui/i18n.py" = ["RUF001"]
 
 [tool.ruff.format]
 quote-style = "double"

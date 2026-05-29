@@ -27,11 +27,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 __all__ = [
-    "Appearance",
     "AUTO_DARK_START_HOUR",
     "AUTO_LIGHT_START_HOUR",
     "DARK_THEME",
     "LIGHT_THEME",
+    "Appearance",
     "Theme",
     "resolve_auto_appearance",
     "theme_for",

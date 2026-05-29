@@ -25,11 +25,11 @@ from typing import Protocol
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
 
 __all__ = [
-    "BREATH_PERIOD_S",
     "BREATH_AMPLITUDE",
     "BREATH_BASELINE",
-    "NullStatusSink",
+    "BREATH_PERIOD_S",
     "GpioStatusSink",
+    "NullStatusSink",
     "StatusPattern",
     "StatusSignal",
     "StatusSink",
@@ -274,7 +274,7 @@ class StatusSink(Protocol):
 class NullStatusSink:
     """Default sink that drops every state. Used when no surface is wired."""
 
-    def set(self, state: StatusState) -> None:  # noqa: D401 - protocol shim
+    def set(self, state: StatusState) -> None:
         return None
 
 

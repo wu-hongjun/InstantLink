@@ -67,9 +67,9 @@ from instantlink_bridge.ui.settings import (
     SettingKey,
     SettingsPage,
     WifiMode,
+    appearance_label,
     bool_label,
     config_with_setting_value,
-    appearance_label,
     fit_label,
     ftp_receive_mode_label,
     language_label,
@@ -80,6 +80,13 @@ from instantlink_bridge.ui.settings import (
     setting_help_text,
     setting_options,
 )
+from instantlink_bridge.ui.status import (
+    BlePrinterStatusProvider,
+    InstantLinkPrinterStatusProvider,
+    PrinterStatusProvider,
+    PrinterStatusSnapshot,
+    PrinterStatusUnavailableError,
+)
 from instantlink_bridge.ui.status_indicator import (
     GpioStatusSink,
     NullStatusSink,
@@ -87,13 +94,6 @@ from instantlink_bridge.ui.status_indicator import (
     StatusSink,
     StatusState,
     derive_status,
-)
-from instantlink_bridge.ui.status import (
-    BlePrinterStatusProvider,
-    InstantLinkPrinterStatusProvider,
-    PrinterStatusProvider,
-    PrinterStatusSnapshot,
-    PrinterStatusUnavailableError,
 )
 
 LOGGER = logging.getLogger(__name__)

@@ -747,10 +747,26 @@ def _validation(
     )
     causes = readiness_cause_texts(snapshot)
     if not causes:
-        _text(draw, 18, 112, t("FTP and printer ready", snapshot.language), fonts["body"], theme.label_primary)
-        _text(draw, 18, 132, t("Waiting for upload", snapshot.language), fonts["small"], theme.label_secondary)
+        _text(
+            draw,
+            18,
+            112,
+            t("FTP and printer ready", snapshot.language),
+            fonts["body"],
+            theme.label_primary,
+        )
+        _text(
+            draw,
+            18,
+            132,
+            t("Waiting for upload", snapshot.language),
+            fonts["small"],
+            theme.label_secondary,
+        )
     else:
-        _text(draw, 18, 112, t("Next action", snapshot.language), fonts["body"], theme.label_primary)
+        _text(
+            draw, 18, 112, t("Next action", snapshot.language), fonts["body"], theme.label_primary
+        )
         for index, cause in enumerate(causes[:3]):
             # cause strings come from readiness_cause_texts in English; the
             # i18n table has entries for the common ones ("Turn printer on",
@@ -776,7 +792,13 @@ def _no_film(
     theme: Theme,
 ) -> None:
     _center_lines(draw, [t("No film", snapshot.language)], 75, fonts["large"], theme.label_primary)
-    _center_lines(draw, [t("No-film test is in Settings", snapshot.language)], 128, fonts["small"], theme.label_secondary)
+    _center_lines(
+        draw,
+        [t("No-film test is in Settings", snapshot.language)],
+        128,
+        fonts["small"],
+        theme.label_secondary,
+    )
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -790,23 +812,79 @@ def _printer_searching(
 ) -> None:
     message = snapshot.printer_status_message or t("Keep printer awake", snapshot.language)
     if message in {"Restart printer", "Close phone app"}:
-        _center_lines(draw, [t("Blocked", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _center_lines(draw, [t("Close phone app or phone BT", snapshot.language)], 128, fonts["small"], theme.accent_yellow)
-        _center_lines(draw, [t("Power-cycle printer, then retry", snapshot.language)], 146, fonts["small"], theme.label_secondary)
+        _center_lines(
+            draw, [t("Blocked", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
+        _center_lines(
+            draw,
+            [t("Close phone app or phone BT", snapshot.language)],
+            128,
+            fonts["small"],
+            theme.accent_yellow,
+        )
+        _center_lines(
+            draw,
+            [t("Power-cycle printer, then retry", snapshot.language)],
+            146,
+            fonts["small"],
+            theme.label_secondary,
+        )
     elif message == "Printer seen; connecting":
-        _center_lines(draw, [t("Connecting", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _center_lines(draw, [t("Opening Bluetooth session", snapshot.language)], 128, fonts["small"], theme.label_primary)
-        _center_lines(draw, [t("If stuck, close phone app", snapshot.language)], 146, fonts["small"], theme.label_secondary)
+        _center_lines(
+            draw, [t("Connecting", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
+        _center_lines(
+            draw,
+            [t("Opening Bluetooth session", snapshot.language)],
+            128,
+            fonts["small"],
+            theme.label_primary,
+        )
+        _center_lines(
+            draw,
+            [t("If stuck, close phone app", snapshot.language)],
+            146,
+            fonts["small"],
+            theme.label_secondary,
+        )
     elif message == "Saw other Instax":
-        _center_lines(draw, [t("Wrong one", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _center_lines(draw, [t("Selected printer not visible", snapshot.language)], 128, fonts["small"], theme.label_primary)
-        _center_lines(draw, [t("Turn selected printer on", snapshot.language)], 146, fonts["small"], theme.accent_yellow)
+        _center_lines(
+            draw, [t("Wrong one", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
+        _center_lines(
+            draw,
+            [t("Selected printer not visible", snapshot.language)],
+            128,
+            fonts["small"],
+            theme.label_primary,
+        )
+        _center_lines(
+            draw,
+            [t("Turn selected printer on", snapshot.language)],
+            146,
+            fonts["small"],
+            theme.accent_yellow,
+        )
     elif message in {"Scanning: 0 printers", "No printer signal"}:
         # No BLE signal yet — title names the active state, body gives the
         # action so a power-cycle is the obvious next step.
-        _center_lines(draw, [t("Searching", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _center_lines(draw, [t("Turn printer on and keep awake", snapshot.language)], 128, fonts["small"], theme.label_primary)
-        _center_lines(draw, [t("Phone Bluetooth may grab it", snapshot.language)], 146, fonts["small"], theme.label_secondary)
+        _center_lines(
+            draw, [t("Searching", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
+        _center_lines(
+            draw,
+            [t("Turn printer on and keep awake", snapshot.language)],
+            128,
+            fonts["small"],
+            theme.label_primary,
+        )
+        _center_lines(
+            draw,
+            [t("Phone Bluetooth may grab it", snapshot.language)],
+            146,
+            fonts["small"],
+            theme.label_secondary,
+        )
     else:
         # Title states the active state ("Searching"); body (status_message)
         # carries the live retry copy (e.g. "Looking for printer"). The
@@ -842,16 +920,34 @@ def _printer_offline(
 ) -> None:
     message = snapshot.printer_status_message or t("Printer offline", snapshot.language)
     if message == "Checking printer":
-        _center_lines(draw, [t("Checking", snapshot.language)], 75, fonts["large"], theme.label_primary)
+        _center_lines(
+            draw, [t("Checking", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
     elif message == "Hold K3 to re-pair":
-        _center_lines(draw, [t("No printer", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _center_lines(draw, [t("Printer not found nearby", snapshot.language)], 128, fonts["body"], theme.accent_yellow)
+        _center_lines(
+            draw, [t("No printer", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
+        _center_lines(
+            draw,
+            [t("Printer not found nearby", snapshot.language)],
+            128,
+            fonts["body"],
+            theme.accent_yellow,
+        )
         hints = _mode_hints(snapshot)
         draw_hint_bar(draw, hints, fonts["hint"], theme)
         return
     else:
-        _center_lines(draw, [t("Printer off", snapshot.language)], 75, fonts["large"], theme.label_primary)
-    _center_lines(draw, [t("Keep it awake near bridge", snapshot.language)], 128, fonts["body"], theme.label_primary)
+        _center_lines(
+            draw, [t("Printer off", snapshot.language)], 75, fonts["large"], theme.label_primary
+        )
+    _center_lines(
+        draw,
+        [t("Keep it awake near bridge", snapshot.language)],
+        128,
+        fonts["body"],
+        theme.label_primary,
+    )
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -865,8 +961,22 @@ def _image_received(
 ) -> None:
     _center_lines(draw, [t("Received", snapshot.language)], 75, fonts["large"], theme.label_primary)
     if snapshot.last_image_name is not None:
-        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], theme.label_primary)
-    _text(draw, 18, 148, t("Received over FTP", snapshot.language), fonts["small"], theme.label_secondary)
+        _text(
+            draw,
+            18,
+            126,
+            _ellipsize(snapshot.last_image_name, 25),
+            fonts["body"],
+            theme.label_primary,
+        )
+    _text(
+        draw,
+        18,
+        148,
+        t("Received over FTP", snapshot.language),
+        fonts["small"],
+        theme.label_secondary,
+    )
     _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
     # No hint bar for IMAGE_RECEIVED (transitions automatically)
 
@@ -879,7 +989,9 @@ def _awaiting_confirm(
     theme: Theme,
 ) -> None:
     title = snapshot.print_title or t("Printing soon", snapshot.language)
-    detail = _physical_control_text(snapshot.print_detail or t("Press K2 to cancel", snapshot.language))
+    detail = _physical_control_text(
+        snapshot.print_detail or t("Press K2 to cancel", snapshot.language)
+    )
     if snapshot.preview_image is not None:
         # Wrap preview in a card
         draw_card(draw, 16, 40, 208, 114, theme)
@@ -889,12 +1001,28 @@ def _awaiting_confirm(
         canvas.paste(preview, (x, y))
         _text(draw, 18, 158, _ellipsize(title, 27), fonts["body"], theme.label_primary)
         _text(draw, 18, 175, _ellipsize(detail, 31), fonts["small"], theme.accent_yellow)
-        _text(draw, 18, 190, _ellipsize(preview_state_text(snapshot), 31), fonts["small"], theme.label_secondary)
+        _text(
+            draw,
+            18,
+            190,
+            _ellipsize(preview_state_text(snapshot), 31),
+            fonts["small"],
+            theme.label_secondary,
+        )
     else:
         _center_lines(draw, [title], 62, fonts["large"], theme.label_primary)
         if snapshot.last_image_name is not None:
-            _text(draw, 18, 104, _ellipsize(snapshot.last_image_name, 25), fonts["body"], theme.label_primary)
-        _progress_bar(draw, 18, 128, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme)
+            _text(
+                draw,
+                18,
+                104,
+                _ellipsize(snapshot.last_image_name, 25),
+                fonts["body"],
+                theme.label_primary,
+            )
+        _progress_bar(
+            draw, 18, 128, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme
+        )
         _text(draw, 18, 154, _ellipsize(detail, 31), fonts["small"], theme.accent_yellow)
         _text(draw, 18, 172, film_status_text(snapshot), fonts["small"], theme.label_secondary)
 
@@ -912,11 +1040,22 @@ def _printing(
     _center_lines(draw, [title], 58, fonts["large"], theme.label_primary)
     detail = snapshot.print_detail or t("Working", snapshot.language)
     _text(draw, 18, 96, _ellipsize(detail, 31), fonts["body"], theme.label_primary)
-    _progress_bar(draw, 18, 122, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme)
+    _progress_bar(
+        draw, 18, 122, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme
+    )
     if snapshot.last_image_name is not None:
-        _text(draw, 18, 150, _ellipsize(snapshot.last_image_name, 25), fonts["small"], theme.label_secondary)
+        _text(
+            draw,
+            18,
+            150,
+            _ellipsize(snapshot.last_image_name, 25),
+            fonts["small"],
+            theme.label_secondary,
+        )
     _text(draw, 18, 166, printer_model_text(snapshot), fonts["small"], theme.label_secondary)
-    _text(draw, 18, 182, t("Do not power off", snapshot.language), fonts["small"], theme.accent_yellow)
+    _text(
+        draw, 18, 182, t("Do not power off", snapshot.language), fonts["small"], theme.accent_yellow
+    )
     # No hint bar for PRINTING
 
 
@@ -928,8 +1067,22 @@ def _print_complete(
 ) -> None:
     _center_lines(draw, [t("Sent", snapshot.language)], 75, fonts["large"], theme.label_primary)
     if snapshot.last_image_name is not None:
-        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], theme.label_primary)
-    _text(draw, 18, 148, t("Film should feed now", snapshot.language), fonts["small"], theme.label_secondary)
+        _text(
+            draw,
+            18,
+            126,
+            _ellipsize(snapshot.last_image_name, 25),
+            fonts["body"],
+            theme.label_primary,
+        )
+    _text(
+        draw,
+        18,
+        148,
+        t("Film should feed now", snapshot.language),
+        fonts["small"],
+        theme.label_secondary,
+    )
     _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
     # No hint bar for PRINT_COMPLETE (auto-returns home)
 
@@ -940,10 +1093,28 @@ def _needs_pairing(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    _center_lines(draw, [t("No printer", snapshot.language)], 75, fonts["large"], theme.label_primary)
-    _menu_item(draw, 122, t("Find printer", snapshot.language), selected=True, font=fonts["body"], theme=theme)
-    _text(draw, 18, 162, t("Turn on printer first", snapshot.language), fonts["small"], theme.label_secondary)
-    _text(draw, 18, 178, t("Then press K1", snapshot.language), fonts["small"], theme.label_secondary)
+    _center_lines(
+        draw, [t("No printer", snapshot.language)], 75, fonts["large"], theme.label_primary
+    )
+    _menu_item(
+        draw,
+        122,
+        t("Find printer", snapshot.language),
+        selected=True,
+        font=fonts["body"],
+        theme=theme,
+    )
+    _text(
+        draw,
+        18,
+        162,
+        t("Turn on printer first", snapshot.language),
+        fonts["small"],
+        theme.label_secondary,
+    )
+    _text(
+        draw, 18, 178, t("Then press K1", snapshot.language), fonts["small"], theme.label_secondary
+    )
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -1062,9 +1233,25 @@ def _pairing(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    _center_lines(draw, [t("Searching", snapshot.language)], 70, fonts["large"], theme.label_primary)
-    _text(draw, 18, 128, t("Keep printer awake", snapshot.language), fonts["body"], theme.label_primary)
-    _text(draw, 18, 150, t("Close phone app if it fails", snapshot.language), fonts["small"], theme.label_secondary)
+    _center_lines(
+        draw, [t("Searching", snapshot.language)], 70, fonts["large"], theme.label_primary
+    )
+    _text(
+        draw,
+        18,
+        128,
+        t("Keep printer awake", snapshot.language),
+        fonts["body"],
+        theme.label_primary,
+    )
+    _text(
+        draw,
+        18,
+        150,
+        t("Close phone app if it fails", snapshot.language),
+        fonts["small"],
+        theme.label_secondary,
+    )
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -1081,8 +1268,17 @@ def _pair_failed(
     for index, line in enumerate(_wrap_words(message, 24)[:2]):
         _text(draw, 18, 126 + index * 17, line, fonts["small"], theme.label_primary)
     if len(_wrap_words(message, 24)) < 2:
-        _text(draw, 18, 143, t("Turn printer on first", snapshot.language), fonts["small"], theme.label_secondary)
-    _menu_item(draw, 162, t("Try again", snapshot.language), selected=True, font=fonts["body"], theme=theme)
+        _text(
+            draw,
+            18,
+            143,
+            t("Turn printer on first", snapshot.language),
+            fonts["small"],
+            theme.label_secondary,
+        )
+    _menu_item(
+        draw, 162, t("Try again", snapshot.language), selected=True, font=fonts["body"], theme=theme
+    )
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -1248,9 +1444,7 @@ _CJK_SIBLING_BY_ID: dict[int, Font] = {}
 # faster than the previous per-character Python loop with chained
 # comparisons. `_has_cjk` runs for every drawn string, including the hot
 # `_text_width` path used during row layout.
-_CJK_RE = re.compile(
-    "[一-鿿㐀-䶿豈-﫿]"
-)
+_CJK_RE = re.compile("[一-鿿㐀-䶿豈-﫿]")
 
 
 def _has_cjk(text: str) -> bool:

@@ -438,10 +438,6 @@ _ZH_HANS: dict[str, str] = {
     "Scans every 15s when printer offline": "打印机离线时每 15s 扫描一次",
     "Scans every 30s when printer offline": "打印机离线时每 30s 扫描一次",
     "Scans every 60s when printer offline": "打印机离线时每 60s 扫描一次",
-    # FTP_PASSWORD_INFO's dynamic branch returns this shorter variant; the
-    # static SETTING_HELP_TEXT version (``PIN: enter as FTP password ...``)
-    # is registered above for the picker's KEY3 help.
-    "Enter as FTP password in camera": "请在相机中输入为 FTP 密码",
     # --- Preview tool hints ----------------------------------------------
     # Mirrors Apple's "Zoom" / "Crop" / "Rotate" verbs in the Photos app.
     "Crop: joystick  K3 tool": "裁剪：摇杆  K3 工具",

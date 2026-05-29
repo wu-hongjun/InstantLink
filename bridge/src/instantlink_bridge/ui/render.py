@@ -8,6 +8,7 @@ from collections.abc import Iterable
 from PIL import Image, ImageDraw, ImageFont
 
 from instantlink_bridge.ble.models import PrinterModel
+from instantlink_bridge.ui.i18n import t
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
 from instantlink_bridge.ui.status_indicator import StatusState, derive_status
 
@@ -72,8 +73,14 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
     image = Image.new("RGB", LCD_SIZE, BG)
     draw = ImageDraw.Draw(image)
     font_scale, _row_scale = _scale_for_snapshot(snapshot)
+    # CJK glyphs aren't in DejaVu; prefer a CJK-capable family when the
+    # active language needs it. Latin glyphs are present in Noto CJK too,
+    # so a CJK font also renders English correctly — the preference flip
+    # is the only thing needed.
+    prefer_cjk = snapshot.language.startswith("zh")
     fonts: dict[str, Font] = {
-        key: _font(max(1, round(base * font_scale))) for key, base in _BASE_FONTS.items()
+        key: _font(max(1, round(base * font_scale)), prefer_cjk=prefer_cjk)
+        for key, base in _BASE_FONTS.items()
     }
 
     breath_clock = time.monotonic() if now is None else now
@@ -148,7 +155,7 @@ def draw_status_bar(
 
     draw.rectangle((0, 0, 239, STATUS_BAR_H - 1), fill=bg)
 
-    word = status_bar_word(snapshot)
+    word = t(status_bar_word(snapshot), snapshot.language)
     counter = ""
     if snapshot.mode is UiMode.SETTINGS and snapshot.settings_rows:
         selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
@@ -344,33 +351,25 @@ def _ready(
         _validation(draw, snapshot, fonts)
         return
 
-    # Centered "Ready" title (restored — it frames the info block and the
-    # status bar's "Connected" word reads as live state rather than a title).
-    _center_lines(draw, ["Ready"], 75, fonts["large"], TEXT)
+    # Centered title — translated via i18n so it reads "就绪" / "Ready".
+    _center_lines(draw, [t("Ready", snapshot.language)], 75, fonts["large"], TEXT)
 
-    # Info rows below the title use a single inline "Label: value" string so
-    # there's no fixed value column to widen — a fixed column at x=110 ate
-    # ~40 px of value width and clipped long printer names ("Instax Link
-    # Square" overran into the right margin). The label sits in MUTED, the
-    # value in TEXT, joined with a colon so it still reads as a key/value
-    # pair without committing screen space to a column gutter.
     body_y = 116
     line_h = 18
     label_x = 18
 
     def row(label: str, value: str, y: int) -> None:
-        # Draw "<label>: " in MUTED, then the value in TEXT immediately after.
-        prefix = f"{label}: "
+        # Label is translated; value is dynamic data (printer name, count,
+        # etc.) so it stays as-is.
+        prefix = f"{t(label, snapshot.language)}: "
         _text(draw, label_x, y, prefix, fonts["small"], MUTED)
         prefix_w = _text_width(draw, prefix, fonts["small"])
         _text(draw, label_x + prefix_w, y, value, fonts["small"], TEXT)
 
-    # 1. Printer type — e.g. "Instax Link Square"
     if snapshot.paired_printer is not None:
         row("Type", _status_bar_printer_name(snapshot), body_y)
         body_y += line_h
 
-    # 2. Film count — e.g. "2/10"
     if snapshot.film_remaining is not None:
         row(
             "Film",
@@ -379,7 +378,6 @@ def _ready(
         )
         body_y += line_h
 
-    # 3. Battery % + optional time-remaining estimate
     if snapshot.printer_battery is not None:
         charging = "+" if snapshot.printer_is_charging else ""
         battery_val = f"{snapshot.printer_battery}%{charging}"
@@ -389,24 +387,26 @@ def _ready(
         row("Battery", battery_val, body_y)
         body_y += line_h
 
-    # 4. Bare printer ID (no "INSTAX-" prefix) so the user can confirm which
-    # unit is bonded without staring at the verbose BLE name.
     if snapshot.paired_printer is not None:
         bare_id = snapshot.paired_printer.name.removeprefix("INSTAX-")
         row("Printer", bare_id, body_y)
         body_y += line_h
 
-    # 5. Bridge Wi-Fi SSID (camera connects to this hotspot to FTP photos in)
     if snapshot.hotspot_ssid is not None:
         row("SSID", snapshot.hotspot_ssid, body_y)
         body_y += line_h
 
-    # 6. Pending uploads queue
     depth = snapshot.image_queue_depth
     if depth == 1:
-        row("Queue", "1 photo", body_y)
+        row("Queue", t("1 photo", snapshot.language), body_y)
     elif depth > 1:
-        row("Queue", f"{depth} photos", body_y)
+        # "N photos" — translate "photos" only; the number is locale-neutral.
+        # Falls back to English when no translation registered.
+        photos_word = t("photos", snapshot.language)
+        if photos_word == "photos":  # English passthrough
+            row("Queue", f"{depth} photos", body_y)
+        else:
+            row("Queue", f"{depth} {photos_word}", body_y)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
@@ -637,17 +637,21 @@ def _settings(
     for offset, row in enumerate(rows[start : start + visible_count]):
         index = start + offset
         y = STATUS_BAR_H + 4 + offset * row_height
+        # Translate the label (stable English source string). Values are
+        # left in their source form because they're mixed data + labels:
+        # printer serials and FTP credentials should never be translated,
+        # while option labels (e.g. "Hotspot") are short enough that the
+        # user can recognise them in either language.
         draw_settings_row(
             draw,
             y,
-            row.label,
+            t(row.label, snapshot.language),
             row.value,
             row.hint,
             selected=index == selected,
             font=font,
         )
 
-    # Hint bar for settings (use label lines)
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
 
@@ -711,13 +715,20 @@ def _error(
 
 
 def _mode_hints(snapshot: UiSnapshot) -> tuple[str, str, str]:
-    """Return (left, center, right) hint strings for a mode's hint bar."""
+    """Return the per-mode (left, center, right) hint strings, translated to
+    the snapshot's active language.
+
+    The translation happens here (rather than at every draw_hint_bar caller)
+    so the K1/K2/K3 labels are localised automatically across every body
+    renderer; new screens get i18n for free.
+    """
 
     lines = _footer_label_lines(snapshot)
     if not lines:
         return ("", "", "")
-    # Use first line for the hint bar
-    return lines[0]
+    left, center, right = lines[0]
+    lang = snapshot.language
+    return (t(left, lang), t(center, lang), t(right, lang))
 
 
 # ---------------------------------------------------------------------------
@@ -862,11 +873,31 @@ def _snapshot_chrome(snapshot: UiSnapshot) -> tuple[str, str]:
     return _mode_chrome(snapshot.mode)
 
 
-def _font(size: int) -> Font:
-    for path in (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-    ):
+# DejaVu / Arial have no CJK glyphs, so for Chinese we prefer Noto Sans CJK
+# (most Pi OS images bundle it via fonts-noto-cjk) and fall back to other
+# common CJK families before resigning to the Latin-only fonts that would
+# render Chinese as tofu boxes.
+_LATIN_FONT_PATHS: tuple[str, ...] = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+)
+
+_CJK_FONT_PATHS: tuple[str, ...] = (
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/System/Library/Fonts/PingFang.ttc",
+)
+
+
+def _font(size: int, prefer_cjk: bool = False) -> Font:
+    paths = (
+        (*_CJK_FONT_PATHS, *_LATIN_FONT_PATHS)
+        if prefer_cjk
+        else (*_LATIN_FONT_PATHS, *_CJK_FONT_PATHS)
+    )
+    for path in paths:
         try:
             return ImageFont.truetype(path, size)
         except OSError:

@@ -1886,9 +1886,9 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "System"
 
-    # System rows: Battery, Idle, Idle poweroff, Text size, Refresh status,
-    # About. 5 DOWNs lands on About; SELECT enters the About page.
-    for _ in range(5):
+    # System rows: Battery, Idle, Idle poweroff, Text size, Language,
+    # Refresh status, About. 6 DOWNs lands on About; SELECT enters About.
+    for _ in range(6):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"

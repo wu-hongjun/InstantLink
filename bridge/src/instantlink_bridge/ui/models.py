@@ -111,4 +111,5 @@ class UiSnapshot:
     settings_rows: tuple[SettingsRow, ...] = ()
     settings_message: str | None = None
     font_size: str = "medium"
+    language: str = "en"
     image_queue_depth: int = 0

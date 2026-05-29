@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from instantlink_bridge.ble.models import PrinterModel
-from instantlink_bridge.config import BridgeConfig, FontSize, FtpReceiveMode
+from instantlink_bridge.config import BridgeConfig, FontSize, FtpReceiveMode, UiLanguage
 from instantlink_bridge.imaging.pipeline import FitMode
 
 
@@ -53,6 +53,7 @@ class SettingKey(StrEnum):
     SYSTEM_IDLE_INFO = "system_idle_info"
     SYSTEM_IDLE_POWEROFF = "system_idle_poweroff"
     FONT_SIZE = "font_size"
+    LANGUAGE = "language"
     REFRESH_STATUS = "refresh_status"
     RESET_CREDENTIALS = "reset_credentials"
 
@@ -141,11 +142,11 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.SYSTEM_IDLE_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
         SettingKey.FONT_SIZE,
+        # LANGUAGE will move to a dedicated Accessibility sub-page once that
+        # menu restructure ships; lives on System for now so it's discoverable.
+        SettingKey.LANGUAGE,
         SettingKey.REFRESH_STATUS,
         SettingKey.OPEN_ABOUT,
-        # SYSTEM_POWER_INFO removed: the X306 case has no host telemetry, so
-        # the row always read "Battery case" regardless of source. If the Pi
-        # is running, it's powered.
     ),
     SettingsPage.ABOUT: (
         SettingKey.SYSTEM_DEVICE_ID,
@@ -230,6 +231,7 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.SEARCH_INTERVAL,
         SettingKey.SYSTEM_IDLE_POWEROFF,
         SettingKey.FONT_SIZE,
+        SettingKey.LANGUAGE,
     }
 )
 
@@ -255,6 +257,7 @@ AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 5.0)
 BOOL_OPTIONS: tuple[bool, ...] = (False, True)
 KEEPALIVE_OPTIONS: tuple[float, ...] = (5.0, 10.0, 15.0, 30.0)
 FONT_SIZE_OPTIONS: tuple[FontSize, ...] = (FontSize.SMALL, FontSize.MEDIUM, FontSize.LARGE)
+LANGUAGE_OPTIONS: tuple[UiLanguage, ...] = (UiLanguage.EN, UiLanguage.ZH_HANS)
 # Total scan period options. The minimum (5s) equals the active-scan window, so it scans
 # continuously (0 gap); larger values insert an idle gap between scans to save power.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
@@ -315,6 +318,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_IDLE_INFO: "Dim and screen-off timing",
     SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
     SettingKey.FONT_SIZE: "LCD text size",
+    SettingKey.LANGUAGE: "LCD language (中文 / English)",
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
 }
@@ -358,6 +362,8 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.FONT_SIZE:
         return tuple(SettingOption(value.value.capitalize(), value) for value in FONT_SIZE_OPTIONS)
+    if key is SettingKey.LANGUAGE:
+        return tuple(SettingOption(language_label(value), value) for value in LANGUAGE_OPTIONS)
     return ()
 
 
@@ -405,6 +411,8 @@ def config_with_setting_value(
         return replace(config, power=replace(config.power, idle_poweroff_enabled=value))
     if key is SettingKey.FONT_SIZE and isinstance(value, FontSize):
         return replace(config, ui=replace(config.ui, font_size=value))
+    if key is SettingKey.LANGUAGE and isinstance(value, UiLanguage):
+        return replace(config, ui=replace(config.ui, language=value))
     return config
 
 
@@ -481,4 +489,21 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.power.idle_poweroff_enabled
     if key is SettingKey.FONT_SIZE:
         return config.ui.font_size
+    if key is SettingKey.LANGUAGE:
+        return config.ui.language
     return None
+
+
+def language_label(language: UiLanguage) -> str:
+    """Return the picker label for a language.
+
+    The label is written in the *target* language so the user sees their
+    own native spelling — "English" vs "中文" — regardless of which UI
+    language is currently active.
+    """
+
+    labels = {
+        UiLanguage.EN: "English",
+        UiLanguage.ZH_HANS: "中文",
+    }
+    return labels[language]

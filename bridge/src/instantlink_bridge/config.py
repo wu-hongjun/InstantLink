@@ -67,6 +67,18 @@ class FontSize(StrEnum):
     LARGE = "large"
 
 
+class UiLanguage(StrEnum):
+    """User-selectable LCD languages (BCP 47 tags).
+
+    Kept separate from the runtime i18n module's Language enum so config
+    doesn't import the i18n table; the two are kept value-equivalent and
+    converted at the boundary.
+    """
+
+    EN = "en"
+    ZH_HANS = "zh-Hans"
+
+
 class StatusSinkKind(StrEnum):
     """Where the unified status signal is published.
 
@@ -297,6 +309,7 @@ class UiConfig:
     surface: UiSurface = UiSurface.LCD
     font_size: FontSize = FontSize.MEDIUM
     status_sink: StatusSinkKind = StatusSinkKind.LCD
+    language: UiLanguage = UiLanguage.EN
 
 
 @dataclass(frozen=True, slots=True)
@@ -432,6 +445,7 @@ def render_config(config: BridgeConfig) -> str:
             f"surface = {_toml_string(config.ui.surface.value)}",
             f"font_size = {_toml_string(config.ui.font_size.value)}",
             f"status_sink = {_toml_string(config.ui.status_sink.value)}",
+            f"language = {_toml_string(config.ui.language.value)}",
             "",
         ]
     )
@@ -580,6 +594,7 @@ def _load_ui_config(data: object) -> UiConfig:
         surface=parse_ui_surface(data.get("surface", UiSurface.LCD.value)),
         font_size=parse_font_size(data.get("font_size", FontSize.MEDIUM.value)),
         status_sink=parse_status_sink(data.get("status_sink", StatusSinkKind.LCD.value)),
+        language=parse_ui_language(data.get("language", UiLanguage.EN.value)),
     )
 
 
@@ -614,6 +629,20 @@ def parse_status_sink(value: object) -> StatusSinkKind:
     except ValueError as exc:
         allowed = ", ".join(s.value for s in StatusSinkKind)
         raise ValueError(f"[ui].status_sink must be one of: {allowed}") from exc
+
+
+def parse_ui_language(value: object) -> UiLanguage:
+    """Parse a configured LCD language (BCP 47 tag)."""
+
+    # Case-insensitive for the tag prefix ("en"), but the "Hans" subtag is
+    # mixed-case in BCP 47 — accept any case spelling and normalise on the
+    # enum value.
+    text = str(value).strip()
+    for lang in UiLanguage:
+        if text.lower() == lang.value.lower():
+            return lang
+    allowed = ", ".join(lang.value for lang in UiLanguage)
+    raise ValueError(f"[ui].language must be one of: {allowed}")
 
 
 def parse_ftp_receive_mode(value: object) -> FtpReceiveMode:

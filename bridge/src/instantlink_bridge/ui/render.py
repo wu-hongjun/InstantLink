@@ -609,28 +609,47 @@ def _ready(
     card_w, card_h = 216, 96
     draw_card(draw, card_x, card_y, card_w, card_h, theme)
 
-    # Build the list of rows to show
-    row_data: list[tuple[str, str]] = []
+    # Build the list of row "groups". Each group is one rendered row; a
+    # group with one (label, value) draws a normal full-width row, a group
+    # with two draws a half-card pair separated by a vertical hairline. The
+    # split row is what compacts Film and Battery into a single line.
+    row_groups: list[list[tuple[str, str]]] = []
 
     if snapshot.paired_printer is not None:
-        row_data.append((t("Type", snapshot.language), _status_bar_printer_name(snapshot)))
+        row_groups.append([(t("Type", snapshot.language), _status_bar_printer_name(snapshot))])
 
+    film_cell: tuple[str, str] | None = None
     if snapshot.film_remaining is not None:
-        row_data.append(
-            (t("Film", snapshot.language), f"{snapshot.film_remaining}/{snapshot.film_capacity}")
+        film_cell = (
+            t("Film", snapshot.language),
+            f"{snapshot.film_remaining}/{snapshot.film_capacity}",
         )
 
+    battery_cell: tuple[str, str] | None = None
     if snapshot.printer_battery is not None:
         charging = "+" if snapshot.printer_is_charging else ""
-        battery_val = f"{snapshot.printer_battery}%{charging}"
-        life = printer_battery_life_text(snapshot)
-        if life is not None:
-            battery_val = f"{battery_val} ({life})"
-        row_data.append((t("Battery", snapshot.language), battery_val))
+        # Drop the body-line battery-life estimate from this row: pairing
+        # Film + Battery on one line leaves no room for "(4h32m left)", and
+        # the user-facing value (percentage) is the part that matters at
+        # arm's length. Battery-life is still surfaced via the helper for
+        # the future Mac/headless views.
+        battery_cell = (
+            t("Battery", snapshot.language),
+            f"{snapshot.printer_battery}%{charging}",
+        )
+
+    # Pair Film + Battery on a single split row when both are present;
+    # fall back to a single-row render if only one is available.
+    if film_cell is not None and battery_cell is not None:
+        row_groups.append([film_cell, battery_cell])
+    elif film_cell is not None:
+        row_groups.append([film_cell])
+    elif battery_cell is not None:
+        row_groups.append([battery_cell])
 
     if snapshot.paired_printer is not None:
         bare_id = snapshot.paired_printer.name.removeprefix("INSTAX-")
-        row_data.append((t("Printer", snapshot.language), bare_id))
+        row_groups.append([(t("Printer", snapshot.language), bare_id)])
 
     # SSID row removed from READY body: the READY card is the *printer*
     # info section (type, film, battery, serial). The bridge hotspot SSID
@@ -639,36 +658,68 @@ def _ready(
 
     depth = snapshot.image_queue_depth
     if depth == 1:
-        row_data.append((t("Queue", snapshot.language), t("1 photo", snapshot.language)))
+        row_groups.append([(t("Queue", snapshot.language), t("1 photo", snapshot.language))])
     elif depth > 1:
         photos_word = t("photos", snapshot.language)
         if photos_word == "photos":
-            row_data.append((t("Queue", snapshot.language), f"{depth} photos"))
+            row_groups.append([(t("Queue", snapshot.language), f"{depth} photos")])
         else:
-            row_data.append((t("Queue", snapshot.language), f"{depth} {photos_word}"))
+            row_groups.append([(t("Queue", snapshot.language), f"{depth} {photos_word}")])
 
-    # Distribute rows within the card
-    if row_data:
-        num_rows = len(row_data)
+    # Distribute groups within the card
+    if row_groups:
+        num_rows = len(row_groups)
         row_h = card_h // max(num_rows, 1)
         row_h = min(row_h, 20)  # cap to avoid oversized rows with few items
         total_content = num_rows * row_h
         start_y = card_y + (card_h - total_content) // 2
 
-        for i, (label, value) in enumerate(row_data):
+        for i, group in enumerate(row_groups):
             ry = start_y + i * row_h
             row_mid = ry + row_h // 2
+            label_y = row_mid - _font_height(draw, "Ag", fonts["small"]) // 2
 
-            # Label (left, secondary) — 16 px inset aligns with iOS separator inset
-            prefix = f"{label}: "
-            lw = _text_width(draw, prefix, fonts["small"])
-            label_y = row_mid - _font_height(draw, prefix, fonts["small"]) // 2
-            _text(draw, card_x + 16, label_y, prefix, fonts["small"], theme.label_secondary)
-
-            # Value (follows label, primary)
-            _text(
-                draw, card_x + 16 + lw, label_y, value, fonts["small"], theme.label_primary
-            )
+            if len(group) == 1:
+                # Single full-width row — keeps Type / Printer / Queue
+                # behaving exactly as before.
+                label, value = group[0]
+                prefix = f"{label}: "
+                lw = _text_width(draw, prefix, fonts["small"])
+                _text(
+                    draw, card_x + 16, label_y, prefix, fonts["small"], theme.label_secondary
+                )
+                _text(
+                    draw, card_x + 16 + lw, label_y, value, fonts["small"], theme.label_primary
+                )
+            else:
+                # Split row: each cell takes a half-card with a vertical
+                # hairline divider between them. Labels keep the trailing
+                # ":" so the eye can still bind label↔value across the gap.
+                cell_w = (card_w - 32) // 2
+                for cell_idx, (label, value) in enumerate(group):
+                    cx = card_x + 16 + cell_idx * cell_w
+                    prefix = f"{label}: "
+                    lw = _text_width(draw, prefix, fonts["small"])
+                    _text(
+                        draw, cx, label_y, prefix, fonts["small"], theme.label_secondary
+                    )
+                    _text(
+                        draw,
+                        cx + lw,
+                        label_y,
+                        value,
+                        fonts["small"],
+                        theme.label_primary,
+                    )
+                # Vertical divider — 1 px hairline in the same secondary
+                # tint as the row hairlines, inset from the row top/bottom
+                # so it reads as a slim "·" between the cells, not a frame.
+                divider_x = card_x + card_w // 2
+                draw.line(
+                    (divider_x, ry + 3, divider_x, ry + row_h - 5),
+                    fill=theme.separator,
+                    width=1,
+                )
 
             # Hairline after row (except last) — 16 px leading inset matches
             # iOS default UITableViewCell.separatorInset (16 pt leading).

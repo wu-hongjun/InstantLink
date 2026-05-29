@@ -2002,7 +2002,10 @@ class BridgeUi:
             while True:
                 if generation != self._status_generation:
                     return
-                self._show_printer_searching_if_retrying(printer, "Searching for printer")
+                # Use the same placeholder as the initial PRINTER_SEARCHING transition so the
+                # body line stays stable across retries. Flipping copy mid-poll reads as a state
+                # change to the user when nothing has actually changed.
+                self._show_printer_searching_if_retrying(printer, "Looking for printer")
                 attempt_start = self._monotonic()
                 was_online = self._printer_was_online
                 online = await self._refresh_printer_status_in_background(printer, generation)

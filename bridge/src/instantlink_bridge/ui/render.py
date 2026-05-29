@@ -348,15 +348,15 @@ def _printer_searching(
         _text(draw, 18, 128, "Selected printer not visible", fonts["small"], TEXT)
         _text(draw, 18, 146, "Turn selected printer on", fonts["small"], YELLOW)
     elif message in {"Scanning: 0 printers", "No printer signal"}:
-        # No BLE signal yet — name the most likely cause so the title pairs
-        # naturally with the action line ("Printer off" + "Turn printer on").
-        _center_lines(draw, ["Printer off"], 75, fonts["large"], TEXT)
+        # No BLE signal yet — title names the active state, body gives the
+        # action so a power-cycle is the obvious next step.
+        _center_lines(draw, ["Searching"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, "Turn printer on and keep awake", fonts["small"], TEXT)
         _text(draw, 18, 146, "Phone Bluetooth may grab it", fonts["small"], MUTED)
     else:
-        # Title states the state, body (status_message) gives the action
-        # ("Printer off" + "Turn printer on" / "Keep printer awake").
-        _center_lines(draw, ["Printer off"], 75, fonts["large"], TEXT)
+        # Title states the active state ("Searching"); body (status_message)
+        # carries the live retry copy (e.g. "Looking for printer").
+        _center_lines(draw, ["Searching"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, _ellipsize(message, 31), fonts["body"], TEXT)
 
     hints = _mode_hints(snapshot)

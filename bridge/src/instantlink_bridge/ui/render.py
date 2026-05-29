@@ -909,11 +909,16 @@ def _settings(
     for offset, row in enumerate(rows[start : start + visible_count]):
         index = start + offset
         y = card_top + 4 + offset * row_height
+        # Translate both label and value. Values are mixed: some are
+        # registered option labels ("Dark", "Large", "Hotspot", "saved"),
+        # others are dynamic data (printer serial, IP, film count). t()
+        # falls back to the source string on a miss, so dynamic data
+        # passes through unchanged while option labels pick up i18n.
         draw_settings_row(
             draw,
             y,
             t(row.label, snapshot.language),
-            row.value,
+            t(row.value, snapshot.language),
             row.hint,
             selected=index == selected,
             font=font,

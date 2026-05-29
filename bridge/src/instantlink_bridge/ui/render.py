@@ -33,9 +33,12 @@ TOAST_Y = 208  # settings_message toast y
 # these multipliers must not alter the MEDIUM render.
 _FONT_SCALES: dict[str, tuple[float, float]] = {
     # font_size_value: (font_multiplier, row_spacing_multiplier)
-    "small": (0.85, 0.92),
-    "medium": (1.0, 1.0),
-    "large": (1.18, 1.10),
+    # Scale shifted up 2026-05-29 — the previous SMALL (0.85x) was unreadable on
+    # the ST7789 panel. Current SMALL is now what was MEDIUM, current MEDIUM is
+    # what was LARGE, and a new LARGE on top.
+    "small": (1.00, 1.00),
+    "medium": (1.18, 1.10),
+    "large": (1.40, 1.22),
 }
 
 # Base font sizes at MEDIUM (historical values).
@@ -139,7 +142,9 @@ def draw_status_bar(
     else:
         printer_name = "No printer"
 
-    # Right side: bridge battery (outermost) then film+printer-battery chip
+    # Right side: bridge battery (outermost) then film+printer-battery chip.
+    # In SETTINGS mode, prepend the position counter (e.g. "3/10") so the user
+    # always sees navigation context without taking a row out of the body.
     right_parts: list[str] = []
     power = bridge_power_header_text(snapshot)
     if power is not None:
@@ -148,6 +153,10 @@ def draw_status_bar(
     film_battery = _status_bar_printer_chip(snapshot)
     if film_battery is not None:
         right_parts.insert(0, film_battery)
+
+    if snapshot.mode is UiMode.SETTINGS and snapshot.settings_rows:
+        selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
+        right_parts.insert(0, f"{selected + 1}/{len(snapshot.settings_rows)}")
 
     right_text = "  ".join(right_parts) if right_parts else ""
     right_width = _text_width(draw, right_text, font_small) if right_text else 0
@@ -471,6 +480,13 @@ def _settings(
     body_height = HINT_BAR_Y - STATUS_BAR_H - 8
     visible_count = max(1, body_height // row_height)
 
+    # When a settings_message toast is showing, reserve the last visible row slot for the
+    # toast so it never overlaps with row content. Toast takes the row position the last
+    # row would have occupied; the page may scroll one row earlier as a result.
+    toast_shown = snapshot.settings_message is not None
+    if toast_shown and visible_count > 1:
+        visible_count -= 1
+
     selected = min(snapshot.selected_index, len(rows) - 1)
     start = min(max(0, selected - 4), max(0, len(rows) - visible_count))
 
@@ -487,20 +503,19 @@ def _settings(
             font=font,
         )
 
-    # Position counter at y=212 — just above the hint bar, outside the row area.
-    position = f"{selected + 1}/{len(rows)}"
-    position_width = _text_width(draw, position, font)
-    position_x = 232 - position_width
-    _text(draw, position_x, 212, position, font, MUTED)
-
     # Hint bar for settings (use label lines)
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
 
-    # settings_message toast above hint bar
-    if snapshot.settings_message is not None:
-        toast_text = _fit_text_to_width(draw, snapshot.settings_message, font, 220)
-        _text(draw, 10, TOAST_Y, toast_text, font, YELLOW)
+    # settings_message toast occupies the slot below the last visible row (which we
+    # reserved above by reducing visible_count). Sits in MUTED-row territory but
+    # uses YELLOW to read as a transient message, not a row.
+    if toast_shown:
+        toast_y = STATUS_BAR_H + 4 + visible_count * row_height
+        toast_text = _fit_text_to_width(
+            draw, snapshot.settings_message or "", font, 220
+        )
+        _text(draw, 10, toast_y, toast_text, font, YELLOW)
 
 
 def _pairing(

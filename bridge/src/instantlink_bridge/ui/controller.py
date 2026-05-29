@@ -1681,7 +1681,7 @@ class BridgeUi:
                 return "Shuts down after 10 min idle"
             return "Stays on indefinitely"
         if key is SettingKey.FONT_SIZE:
-            return "LCD text size"
+            return "Screen text size"
         if key is SettingKey.FTP_HOST_INFO:
             return "Enter as FTP server in camera"
         if key is SettingKey.FTP_USERNAME_INFO:
@@ -1713,7 +1713,7 @@ class BridgeUi:
         if key is SettingKey.SYSTEM_BLUEZ_VERSION:
             return "Bluetooth stack version"
         if key is SettingKey.SYSTEM_OS_VERSION:
-            return "Linux distribution version"
+            return "Operating system version"
         if key is SettingKey.SYSTEM_POWER_INFO:
             return "Bridge battery/UPS hardware"
         if key is SettingKey.SYSTEM_BATTERY_INFO:

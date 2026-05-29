@@ -71,6 +71,7 @@ class UiSnapshot:
     ftp_receive_mode: str = "auto"
     wifi_host: str | None = None
     hotspot_host: str | None = None
+    hotspot_ssid: str | None = None
     hotspot_ftp_host: str = "192.168.8.1"
     preferred_wifi_host: str | None = None
     usb_connected: bool = False

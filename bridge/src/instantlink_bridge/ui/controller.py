@@ -1853,6 +1853,7 @@ class BridgeUi:
             ftp_receive_mode=self._config.ftp.mode.value,
             wifi_host=self._wifi_host,
             hotspot_host=self._hotspot_host,
+            hotspot_ssid=self._hotspot_ssid_value(),
             hotspot_ftp_host=self._config.ftp.hotspot_host,
             preferred_wifi_host=self._config.ftp.preferred_wifi_host,
             usb_connected=self._usb_connected,

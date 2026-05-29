@@ -272,12 +272,12 @@ def _ready(
         return
 
     _center_lines(draw, ["Ready"], 75, fonts["large"], TEXT)
-    # Body: waiting for upload + paired printer ID + FTP address
+    # Body: waiting for upload + paired printer ID + Wi-Fi SSID
     _text(draw, 18, 120, "Waiting for upload", fonts["body"], TEXT)
     if snapshot.paired_printer is not None:
-        _text(draw, 18, 140, snapshot.paired_printer.name, fonts["small"], MUTED)
-    ftp_line = _ready_ftp_line(snapshot)
-    _text(draw, 18, 156, ftp_line, fonts["small"], MUTED)
+        _text(draw, 18, 148, snapshot.paired_printer.name, fonts["small"], MUTED)
+    if snapshot.hotspot_ssid is not None:
+        _text(draw, 18, 168, f"Wi-Fi: {snapshot.hotspot_ssid}", fonts["small"], MUTED)
     depth = snapshot.image_queue_depth
     if depth == 1:
         _text(draw, 18, 172, "1 photo in queue", fonts["small"], MUTED)

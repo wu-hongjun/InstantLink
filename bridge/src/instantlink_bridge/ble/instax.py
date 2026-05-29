@@ -128,8 +128,15 @@ class InstaxProtocolClient:
             raise UnexpectedResponseError("expected ImageSupportInfo response")
         if response.width is None or response.height is None:
             raise UnexpectedResponseError("image support response missing dimensions")
-        detected_model = detect_model(
-            response.width, response.height, transport.model_number_hint()
+        dis_hint = transport.model_number_hint()
+        detected_model = detect_model(response.width, response.height, dis_hint)
+        LOGGER.info(
+            "instax.model_detected name=%s dis=%r width=%s height=%s detected=%s",
+            name,
+            dis_hint,
+            response.width,
+            response.height,
+            detected_model.value,
         )
         model = _compatible_model_override(detected_model, model_override)
         return cls(transport=transport, name=name, model=model)

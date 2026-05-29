@@ -69,6 +69,7 @@ from instantlink_bridge.ui.settings import (
     WifiMode,
     bool_label,
     config_with_setting_value,
+    appearance_label,
     fit_label,
     ftp_receive_mode_label,
     language_label,
@@ -1246,6 +1247,7 @@ class BridgeUi:
             allow_print_without_film=config.workflow.allow_print_without_film,
             font_size=config.ui.font_size.value,
             language=config.ui.language.value,
+            appearance=config.ui.appearance.value,
         )
         self._show_settings(message)
         return True
@@ -1625,6 +1627,8 @@ class BridgeUi:
             return SettingsRow("Text size", self._config.ui.font_size.value.capitalize())
         if key is SettingKey.LANGUAGE:
             return SettingsRow("Language", language_label(self._config.ui.language))
+        if key is SettingKey.APPEARANCE:
+            return SettingsRow("Appearance", appearance_label(self._config.ui.appearance))
         if key is SettingKey.RESET_CREDENTIALS:
             return SettingsRow("Reset credentials", "Hold K1")
         return SettingsRow("Unknown", "")
@@ -2114,6 +2118,7 @@ class BridgeUi:
             settings_message=settings_message,
             font_size=self._config.ui.font_size.value,
             language=self._config.ui.language.value,
+            appearance=self._config.ui.appearance.value,
             image_queue_depth=self._image_queue_depth,
         )
 

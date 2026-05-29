@@ -112,4 +112,5 @@ class UiSnapshot:
     settings_message: str | None = None
     font_size: str = "medium"
     language: str = "en"
+    appearance: str = "light"
     image_queue_depth: int = 0

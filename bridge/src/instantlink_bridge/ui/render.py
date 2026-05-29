@@ -1,4 +1,4 @@
-"""240x240 LCD screen rendering."""
+"""240x240 LCD screen rendering — iOS 26 / Liquid Glass aesthetic."""
 
 from __future__ import annotations
 
@@ -11,9 +11,14 @@ from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.ui.i18n import t
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
 from instantlink_bridge.ui.status_indicator import StatusState, derive_status
+from instantlink_bridge.ui.theme import Theme, theme_for
 
 LCD_SIZE = (240, 240)
 Font = ImageFont.ImageFont | ImageFont.FreeTypeFont
+
+# ---------------------------------------------------------------------------
+# Legacy colour constants — kept as fallbacks; theme tokens take precedence
+# ---------------------------------------------------------------------------
 
 BG = "#101820"
 PANEL = "#172633"
@@ -62,6 +67,11 @@ def _scale_for_snapshot(snapshot: UiSnapshot) -> tuple[float, float]:
     return _FONT_SCALES.get(snapshot.font_size, _FONT_SCALES["medium"])
 
 
+def _theme_for_snapshot(snapshot: UiSnapshot) -> Theme:
+    """Return the resolved Theme for a snapshot's appearance field."""
+    return theme_for(snapshot.appearance)
+
+
 def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Image:
     """Render one UI frame.
 
@@ -70,7 +80,8 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
     a fixed value for deterministic pixel comparisons.
     """
 
-    image = Image.new("RGB", LCD_SIZE, BG)
+    theme = _theme_for_snapshot(snapshot)
+    image = Image.new("RGB", LCD_SIZE, theme.bg)
     draw = ImageDraw.Draw(image)
     font_scale, _row_scale = _scale_for_snapshot(snapshot)
     # CJK glyphs aren't in DejaVu; prefer a CJK-capable family when the
@@ -84,40 +95,109 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
     }
 
     breath_clock = time.monotonic() if now is None else now
-    draw_status_bar(draw, snapshot, fonts, breath_clock)
+    draw_status_bar(draw, snapshot, fonts, breath_clock, theme=theme)
 
     if snapshot.mode is UiMode.READY:
-        _ready(draw, snapshot, fonts)
+        _ready(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.SETTINGS:
-        _settings(draw, snapshot, fonts)
+        _settings(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.VALIDATION:
-        _validation(draw, snapshot, fonts)
+        _validation(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.NO_FILM:
-        _no_film(draw, snapshot, fonts)
+        _no_film(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.PRINTER_SEARCHING:
-        _printer_searching(draw, snapshot, fonts)
+        _printer_searching(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.PRINTER_OFFLINE:
-        _printer_offline(draw, snapshot, fonts)
+        _printer_offline(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.IMAGE_RECEIVED:
-        _image_received(draw, snapshot, fonts)
+        _image_received(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.AWAITING_CONFIRM:
-        _awaiting_confirm(image, draw, snapshot, fonts)
+        _awaiting_confirm(image, draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.PRINTING:
-        _printing(draw, snapshot, fonts)
+        _printing(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.PRINT_COMPLETE:
-        _print_complete(draw, snapshot, fonts)
+        _print_complete(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.PAIRING:
-        _pairing(draw, snapshot, fonts)
+        _pairing(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.PAIR_FAILED:
-        _pair_failed(draw, snapshot, fonts)
+        _pair_failed(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.ERROR:
-        _error(draw, snapshot, fonts)
+        _error(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.BOOTING:
-        _booting(draw, snapshot, fonts)
+        _booting(draw, snapshot, fonts, theme)
     else:
-        _needs_pairing(draw, snapshot, fonts)
+        _needs_pairing(draw, snapshot, fonts, theme)
 
     return image
+
+
+# ---------------------------------------------------------------------------
+# Liquid Glass building-block helpers
+# ---------------------------------------------------------------------------
+
+
+def draw_pill(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    fill: str | tuple[int, int, int],
+    fg: str | tuple[int, int, int],
+    text: str,
+    font: Font,
+) -> None:
+    """Draw a capsule (rounded rect, radius = h//2) with centred text.
+
+    Used for the status bar live-indicator pill and hint chips.
+    """
+    radius = h // 2
+    draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=fill)
+    # Centre text within the pill
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    tx = x + (w - tw) // 2 - bbox[0]
+    ty = y + (h - th) // 2 - bbox[1]
+    draw.text((tx, ty), text, fill=fg, font=font)
+
+
+def draw_card(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    theme: Theme,
+    *,
+    elevated: bool = False,
+) -> None:
+    """Draw a rounded card surface.
+
+    ``elevated`` uses ``theme.surface_elevated`` and adds a 1 px darker top
+    edge so it reads as a layer above the base surface.
+    """
+    fill = theme.surface_elevated if elevated else theme.surface
+    radius = 12
+    draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=fill)
+    if elevated:
+        # 1 px top edge in separator colour — gives a subtle "lifted" read
+        draw.rounded_rectangle(
+            (x, y, x + w, y + 1),
+            radius=radius,
+            fill=theme.separator,
+        )
+
+
+def draw_hairline(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    w: int,
+    theme: Theme,
+) -> None:
+    """Draw a 1 px horizontal separator line."""
+    draw.line((x, y, x + w, y), fill=theme.separator, width=1)
 
 
 # ---------------------------------------------------------------------------
@@ -130,63 +210,82 @@ def draw_status_bar(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
     now: float = 0.0,
+    *,
+    theme: Theme | None = None,
 ) -> None:
-    """Draw the single-line 30 px status bar.
+    """Draw the 30 px status bar with a Liquid Glass pill indicator.
 
-    The bar is dedicated to a single piece of information: the live status
-    word ("Connected", "Searching", "Printing", …). All other data (printer
-    type, film, battery, queue) lives in the body so the bar reads as a
-    glanceable, colour-coded signal across every screen.
+    The full bar background is ``theme.bg`` (calm, no tint). The live status
+    word sits inside a vibrant capsule pill centred at x=120. The pill colour
+    is modulated by the breath envelope for breathing states, keeping the
+    whole-bar tint approach retired.
 
-    The full background is tinted by the resolved :class:`StatusState`,
-    breathing where the pattern calls for it. The status word uses a
-    luma-picked foreground (black on yellow, white on green/red) so the text
-    stays legible across the palette.
-
-    SETTINGS mode appends a small page counter (e.g. ``Settings  3/10``) so
-    the user always sees navigation context.
+    SETTINGS mode appends a page counter (``3/10``) to the right of the pill
+    in ``theme.label_secondary``.
     """
 
+    if theme is None:
+        theme = theme_for("light")
+
     state = derive_status(snapshot)
-    bg = state.tint_at(now)
-    fg = state.foreground()
     font_body = fonts["body"]
     font_small = fonts["small"]
 
-    draw.rectangle((0, 0, 239, STATUS_BAR_H - 1), fill=bg)
+    # Bar background — neutral, no tint
+    draw.rectangle((0, 0, 239, STATUS_BAR_H - 1), fill=theme.bg)
 
     word = t(status_bar_word(snapshot), snapshot.language)
-    counter = ""
-    if snapshot.mode is UiMode.SETTINGS and snapshot.settings_rows:
-        selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
-        counter = f"  {selected + 1}/{len(snapshot.settings_rows)}"
 
-    # True vertical centring uses each font's bounding box (PIL's text() takes
-    # the top of the *full* box including ascender padding, so a naive
-    # ``STATUS_BAR_H/2 - font_size/2`` skews visually low for body fonts with
-    # large padding). We measure via textbbox and centre the box itself.
+    # Resolve pill background from the theme's semantic pill tokens,
+    # then modulate by the breath envelope at `now`.
+    pill_bg_rgb = _state_pill_bg(state, theme)
+    pill_bg_tinted = _apply_breath(state, pill_bg_rgb, now)
+    pill_bg_hex = _rgb_to_hex(pill_bg_tinted)
+
+    fg = state.foreground()
+    fg_hex = _rgb_to_hex(fg)
+
+    # Measure pill width: max(60, text_width + 24)
     word_bbox = draw.textbbox((0, 0), word, font=font_body)
     word_w = word_bbox[2] - word_bbox[0]
-    word_h = word_bbox[3] - word_bbox[1]
+    pill_w = max(60, word_w + 24)
+    pill_h = 22
+    pill_x = 120 - pill_w // 2
+    pill_y = (STATUS_BAR_H - pill_h) // 2
 
-    if counter:
+    draw_pill(draw, pill_x, pill_y, pill_w, pill_h, pill_bg_hex, fg_hex, word, font_body)
+
+    # Settings counter to the right of the pill
+    if snapshot.mode is UiMode.SETTINGS and snapshot.settings_rows:
+        selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
+        counter = f"{selected + 1}/{len(snapshot.settings_rows)}"
         counter_bbox = draw.textbbox((0, 0), counter, font=font_small)
-        counter_w = counter_bbox[2] - counter_bbox[0]
         counter_h = counter_bbox[3] - counter_bbox[1]
-    else:
-        counter_w = 0
-        counter_h = 0
-
-    total = word_w + counter_w
-    start_x = max(8, (240 - total) // 2)
-    # bbox[1] is the offset from y=0 to the actual top of inked pixels;
-    # subtract it so the inked top sits where we asked. Then centre the
-    # inked box vertically inside the 30 px bar.
-    word_y = (STATUS_BAR_H - word_h) // 2 - word_bbox[1]
-    _text(draw, start_x, word_y, word, font_body, fg)
-    if counter:
+        counter_x = pill_x + pill_w + 6
         counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_bbox[1]
-        _text(draw, start_x + word_w, counter_y, counter, font_small, fg)
+        _text(draw, counter_x, counter_y, counter, font_small, theme.label_secondary)
+
+
+def _state_pill_bg(
+    state: StatusState,
+    theme: Theme,
+) -> tuple[int, int, int]:
+    """Return the full-intensity pill background RGB for a StatusState."""
+    return state.base_color
+
+
+def _apply_breath(
+    state: StatusState,
+    rgb: tuple[int, int, int],
+    now: float,
+) -> tuple[int, int, int]:
+    """Modulate rgb by the breath envelope — returns rgb unchanged for SOLID."""
+    return state.tint_at(now)
+
+
+def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+    r, g, b = rgb
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 # Mapping from UiMode → one-word status the top bar shows. Kept here rather
@@ -267,28 +366,53 @@ def draw_hint_bar(
     draw: ImageDraw.ImageDraw,
     hints: tuple[str, str, str],
     font: Font,
+    theme: Theme | None = None,
 ) -> None:
     """Draw the single-row hint bar at the bottom of the screen.
 
+    Liquid Glass redesign: bar background is ``theme.bg`` (no contrasting
+    band). Each non-empty hint becomes a small capsule pill with
+    ``theme.hint_bg`` fill and ``theme.hint_fg`` text, centred within its
+    80 px zone.
+
     ``hints`` is a (left, center, right) triple of glyph/label strings.
-    Empty strings are not drawn. Each slot owns a third of the 240 px bar and
-    its label is *centered within its third*; this gives even spacing across
-    K1/K2/K3 regardless of label length and prevents the old left/right anchors
-    from clipping mid-length labels like "K1 Setting".
+    Empty strings are not drawn.
     """
 
-    draw.rectangle((0, HINT_BAR_Y - 2, 239, 239), fill=PANEL)
+    if theme is None:
+        theme = theme_for("light")
+
+    # No contrasting band — bg is the page background
+    draw.rectangle((0, HINT_BAR_Y - 2, 239, 239), fill=theme.bg)
+
     left, center, right = hints
-    # 240 px split into three equal zones of 80 px each.
     zone_w = 80
-    zone_max = zone_w - 4  # 2 px of padding on each side
+    zone_max = zone_w - 8  # 4 px padding each side
     centers = (40, 120, 200)
+    pill_h = 18
+    pill_radius = pill_h // 2
+
     for text, cx in zip((left, center, right), centers, strict=True):
         if not text:
             continue
         fitted = _fit_text_to_width(draw, text, font, zone_max)
         tw = _text_width(draw, fitted, font)
-        _text(draw, cx - tw // 2, HINT_BAR_Y, fitted, font, MUTED)
+        pill_w = tw + 14  # 7 px padding each side
+        pill_w = max(pill_w, 20)
+        pill_x = cx - pill_w // 2
+        pill_y = HINT_BAR_Y + (20 - pill_h) // 2
+
+        draw.rounded_rectangle(
+            (pill_x, pill_y, pill_x + pill_w, pill_y + pill_h),
+            radius=pill_radius,
+            fill=theme.hint_bg,
+        )
+        # Centre text within pill
+        bbox = draw.textbbox((0, 0), fitted, font=font)
+        text_h = bbox[3] - bbox[1]
+        tx = pill_x + (pill_w - tw) // 2 - bbox[0]
+        ty = pill_y + (pill_h - text_h) // 2 - bbox[1]
+        draw.text((tx, ty), fitted, fill=theme.hint_fg, font=font)
 
 
 def draw_settings_row(
@@ -300,18 +424,35 @@ def draw_settings_row(
     *,
     selected: bool,
     font: Font,
+    theme: Theme | None = None,
+    row_height: int = 19,
 ) -> None:
-    """Draw a flat 2-column settings row with a 3px GREEN left accent when selected."""
+    """Draw a settings row in iOS picker style.
 
-    bg = PANEL
-    text_fill = TEXT if selected else MUTED
-    draw.rectangle((14, y, 226, y + 19), fill=bg)
-    # 3px green left accent on selected row
-    accent_color = GREEN if selected else PANEL
-    draw.rectangle((14, y, 17, y + 19), fill=accent_color)
+    Selected row: ``theme.accent_blue`` background, ``theme.label_inverse`` text.
+    Non-selected: transparent strip; label in ``theme.label_primary``, value in
+    ``theme.label_secondary``.
+    """
+
+    if theme is None:
+        theme = theme_for("light")
+
+    if selected:
+        # Selected row: vibrant accent fill, inverse text
+        draw.rounded_rectangle(
+            (14, y, 226, y + row_height - 1),
+            radius=4,
+            fill=theme.accent_blue,
+        )
+        text_fill = theme.label_inverse
+        value_fill = theme.label_inverse
+    else:
+        text_fill = theme.label_primary
+        value_fill = theme.label_secondary
 
     kind = _settings_row_kind(hint)
-    marker, marker_fill = _settings_row_marker(kind, selected)
+    marker, _marker_fill = _settings_row_marker(kind, selected)
+    marker_fill = text_fill  # always match row text colour
 
     label_max = 94
     _text(draw, 22, y + 3, _fit_text_to_width(draw, label, font, label_max), font, text_fill)
@@ -319,12 +460,12 @@ def draw_settings_row(
     marker_width = _text_width(draw, marker, font) if marker else 0
     marker_x = 218 - marker_width
     if marker:
-        _text(draw, marker_x, y + 3, marker, font, marker_fill if not selected else TEXT)
+        _text(draw, marker_x, y + 3, marker, font, marker_fill)
 
     value_right = marker_x - 4 if marker else 218
     value_text = _fit_text_to_width(draw, value, font, max(0, value_right - 122))
     value_width = _text_width(draw, value_text, font)
-    _text(draw, max(122, value_right - value_width), y + 3, value_text, font, text_fill)
+    _text(draw, max(122, value_right - value_width), y + 3, value_text, font, value_fill)
 
 
 # ---------------------------------------------------------------------------
@@ -336,8 +477,9 @@ def _booting(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["Starting"], 75, fonts["large"], TEXT)
+    _center_lines(draw, ["Starting"], 75, fonts["large"], theme.label_primary)
     # No hint bar for BOOTING
 
 
@@ -345,38 +487,31 @@ def _ready(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     accepting = can_accept_images(snapshot)
     if not accepting:
-        _validation(draw, snapshot, fonts)
+        _validation(draw, snapshot, fonts, theme)
         return
 
     # Centered title — translated via i18n so it reads "就绪" / "Ready".
-    _center_lines(draw, [t("Ready", snapshot.language)], 75, fonts["large"], TEXT)
+    _center_lines(draw, [t("Ready", snapshot.language)], 75, fonts["large"], theme.label_primary)
 
-    body_y = 116
-    line_h = 18
-    label_x = 18
+    # Card spanning x=12..228, y=104..200
+    card_x, card_y = 12, 104
+    card_w, card_h = 216, 96
+    draw_card(draw, card_x, card_y, card_w, card_h, theme)
 
-    def row(label: str, value: str, y: int) -> None:
-        # Label is translated; value is dynamic data (printer name, count,
-        # etc.) so it stays as-is.
-        prefix = f"{t(label, snapshot.language)}: "
-        _text(draw, label_x, y, prefix, fonts["small"], MUTED)
-        prefix_w = _text_width(draw, prefix, fonts["small"])
-        _text(draw, label_x + prefix_w, y, value, fonts["small"], TEXT)
+    # Build the list of rows to show
+    row_data: list[tuple[str, str]] = []
 
     if snapshot.paired_printer is not None:
-        row("Type", _status_bar_printer_name(snapshot), body_y)
-        body_y += line_h
+        row_data.append((t("Type", snapshot.language), _status_bar_printer_name(snapshot)))
 
     if snapshot.film_remaining is not None:
-        row(
-            "Film",
-            f"{snapshot.film_remaining}/{snapshot.film_capacity}",
-            body_y,
+        row_data.append(
+            (t("Film", snapshot.language), f"{snapshot.film_remaining}/{snapshot.film_capacity}")
         )
-        body_y += line_h
 
     if snapshot.printer_battery is not None:
         charging = "+" if snapshot.printer_is_charging else ""
@@ -384,38 +519,61 @@ def _ready(
         life = printer_battery_life_text(snapshot)
         if life is not None:
             battery_val = f"{battery_val} ({life})"
-        row("Battery", battery_val, body_y)
-        body_y += line_h
+        row_data.append((t("Battery", snapshot.language), battery_val))
 
     if snapshot.paired_printer is not None:
         bare_id = snapshot.paired_printer.name.removeprefix("INSTAX-")
-        row("Printer", bare_id, body_y)
-        body_y += line_h
+        row_data.append((t("Printer", snapshot.language), bare_id))
 
     if snapshot.hotspot_ssid is not None:
-        row("SSID", snapshot.hotspot_ssid, body_y)
-        body_y += line_h
+        row_data.append((t("SSID", snapshot.language), snapshot.hotspot_ssid))
 
     depth = snapshot.image_queue_depth
     if depth == 1:
-        row("Queue", t("1 photo", snapshot.language), body_y)
+        row_data.append((t("Queue", snapshot.language), t("1 photo", snapshot.language)))
     elif depth > 1:
-        # "N photos" — translate "photos" only; the number is locale-neutral.
-        # Falls back to English when no translation registered.
         photos_word = t("photos", snapshot.language)
-        if photos_word == "photos":  # English passthrough
-            row("Queue", f"{depth} photos", body_y)
+        if photos_word == "photos":
+            row_data.append((t("Queue", snapshot.language), f"{depth} photos"))
         else:
-            row("Queue", f"{depth} {photos_word}", body_y)
+            row_data.append((t("Queue", snapshot.language), f"{depth} {photos_word}"))
+
+    # Distribute rows within the card
+    if row_data:
+        num_rows = len(row_data)
+        row_h = card_h // max(num_rows, 1)
+        row_h = min(row_h, 20)  # cap to avoid oversized rows with few items
+        total_content = num_rows * row_h
+        start_y = card_y + (card_h - total_content) // 2
+
+        for i, (label, value) in enumerate(row_data):
+            ry = start_y + i * row_h
+            row_mid = ry + row_h // 2
+
+            # Label (left, secondary)
+            prefix = f"{label}: "
+            lw = _text_width(draw, prefix, fonts["small"])
+            label_y = row_mid - _font_height(draw, prefix, fonts["small"]) // 2
+            _text(draw, card_x + 10, label_y, prefix, fonts["small"], theme.label_secondary)
+
+            # Value (follows label, primary)
+            _text(
+                draw, card_x + 10 + lw, label_y, value, fonts["small"], theme.label_primary
+            )
+
+            # Hairline after row (except last)
+            if i < num_rows - 1:
+                draw_hairline(draw, card_x + 8, ry + row_h - 1, card_w - 16, theme)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _validation(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     accepting = can_accept_images(snapshot)
     _center_lines(
@@ -423,99 +581,103 @@ def _validation(
         ["Ready" if accepting else "Setup needed"],
         75,
         fonts["large"],
-        TEXT,
+        theme.label_primary,
     )
     causes = readiness_cause_texts(snapshot)
     if not causes:
-        _text(draw, 18, 112, "FTP and printer ready", fonts["body"], TEXT)
-        _text(draw, 18, 132, "Waiting for upload", fonts["small"], MUTED)
+        _text(draw, 18, 112, "FTP and printer ready", fonts["body"], theme.label_primary)
+        _text(draw, 18, 132, "Waiting for upload", fonts["small"], theme.label_secondary)
     else:
-        _text(draw, 18, 112, "Next action", fonts["body"], TEXT)
+        _text(draw, 18, 112, "Next action", fonts["body"], theme.label_primary)
         for index, cause in enumerate(causes[:3]):
-            _text(draw, 18, 132 + index * 17, _ellipsize(cause, 31), fonts["small"], YELLOW)
+            _text(draw, 18, 132 + index * 17, _ellipsize(cause, 31), fonts["small"], theme.accent_yellow)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _no_film(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["No film"], 75, fonts["large"], TEXT)
-    _text(draw, 18, 128, "No-film test is in Settings", fonts["small"], MUTED)
+    _center_lines(draw, ["No film"], 75, fonts["large"], theme.label_primary)
+    _text(draw, 18, 128, "No-film test is in Settings", fonts["small"], theme.label_secondary)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _printer_searching(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     message = snapshot.printer_status_message or "Keep printer awake"
     if message in {"Restart printer", "Close phone app"}:
-        _center_lines(draw, ["Blocked"], 75, fonts["large"], TEXT)
-        _text(draw, 18, 128, "Close phone app or phone BT", fonts["small"], YELLOW)
-        _text(draw, 18, 146, "Power-cycle printer, then retry", fonts["small"], MUTED)
+        _center_lines(draw, ["Blocked"], 75, fonts["large"], theme.label_primary)
+        _text(draw, 18, 128, "Close phone app or phone BT", fonts["small"], theme.accent_yellow)
+        _text(draw, 18, 146, "Power-cycle printer, then retry", fonts["small"], theme.label_secondary)
     elif message == "Printer seen; connecting":
-        _center_lines(draw, ["Connecting"], 75, fonts["large"], TEXT)
-        _text(draw, 18, 128, "Opening Bluetooth session", fonts["small"], TEXT)
-        _text(draw, 18, 146, "If stuck, close phone app", fonts["small"], MUTED)
+        _center_lines(draw, ["Connecting"], 75, fonts["large"], theme.label_primary)
+        _text(draw, 18, 128, "Opening Bluetooth session", fonts["small"], theme.label_primary)
+        _text(draw, 18, 146, "If stuck, close phone app", fonts["small"], theme.label_secondary)
     elif message == "Saw other Instax":
-        _center_lines(draw, ["Wrong one"], 75, fonts["large"], TEXT)
-        _text(draw, 18, 128, "Selected printer not visible", fonts["small"], TEXT)
-        _text(draw, 18, 146, "Turn selected printer on", fonts["small"], YELLOW)
+        _center_lines(draw, ["Wrong one"], 75, fonts["large"], theme.label_primary)
+        _text(draw, 18, 128, "Selected printer not visible", fonts["small"], theme.label_primary)
+        _text(draw, 18, 146, "Turn selected printer on", fonts["small"], theme.accent_yellow)
     elif message in {"Scanning: 0 printers", "No printer signal"}:
         # No BLE signal yet — title names the active state, body gives the
         # action so a power-cycle is the obvious next step.
-        _center_lines(draw, ["Searching"], 75, fonts["large"], TEXT)
-        _text(draw, 18, 128, "Turn printer on and keep awake", fonts["small"], TEXT)
-        _text(draw, 18, 146, "Phone Bluetooth may grab it", fonts["small"], MUTED)
+        _center_lines(draw, ["Searching"], 75, fonts["large"], theme.label_primary)
+        _text(draw, 18, 128, "Turn printer on and keep awake", fonts["small"], theme.label_primary)
+        _text(draw, 18, 146, "Phone Bluetooth may grab it", fonts["small"], theme.label_secondary)
     else:
         # Title states the active state ("Searching"); body (status_message)
         # carries the live retry copy (e.g. "Looking for printer").
-        _center_lines(draw, ["Searching"], 75, fonts["large"], TEXT)
-        _text(draw, 18, 128, _ellipsize(message, 31), fonts["body"], TEXT)
+        _center_lines(draw, ["Searching"], 75, fonts["large"], theme.label_primary)
+        _text(draw, 18, 128, _ellipsize(message, 31), fonts["body"], theme.label_primary)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _printer_offline(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     message = snapshot.printer_status_message or "Printer offline"
     if message == "Checking printer":
-        _center_lines(draw, ["Checking"], 75, fonts["large"], TEXT)
+        _center_lines(draw, ["Checking"], 75, fonts["large"], theme.label_primary)
     elif message == "Hold K3 to re-pair":
-        _center_lines(draw, ["No printer"], 75, fonts["large"], TEXT)
-        _text(draw, 18, 128, "Printer not found nearby", fonts["body"], YELLOW)
+        _center_lines(draw, ["No printer"], 75, fonts["large"], theme.label_primary)
+        _text(draw, 18, 128, "Printer not found nearby", fonts["body"], theme.accent_yellow)
         hints = _mode_hints(snapshot)
-        draw_hint_bar(draw, hints, fonts["hint"])
+        draw_hint_bar(draw, hints, fonts["hint"], theme)
         return
     else:
-        _center_lines(draw, ["Printer off"], 75, fonts["large"], TEXT)
-    _text(draw, 18, 128, "Keep it awake near bridge", fonts["body"], TEXT)
+        _center_lines(draw, ["Printer off"], 75, fonts["large"], theme.label_primary)
+    _text(draw, 18, 128, "Keep it awake near bridge", fonts["body"], theme.label_primary)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _image_received(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["Received"], 75, fonts["large"], TEXT)
+    _center_lines(draw, ["Received"], 75, fonts["large"], theme.label_primary)
     if snapshot.last_image_name is not None:
-        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
-    _text(draw, 18, 148, "Received over FTP", fonts["small"], MUTED)
-    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], MUTED)
+        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], theme.label_primary)
+    _text(draw, 18, 148, "Received over FTP", fonts["small"], theme.label_secondary)
+    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
     # No hint bar for IMAGE_RECEIVED (transitions automatically)
 
 
@@ -524,44 +686,47 @@ def _awaiting_confirm(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     title = snapshot.print_title or "Printing soon"
     detail = _physical_control_text(snapshot.print_detail or "Press K2 to cancel")
     if snapshot.preview_image is not None:
-        draw.rounded_rectangle((18, 42, 222, 151), radius=4, fill=PANEL)
+        # Wrap preview in a card
+        draw_card(draw, 16, 40, 208, 114, theme)
         preview = snapshot.preview_image
         x = 120 - preview.width // 2
         y = 96 - preview.height // 2
         canvas.paste(preview, (x, y))
-        _text(draw, 18, 155, _ellipsize(title, 27), fonts["body"], TEXT)
-        _text(draw, 18, 173, _ellipsize(detail, 31), fonts["small"], YELLOW)
-        _text(draw, 18, 189, _ellipsize(preview_state_text(snapshot), 31), fonts["small"], MUTED)
+        _text(draw, 18, 158, _ellipsize(title, 27), fonts["body"], theme.label_primary)
+        _text(draw, 18, 175, _ellipsize(detail, 31), fonts["small"], theme.accent_yellow)
+        _text(draw, 18, 190, _ellipsize(preview_state_text(snapshot), 31), fonts["small"], theme.label_secondary)
     else:
-        _center_lines(draw, [title], 62, fonts["large"], TEXT)
+        _center_lines(draw, [title], 62, fonts["large"], theme.label_primary)
         if snapshot.last_image_name is not None:
-            _text(draw, 18, 104, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
-        _progress_bar(draw, 18, 128, snapshot.print_progress_percent, BLUE, fonts["small"])
-        _text(draw, 18, 154, _ellipsize(detail, 31), fonts["small"], YELLOW)
-        _text(draw, 18, 172, film_status_text(snapshot), fonts["small"], MUTED)
+            _text(draw, 18, 104, _ellipsize(snapshot.last_image_name, 25), fonts["body"], theme.label_primary)
+        _progress_bar(draw, 18, 128, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme)
+        _text(draw, 18, 154, _ellipsize(detail, 31), fonts["small"], theme.accent_yellow)
+        _text(draw, 18, 172, film_status_text(snapshot), fonts["small"], theme.label_secondary)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _printing(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     title = snapshot.print_title or "Sending to printer"
-    _center_lines(draw, [title], 58, fonts["large"], TEXT)
+    _center_lines(draw, [title], 58, fonts["large"], theme.label_primary)
     detail = snapshot.print_detail or "Working"
-    _text(draw, 18, 96, _ellipsize(detail, 31), fonts["body"], TEXT)
-    _progress_bar(draw, 18, 122, snapshot.print_progress_percent, BLUE, fonts["small"])
+    _text(draw, 18, 96, _ellipsize(detail, 31), fonts["body"], theme.label_primary)
+    _progress_bar(draw, 18, 122, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme)
     if snapshot.last_image_name is not None:
-        _text(draw, 18, 150, _ellipsize(snapshot.last_image_name, 25), fonts["small"], MUTED)
-    _text(draw, 18, 166, printer_model_text(snapshot), fonts["small"], MUTED)
-    _text(draw, 18, 182, "Do not power off", fonts["small"], YELLOW)
+        _text(draw, 18, 150, _ellipsize(snapshot.last_image_name, 25), fonts["small"], theme.label_secondary)
+    _text(draw, 18, 166, printer_model_text(snapshot), fonts["small"], theme.label_secondary)
+    _text(draw, 18, 182, "Do not power off", fonts["small"], theme.accent_yellow)
     # No hint bar for PRINTING
 
 
@@ -569,12 +734,13 @@ def _print_complete(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["Sent"], 75, fonts["large"], TEXT)
+    _center_lines(draw, ["Sent"], 75, fonts["large"], theme.label_primary)
     if snapshot.last_image_name is not None:
-        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
-    _text(draw, 18, 148, "Film should feed now", fonts["small"], MUTED)
-    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], MUTED)
+        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], theme.label_primary)
+    _text(draw, 18, 148, "Film should feed now", fonts["small"], theme.label_secondary)
+    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
     # No hint bar for PRINT_COMPLETE (auto-returns home)
 
 
@@ -582,26 +748,28 @@ def _needs_pairing(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["No printer"], 75, fonts["large"], TEXT)
-    _menu_item(draw, 122, "Find printer", selected=True, font=fonts["body"])
-    _text(draw, 18, 162, "Turn on printer first", fonts["small"], MUTED)
-    _text(draw, 18, 178, "Then press K1", fonts["small"], MUTED)
+    _center_lines(draw, ["No printer"], 75, fonts["large"], theme.label_primary)
+    _menu_item(draw, 122, "Find printer", selected=True, font=fonts["body"], theme=theme)
+    _text(draw, 18, 162, "Turn on printer first", fonts["small"], theme.label_secondary)
+    _text(draw, 18, 178, "Then press K1", fonts["small"], theme.label_secondary)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _settings(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     rows = snapshot.settings_rows
     font = fonts["small"]
     if not rows:
-        _text(draw, 18, 58, "No settings available", fonts["body"], TEXT)
-        draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"])
+        _text(draw, 18, 58, "No settings available", fonts["body"], theme.label_primary)
+        draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
         return
 
     _font_scale, row_scale = _scale_for_snapshot(snapshot)
@@ -618,13 +786,13 @@ def _settings(
     help_text = selected_row.help if selected_row.help else ""
     if toast_message is not None:
         bottom_text = toast_message
-        bottom_color = YELLOW
+        bottom_color = theme.accent_yellow
     elif help_text:
         bottom_text = help_text
-        bottom_color = MUTED
+        bottom_color = theme.label_secondary
     else:
         bottom_text = ""
-        bottom_color = MUTED
+        bottom_color = theme.label_secondary
 
     # Reserve the last visible row slot for the bottom line only when we have
     # something to show there, so it never overlaps with row content.
@@ -634,14 +802,15 @@ def _settings(
 
     start = min(max(0, selected - 4), max(0, len(rows) - visible_count))
 
+    # Draw the full-page card backdrop behind the rows
+    card_top = STATUS_BAR_H + 2
+    card_bottom = HINT_BAR_Y - 4
+    card_h = card_bottom - card_top
+    draw_card(draw, 12, card_top, 216, card_h, theme)
+
     for offset, row in enumerate(rows[start : start + visible_count]):
         index = start + offset
         y = STATUS_BAR_H + 4 + offset * row_height
-        # Translate the label (stable English source string). Values are
-        # left in their source form because they're mixed data + labels:
-        # printer serials and FTP credentials should never be translated,
-        # while option labels (e.g. "Hotspot") are short enough that the
-        # user can recognise them in either language.
         draw_settings_row(
             draw,
             y,
@@ -650,13 +819,19 @@ def _settings(
             row.hint,
             selected=index == selected,
             font=font,
+            theme=theme,
+            row_height=row_height,
         )
+        # Hairline between rows (not after last visible row)
+        if offset < visible_count - 1:
+            separator_y = y + row_height
+            draw_hairline(draw, 16, separator_y, 210, theme)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
     # Bottom line occupies the slot below the last visible row (which we reserved
-    # above by reducing visible_count). Toast is YELLOW; help text is MUTED.
+    # above by reducing visible_count). Toast is accent_yellow; help text is label_secondary.
     if bottom_shown:
         bottom_y = STATUS_BAR_H + 4 + visible_count * row_height
         fitted = _fit_text_to_width(draw, bottom_text, font, 220)
@@ -667,46 +842,49 @@ def _pairing(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["Searching"], 70, fonts["large"], TEXT)
-    _text(draw, 18, 128, "Keep printer awake", fonts["body"], TEXT)
-    _text(draw, 18, 150, "Close phone app if it fails", fonts["small"], MUTED)
+    _center_lines(draw, ["Searching"], 70, fonts["large"], theme.label_primary)
+    _text(draw, 18, 128, "Keep printer awake", fonts["body"], theme.label_primary)
+    _text(draw, 18, 150, "Close phone app if it fails", fonts["small"], theme.label_secondary)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _pair_failed(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
-    _center_lines(draw, ["Failed"], 75, fonts["large"], TEXT)
+    _center_lines(draw, ["Failed"], 75, fonts["large"], theme.label_primary)
     message = snapshot.message or "No INSTAX printer found"
     for index, line in enumerate(_wrap_words(message, 24)[:2]):
-        _text(draw, 18, 126 + index * 17, line, fonts["small"], TEXT)
+        _text(draw, 18, 126 + index * 17, line, fonts["small"], theme.label_primary)
     if len(_wrap_words(message, 24)) < 2:
-        _text(draw, 18, 143, "Turn printer on first", fonts["small"], MUTED)
-    _menu_item(draw, 162, "Try again", selected=True, font=fonts["body"])
+        _text(draw, 18, 143, "Turn printer on first", fonts["small"], theme.label_secondary)
+    _menu_item(draw, 162, "Try again", selected=True, font=fonts["body"], theme=theme)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 def _error(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
+    theme: Theme,
 ) -> None:
     title, detail, hint = error_copy_for_message(snapshot.message)
-    _center_lines(draw, _wrap_words(title, 16)[:2], 50, fonts["large"], TEXT)
+    _center_lines(draw, _wrap_words(title, 16)[:2], 50, fonts["large"], theme.label_primary)
     for index, line in enumerate(_wrap_words(detail, 27)[:2]):
-        _text(draw, 18, 126 + index * 17, line, fonts["small"], TEXT)
+        _text(draw, 18, 126 + index * 17, line, fonts["small"], theme.label_primary)
     if hint is not None:
-        _text(draw, 18, 165, _ellipsize(hint, 31), fonts["small"], YELLOW)
+        _text(draw, 18, 165, _ellipsize(hint, 31), fonts["small"], theme.accent_yellow)
 
     hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"])
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
 # ---------------------------------------------------------------------------
@@ -779,9 +957,12 @@ def _menu_item(
     *,
     selected: bool,
     font: Font,
+    theme: Theme | None = None,
 ) -> None:
-    fill = BLUE if selected else PANEL
-    text_fill = TEXT if selected else MUTED
+    if theme is None:
+        theme = theme_for("light")
+    fill = theme.accent_blue if selected else theme.surface
+    text_fill = theme.label_inverse if selected else theme.label_secondary
     draw.rounded_rectangle((18, y, 222, y + 24), radius=4, fill=fill)
     prefix = ">" if selected else " "
     _text(draw, 28, y + 5, f"{prefix} {label}", font, text_fill)
@@ -794,20 +975,23 @@ def _progress_bar(
     percent: int | None,
     fill: str,
     font: Font,
+    theme: Theme | None = None,
 ) -> None:
+    if theme is None:
+        theme = theme_for("light")
     if percent is None:
-        _text(draw, x, y + 2, "Progress: working...", font, MUTED)
+        _text(draw, x, y + 2, "Progress: working...", font, theme.label_secondary)
         return
     bounded = max(0, min(100, percent))
     width = 204
     height = 12
-    draw.rounded_rectangle((x, y, x + width, y + height), radius=3, fill=PANEL)
+    draw.rounded_rectangle((x, y, x + width, y + height), radius=3, fill=theme.surface)
     if bounded > 0:
         filled = max(4, int(width * bounded / 100))
         draw.rounded_rectangle((x, y, x + filled, y + height), radius=3, fill=fill)
     label = f"{bounded}%"
     label_width = _text_width(draw, label, font)
-    _text(draw, x + width - label_width, y + 16, label, font, MUTED)
+    _text(draw, x + width - label_width, y + 16, label, font, theme.label_secondary)
 
 
 def _center_lines(
@@ -833,6 +1017,11 @@ def _text(
     fill: str,
 ) -> None:
     draw.text((x, y), text, fill=fill, font=font)
+
+
+def _font_height(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return int(bbox[3] - bbox[1])
 
 
 def _mode_chrome(mode: UiMode) -> tuple[str, str]:

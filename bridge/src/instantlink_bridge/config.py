@@ -67,6 +67,19 @@ class FontSize(StrEnum):
     LARGE = "large"
 
 
+class UiAppearance(StrEnum):
+    """User-selectable LCD appearance (light / dark / system).
+
+    SYSTEM tracks an ambient signal if hardware adds one in the future;
+    today it falls through to LIGHT in the renderer because the bridge
+    has no ambient sensor.
+    """
+
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"
+
+
 class UiLanguage(StrEnum):
     """User-selectable LCD languages (BCP 47 tags).
 
@@ -310,6 +323,7 @@ class UiConfig:
     font_size: FontSize = FontSize.MEDIUM
     status_sink: StatusSinkKind = StatusSinkKind.LCD
     language: UiLanguage = UiLanguage.EN
+    appearance: UiAppearance = UiAppearance.LIGHT
 
 
 @dataclass(frozen=True, slots=True)
@@ -446,6 +460,7 @@ def render_config(config: BridgeConfig) -> str:
             f"font_size = {_toml_string(config.ui.font_size.value)}",
             f"status_sink = {_toml_string(config.ui.status_sink.value)}",
             f"language = {_toml_string(config.ui.language.value)}",
+            f"appearance = {_toml_string(config.ui.appearance.value)}",
             "",
         ]
     )
@@ -595,6 +610,7 @@ def _load_ui_config(data: object) -> UiConfig:
         font_size=parse_font_size(data.get("font_size", FontSize.MEDIUM.value)),
         status_sink=parse_status_sink(data.get("status_sink", StatusSinkKind.LCD.value)),
         language=parse_ui_language(data.get("language", UiLanguage.EN.value)),
+        appearance=parse_ui_appearance(data.get("appearance", UiAppearance.LIGHT.value)),
     )
 
 
@@ -629,6 +645,17 @@ def parse_status_sink(value: object) -> StatusSinkKind:
     except ValueError as exc:
         allowed = ", ".join(s.value for s in StatusSinkKind)
         raise ValueError(f"[ui].status_sink must be one of: {allowed}") from exc
+
+
+def parse_ui_appearance(value: object) -> UiAppearance:
+    """Parse a configured LCD appearance (light / dark / system)."""
+
+    text = str(value).strip().lower()
+    try:
+        return UiAppearance(text)
+    except ValueError as exc:
+        allowed = ", ".join(a.value for a in UiAppearance)
+        raise ValueError(f"[ui].appearance must be one of: {allowed}") from exc
 
 
 def parse_ui_language(value: object) -> UiLanguage:

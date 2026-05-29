@@ -35,9 +35,10 @@ STATUS_BAR_H = 36  # top status bar — 6 px taller than v1 so the pill has
 # breathing room above + below (was 30 with pill almost touching the screen
 # edge). BODY_TOP adapts via the formula below; body renderers already use
 # STATUS_BAR_H + offset so no per-mode shift is needed.
-HINT_BAR_H = 32  # hint bar — taller to host two-line K-chips. Each chip
-# stacks the key label (K1/K2/K3) on line 1 and the action label on line 2,
-# which doubles the horizontal width budget per action.
+HINT_BAR_H = 40  # hint bar — sized for two-line K-chips with generous
+# padding. Each chip stacks the key label (KEY1/KEY2/KEY3) on line 1 and
+# the action label on line 2; both render in the slightly-larger hint
+# font (12 pt vs the previous 10) so the labels read at arm's length.
 HINT_BAR_Y = 240 - HINT_BAR_H  # top of hint bar row
 BODY_TOP = STATUS_BAR_H + 4  # first usable body y
 TOAST_Y = HINT_BAR_Y - 12  # settings_message toast y — sits between card
@@ -62,7 +63,7 @@ _BASE_FONTS: dict[str, int] = {
     "body": 14,
     "title": 17,
     "large": 22,
-    "hint": 10,
+    "hint": 12,
 }
 
 # Base row height at MEDIUM (architect's spec).
@@ -431,13 +432,12 @@ def draw_hint_bar(
     zone_w = 80
     zone_max = zone_w - 8  # 4 px padding each side
     centers = (40, 120, 200)
-    # Pill is sized to host two lines comfortably. Single-line hints centre
-    # vertically inside the same chip so all three chips share one height.
-    # pill_h trimmed from HINT_BAR_H - 6 → HINT_BAR_H - 10 so the chip leaves
-    # 5 px clear above + below it (was 3 px below), giving the bottom row
-    # breathing room from the screen edge — matches the top pill's gap.
-    pill_h = HINT_BAR_H - 10
-    pill_radius = 8
+    # Pill sized to host two lines comfortably with breathing room above
+    # and below inside the band. HINT_BAR_H - 8 yields a 32 px chip that
+    # leaves ~4 px clear above + below it (matches the top pill's
+    # symmetric gap from the screen edge).
+    pill_h = HINT_BAR_H - 8
+    pill_radius = 10
 
     for text, cx in zip((left, center, right), centers, strict=True):
         if not text:

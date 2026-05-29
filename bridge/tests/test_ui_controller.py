@@ -3150,7 +3150,9 @@ async def test_reset_credentials_requires_confirmation(
     # First SELECT should show confirmation prompt, not execute
     await ui._handle_action(UiAction.SELECT)
 
-    assert "confirm" in (display.snapshots[-1].settings_message or "").lower()
+    # New copy: "Press KEY1 again to RESET Wi-Fi/FTP credentials" — match
+    # the pattern shared with other destructive-confirm toasts.
+    assert "press key1 again to reset" in (display.snapshots[-1].settings_message or "").lower()
     assert ssid_path.read_text(encoding="utf-8") == "InstantLink-ORIG\n"
     assert psk_path.read_text(encoding="utf-8") == "11111111\n"
     assert ui._pending_credential_reset is True

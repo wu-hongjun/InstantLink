@@ -1424,10 +1424,46 @@ class BridgeUi:
     async def _confirm_or_reset_credentials(self) -> None:
         if not self._pending_credential_reset:
             self._pending_credential_reset = True
-            self._show_settings("Reset Wi-Fi/FTP creds? K1 confirm K2 cancel")
+            self._show_settings("Press KEY1 again to RESET Wi-Fi/FTP credentials")
             return
         self._pending_credential_reset = False
         await self._reset_credentials()
+
+    def _atomic_write_credential_file(self, path: Path, contents: str) -> bool:
+        """Write ``contents`` to ``path`` via temp-file + rename.
+
+        Direct ``write_text`` fails when the target file is owned by root
+        with mode 0644: we have read but not write on the file itself. The
+        parent dir IS group-writable (drwxrws--- root:ib), so we create a
+        sibling temp file (which inherits group ``ib`` via the setgid bit),
+        chmod it 0600, and atomically rename over the target. The rename
+        replaces the root-owned file with a fresh ib-owned one.
+        """
+
+        import tempfile
+
+        try:
+            parent = path.parent
+            fd, tmp_name = tempfile.mkstemp(
+                prefix=f".{path.name}.", suffix=".tmp", dir=str(parent)
+            )
+            tmp_path = Path(tmp_name)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as fp:
+                    fp.write(contents)
+                os.chmod(tmp_path, 0o600)
+                os.replace(tmp_path, path)
+            except Exception:
+                # Best-effort cleanup of the abandoned temp file.
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+                raise
+        except OSError:
+            LOGGER.exception("bridge.credentials_atomic_write_failed path=%s", path)
+            return False
+        return True
 
     async def _reset_credentials(self) -> None:
         new_ssid = f"InstantLink-{secrets.token_hex(2).upper()}"
@@ -1435,37 +1471,20 @@ class BridgeUi:
         new_ftp_pw = f"{secrets.randbelow(90_000_000) + 10_000_000}"
         LOGGER.info("bridge.credentials_reset ssid=%s", new_ssid)
 
-        # Write SSID file
+        # The existing hotspot.{ssid,psk} files were provisioned root-owned
+        # with mode 0644/0640 — the bridge runs as `ib` and has only read
+        # access on the files themselves, so a plain write_text on them
+        # raises PermissionError. The parent /etc/InstantLinkBridge dir is
+        # group-writable (drwxrws--- root:ib), so write to a sibling temp
+        # file and atomically rename over the target. The setgid s-bit on
+        # the dir gives the new file group `ib` automatically.
         ssid_path = _hotspot_ssid_file()
-        try:
-            ssid_path.write_text(new_ssid + "\n", encoding="utf-8")
-            os.chmod(ssid_path, 0o600)
-            try:
-                import pwd
-
-                pw = pwd.getpwnam("ib")
-                os.chown(ssid_path, pw.pw_uid, pw.pw_gid)
-            except (ImportError, KeyError):
-                pass
-        except OSError:
-            LOGGER.exception("bridge.credentials_reset_ssid_write_failed path=%s", ssid_path)
+        if not self._atomic_write_credential_file(ssid_path, new_ssid + "\n"):
             self._show_settings("Credential write failed")
             return
 
-        # Write PSK file
         psk_path = _hotspot_psk_file()
-        try:
-            psk_path.write_text(new_psk + "\n", encoding="utf-8")
-            os.chmod(psk_path, 0o600)
-            try:
-                import pwd
-
-                pw = pwd.getpwnam("ib")
-                os.chown(psk_path, pw.pw_uid, pw.pw_gid)
-            except (ImportError, KeyError):
-                pass
-        except OSError:
-            LOGGER.exception("bridge.credentials_reset_psk_write_failed path=%s", psk_path)
+        if not self._atomic_write_credential_file(psk_path, new_psk + "\n"):
             self._show_settings("Credential write failed")
             return
 
@@ -1559,9 +1578,11 @@ class BridgeUi:
         if key is SettingKey.RESET_PRINTER_LINK:
             return SettingsRow("Reset BLE link", "run")
         if key is SettingKey.FORGET_AND_REPAIR:
+            # Two-press confirm (KEY1 again) — not a hold. The actual
+            # instruction lives in the toast after the first press.
             return SettingsRow(
                 "Forget & re-pair",
-                "Hold K1" if self._snapshot.paired_printer else "none",
+                "saved" if self._snapshot.paired_printer else "none",
             )
         if key is SettingKey.FORGET_PRINTER:
             return SettingsRow(
@@ -1648,7 +1669,10 @@ class BridgeUi:
         if key is SettingKey.APPEARANCE:
             return SettingsRow("Appearance", appearance_label(self._config.ui.appearance))
         if key is SettingKey.RESET_CREDENTIALS:
-            return SettingsRow("Reset credentials", "Hold K1")
+            # No "Hold K1" — the action is a two-press confirm, not a
+            # hold. The actual instruction lives in the toast that
+            # appears after the first KEY1 press.
+            return SettingsRow("Reset credentials", "")
         return SettingsRow("Unknown", "")
 
     def _settings_row_help(self, key: SettingKey) -> str:

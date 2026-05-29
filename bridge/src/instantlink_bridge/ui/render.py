@@ -22,331 +22,164 @@ RED = "#e15554"
 BLUE = "#3d8bfd"
 BLACK = "#05080c"
 
+# Vertical layout constants
+STATUS_BAR_H = 30  # top status bar height (single line)
+HINT_BAR_Y = 220  # top of hint bar row (240 - 20)
+BODY_TOP = STATUS_BAR_H + 4  # first usable body y
+TOAST_Y = 208  # settings_message toast y
+
 
 def render_snapshot(snapshot: UiSnapshot) -> Image.Image:
     """Render one UI frame."""
 
     image = Image.new("RGB", LCD_SIZE, BG)
     draw = ImageDraw.Draw(image)
-    font_small = _font(11)
-    font_body = _font(14)
-    font_title = _font(18)
-    font_large = _font(22)
+    fonts: dict[str, Font] = {
+        "small": _font(10),
+        "body": _font(14),
+        "title": _font(17),
+        "large": _font(22),
+        "hint": _font(10),
+    }
 
-    accent, title = _snapshot_chrome(snapshot)
-    _header(
-        draw,
-        title,
-        accent,
-        top_bar_status_text(snapshot),
-        bridge_power_header_text(snapshot),
-        font_title,
-        font_small,
-    )
+    draw_status_bar(draw, snapshot, fonts)
 
     if snapshot.mode is UiMode.READY:
-        _ready(draw, snapshot, font_large, font_body, font_small)
+        _ready(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.SETTINGS:
-        _settings(draw, snapshot, font_body, font_small)
+        _settings(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.VALIDATION:
-        _validation(draw, snapshot, font_large, font_body, font_small)
+        _validation(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.NO_FILM:
-        _no_film(draw, snapshot, font_large, font_body, font_small)
+        _no_film(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.PRINTER_SEARCHING:
-        _printer_searching(draw, snapshot, font_large, font_body, font_small)
+        _printer_searching(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.PRINTER_OFFLINE:
-        _printer_offline(draw, snapshot, font_large, font_body, font_small)
+        _printer_offline(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.IMAGE_RECEIVED:
-        _image_received(draw, snapshot, font_large, font_body, font_small)
+        _image_received(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.AWAITING_CONFIRM:
-        _awaiting_confirm(image, draw, snapshot, font_large, font_body, font_small)
+        _awaiting_confirm(image, draw, snapshot, fonts)
     elif snapshot.mode is UiMode.PRINTING:
-        _printing(draw, snapshot, font_large, font_body, font_small)
+        _printing(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.PRINT_COMPLETE:
-        _print_complete(draw, snapshot, font_large, font_body, font_small)
+        _print_complete(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.PAIRING:
-        _pairing(draw, snapshot, font_large, font_body, font_small)
+        _pairing(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.PAIR_FAILED:
-        _pair_failed(draw, snapshot, font_large, font_body, font_small)
+        _pair_failed(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.ERROR:
-        _error(draw, snapshot, font_large, font_body, font_small)
+        _error(draw, snapshot, fonts)
     elif snapshot.mode is UiMode.BOOTING:
-        _center_lines(draw, ["Starting", "Checking printer"], 70, font_large, TEXT)
+        _booting(draw, snapshot, fonts)
     else:
-        _needs_pairing(draw, snapshot, font_large, font_body, font_small)
+        _needs_pairing(draw, snapshot, fonts)
 
-    _footer(draw, snapshot, font_small)
     return image
 
 
-def _header(
+# ---------------------------------------------------------------------------
+# New building-block helpers
+# ---------------------------------------------------------------------------
+
+
+def draw_status_bar(
     draw: ImageDraw.ImageDraw,
-    title: str,
-    accent: str,
-    status: str | None,
-    power: str | None,
-    font_title: Font,
-    font_small: Font,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
 ) -> None:
-    draw.rectangle((0, 0, 239, 36), fill=accent)
-    title_max_width = 132 if power is not None else 220
-    _text(
-        draw,
-        10,
-        3 if status else 8,
-        _fit_text_to_width(draw, _sentence_case(title), font_title, title_max_width),
-        font_title,
-        BLACK,
+    """Draw the single-line 30px status bar.
+
+    Layout (left to right):
+      [dot]  printer-name          film/battery  bridge-battery
+
+    The mode name never appears here — it belongs only in the body title.
+    """
+
+    accent, _ = _snapshot_chrome(snapshot)
+    font_small = fonts["small"]
+
+    # Background
+    draw.rectangle((0, 0, 239, STATUS_BAR_H - 1), fill=PANEL)
+
+    # Status dot (6px filled circle, mode accent colour)
+    dot_x, dot_y, dot_r = 8, STATUS_BAR_H // 2, 3
+    draw.ellipse(
+        (dot_x - dot_r, dot_y - dot_r, dot_x + dot_r, dot_y + dot_r),
+        fill=accent,
     )
-    if power is not None:
-        power = _fit_text_to_width(draw, power, font_small, 86)
-        width = _text_width(draw, power, font_small)
-        _text(draw, max(144, 230 - width), 6, power, font_small, BLACK)
-    if status is not None:
-        _text(
-            draw,
-            10,
-            23,
-            _fit_text_to_width(draw, status, font_small, 220),
-            font_small,
-            BLACK,
-        )
 
-
-def _ready(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    accepting = can_accept_images(snapshot)
-    if not accepting:
-        _validation(draw, snapshot, font_large, font_body, font_small)
-        return
-    _center_lines(draw, ["Ready", "to print"], 64, font_large, TEXT)
-    _text(draw, 18, 128, "Waiting for upload", font_body, TEXT)
-    _text(draw, 18, 150, "Next photo prints in order", font_small, MUTED)
-
-
-def _validation(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    accepting = can_accept_images(snapshot)
-    _center_lines(draw, ["Ready to print" if accepting else "Setup needed"], 62, font_large, TEXT)
-    causes = readiness_cause_texts(snapshot)
-    if not causes:
-        _text(draw, 18, 112, "FTP and printer ready", font_body, TEXT)
-        _text(draw, 18, 137, "Waiting for upload", font_small, MUTED)
-        return
-    _text(draw, 18, 112, "Next action", font_body, TEXT)
-    for index, cause in enumerate(causes[:3]):
-        _text(draw, 18, 137 + index * 17, _ellipsize(cause, 31), font_small, YELLOW)
-
-
-def _no_film(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    _center_lines(draw, ["Replace", "film pack"], 62, font_large, TEXT)
-    _text(draw, 18, 130, "No-film test is in Settings", font_small, MUTED)
-    _text(draw, 18, 148, "KEY1 opens Settings", font_small, YELLOW)
-
-
-def _printer_searching(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    message = snapshot.printer_status_message or "Keep printer awake"
-    if message in {"Restart printer", "Close phone app"}:
-        _center_lines(draw, ["Printer seen", "connect blocked"], 58, font_large, TEXT)
-        _text(draw, 18, 130, "Close phone app or phone BT", font_small, YELLOW)
-        _text(draw, 18, 148, "Power-cycle printer, then retry", font_small, MUTED)
-        return
-    if message == "Printer seen; connecting":
-        _center_lines(draw, ["Printer seen", "connecting"], 58, font_large, TEXT)
-        _text(draw, 18, 130, "Opening Bluetooth session", font_small, TEXT)
-        _text(draw, 18, 148, "If stuck, close phone app", font_small, MUTED)
-        return
-    if message == "Saw other Instax":
-        _center_lines(draw, ["Other printer", "seen"], 58, font_large, TEXT)
-        _text(draw, 18, 130, "Selected printer not visible", font_small, TEXT)
-        _text(draw, 18, 148, "Hold KEY3 to choose again", font_small, YELLOW)
-        return
-    if message in {"Scanning: 0 printers", "No printer signal"}:
-        _center_lines(draw, ["Looking for", "printer"], 58, font_large, TEXT)
-        _text(draw, 18, 130, "Turn printer on and keep awake", font_small, TEXT)
-        _text(draw, 18, 148, "Phone Bluetooth may grab it", font_small, MUTED)
-        return
-    _center_lines(draw, ["Finding", "printer"], 62, font_large, TEXT)
-    _text(draw, 18, 130, "Turn selected printer on", font_body, TEXT)
-    _text(draw, 18, 152, _ellipsize(message, 31), font_small, MUTED)
-
-
-def _printer_offline(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    message = snapshot.printer_status_message or "Printer offline"
-    if message == "Checking printer":
-        _center_lines(draw, ["Checking", "printer"], 62, font_large, TEXT)
-    elif message == "Hold K3 to re-pair":
-        _center_lines(draw, ["Select", "printer"], 62, font_large, TEXT)
-        _text(draw, 18, 130, "Hold KEY3 to scan again", font_body, YELLOW)
-        return
+    # Printer name (left, after dot)
+    if snapshot.paired_printer is not None:
+        printer_name = snapshot.paired_printer.name
     else:
-        _center_lines(draw, ["Turn", "printer on"], 62, font_large, TEXT)
-    _text(draw, 18, 130, "Keep it awake near bridge", font_body, TEXT)
-    _text(draw, 18, 152, "KEY2 refreshes status", font_small, MUTED)
+        printer_name = "No printer"
+
+    # Right side: bridge battery (outermost) then film+printer-battery chip
+    right_parts: list[str] = []
+    power = bridge_power_header_text(snapshot)
+    if power is not None:
+        right_parts.append(power)
+
+    film_battery = _status_bar_printer_chip(snapshot)
+    if film_battery is not None:
+        right_parts.insert(0, film_battery)
+
+    right_text = "  ".join(right_parts) if right_parts else ""
+    right_width = _text_width(draw, right_text, font_small) if right_text else 0
+    right_x = 232 - right_width
+
+    # Printer name — fitted to avoid overlap with right side
+    name_max = max(0, right_x - 18 - 4)
+    fitted_name = _fit_text_to_width(draw, printer_name, font_small, name_max)
+    name_y = STATUS_BAR_H // 2 - 5  # vertically centred for 10px font
+    _text(draw, 18, name_y, fitted_name, font_small, TEXT)
+
+    if right_text:
+        _text(draw, right_x, name_y, right_text, font_small, MUTED)
 
 
-def _image_received(
+def draw_body_message(
     draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
+    lines: list[tuple[str, str]],
+    start_y: int,
+    fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Image", "received"], 55, font_large, TEXT)
-    if snapshot.last_image_name is not None:
-        _text(draw, 18, 128, _ellipsize(snapshot.last_image_name, 25), font_body, TEXT)
-    _text(draw, 18, 151, "Received over FTP", font_small, MUTED)
-    _text(draw, 18, 168, film_status_text(snapshot), font_small, MUTED)
+    """Draw a list of (text, color) lines stacked from start_y with 18px spacing."""
+
+    y = start_y
+    for text, color in lines:
+        _text(draw, 18, y, text, fonts["body"], color)
+        y += 18
 
 
-def _awaiting_confirm(
-    canvas: Image.Image,
+def draw_hint_bar(
     draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
+    hints: tuple[str, str, str],
+    font: Font,
 ) -> None:
-    title = snapshot.print_title or "Printing soon"
-    detail = _physical_control_text(snapshot.print_detail or "Press KEY2 to cancel")
-    if snapshot.preview_image is not None:
-        draw.rounded_rectangle((18, 68, 222, 151), radius=4, fill=PANEL)
-        preview = snapshot.preview_image
-        x = 120 - preview.width // 2
-        y = 109 - preview.height // 2
-        canvas.paste(preview, (x, y))
-        _text(draw, 18, 155, _ellipsize(title, 27), font_body, TEXT)
-        _text(draw, 18, 173, _ellipsize(detail, 31), font_small, YELLOW)
-        _text(draw, 18, 187, _ellipsize(preview_state_text(snapshot), 31), font_small, MUTED)
-        return
-    _center_lines(draw, [title], 66, font_large, TEXT)
-    if snapshot.last_image_name is not None:
-        _text(draw, 18, 108, _ellipsize(snapshot.last_image_name, 25), font_body, TEXT)
-    _progress_bar(draw, 18, 134, snapshot.print_progress_percent, BLUE, font_small)
-    _text(draw, 18, 158, _ellipsize(detail, 31), font_small, YELLOW)
-    _text(draw, 18, 176, film_status_text(snapshot), font_small, MUTED)
+    """Draw the single-row hint bar at the bottom of the screen.
+
+    ``hints`` is a (left, center, right) triple of glyph/label strings.
+    Empty strings are not drawn. Center text is centered at x=120.
+    """
+
+    draw.rectangle((0, HINT_BAR_Y - 2, 239, 239), fill=PANEL)
+    left, center, right = hints
+    x_left = 8
+    x_right = 232
+    if left:
+        _text(draw, x_left, HINT_BAR_Y, _fit_text_to_width(draw, left, font, 74), font, MUTED)
+    if center:
+        cw = _text_width(draw, center, font)
+        _text(draw, 120 - cw // 2, HINT_BAR_Y, center, font, MUTED)
+    if right:
+        rw = _text_width(draw, right, font)
+        fitted_right = _fit_text_to_width(draw, right, font, 74)
+        _text(draw, x_right - rw, HINT_BAR_Y, fitted_right, font, MUTED)
 
 
-def _printing(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    title = snapshot.print_title or "Sending to printer"
-    _center_lines(draw, [title], 58, font_large, TEXT)
-    detail = snapshot.print_detail or "Working"
-    _text(draw, 18, 98, _ellipsize(detail, 31), font_body, TEXT)
-    _progress_bar(draw, 18, 126, snapshot.print_progress_percent, BLUE, font_small)
-    if snapshot.last_image_name is not None:
-        _text(draw, 18, 153, _ellipsize(snapshot.last_image_name, 25), font_small, MUTED)
-    _text(draw, 18, 170, printer_model_text(snapshot), font_small, MUTED)
-    _text(draw, 18, 186, "Do not power off", font_small, YELLOW)
-
-
-def _print_complete(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    _center_lines(draw, ["Print", "sent"], 55, font_large, TEXT)
-    if snapshot.last_image_name is not None:
-        _text(draw, 18, 128, _ellipsize(snapshot.last_image_name, 25), font_body, TEXT)
-    _text(draw, 18, 151, "Film should feed now", font_small, MUTED)
-    _text(draw, 18, 168, film_status_text(snapshot), font_small, MUTED)
-
-
-def _needs_pairing(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    _center_lines(draw, ["No printer", "selected"], 58, font_large, TEXT)
-    _menu_item(draw, 124, "Find printer", selected=True, font=font_body)
-    _text(draw, 18, 164, "Turn on printer first", font_small, MUTED)
-    _text(draw, 18, 178, "Then press KEY1", font_small, MUTED)
-
-
-def _settings(
-    draw: ImageDraw.ImageDraw,
-    snapshot: UiSnapshot,
-    font_body: Font,
-    font_small: Font,
-) -> None:
-    rows = snapshot.settings_rows
-    if not rows:
-        _text(draw, 18, 58, "No settings available", font_body, TEXT)
-        return
-    visible_count = 5
-    selected = min(snapshot.selected_index, len(rows) - 1)
-    selected_row = rows[selected]
-    message = snapshot.settings_message or selected_row.hint or "Up/Dn move KEY1 OK KEY2 Back"
-    position = f"{selected + 1}/{len(rows)}"
-    position_width = _text_width(draw, position, font_small)
-    position_x = 222 - position_width
-    _text(
-        draw,
-        18,
-        42,
-        _fit_text_to_width(
-            draw,
-            _physical_control_text(message),
-            font_small,
-            max(0, position_x - 24),
-        ),
-        font_small,
-        MUTED,
-    )
-    _text(draw, position_x, 42, position, font_small, MUTED)
-    start = min(max(0, selected - 2), max(0, len(rows) - visible_count))
-    for offset, row in enumerate(rows[start : start + visible_count]):
-        index = start + offset
-        y = 58 + offset * 27
-        _settings_row(
-            draw,
-            y,
-            row.label,
-            row.value,
-            row.hint,
-            selected=index == selected,
-            font=font_small,
-        )
-
-
-def _settings_row(
+def draw_settings_row(
     draw: ImageDraw.ImageDraw,
     y: int,
     label: str,
@@ -356,74 +189,355 @@ def _settings_row(
     selected: bool,
     font: Font,
 ) -> None:
-    fill = BLUE if selected else PANEL
+    """Draw a flat 2-column settings row with a 3px GREEN left accent when selected."""
+
+    bg = PANEL
     text_fill = TEXT if selected else MUTED
-    draw.rounded_rectangle((14, y, 226, y + 24), radius=4, fill=fill)
+    draw.rectangle((14, y, 226, y + 19), fill=bg)
+    # 3px green left accent on selected row
+    accent_color = GREEN if selected else PANEL
+    draw.rectangle((14, y, 17, y + 19), fill=accent_color)
+
     kind = _settings_row_kind(hint)
     marker, marker_fill = _settings_row_marker(kind, selected)
-    draw.rounded_rectangle((16, y + 3, 20, y + 21), radius=2, fill=marker_fill)
-    prefix = ">" if selected else " "
-    _text(draw, 24, y + 5, f"{prefix} {_fit_text_to_width(draw, label, font, 94)}", font, text_fill)
+
+    label_max = 94
+    _text(draw, 22, y + 3, _fit_text_to_width(draw, label, font, label_max), font, text_fill)
+
     marker_width = _text_width(draw, marker, font) if marker else 0
-    marker_x = 216 - marker_width
+    marker_x = 218 - marker_width
     if marker:
-        _text(draw, marker_x, y + 5, marker, font, marker_fill)
-    value_right = marker_x - 6 if marker else 216
-    value_text = _fit_text_to_width(draw, value, font, max(0, value_right - 130))
+        _text(draw, marker_x, y + 3, marker, font, marker_fill if not selected else TEXT)
+
+    value_right = marker_x - 4 if marker else 218
+    value_text = _fit_text_to_width(draw, value, font, max(0, value_right - 122))
     value_width = _text_width(draw, value_text, font)
-    _text(draw, max(130, value_right - value_width), y + 5, value_text, font, text_fill)
+    _text(draw, max(122, value_right - value_width), y + 3, value_text, font, text_fill)
+
+
+# ---------------------------------------------------------------------------
+# Mode renderers
+# ---------------------------------------------------------------------------
+
+
+def _booting(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    _center_lines(draw, ["Starting", "Checking printer"], 70, fonts["large"], TEXT)
+    # No hint bar for BOOTING
+
+
+def _ready(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    accepting = can_accept_images(snapshot)
+    if not accepting:
+        _validation(draw, snapshot, fonts)
+        return
+
+    _center_lines(draw, ["Ready", "to print"], 60, fonts["large"], TEXT)
+    # Body: waiting for upload + FTP address
+    _text(draw, 18, 120, "Waiting for upload", fonts["body"], TEXT)
+    ftp_line = _ready_ftp_line(snapshot)
+    _text(draw, 18, 140, ftp_line, fonts["small"], MUTED)
+    _text(draw, 18, 156, "Next photo prints in order", fonts["small"], MUTED)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _validation(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    accepting = can_accept_images(snapshot)
+    _center_lines(
+        draw,
+        ["Ready to print" if accepting else "Setup needed"],
+        62,
+        fonts["large"],
+        TEXT,
+    )
+    causes = readiness_cause_texts(snapshot)
+    if not causes:
+        _text(draw, 18, 112, "FTP and printer ready", fonts["body"], TEXT)
+        _text(draw, 18, 132, "Waiting for upload", fonts["small"], MUTED)
+    else:
+        _text(draw, 18, 112, "Next action", fonts["body"], TEXT)
+        for index, cause in enumerate(causes[:3]):
+            _text(draw, 18, 132 + index * 17, _ellipsize(cause, 31), fonts["small"], YELLOW)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _no_film(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    _center_lines(draw, ["Replace", "film pack"], 60, fonts["large"], TEXT)
+    _text(draw, 18, 128, "No-film test is in Settings", fonts["small"], MUTED)
+    _text(draw, 18, 146, "K1 opens Settings", fonts["small"], YELLOW)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _printer_searching(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    message = snapshot.printer_status_message or "Keep printer awake"
+    if message in {"Restart printer", "Close phone app"}:
+        _center_lines(draw, ["Printer seen", "connect blocked"], 58, fonts["large"], TEXT)
+        _text(draw, 18, 128, "Close phone app or phone BT", fonts["small"], YELLOW)
+        _text(draw, 18, 146, "Power-cycle printer, then retry", fonts["small"], MUTED)
+    elif message == "Printer seen; connecting":
+        _center_lines(draw, ["Printer seen", "connecting"], 58, fonts["large"], TEXT)
+        _text(draw, 18, 128, "Opening Bluetooth session", fonts["small"], TEXT)
+        _text(draw, 18, 146, "If stuck, close phone app", fonts["small"], MUTED)
+    elif message == "Saw other Instax":
+        _center_lines(draw, ["Other printer", "seen"], 58, fonts["large"], TEXT)
+        _text(draw, 18, 128, "Selected printer not visible", fonts["small"], TEXT)
+        _text(draw, 18, 146, "Hold K3 to choose again", fonts["small"], YELLOW)
+    elif message in {"Scanning: 0 printers", "No printer signal"}:
+        _center_lines(draw, ["Looking for", "printer"], 58, fonts["large"], TEXT)
+        _text(draw, 18, 128, "Turn printer on and keep awake", fonts["small"], TEXT)
+        _text(draw, 18, 146, "Phone Bluetooth may grab it", fonts["small"], MUTED)
+    else:
+        _center_lines(draw, ["Finding", "printer"], 62, fonts["large"], TEXT)
+        _text(draw, 18, 128, "Turn selected printer on", fonts["body"], TEXT)
+        _text(draw, 18, 150, _ellipsize(message, 31), fonts["small"], MUTED)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _printer_offline(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    message = snapshot.printer_status_message or "Printer offline"
+    if message == "Checking printer":
+        _center_lines(draw, ["Checking", "printer"], 62, fonts["large"], TEXT)
+    elif message == "Hold K3 to re-pair":
+        _center_lines(draw, ["Select", "printer"], 62, fonts["large"], TEXT)
+        _text(draw, 18, 128, "Hold K3 to scan again", fonts["body"], YELLOW)
+        hints = _mode_hints(snapshot)
+        draw_hint_bar(draw, hints, fonts["hint"])
+        return
+    else:
+        _center_lines(draw, ["Turn", "printer on"], 62, fonts["large"], TEXT)
+    _text(draw, 18, 128, "Keep it awake near bridge", fonts["body"], TEXT)
+    _text(draw, 18, 150, "K2 refreshes status", fonts["small"], MUTED)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _image_received(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    _center_lines(draw, ["Image", "received"], 55, fonts["large"], TEXT)
+    if snapshot.last_image_name is not None:
+        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
+    _text(draw, 18, 148, "Received over FTP", fonts["small"], MUTED)
+    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], MUTED)
+    # No hint bar for IMAGE_RECEIVED (transitions automatically)
+
+
+def _awaiting_confirm(
+    canvas: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    title = snapshot.print_title or "Printing soon"
+    detail = _physical_control_text(snapshot.print_detail or "Press K2 to cancel")
+    if snapshot.preview_image is not None:
+        draw.rounded_rectangle((18, 42, 222, 151), radius=4, fill=PANEL)
+        preview = snapshot.preview_image
+        x = 120 - preview.width // 2
+        y = 96 - preview.height // 2
+        canvas.paste(preview, (x, y))
+        _text(draw, 18, 155, _ellipsize(title, 27), fonts["body"], TEXT)
+        _text(draw, 18, 173, _ellipsize(detail, 31), fonts["small"], YELLOW)
+        _text(draw, 18, 189, _ellipsize(preview_state_text(snapshot), 31), fonts["small"], MUTED)
+    else:
+        _center_lines(draw, [title], 62, fonts["large"], TEXT)
+        if snapshot.last_image_name is not None:
+            _text(draw, 18, 104, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
+        _progress_bar(draw, 18, 128, snapshot.print_progress_percent, BLUE, fonts["small"])
+        _text(draw, 18, 154, _ellipsize(detail, 31), fonts["small"], YELLOW)
+        _text(draw, 18, 172, film_status_text(snapshot), fonts["small"], MUTED)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _printing(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    title = snapshot.print_title or "Sending to printer"
+    _center_lines(draw, [title], 58, fonts["large"], TEXT)
+    detail = snapshot.print_detail or "Working"
+    _text(draw, 18, 96, _ellipsize(detail, 31), fonts["body"], TEXT)
+    _progress_bar(draw, 18, 122, snapshot.print_progress_percent, BLUE, fonts["small"])
+    if snapshot.last_image_name is not None:
+        _text(draw, 18, 150, _ellipsize(snapshot.last_image_name, 25), fonts["small"], MUTED)
+    _text(draw, 18, 166, printer_model_text(snapshot), fonts["small"], MUTED)
+    _text(draw, 18, 182, "Do not power off", fonts["small"], YELLOW)
+    # No hint bar for PRINTING
+
+
+def _print_complete(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    _center_lines(draw, ["Print", "sent"], 55, fonts["large"], TEXT)
+    if snapshot.last_image_name is not None:
+        _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
+    _text(draw, 18, 148, "Film should feed now", fonts["small"], MUTED)
+    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], MUTED)
+    # No hint bar for PRINT_COMPLETE (auto-returns home)
+
+
+def _needs_pairing(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    _center_lines(draw, ["No printer", "selected"], 58, fonts["large"], TEXT)
+    _menu_item(draw, 122, "Find printer", selected=True, font=fonts["body"])
+    _text(draw, 18, 162, "Turn on printer first", fonts["small"], MUTED)
+    _text(draw, 18, 178, "Then press K1", fonts["small"], MUTED)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+
+def _settings(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+) -> None:
+    rows = snapshot.settings_rows
+    font = fonts["small"]
+    if not rows:
+        _text(draw, 18, 58, "No settings available", fonts["body"], TEXT)
+        draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"])
+        return
+
+    visible_count = 10
+    selected = min(snapshot.selected_index, len(rows) - 1)
+    start = min(max(0, selected - 4), max(0, len(rows) - visible_count))
+
+    # Position counter (top right)
+    position = f"{selected + 1}/{len(rows)}"
+    position_width = _text_width(draw, position, font)
+    position_x = 222 - position_width
+    _text(draw, position_x, 40, position, font, MUTED)
+
+    for offset, row in enumerate(rows[start : start + visible_count]):
+        index = start + offset
+        y = STATUS_BAR_H + 4 + offset * 20
+        draw_settings_row(
+            draw,
+            y,
+            row.label,
+            row.value,
+            row.hint,
+            selected=index == selected,
+            font=font,
+        )
+
+    # Hint bar for settings (use label lines)
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
+
+    # settings_message toast above hint bar
+    if snapshot.settings_message is not None:
+        toast_text = _fit_text_to_width(draw, snapshot.settings_message, font, 220)
+        _text(draw, 10, TOAST_Y, toast_text, font, YELLOW)
 
 
 def _pairing(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
+    fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Finding", "printer"], 55, font_large, TEXT)
-    _text(draw, 18, 130, "Keep printer awake", font_body, TEXT)
-    _text(draw, 18, 152, "Close phone app if it fails", font_small, MUTED)
-    _text(draw, 18, 169, "KEY2 cancels scan", font_small, MUTED)
+    _center_lines(draw, ["Finding", "printer"], 55, fonts["large"], TEXT)
+    _text(draw, 18, 128, "Keep printer awake", fonts["body"], TEXT)
+    _text(draw, 18, 150, "Close phone app if it fails", fonts["small"], MUTED)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
 
 
 def _pair_failed(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
+    fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Find", "failed"], 50, font_large, TEXT)
+    _center_lines(draw, ["Find", "failed"], 50, fonts["large"], TEXT)
     message = snapshot.message or "No INSTAX printer found"
     for index, line in enumerate(_wrap_words(message, 24)[:2]):
-        _text(draw, 18, 128 + index * 17, line, font_small, TEXT)
+        _text(draw, 18, 126 + index * 17, line, fonts["small"], TEXT)
     if len(_wrap_words(message, 24)) < 2:
-        _text(draw, 18, 145, "Turn printer on first", font_small, MUTED)
-    _menu_item(draw, 164, "Try again", selected=True, font=font_body)
+        _text(draw, 18, 143, "Turn printer on first", fonts["small"], MUTED)
+    _menu_item(draw, 162, "Try again", selected=True, font=fonts["body"])
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
 
 
 def _error(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
-    font_large: Font,
-    font_body: Font,
-    font_small: Font,
+    fonts: dict[str, Font],
 ) -> None:
     title, detail, hint = error_copy_for_message(snapshot.message)
-    _center_lines(draw, _wrap_words(title, 16)[:2], 50, font_large, TEXT)
+    _center_lines(draw, _wrap_words(title, 16)[:2], 50, fonts["large"], TEXT)
     for index, line in enumerate(_wrap_words(detail, 27)[:2]):
-        _text(draw, 18, 128 + index * 17, line, font_small, TEXT)
+        _text(draw, 18, 126 + index * 17, line, fonts["small"], TEXT)
     if hint is not None:
-        _text(draw, 18, 167, _ellipsize(hint, 31), font_small, YELLOW)
+        _text(draw, 18, 165, _ellipsize(hint, 31), fonts["small"], YELLOW)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"])
 
 
-def _footer(draw: ImageDraw.ImageDraw, snapshot: UiSnapshot, font: Font) -> None:
-    draw.rectangle((0, 199, 239, 239), fill=PANEL)
+# ---------------------------------------------------------------------------
+# Hint data (replaces _footer / _footer_label_lines as the source of truth)
+# ---------------------------------------------------------------------------
+
+
+def _mode_hints(snapshot: UiSnapshot) -> tuple[str, str, str]:
+    """Return (left, center, right) hint strings for a mode's hint bar."""
+
     lines = _footer_label_lines(snapshot)
-    y_positions = (213,) if len(lines) == 1 else (207, 225)
-    for labels, y in zip(lines, y_positions, strict=True):
-        _footer_label_row(draw, labels, y, font)
+    if not lines:
+        return ("", "", "")
+    # Use first line for the hint bar
+    return lines[0]
+
+
+# ---------------------------------------------------------------------------
+# Legacy footer helpers — kept because tests import them
+# ---------------------------------------------------------------------------
 
 
 def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...]:
@@ -457,16 +571,9 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
     return (("KEY1 Settings", "KEY2 Refresh", "Hold KEY3"),)
 
 
-def _footer_label_row(
-    draw: ImageDraw.ImageDraw,
-    labels: tuple[str, str, str],
-    y: int,
-    font: Font,
-) -> None:
-    x_positions = (7, 80, 161)
-    max_widths = (70, 76, 76)
-    for x, label, max_width in zip(x_positions, labels, max_widths, strict=True):
-        _text(draw, x, y, _fit_text_to_width(draw, label, font, max_width), font, MUTED)
+# ---------------------------------------------------------------------------
+# Retained private helpers
+# ---------------------------------------------------------------------------
 
 
 def _menu_item(
@@ -670,6 +777,23 @@ def _settings_row_marker(kind: str, selected: bool) -> tuple[str, str]:
     return "", MUTED
 
 
+def _ready_ftp_line(snapshot: UiSnapshot) -> str:
+    """Return the FTP address line for the READY screen body."""
+
+    if snapshot.hotspot_host is not None:
+        return f"Bridge Wi-Fi  {snapshot.hotspot_host}"
+    if snapshot.wifi_host is not None:
+        return f"Same Wi-Fi  {snapshot.wifi_host}"
+    if snapshot.camera_transport_message is not None:
+        return _ellipsize(snapshot.camera_transport_message, 34)
+    return "FTP: no address"
+
+
+# ---------------------------------------------------------------------------
+# Public utility functions (used by controller + tests)
+# ---------------------------------------------------------------------------
+
+
 def film_status_text(snapshot: UiSnapshot) -> str:
     """Return the user-facing film counter line."""
 
@@ -833,6 +957,23 @@ def _printer_model_short_text(snapshot: UiSnapshot) -> str:
     return labels.get(model, "Film")
 
 
+def _status_bar_printer_chip(snapshot: UiSnapshot) -> str | None:
+    """Return the compact film/battery chip for the right side of the status bar.
+
+    Shows nothing when no printer is selected or film status is unknown.
+    Shows film count and optional battery when available.
+    """
+
+    if snapshot.paired_printer is None:
+        return None
+    if snapshot.film_remaining is None:
+        return None
+    film = f"{snapshot.film_remaining}/{snapshot.film_capacity}"
+    if snapshot.printer_battery is not None:
+        return f"{film}  {snapshot.printer_battery}%{top_bar_battery_state_text(snapshot)}"
+    return film
+
+
 def bridge_power_header_text(snapshot: UiSnapshot) -> str | None:
     """Return the tiny bridge-power text for the title bar."""
 
@@ -961,12 +1102,12 @@ def error_copy_for_message(message: str | None) -> tuple[str, str, str | None]:
     """Return LCD-sized title, detail, and recovery hint for an error message."""
 
     if message is None:
-        return "Bridge error", "Check logs", "KEY2 refreshes status"
+        return "Bridge error", "Check logs", "K2 refreshes status"
     normalized = message.lower()
     if "pair printer first" in normalized or "select printer first" in normalized:
-        return "No printer selected", "Open Printer settings", "KEY3 starts scan"
+        return "No printer selected", "Open Printer settings", "K3 starts scan"
     if "printer offline" in normalized:
-        return "Printer offline", "Turn printer on", "KEY2 refreshes status"
+        return "Printer offline", "Turn printer on", "K2 refreshes status"
     if "printer type unknown" in normalized:
         return "Printer type unknown", "Set Printer type", "Settings > Printer"
     if "printer timed out" in normalized:
@@ -987,7 +1128,7 @@ def error_copy_for_message(message: str | None) -> tuple[str, str, str | None]:
         return "Image unsupported", "Use JPG, HIF, or ARW", "Check file type"
     if "preview failed" in normalized:
         return "Preview failed", "Image could not be prepared", "Cancel and retry"
-    return "Bridge error", message, "KEY2 refreshes status"
+    return "Bridge error", message, "K2 refreshes status"
 
 
 def ftp_mode_label(snapshot: UiSnapshot) -> str:

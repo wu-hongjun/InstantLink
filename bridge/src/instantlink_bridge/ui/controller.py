@@ -303,7 +303,7 @@ class BridgeUi:
         self._pending_credential_reset = False
         # Two-press confirm flags so destructive printer actions never fire on
         # an accidental K1: each flag flips to True on the first press (showing
-        # an explicit "Press K1 again to <verb>" toast), and only the second
+        # an explicit "Press KEY1 again to <verb>" toast), and only the second
         # press inside the same SETTINGS context actually runs the action. Any
         # navigation or BACK clears them.
         self._pending_reset_ble_link = False
@@ -1329,7 +1329,7 @@ class BridgeUi:
             self._forget_confirm_pending = True
             # Explicit verb + key reminds the user K1 is the destructive press;
             # uppercase FORGET signals destructive intent without needing color.
-            self._show_settings("Press K1 again to FORGET printer")
+            self._show_settings("Press KEY1 again to FORGET printer")
             return
         self._forget_confirm_pending = False
         await self._forget_selected_printer()
@@ -1349,7 +1349,7 @@ class BridgeUi:
             return
         if not self._pending_reset_ble_link:
             self._pending_reset_ble_link = True
-            self._show_settings("Press K1 again to RESET BLE link")
+            self._show_settings("Press KEY1 again to RESET BLE link")
             return
         self._pending_reset_ble_link = False
         await self._reset_printer_link_from_settings()
@@ -1369,7 +1369,7 @@ class BridgeUi:
             return
         if not self._pending_forget_and_repair:
             self._pending_forget_and_repair = True
-            self._show_settings("Press K1 again to FORGET and re-pair")
+            self._show_settings("Press KEY1 again to FORGET and re-pair")
             return
         self._pending_forget_and_repair = False
         # Run the forget, then immediately enter pairing — the user requested

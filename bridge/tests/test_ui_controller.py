@@ -1880,7 +1880,7 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     # session and schedules a fresh poll.
     await ui._handle_action(UiAction.SELECT)
     assert status_provider.close_cached_calls == 0
-    assert display.snapshots[-1].settings_message == "Press K1 again to RESET BLE link"
+    assert display.snapshots[-1].settings_message == "Press KEY1 again to RESET BLE link"
     await ui._handle_action(UiAction.SELECT)
     await asyncio.sleep(0)
 
@@ -2012,7 +2012,7 @@ async def test_forget_printer_requires_second_confirmation() -> None:
     assert not pairer.forgot
     # Confirm wording is now explicit about which key + which verb so the
     # user knows K1 is the destructive press.
-    assert display.snapshots[-1].settings_message == "Press K1 again to FORGET printer"
+    assert display.snapshots[-1].settings_message == "Press KEY1 again to FORGET printer"
 
     await ui._handle_action(UiAction.RIGHT)
 
@@ -2053,7 +2053,7 @@ async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None
 
     # First press just primes the confirm — neither destructive step runs yet.
     assert not pairer.forgot
-    assert display.snapshots[-1].settings_message == "Press K1 again to FORGET and re-pair"
+    assert display.snapshots[-1].settings_message == "Press KEY1 again to FORGET and re-pair"
 
     await ui._handle_action(UiAction.SELECT)
 

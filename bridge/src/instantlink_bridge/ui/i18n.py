@@ -139,18 +139,18 @@ _ZH_HANS: dict[str, str] = {
     "Wi-Fi PIN": "Wi-Fi 密码",
     # --- Hint-bar labels --------------------------------------------------
     "4-way Pan": "四向平移",
-    "Hold K3": "长按 K3",
-    "K1 OK": "K1 确认",
-    "K1 Print": "K1 打印",
-    "K1 Retry": "K1 重试",
-    "K1 Select": "K1 选择",
-    "K1 Setting": "K1 设置",
-    "K2 Back": "K2 返回",
-    "K2 Cancel": "K2 取消",
-    "K2 Refresh": "K2 刷新",
-    "K3 Network": "K3 网络",
-    "K3 Help": "K3 帮助",
-    "K3 Retry": "K3 重试",
+    "Hold KEY3": "长按 KEY3",
+    "KEY1 OK": "KEY1 确认",
+    "KEY1 Print": "KEY1 打印",
+    "KEY1 Retry": "KEY1 重试",
+    "KEY1 Select": "KEY1 选择",
+    "KEY1 Setting": "KEY1 设置",
+    "KEY2 Back": "KEY2 返回",
+    "KEY2 Cancel": "KEY2 取消",
+    "KEY2 Refresh": "KEY2 刷新",
+    "KEY3 Network": "KEY3 网络",
+    "KEY3 Help": "KEY3 帮助",
+    "KEY3 Retry": "KEY3 重试",
     "Left Back": "左 返回",
     "Left/Right": "左/右",
     "Move": "移动",
@@ -403,6 +403,46 @@ _ZH_HANS: dict[str, str] = {
     "Debian/Linux release on the Pi": "Pi 上的 Debian/Linux 版本",
     "Generate new Wi-Fi & FTP credentials": "生成新的 Wi-Fi 与 FTP 凭据",
     "Python: language running bridge code": "Python：运行桥接代码的语言",
+    # --- Dynamic Settings help (composed at runtime) ---------------------
+    # ``_settings_row_help`` in controller.py builds short, contextual help
+    # strings that embed live config values (current quality, keepalive
+    # interval, etc.). Register both the templated form (with the literal
+    # ``{...}`` placeholders the runtime substitutes into) and the concrete
+    # variants for every enumerated option so the lookup hits whichever
+    # surface the render layer asks for.
+    "Prints immediately on upload": "上传后立即打印",
+    "Waits for K1 press": "等待按下 K1",
+    "Fixed to {label}": "固定为 {label}",
+    "Fixed to Mini": "固定为 Mini",
+    "Fixed to Mini 3": "固定为 Mini 3",
+    "Fixed to Square": "固定为 Square",
+    "Fixed to Wide": "固定为 Wide",
+    "Trade-off: higher = bigger, sharper. Current: {n}": "权衡：越高越大越清晰。当前：{n}",
+    "Trade-off: higher = bigger, sharper. Current: 70": "权衡：越高越大越清晰。当前：70",
+    "Trade-off: higher = bigger, sharper. Current: 75": "权衡：越高越大越清晰。当前：75",
+    "Trade-off: higher = bigger, sharper. Current: 80": "权衡：越高越大越清晰。当前：80",
+    "Trade-off: higher = bigger, sharper. Current: 85": "权衡：越高越大越清晰。当前：85",
+    "Trade-off: higher = bigger, sharper. Current: 90": "权衡：越高越大越清晰。当前：90",
+    "Trade-off: higher = bigger, sharper. Current: 95": "权衡：越高越大越清晰。当前：95",
+    "Trade-off: higher = bigger, sharper. Current: 100": "权衡：越高越大越清晰。当前：100",
+    # ``{Ns}`` keeps the second-suffix Latin/numeric per Apple's iOS voice
+    # (``10s``/``30s``); the runtime substitutes the int directly so the
+    # placeholder text below is the templated key, while the concrete
+    # variants cover the live KEEPALIVE_OPTIONS / SEARCH_INTERVAL_OPTIONS.
+    "Polls printer every {Ns} while idle": "空闲时每 {Ns} 轮询打印机",
+    "Polls printer every 5s while idle": "空闲时每 5s 轮询打印机",
+    "Polls printer every 10s while idle": "空闲时每 10s 轮询打印机",
+    "Polls printer every 15s while idle": "空闲时每 15s 轮询打印机",
+    "Polls printer every 30s while idle": "空闲时每 30s 轮询打印机",
+    "Scans every {Ns} when printer offline": "打印机离线时每 {Ns} 扫描一次",
+    "Scans every 5s when printer offline": "打印机离线时每 5s 扫描一次",
+    "Scans every 15s when printer offline": "打印机离线时每 15s 扫描一次",
+    "Scans every 30s when printer offline": "打印机离线时每 30s 扫描一次",
+    "Scans every 60s when printer offline": "打印机离线时每 60s 扫描一次",
+    # FTP_PASSWORD_INFO's dynamic branch returns this shorter variant; the
+    # static SETTING_HELP_TEXT version (``PIN: enter as FTP password ...``)
+    # is registered above for the picker's KEY3 help.
+    "Enter as FTP password in camera": "请在相机中输入为 FTP 密码",
     # --- Preview tool hints ----------------------------------------------
     # Mirrors Apple's "Zoom" / "Crop" / "Rotate" verbs in the Photos app.
     "Crop: joystick  K3 tool": "裁剪：摇杆  K3 工具",

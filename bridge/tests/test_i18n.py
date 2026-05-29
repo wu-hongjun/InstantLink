@@ -43,4 +43,4 @@ def test_translatable_strings_exposes_full_target_map() -> None:
     assert table["Ready"] == "就绪"
     assert table["Settings"] == "设置"
     assert "Connected" in table
-    assert "K1 Setting" in table
+    assert "KEY1 Setting" in table

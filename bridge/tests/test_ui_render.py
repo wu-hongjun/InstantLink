@@ -366,7 +366,7 @@ def test_settings_row_kind_is_inferred_from_hint() -> None:
 def test_settings_footer_includes_key2_back() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.SETTINGS, ftp_host="192.168.7.1"))
 
-    assert ("Move", "Left Back", "KEY2 Back") in lines
+    assert ("Move", "Left Back", "K2 Back") in lines
 
 
 def test_ready_footer_exposes_upload_credentials_when_printer_is_paired() -> None:
@@ -378,7 +378,7 @@ def test_ready_footer_exposes_upload_credentials_when_printer_is_paired() -> Non
         )
     )
 
-    assert lines == (("KEY1 Settings", "KEY2 Refresh", "KEY3 FTP"),)
+    assert lines == (("K1 Settings", "K2 Refresh", "K3 FTP"),)
 
 
 def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
@@ -394,7 +394,7 @@ def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
 def test_pair_failed_footer_uses_retry_and_back_controls() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.PAIR_FAILED, ftp_host="192.168.7.1"))
 
-    assert lines == (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
+    assert lines == (("K1 Retry", "K2 Back", "K3 Retry"),)
 
 
 def test_crop_preview_footer_uses_all_direction_pan_hint() -> None:
@@ -402,7 +402,7 @@ def test_crop_preview_footer_uses_all_direction_pan_hint() -> None:
         UiSnapshot(mode=UiMode.AWAITING_CONFIRM, ftp_host="192.168.7.1", preview_tool="crop")
     )
 
-    assert lines == (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
+    assert lines == (("4-way Pan", "K1 Print", "K2 Cancel"),)
 
 
 def test_printer_model_text_shows_detected_type() -> None:

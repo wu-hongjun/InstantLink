@@ -574,30 +574,30 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
         return (("", "Starting", ""),)
     if snapshot.mode is UiMode.SETTINGS:
         return (
-            ("Up/Dn", "KEY1 OK", "KEY3 Help"),
-            ("Move", "Left Back", "KEY2 Back"),
+            ("Up/Dn", "K1 OK", "K3 Help"),
+            ("Move", "Left Back", "K2 Back"),
         )
     if snapshot.mode is UiMode.NEEDS_PAIRING:
-        return (("Up/Dn", "KEY1 Select", "Hold KEY3"),)
+        return (("Up/Dn", "K1 Select", "Hold K3"),)
     if snapshot.mode is UiMode.PAIR_FAILED:
-        return (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
+        return (("K1 Retry", "K2 Back", "K3 Retry"),)
     if snapshot.mode is UiMode.PAIRING:
-        return (("", "Scanning", "KEY2 Back"),)
+        return (("", "Scanning", "K2 Back"),)
     if snapshot.mode is UiMode.AWAITING_CONFIRM:
         if snapshot.preview_tool == "crop":
-            return (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
+            return (("4-way Pan", "K1 Print", "K2 Cancel"),)
         if snapshot.preview_tool == "rotate":
-            return (("Left/Right", "KEY1 Print", "KEY2 Cancel"),)
-        return (("Up/Dn Edit", "KEY1 Print", "KEY2 Cancel"),)
+            return (("Left/Right", "K1 Print", "K2 Cancel"),)
+        return (("Up/Dn Edit", "K1 Print", "K2 Cancel"),)
     if snapshot.mode is UiMode.PRINTING:
         return (("", "Printing", ""),)
     if snapshot.mode is UiMode.PRINT_COMPLETE:
         if snapshot.paired_printer is not None:
-            return (("KEY1 Settings", "Done", "KEY3 FTP"),)
-        return (("KEY1 Settings", "Done", "Hold KEY3"),)
+            return (("K1 Settings", "Done", "K3 FTP"),)
+        return (("K1 Settings", "Done", "Hold K3"),)
     if snapshot.paired_printer is not None:
-        return (("KEY1 Settings", "KEY2 Refresh", "KEY3 FTP"),)
-    return (("KEY1 Settings", "KEY2 Refresh", "Hold KEY3"),)
+        return (("K1 Settings", "K2 Refresh", "K3 FTP"),)
+    return (("K1 Settings", "K2 Refresh", "Hold K3"),)
 
 
 # ---------------------------------------------------------------------------

@@ -1391,6 +1391,8 @@ class BridgeUi:
             )
         if key is SettingKey.REFRESH_STATUS:
             return SettingsRow("Refresh status", "run")
+        if key is SettingKey.FONT_SIZE:
+            return SettingsRow("Text size", self._config.ui.font_size.value.capitalize())
         return SettingsRow("Unknown", "")
 
     def _system_info_snapshot(self) -> SystemInfo:

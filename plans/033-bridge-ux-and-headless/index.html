@@ -1,0 +1,2798 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
+      
+      
+      
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/033-bridge-ux-and-headless/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Plan 033 — Bridge UX polish and headless variant - InstantLink</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-033-bridge-ux-polish-and-headless-variant" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="InstantLink" class="md-header__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InstantLink
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan 033 — Bridge UX polish and headless variant
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="white"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../001-full-stack-scaffold/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plans
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InstantLink" class="md-nav__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InstantLink
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bridge-firmware-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Firmware Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/reverse-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reverse Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plans
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plans
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../001-full-stack-scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 001 Full-Stack Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../002-ci-cd-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 002 CI/CD Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 003 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../004-app-bundle-and-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 004 App Bundle and Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../005-mock-transport-device-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 005 Mock Transport Device Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-overlay-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 006 Overlay System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-ui-ux-pass-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 007 UI/UX Pass 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../008-ui-ux-pass-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 008 UI/UX Pass 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../009-repo-simplification-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 009 Repo Simplification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../010-ui-ux-pass-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 010 UI/UX Pass 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../013-ffi-connection-stage-callbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 013 FFI Connection Stage Callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../014-printer-led-print-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 014 Printer LED Print Phase Feedback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../018-auto-update-signature-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 018 Auto-Update Signature Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../019-packet-assembler-error-surfacing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 019 Packet Assembler Error Surfacing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../020-notification-listener-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 020 Notification Listener Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../021-print-flow-deduplication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 021 Print Flow Deduplication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../022-ffi-device-guard-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 022 FFI Device Guard Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../023-ffi-unsafe-block-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 023 FFI Unsafe Block Discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../024-protocol-build-packet-bounds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 024 Protocol Build Packet Bounds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../025-rand-dependency-upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 025 Rand Dependency Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../026-docs-ffi-symbol-count-and-context-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 026 Docs FFI Symbol Count and Context Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../027-docs-protocol-mini-link-3-flip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 027 Docs Protocol Mini Link 3 Flip
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../028-sparkle-2-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 028 Sparkle 2 Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../029-bridge-control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 029 Bridge Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../030-bridge-secure-management-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 030 Bridge Secure Management and Updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why now
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#north-star-ux-the-test-for-every-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        North-star UX (the test for every change)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="North-star UX (the test for every change)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-both-skus-one-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup (both SKUs, one-time)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#daily-use-lcd-sku" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Daily use — LCD SKU
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#daily-use-headless-sku-the-camera-powered-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Daily use — headless SKU (the camera-powered design)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-settled-2026-05-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions (settled 2026-05-28)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-broken-today-settings-audit-evidence-based" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's broken today (settings audit, evidence-based)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-leverage-dont-reinvent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Existing leverage (don't reinvent)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#62-headless-boot-speed-is-the-load-bearing-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §6.2 Headless boot speed is the load-bearing metric
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-strip-the-lcd-menu-to-status-one-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — Strip the LCD menu to status + one action
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-mac-side-settings-as-canonical-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — Mac-side settings as canonical config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-virtual-display-virtual-controls-websocket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Virtual display + virtual controls (WebSocket)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-status-led-service-deleted-2026-05-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ~~Phase 4 — Status LED service~~ (deleted 2026-05-28)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-headless-sku-camera-hot-shoe-powered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Headless SKU (camera-hot-shoe powered)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-ftp-reply-codes-as-the-user-facing-signal-added-2026-05-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 — FTP reply codes as the user-facing signal (added 2026-05-28)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sequencing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sequencing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open questions / risks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope-for-this-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of scope (for this plan)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-existing-channel-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference: existing channel surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="plan-033-bridge-ux-polish-and-headless-variant">Plan 033 — Bridge UX polish and headless variant<a class="headerlink" href="#plan-033-bridge-ux-polish-and-headless-variant" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>proposed</strong> (2026-05-28)
+Successor to: plans 031 (connection recovery) and 032 (boot speed).
+Owner: bridge UX + Mac app.</p>
+<h2 id="why-now">Why now<a class="headerlink" href="#why-now" title="Permanent link">&para;</a></h2>
+<p>Two workstreams just landed:
+- Plan 031 — ~4 s active reconnect on a power cycle.
+- Plan 032 — ~15 s power-on → scanning.</p>
+<p>With the device fast and reliable, the remaining gap to a giftable product is
+<strong>the UI</strong>. The LCD's settings menu mixes status, configuration, and
+diagnostics; users see "Network → USB debug" and "FTP receive mode" before
+they see "Pair printer." The on-device menu also blocks the cheaper SKU we
+want to build: a Pi Zero 2 W with no LCD, no joystick, and no keys — driven
+entirely from the Mac app, with a single onboard LED for at-a-glance status.</p>
+<p>The Mac↔bridge channel (<code>BridgeHTTPTransport</code>, ed25519-signed identities,
+<code>manager/api.py</code> aiohttp server) already exists and already streams
+update-progress events. Extending it to carry the live UI is a small additive
+step on a proven channel — not a new transport.</p>
+<h2 id="north-star-ux-the-test-for-every-change">North-star UX (the test for every change)<a class="headerlink" href="#north-star-ux-the-test-for-every-change" title="Permanent link">&para;</a></h2>
+<p>There are <strong>two operating models</strong>, one per SKU. They share the same setup
+flow but have different daily-use flows.</p>
+<h3 id="setup-both-skus-one-time">Setup (both SKUs, one-time)<a class="headerlink" href="#setup-both-skus-one-time" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Plug the bridge in — USB to Mac, or wall power + label-printed Wi-Fi creds.</li>
+<li>Open the InstantLink Mac app. The bridge appears in the sidebar.</li>
+<li>Tap "Pair printer" once. The printer's LED handoff confirms.</li>
+<li>Press C1 on the Sony. Photo prints.</li>
+</ol>
+<h3 id="daily-use-lcd-sku">Daily use — LCD SKU<a class="headerlink" href="#daily-use-lcd-sku" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Press the X306 power button → boot → reconnect → ready.</li>
+<li>Pair button on the LCD remains as a manual recovery affordance.</li>
+<li>LCD shows status; Mac is optional once paired.</li>
+</ul>
+<h3 id="daily-use-headless-sku-the-camera-powered-design">Daily use — headless SKU (the camera-powered design)<a class="headerlink" href="#daily-use-headless-sku-the-camera-powered-design" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Power source: camera hot-shoe.</strong> The bridge mounts in the cold shoe and
+  is wired into the hot-shoe pins. Camera on → bridge boots from cold.</li>
+<li>Bridge reconnects to the remembered paired printer automatically.</li>
+<li><strong>LED green = ready to print.</strong> That is the only signal the user needs.</li>
+<li>Press C1 on the Sony → FTP transfer → print.</li>
+<li>Camera off → bridge loses power → no idle logic required.</li>
+</ul>
+<p>The implication that drives this plan: <strong>on the headless SKU, every camera
+power-on is a cold boot.</strong> Plan 032's ~15 s power-on→scanning figure is the
+load-bearing UX metric for this product, not a benchmark. See §6.2.</p>
+<p>The on-device LCD (when present) is a <strong>status surface and a recovery
+affordance</strong> — never a configuration tool. The Mac app is the <strong>setup
+surface</strong>, used during pairing and configuration changes, but not required
+for daily operation on either SKU. The status LED is the only mandatory
+on-device feedback.</p>
+<h2 id="decisions-settled-2026-05-28">Decisions (settled 2026-05-28)<a class="headerlink" href="#decisions-settled-2026-05-28" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>LCD SKU long-term role</td>
+<td><strong>Both ship.</strong> LCD-SKU and headless-SKU are parallel products; every UX decision optimises for headless, LCD inherits.</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>Mac virtual-display render</td>
+<td><strong>Native SwiftUI mirror.</strong> Stream the <code>UiSnapshot</code> as structured JSON; preview JPEGs ride a separate sub-resource.</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>First-run for screen-less SKU</td>
+<td><strong>Both USB-tether and hotspot.</strong> USB wins when present; hotspot is the cordless fallback. Race resolution: see §6.4.</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>Status LED hardware</td>
+<td>~~Pi onboard ACT LED~~ → <strong>No on-device LED.</strong> Revised 2026-05-28 after hardware verification: the Pi ACT LED is hardwired to SD-card activity and cannot be reliably commandeered for status patterns on Pi Zero 2 W. Adding a discrete LED was rejected to keep the headless BOM minimal. Instead, the camera-side FTP transfer success/failure message becomes the user-visible signal: "C1 succeeded" = bridge worked; "C1 failed" = retry or check Mac app. Phase 4 (LED service) is deleted from this plan. <strong>Consequence:</strong> the user is shooting blind from camera-on until the first FTP transfer either lands or errors. This makes §6.2 (boot speed) the most user-critical lever in the plan, not a nice-to-have.</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>Headless SKU power source</td>
+<td><strong>Camera hot-shoe.</strong> Bridge powered from the camera's accessory shoe; camera on/off === bridge on/off. No X306 on the headless BOM. Implies every camera power-on is a cold boot — boot speed becomes load-bearing (see §6.2).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="whats-broken-today-settings-audit-evidence-based">What's broken today (settings audit, evidence-based)<a class="headerlink" href="#whats-broken-today-settings-audit-evidence-based" title="Permanent link">&para;</a></h2>
+<p>From <code>bridge/src/instantlink_bridge/ui/settings.py</code>:</p>
+<ol>
+<li><strong>Main menu is 5 pages</strong>, only 1 is action-oriented:</li>
+<li><code>Printer</code> (the only one users want)</li>
+<li><code>Camera</code> (mis-labelled; it's FTP credentials)</li>
+<li><code>Network</code> (Wi-Fi / Bluetooth / USB debug — overlapping concepts)</li>
+<li><code>Print</code> (image fit, JPEG quality — once-set-and-forget knobs)</li>
+<li><code>System</code> (9 read-only diagnostics)</li>
+<li><strong>Duplicate data</strong>: <code>NETWORK_HOTSPOT_SSID_INFO</code> and <code>NETWORK_HOTSPOT_PASSWORD_INFO</code> appear under BOTH <code>Camera</code> and <code>Network</code>. Same fact, two locations, no source of truth.</li>
+<li><strong>End-user exposure of admin concepts</strong>: <code>USB debug</code>, <code>Same Wi-Fi adv</code>, <code>BlueZ version</code>, <code>Python version</code>, <code>Refresh status</code>. Users don't reason in these terms.</li>
+<li><strong><code>Refresh status</code></strong> is an action with an invisible effect.</li>
+<li><strong>Top-level vocabulary mismatches user mental model</strong>: <code>Camera</code> doesn't talk about the camera; <code>Network</code> is required reading before pairing.</li>
+</ol>
+<p>The structural fix isn't "rename things" — it's <strong>stop using the LCD as a
+configuration surface at all.</strong></p>
+<h2 id="existing-leverage-dont-reinvent">Existing leverage (don't reinvent)<a class="headerlink" href="#existing-leverage-dont-reinvent" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Where</th>
+<th>What it gives us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BridgeTransport</code> (Swift protocol, 14 methods)</td>
+<td><code>macos/InstantLink/Core/BridgeTransport.swift</code></td>
+<td>Discovery, pairing, ed25519 identity, status, streaming update events</td>
+</tr>
+<tr>
+<td><code>manager/api.py</code> (aiohttp)</td>
+<td><code>bridge/src/instantlink_bridge/manager/api.py</code></td>
+<td>Routes for <code>/v1/hello</code>, <code>/v1/pairing/*</code>, signed handlers, async streaming pipe</td>
+</tr>
+<tr>
+<td><code>UiController</code> → <code>Display</code> sink</td>
+<td><code>bridge/src/instantlink_bridge/ui/controller.py</code> + <code>ui/display.py</code></td>
+<td>Already emits immutable <code>UiSnapshot</code>s; already accepts pluggable Display backends (<code>NullDisplay</code>, <code>LumaSt7789Display</code>, <code>FramebufferDisplay</code>)</td>
+</tr>
+<tr>
+<td><code>GpioUiInput</code> ↔ <code>NullInput</code></td>
+<td><code>bridge/src/instantlink_bridge/ui/input.py</code></td>
+<td>Headless input is already a factory swap; the action queue is the same</td>
+</tr>
+<tr>
+<td><code>UiSnapshot</code> dataclass (frozen, slotted)</td>
+<td><code>bridge/src/instantlink_bridge/ui/models.py</code></td>
+<td>Serialisable; PIL <code>preview_image</code> is the only non-trivial field</td>
+</tr>
+<tr>
+<td>Pi onboard ACT LED</td>
+<td><code>/sys/class/leds/ACT/{trigger,brightness}</code></td>
+<td>Writable from <code>User=ib</code> with <code>gpio</code> group; no extra hardware</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The state machine, snapshot model, render output, and Mac auth channel are
+all already decoupled enough that this plan is mostly <em>wiring</em>, not new code.</strong></p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  Bridge (Pi Zero 2 W, headless OR LCD)                          │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                                                                  │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   UiController ── emits ──&gt; UiSnapshot ── consumed by ──┐       │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│        ▲                                                 │       │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│        │ UiAction queue                                  ▼       │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│        │                                          ┌─────────┐   │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│        └── consumes ──────────────────────────────│ Display │   │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│                                                   │  sinks: │   │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│                                                   │ LCD     │ ◀─ headless: omitted
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│                                                   │ Network │ ──┐
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│                                                   └─────────┘   │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│                                                                  │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   manager/api.py (aiohttp)                                       │
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│     /v1/hello   /v1/pairing/*   (existing)                       │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│     /v1/config  (Phase 2, new)                                   │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│     /v1/ui      WebSocket (Phase 3, new) ◀───────────────────────┘
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│                                                                  │
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>└──────────────────────────────────────┬──────────────────────────┘
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                                       │  ed25519-signed HTTP/WS
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                                       │
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>┌──────────────────────────────────────▼──────────────────────────┐
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│  Mac app (SwiftUI)                                              │
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│                                                                  │
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   BridgeTransport  (existing) ── adds: getConfig / patchConfig  │
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│                                  adds: openUIStream (WS)         │
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│                                                                  │
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   &quot;Bridge&quot; sidebar                                               │
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│     ├── Status (existing)                                        │
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│     ├── Settings  (Phase 2, new — canonical config)              │
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│     └── Remote    (Phase 3, new — virtual display + controls)    │
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>│                                                                  │
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+<p>The <code>Network</code> Display sink is the load-bearing piece: it broadcasts the
+<em>same</em> <code>UiSnapshot</code> the LCD renders, with no UI fork. The Mac app re-renders
+that snapshot natively in SwiftUI (per D2) for Retina sharpness.</p>
+<h2 id="62-headless-boot-speed-is-the-load-bearing-metric">§6.2 Headless boot speed is the load-bearing metric<a class="headerlink" href="#62-headless-boot-speed-is-the-load-bearing-metric" title="Permanent link">&para;</a></h2>
+<p>For the headless SKU, the entire daily-use UX collapses to one number:</p>
+<blockquote>
+<p><strong>Camera-on → LED-green latency.</strong></p>
+</blockquote>
+<p>This is the time from the camera switching on (closing the hot-shoe power
+contact) to the bridge being paired-connected and ready to receive an FTP
+upload. Every component on the path contributes:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th style="text-align: right;">Time today</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pi boot → bridge READY=1</td>
+<td style="text-align: right;">~15.0 s</td>
+<td>Plan 032 §10</td>
+</tr>
+<tr>
+<td>Bridge READY → BLE active reconnect to remembered printer</td>
+<td style="text-align: right;">~4 s</td>
+<td>Plan 031 §14</td>
+</tr>
+<tr>
+<td><strong>Total camera-on → LED-green</strong></td>
+<td style="text-align: right;"><strong>~19 s</strong></td>
+<td>Today</td>
+</tr>
+</tbody>
+</table>
+<p>19 s is a long time to stand there with a camera in your hand. The user has
+to either wait (frustrating) or shoot first and accept that early shots
+won't print until later (confusing — "did it work?").</p>
+<p><strong>Target for v1 headless:</strong> ≤ 12 s camera-on → LED-green.</p>
+<p>This is achievable by composing pre-existing leverage:</p>
+<ul>
+<li><strong>Plan 032 next levers</strong> (documented but unshipped): dd-splash (~−1 s), lazy FFI load (~−1 s), <code>__pycache__</code> pre-bake (~−0.5 s). All compatible.</li>
+<li><strong>Headless removes the splash unit and the LCD init entirely</strong> (~−1 s further). The splash is cosmetic on the LCD-SKU; gone on headless.</li>
+<li><strong>Boot-time BLE warm-up:</strong> start scanning <em>before</em> the FTP service is fully up. The bridge can reasonably bet that the saved printer is the target; if FTP isn't ready by the time the photo arrives, the camera retries (Sony FTP has built-in retry). This is a meaningful inversion of the M3 plan-032 ordering and might be worth ~1-2 s.</li>
+<li><strong>No userland warmup of luma/gpiozero/etc on headless</strong> (~−0.5 s).</li>
+</ul>
+<p>Composed estimate: ~12 s, leaving buffer for variance.</p>
+<p><strong>This becomes Phase 0.</strong> Boot-speed work for headless ships before the
+Mac-facing Phases 2/3, because nothing in the Mac app matters if the device
+can't be ready in time for a typical "shoot a portrait, print it" gesture.</p>
+<p>(For the LCD SKU, boot speed is nice-to-have, not load-bearing — the user
+explicitly powers it on and waits.)</p>
+<h2 id="phases">Phases<a class="headerlink" href="#phases" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-strip-the-lcd-menu-to-status-one-action">Phase 1 — Strip the LCD menu to status + one action<a class="headerlink" href="#phase-1-strip-the-lcd-menu-to-status-one-action" title="Permanent link">&para;</a></h3>
+<p>Make the on-device LCD a status-and-recovery surface. The Mac app becomes the
+config surface (Phase 2) — Phase 1 prepares that transition without breaking
+the existing LCD-SKU experience.</p>
+<p><strong>New <code>SettingsPage.MAIN</code> layout (3 items):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Pair printer</code></td>
+<td>(current <code>PAIR_PRINTER</code>)</td>
+</tr>
+<tr>
+<td><code>Help</code></td>
+<td>Shows a QR code linking to the Mac app + this bridge's ID</td>
+</tr>
+<tr>
+<td><code>Diagnostics</code></td>
+<td>The current <code>System</code> page contents, with no value changes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Removed from user-facing navigation (still reachable via long-press for field support):</strong>
+- The entire <code>Camera</code> page (data moves to Mac Settings).
+- The entire <code>Network</code> page.
+- The entire <code>Print</code> page.
+- <code>System &gt; Refresh status</code> (no observable effect).</p>
+<p><strong>Long-press diagnostics combo:</strong> KEY1 + KEY3 held 2 s opens the full
+current menu. Documented in <code>docs/development/bridge-diagnostics.md</code>.</p>
+<p><strong>Acceptance:</strong>
+- Fresh-eyes user walked through the LCD reaches <code>Pair printer</code> within 2 button presses from the home screen.
+- No data is lost — all settings still in <code>config.toml</code>; just relocated.
+- <code>SettingsPage.MAIN</code> has ≤ 3 rows.
+- Long-press combo restores full menu access; pytest covers the combo path.</p>
+<p><strong>Files touched:</strong> <code>ui/settings.py</code>, <code>ui/controller.py</code>, <code>ui/render.py</code>,
+<code>docs/development/bridge-diagnostics.md</code> (new).</p>
+<h3 id="phase-2-mac-side-settings-as-canonical-config">Phase 2 — Mac-side settings as canonical config<a class="headerlink" href="#phase-2-mac-side-settings-as-canonical-config" title="Permanent link">&para;</a></h3>
+<p>Two new endpoints on the existing aiohttp surface:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">GET</span>   <span class="o">/</span><span class="n">v1</span><span class="o">/</span><span class="n">config</span>   <span class="o">-&gt;</span> <span class="p">{</span> <span class="s2">&quot;schema_version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">{</span><span class="err">…</span><span class="p">}</span> <span class="p">}</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">PATCH</span> <span class="o">/</span><span class="n">v1</span><span class="o">/</span><span class="n">config</span>   <span class="o">&lt;-</span> <span class="p">{</span> <span class="s2">&quot;patch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="err">…</span><span class="n">partial</span> <span class="n">config</span><span class="err">…</span><span class="p">}</span> <span class="p">}</span>  <span class="o">-&gt;</span> <span class="mi">200</span> <span class="o">+</span> <span class="n">updated</span> <span class="n">config</span>
+</code></pre></div>
+<p>Both are ed25519-signed via the existing middleware. The PATCH handler reuses
+<code>config_with_setting_value</code> and the <code>BridgeConfig</code> <code>replace(...)</code> machinery
+that the LCD menu already uses, so there is exactly one config-mutation code
+path. Writes are atomic (write to temp, fsync, rename) — same as the
+existing LCD path.</p>
+<p><strong>Mac app additions:</strong>
+- <code>BridgeTransport.getConfig(device) async throws -&gt; BridgeConfig</code>
+- <code>BridgeTransport.patchConfig(device, patch) async throws -&gt; BridgeConfig</code>
+- New <code>BridgeSettingsView</code> in SwiftUI organised as Mac users expect:
+  - <strong>Photos</strong> (FTP path, fit mode, JPEG quality, auto-print delay)
+  - <strong>Printer</strong> (selected printer, search rate, keepalive, no-film test)
+  - <strong>Network</strong> (hotspot SSID/password — view only here; Wi-Fi provisioning is a separate flow)
+  - <strong>Power</strong> (idle poweroff toggle)
+  - <strong>About</strong> (versions, device ID — what <code>System</code> is today)</p>
+<p>Copy is rewritten for a desktop audience. "FTP receive mode" becomes
+"How should photos reach the bridge?" with explanations of each option and a
+visible recommended default.</p>
+<p><strong>Acceptance:</strong>
+- Every setting currently reachable via the LCD is reachable from the Mac app.
+- Changing a setting from the Mac is reflected on the LCD within one render tick (≤ 250 ms).
+- Concurrent edits (Mac + LCD long-press) don't lose data; last-writer-wins is fine for v1.
+- New <code>bridge/tests/manager/test_config_endpoints.py</code> covers schema validation and atomic write.</p>
+<p><strong>Files touched:</strong> <code>manager/api.py</code>, <code>config.py</code> (schema export), new Mac
+files <code>BridgeSettings*.swift</code>, new test file.</p>
+<h3 id="phase-3-virtual-display-virtual-controls-websocket">Phase 3 — Virtual display + virtual controls (WebSocket)<a class="headerlink" href="#phase-3-virtual-display-virtual-controls-websocket" title="Permanent link">&para;</a></h3>
+<p>The Mac app needs to <em>see</em> the bridge as if looking at the LCD, and <em>act</em> on
+it as if pressing the joystick. We add one endpoint:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>WS /v1/ui   (ed25519-signed handshake)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>server -&gt; client:
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  { &quot;type&quot;: &quot;snapshot&quot;, &quot;snapshot&quot;: { …UiSnapshot serialized… } }
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  { &quot;type&quot;: &quot;preview&quot;,  &quot;snapshot_id&quot;: &quot;…&quot;, &quot;jpeg&quot;: &quot;&lt;base64&gt;&quot; }
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  { &quot;type&quot;: &quot;led&quot;,      &quot;pattern&quot;: &quot;ready&quot; | &quot;scanning&quot; | … }
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>client -&gt; server:
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  { &quot;type&quot;: &quot;action&quot;, &quot;action&quot;: &quot;up&quot;|&quot;down&quot;|&quot;left&quot;|&quot;right&quot;|&quot;select&quot;|&quot;back&quot;|&quot;help&quot;|&quot;pair&quot; }
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  { &quot;type&quot;: &quot;ping&quot; }
+</code></pre></div>
+<p><strong>Why structured JSON + separate JPEG (D2 → "Hybrid: structured")</strong>: the
+<code>UiSnapshot</code> is small (~1 KB); only <code>preview_image</code> is large. Streaming
+structured snapshots lets the Mac render natively in SwiftUI (Retina sharp,
+keyboard-shortcut-able, accessible). The JPEG sub-resource handles the only
+field SwiftUI can't trivially re-render.</p>
+<p><strong>Server side (<code>bridge/src/instantlink_bridge/ui/network_display.py</code>, new):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">NetworkDisplay</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Display sink that broadcasts UiSnapshots to subscribed WS clients.&quot;&quot;&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="n">UiSnapshot</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_idle_stage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ws</span><span class="p">:</span> <span class="n">WebSocketResponse</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<p><code>UiController</code> already calls <code>display.render(snapshot)</code> once per state
+change; we install a <code>CompositeDisplay([LumaSt7789Display(), NetworkDisplay()])</code>
+on LCD-SKU and <code>CompositeDisplay([NetworkDisplay()])</code> on headless. Identical
+state machine, identical snapshot, two sinks.</p>
+<p>Inbound <code>action</code> events feed the same <code>asyncio.Queue[UiAction]</code> that
+<code>GpioUiInput</code> populates today. Auth and rate-limiting at the handler level.</p>
+<p><strong>Mac side (<code>macos/InstantLink/Features/BridgeRemote/</code>, new):</strong>
+- <code>BridgeRemoteView.swift</code> — top-level SwiftUI view rendering each <code>UiMode</code> natively. One file per mode-cluster (status / settings / preview / printing).
+- <code>BridgeUiSnapshotDecoder.swift</code> — JSON ↔ <code>BridgeUiSnapshot</code> struct mirroring the Python dataclass.
+- Keyboard shortcuts: arrow keys → joystick, Return → SELECT, Backspace/Esc → BACK.
+- Click affordances on virtual joystick + KEY1/KEY2/KEY3 for trackpad users.
+- Reconnect-on-drop with exponential backoff; banner if disconnected &gt; 5 s.</p>
+<p><strong>Acceptance:</strong>
+- A <code>UiAction</code> from the Mac client produces the same state transition as the same action from the LCD joystick (proven by paired tests).
+- Snapshot latency Mac→render &lt; 200 ms p95 on USB-tether, &lt; 500 ms p95 on hotspot.
+- Mac app reconnects automatically after a bridge reboot.
+- Two Mac clients can subscribe simultaneously (no exclusive lock).</p>
+<p><strong>Files touched:</strong> new <code>ui/network_display.py</code>, new <code>ui/composite_display.py</code>,
+<code>manager/api.py</code> (WS route), several new Swift files, paired tests in both
+languages.</p>
+<h3 id="phase-4-status-led-service-deleted-2026-05-28">~~Phase 4 — Status LED service~~ (deleted 2026-05-28)<a class="headerlink" href="#phase-4-status-led-service-deleted-2026-05-28" title="Permanent link">&para;</a></h3>
+<p>Originally a <code>bridge/src/instantlink_bridge/ui/led.py</code> that would drive the
+Pi onboard ACT LED with 5 blink patterns mapping the <code>UiMode</code> state space.
+Deleted after hardware verification: the ACT LED on Pi Zero 2 W is
+hardwired to SD activity (trigger override unreliable on stock kernel) and
+adding a discrete LED was rejected to keep the headless BOM minimal.</p>
+<p>Per D4 (revised), the camera-side FTP transfer message is the
+user-visible signal on the headless SKU. Phase 0 (boot speed) compensates
+for the loss of an "is it ready?" affordance by making the
+camera-on → ready-to-print latency short enough that the user can shoot
+within seconds of camera-on and trust that early errors mean "wait a
+moment, try again."</p>
+<h3 id="phase-5-headless-sku-camera-hot-shoe-powered">Phase 5 — Headless SKU (camera-hot-shoe powered)<a class="headerlink" href="#phase-5-headless-sku-camera-hot-shoe-powered" title="Permanent link">&para;</a></h3>
+<p>Make the absence of LCD + buttons a first-class configuration, <em>and</em> design
+around the camera hot-shoe as the power source. The product story is: mount
+to the cold-shoe, wire to hot-shoe, never touch it again.</p>
+<p><strong>Config schema additions:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[ui]</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">surface</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;lcd&quot;</span><span class="w">        </span><span class="c1"># &quot;lcd&quot; | &quot;headless&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">input</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;gpio&quot;</span><span class="w">       </span><span class="c1"># &quot;gpio&quot; | &quot;none&quot; (auto-implied by surface)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">[power]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">source</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;x306&quot;</span><span class="w">       </span><span class="c1"># &quot;x306&quot; | &quot;hotshoe&quot;  (per D5)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># hotshoe: no battery telemetry, no idle-poweroff,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1"># camera off === bridge off; boot is always cold.</span>
+</code></pre></div>
+<p><strong>Bridge changes:</strong>
+- <code>app.py</code> gates <code>luma.lcd</code> and <code>gpiozero</code> imports on <code>config.ui.surface != "headless"</code>. Saves ~half the existing UI startup cost on headless. (Compounds with plan 032 levers — see §6.2.)
+- <code>bridge/systemd/instantlink-bridge-boot-splash.service</code> is <code>ConditionPathExists</code>-guarded on a fb1 device that doesn't exist on headless; the unit skips itself cleanly with no errors.
+- <code>power/x306.py</code> is not loaded on <code>power.source = "hotshoe"</code>. A new <code>power/hotshoe.py</code> is a stub backend that reports "external, no telemetry" and disables idle-poweroff handling entirely (the camera does it for us).
+- New <code>bridge/systemd/instantlink-bridge-headless.preset</code> enables only what's needed.</p>
+<p><strong>Pairing persistence (load-bearing on this SKU):</strong></p>
+<p>Because every camera power-on is a cold boot, pairing memory must survive
+power loss without any user action. Both pieces of state already do:
+- <code>BridgeConfig.printer.address</code> lives in <code>/etc/InstantLinkBridge/config.toml</code> on the SD card.
+- BlueZ bond data lives under <code>/var/lib/bluetooth/&lt;adapter&gt;/&lt;device&gt;/</code> with <code>Trusted=true</code> (per <code>bridge/CLAUDE.md</code>).</p>
+<p>Acceptance test added: cold-cycle the bridge 10× in a row with the printer
+on; every cycle must reach <code>READY</code> without any human input.</p>
+<p><strong>Reconnect after cold boot:</strong></p>
+<p>The plan-031 hybrid connect handles this well: ~4 s active reconnect once
+the bridge starts scanning. With ~15 s boot + ~4 s reconnect, total camera-on
+→ ready-to-print on the headless SKU is <strong>~19 s</strong>. That number is the
+metric to drive down via the §6.2 levers.</p>
+<p><strong>First-run path (D3 → both):</strong></p>
+<p>The race resolution is <em>order-based, not state-based</em>:</p>
+<ol>
+<li><strong>If USB-tether enumerates within 8 s of boot</strong>, the bridge advertises mDNS only over <code>usb0</code>. Mac app sees it there; hotspot is suppressed until pairing completes.</li>
+<li><strong>Otherwise</strong>, the bridge brings up the Wi-Fi AP with a default SSID/password printed on the device label (e.g. <code>IL-Bridge-A1B2C3D4</code> / 8-digit password derived from <code>device_id</code>). mDNS advertises on <code>wlan0</code>.</li>
+<li>After the first successful pairing + Wi-Fi provisioning, both transports remain available but the bridge prefers the credentialed home Wi-Fi.</li>
+</ol>
+<p>The first-run flow runs on its own bench power (USB-C wall wart), not on
+camera power. Once the bridge has remembered the printer and the home Wi-Fi
+(for FTP path) or has been told "use Bridge Wi-Fi" mode, the user moves it
+to the camera hot-shoe and forgets about setup.</p>
+<p><strong>Headless BOM</strong> (<code>bridge/HARDWARE-headless.md</code>, new):
+- Drop: Waveshare 1.3" LCD HAT, joystick, KEY1/2/3 (~$14).
+- Drop: X306 UPS shield (~$24-35) — replaced by a small buck regulator since the camera provides power.
+- Add: Hot-shoe foot with electrical pickup (proprietary or universal Sony hot-shoe pinout), <code>~$8</code>.
+- Add: 5 V buck regulator (e.g. Pololu D24V5F5), <code>~$5</code>.
+- Add: Cold-shoe / 1/4-20 mount foot on the bridge body so it slots into a side bracket without occupying the hot-shoe alone (hot-shoe carries power, cold-shoe carries weight).
+- Add: Optional bench-power USB-C input for setup (Pi USB-C, already present).
+- Keep: Pi Zero 2 W, microSD (prefer high-endurance — many cold cycles).
+- Expected unit BOM net change: <strong>roughly flat or slightly cheaper</strong> vs. LCD-SKU; the saving is in form factor + simplicity, not dollars.</p>
+<p>The hot-shoe pinout details depend on the camera. Sony a7C II's accessory
+shoe is the "Multi Interface Shoe" with documented power pins (~7.2 V when
+camera on). We design around that one camera for v1; other Sony bodies
+likely work but aren't a goal.</p>
+<p><strong>Acceptance:</strong>
+- <code>config.ui.surface = "headless"</code> boots cleanly with no imports of <code>luma.lcd</code> or <code>gpiozero</code> (verified via <code>python -X importtime</code>).
+- 10× consecutive cold boots (simulating camera on/off) all reach READY without intervention; ACT LED transitions through the expected patterns each time.
+- LED service drives ACT LED through the expected pattern transitions during a full print cycle on hardware.
+- Mac app pairs, configures Wi-Fi, and prints on a headless bridge with no buttons pressed on the bridge itself.
+- First-run race resolution covered by integration test (mocked transports).
+- Bench-tested on hot-shoe power: voltage stable through Wi-Fi/BLE radio bursts, no brown-out resets during print transfer.</p>
+<p><strong>Files touched:</strong> <code>config.py</code>, <code>app.py</code>, <code>power/hotshoe.py</code> (new),
+<code>bridge/systemd/</code>, new <code>bridge/HARDWARE-headless.md</code>, doc updates.</p>
+<h3 id="phase-6-ftp-reply-codes-as-the-user-facing-signal-added-2026-05-28">Phase 6 — FTP reply codes as the user-facing signal (added 2026-05-28)<a class="headerlink" href="#phase-6-ftp-reply-codes-as-the-user-facing-signal-added-2026-05-28" title="Permanent link">&para;</a></h3>
+<p>With D4 settled as "no on-device LED", the question "how does the user know
+the bridge is ready?" needs an answer. The camera is already in their hand.
+FTP (RFC 959) gives us reply codes with arbitrary text. <strong>Use the camera's
+existing FTP error display as the bridge's user-facing signal.</strong></p>
+<p>This is a much better answer than an LED could ever be:
+- The user sees specific, contextual text ("No film. Load film.") instead of
+  guessing what a colour means.
+- It works through hardware the user already owns.
+- Sony's FTP client may auto-retry transient (4xx) failures for a few seconds
+  before showing the user an error — meaning the user might never <em>perceive</em>
+  the bridge starting up if Phase 0 keeps boot under that retry window.
+  (This last claim needs a real-camera test; see Acceptance.)</p>
+<p><strong>Implementation surface:</strong></p>
+<p>In <code>bridge/src/instantlink_bridge/camera/ftp.py</code>, override <code>pyftpdlib</code>'s
+<code>FTPHandler.ftp_STOR</code> (the upload command handler) to do a pre-flight
+check against the current bridge state <em>before</em> the data connection opens.
+If the bridge can accept the photo, fall through to the default handler.
+If not, emit a meaningful reply.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">InstantLinkFTPHandler</span><span class="p">(</span><span class="n">FTPHandler</span><span class="p">):</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">bridge_state</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">UiSnapshot</span><span class="p">]</span>   <span class="c1"># injected at server construction</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">ftp_STOR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">):</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="n">snap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bridge_state</span><span class="p">()</span>                <span class="c1"># bare attribute read of frozen UiSnapshot</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="c1"># Check order matters: BOOTING comes before not-paired because during the first</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="c1"># seconds of boot the paired_printer lookup hasn&#39;t run, and &quot;not paired&quot; would</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="c1"># be misleading. (Architect note 2026-05-28.)</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="k">if</span> <span class="n">snap</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="n">UiMode</span><span class="o">.</span><span class="n">BOOTING</span><span class="p">:</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;451 Bridge starting, try again in a moment.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>            <span class="k">return</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>        <span class="k">if</span> <span class="n">snap</span><span class="o">.</span><span class="n">paired_printer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;501 Bridge not paired. Pair from the Mac app.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>            <span class="k">return</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">_printer_reachable</span><span class="p">(</span><span class="n">snap</span><span class="p">):</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;451 </span><span class="si">{</span><span class="n">snap</span><span class="o">.</span><span class="n">paired_printer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is offline. Power on the printer.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>            <span class="k">return</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>        <span class="k">if</span> <span class="p">(</span><span class="n">snap</span><span class="o">.</span><span class="n">film_remaining</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>                <span class="ow">and</span> <span class="n">snap</span><span class="o">.</span><span class="n">film_remaining</span> <span class="o">&lt;=</span> <span class="mi">0</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>                <span class="ow">and</span> <span class="ow">not</span> <span class="n">snap</span><span class="o">.</span><span class="n">allow_print_without_film</span><span class="p">):</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;552 No film. Load film and retry.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>            <span class="k">return</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>        <span class="k">if</span> <span class="n">snap</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="n">UiMode</span><span class="o">.</span><span class="n">PRINTING</span><span class="p">:</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;450 Printer busy, try again.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>            <span class="k">return</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">ftp_STOR</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
+</code></pre></div>
+<p><code>BridgeStateSnapshotProvider</code> is a thin interface owned by the controller
+that publishes the current <code>UiSnapshot</code>-derived facts (paired? online?
+film count?) under a lock-free snapshot pattern (immutable dataclass swap).
+Same data the LCD shows; just exposed to the FTP handler.</p>
+<p><strong>Reply-code design:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Bridge state</th>
+<th>Code</th>
+<th>Text</th>
+<th>Sony semantics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bridge still booting / FFI not ready</td>
+<td><code>451</code></td>
+<td><code>Bridge starting, try again in a moment.</code></td>
+<td>Transient — Sony may auto-retry for ~5-10 s</td>
+</tr>
+<tr>
+<td>Printer paired but offline / out of range</td>
+<td><code>451</code></td>
+<td><code>INSTAX-XXX is offline. Power on the printer.</code></td>
+<td>Transient</td>
+</tr>
+<tr>
+<td>Not paired yet</td>
+<td><code>501</code></td>
+<td><code>Bridge not paired. Pair from the Mac app.</code></td>
+<td>Permanent — user sees error, must act</td>
+</tr>
+<tr>
+<td>Film count = 0</td>
+<td><code>552</code></td>
+<td><code>No film. Load film and retry.</code></td>
+<td>Permanent</td>
+</tr>
+<tr>
+<td>Printer busy with previous photo</td>
+<td><code>450</code></td>
+<td><code>Printer busy, try again.</code></td>
+<td>Transient</td>
+</tr>
+<tr>
+<td>Success</td>
+<td><code>226</code> (default)</td>
+<td><code>Transfer complete.</code></td>
+<td>Normal success path</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Hardware test plan (REQUIRED before this phase is "done"):</strong></p>
+<ol>
+<li><strong>Sony text display</strong>: on the a7C II, trigger each error condition and
+   confirm what the camera shows. Test cases:</li>
+<li>Power off the printer → C1 a photo → confirm camera shows offline text.</li>
+<li>Forget the printer in config → C1 a photo → confirm "not paired" text.</li>
+<li>Print until film = 0 → C1 a photo → confirm "no film" text.</li>
+<li>Send two C1 in quick succession → confirm "busy" text on the second.</li>
+<li><strong>Sony auto-retry behavior</strong>: with the bridge service stopped (FTP
+   server still up via a stub returning 451), C1 a photo. Time how long the
+   camera retries before showing the user. This number determines whether
+   Phase 0 boot speed remains user-critical or becomes a power-burn concern.</li>
+<li><strong>Reply-text length</strong>: confirm Sony shows the full text vs. truncating.
+   Bound all texts to ≤ 50 ASCII chars to be safe.</li>
+</ol>
+<p><strong>Acceptance:</strong></p>
+<ul>
+<li>All five error conditions produce the right reply code + text on the wire (<code>tcpdump</code> confirms).</li>
+<li>On the a7C II, each error condition surfaces user-visible text that makes the cause obvious — captured in screenshots.</li>
+<li>Sony retry window measured and documented. Plan 033 §6.2 boot-speed urgency reassessed against that number (insert a footnote here once known).</li>
+<li><code>bridge/tests/camera/test_ftp_signal.py</code> covers the pre-flight logic with mocked state.</li>
+<li>No regression in the success path: a valid C1 photo still prints end-to-end.</li>
+</ul>
+<p><strong>Files touched:</strong>
+- <code>bridge/src/instantlink_bridge/camera/ftp.py</code> — <code>InstantLinkFTPHandler</code> subclass.
+- <code>bridge/src/instantlink_bridge/app.py</code> — wire the snapshot provider into the FTP server constructor.
+- <code>bridge/src/instantlink_bridge/ui/controller.py</code> — expose the snapshot-provider interface (read-only handle).
+- New <code>bridge/tests/camera/test_ftp_signal.py</code>.</p>
+<p><strong>Open questions:</strong>
+- Should we wrap the snapshot in a debounce so a flapping "online/offline" doesn't yield contradictory messages on close-spaced C1 presses? Probably yes — debounce window ~2 s.
+- Multi-print queueing: if the camera sends C1 while we're mid-print on a previous photo, do we accept and queue (today's behaviour) or reject with 450? Today's behaviour is correct for the "FTP Trans. (Multi)" workflow; only reject if the queue is full.</p>
+<h2 id="sequencing">Sequencing<a class="headerlink" href="#sequencing" title="Permanent link">&para;</a></h2>
+<p>Phases are mostly independent and can ship in this order. Phase 0 (boot
+speed) jumps to the front of the line because it gates the headless SKU's
+fundamental viability.</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Phase</th>
+<th>Why this order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Phase 6 (FTP-as-signal)</td>
+<td>Small, independent, replaces the deleted LED. Ships in ~1 sprint. Its hardware-test results reframe the urgency of Phase 0 — if Sony silently auto-retries 4xx for 5-10 s, the user never perceives the boot path. Cheapest way to know whether Phase 0 still needs to push for ≤ 12 s or can settle at ≤ 18 s.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Phase 0 (boot speed → ≤12 s or ≤18 s)</td>
+<td>Target adjusts based on Phase 6's retry-window measurement. Regardless, Phase 0 still saves power (idle CPU burn during boot) and improves the LCD-SKU's user-explicit-wait experience. Sprints 0–3 already shipped (~14.9 s today); Sprints 4 + 6 remain.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Phase 1 (LCD declutter)</td>
+<td>Cheap user-visible win on the existing LCD-SKU; no Mac changes needed; sets up Phase 2's removals.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Phase 2 (Mac canonical config)</td>
+<td>Unlocks the LCD declutter being permanent. Required for headless setup flow.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Phase 5 (headless SKU)</td>
+<td>Composes Phases 0 + 2 + 6. Phase 3 is NOT a prerequisite.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Phase 3 (virtual display + controls)</td>
+<td>Larger; nice-to-have for both SKUs as a debug + power-user feature; ships after the headless SKU is real.</td>
+</tr>
+</tbody>
+</table>
+<p>Phase 4 was originally a status LED service; deleted (see above) and
+replaced by Phase 6's FTP-reply-code approach. The reordering reflects the
+camera-power-source model: the daily UX is <strong>hot-shoe → boot → camera-side
+FTP feedback</strong>, not Mac app and not an on-device LED. The Mac app is
+setup-only on headless, so its UI fidelity (Phase 3) matters less than the
+boot path working at all (Phase 0).</p>
+<p>Each phase can be reviewed and shipped independently — no monolithic
+"v2 release."</p>
+<h2 id="open-questions-risks">Open questions / risks<a class="headerlink" href="#open-questions-risks" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>First-run hotspot SSID/password derivation</strong>: deriving from <code>device_id</code> is reproducible but means anyone with <code>device_id</code> can guess the password. Phase 5 task: confirm whether to label-print a random password instead, accepting that we lose reproducibility (and need to handle label loss). Likely answer: random password printed on label; bridge prints it on the LCD-SKU as a recovery affordance.</li>
+<li><strong>Concurrent Mac clients</strong>: Two Macs editing settings at the same time is allowed (last-writer-wins). Should we surface a "Bridge in use by …" advisory? Defer to v1.5.</li>
+<li><strong>Long-press combo (KEY1+KEY3) overlap</strong>: KEY3 already long-press = PAIR. KEY1 + KEY3 held 2 s is unambiguous in the input layer but warrants UX testing. Phase 1 acceptance.</li>
+<li><strong>Headless first-run without a label</strong>: if the user loses the sticker and has no USB cable, recovery requires re-flashing. Acceptable trade-off; mitigated by Mac app showing the printed credentials during pairing so they can be screen-shotted.</li>
+<li><strong>ACT LED conflicts</strong>: <code>/sys/class/leds/ACT</code> is also used by the kernel for SD-card activity. We need to seize it (<code>trigger=none</code>) early; document in <code>bridge/HARDWARE-headless.md</code> and the systemd preset.</li>
+<li><strong>Sony hot-shoe power pinout &amp; current budget</strong>: the Multi Interface Shoe nominally provides ~7.2 V on the rear contacts, but the documented current limit is conservative (~few hundred mA). Pi Zero 2 W idle + Wi-Fi + BLE can spike well above that during scan bursts. Bench-test required before committing to this BOM; if marginal, fall back to a small in-bridge capacitor reservoir or refuse to do BLE scanning until FTP is up.</li>
+<li><strong>Hot-shoe wear on the camera</strong>: repeated power cycling through the camera's accessory shoe is mechanically fine but electrically novel. Document expected duty cycle and confirm with Sony's accessory spec.</li>
+<li><strong>Cold-boot reconnect against a printer that's auto-slept</strong>: if the printer has gone to sleep faster than the bridge cold-boots (the BLE scan might find nothing), we need a clear "wake the printer" affordance. For v1 the LED can fast-blink-red to indicate "printer offline" and the user power-cycles the printer; this is mechanically acceptable.</li>
+<li><strong>Wi-Fi for FTP on the headless SKU</strong>: if <code>ftp.mode = "hotspot"</code>, the Pi has to bring up the AP from cold every camera power-on; that's ~3 s of additional startup work. If <code>ftp.mode = "peer"</code> (home Wi-Fi), the join can be slow on bad networks. Both are bounded but the user needs a sane default — recommend hotspot since it's network-independent.</li>
+</ul>
+<h2 id="out-of-scope-for-this-plan">Out of scope (for this plan)<a class="headerlink" href="#out-of-scope-for-this-plan" title="Permanent link">&para;</a></h2>
+<ul>
+<li>iOS app. The Mac↔bridge channel is reusable for iOS, but UI work is significant; track separately.</li>
+<li>Multi-printer pairing. Already on the v1.5 list.</li>
+<li>Cloud sync.</li>
+<li>Photo editing beyond auto-fit.</li>
+</ul>
+<h2 id="reference-existing-channel-surfaces">Reference: existing channel surfaces<a class="headerlink" href="#reference-existing-channel-surfaces" title="Permanent link">&para;</a></h2>
+<p><code>BridgeTransport.swift</code> (existing methods, do not duplicate):
+<code>discover</code>, <code>pairingStatus</code>, <code>completePairing</code>, <code>forgetLocalAuth</code>, <code>status</code>,
+<code>preflightUpdate</code>, <code>uploadUpdate</code>, <code>startUpdate</code>, <code>updateStatus</code>,
+<code>updateEvents</code>, <code>markUpdateGood</code>, <code>rollbackUpdate</code>, <code>createBackup</code>,
+<code>restoreBackup</code>.</p>
+<p>This plan adds three: <code>getConfig</code>, <code>patchConfig</code>, <code>openUIStream</code>.</p>
+<p><code>manager/api.py</code> (existing routes):
+<code>GET /v1/hello</code>, <code>GET /v1/pairing/status</code>, <code>POST /v1/pairing/complete</code>,
+plus auth-required routes registered via <code>auth_required_handler</code>.</p>
+<p>This plan adds three: <code>GET /v1/config</code>, <code>PATCH /v1/config</code>, <code>WS /v1/ui</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

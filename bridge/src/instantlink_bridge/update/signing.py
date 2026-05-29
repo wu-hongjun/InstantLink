@@ -467,7 +467,10 @@ def firmware_metadata_kind(manifest: Mapping[str, object]) -> str:
         raise FirmwareManifestError("firmware manifest must be a JSON object")
     explicit_kind = manifest.get("manifest_kind")
     if explicit_kind in {PACKAGE_MANIFEST_KIND, RELEASE_INDEX_KIND}:
-        return cast(str, explicit_kind)
+        # Modern mypy narrows `explicit_kind` to `str` after this
+        # membership test (both set elements are str literals), so the
+        # historical `cast(str, ...)` here is now flagged as redundant.
+        return explicit_kind
     if explicit_kind is not None:
         raise FirmwareManifestError("unsupported firmware manifest kind")
     if "manifest_name" in manifest or "archive_name" in manifest:

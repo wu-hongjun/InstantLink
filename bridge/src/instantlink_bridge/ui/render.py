@@ -109,9 +109,10 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
         primary = _font(size, prefer_cjk=prefer_cjk)
         sibling = primary if prefer_cjk else _font(size, prefer_cjk=True)
         # Attach for the smart `_text` fallback. PIL fonts are plain Python
-        # objects and accept arbitrary attrs.
+        # objects and accept arbitrary attrs at runtime; mypy can't see that
+        # because `Font` is a union of stubs that don't declare the field.
         try:
-            primary.cjk_sibling = sibling  # type: ignore[attr-defined]
+            primary.cjk_sibling = sibling  # type: ignore[union-attr]
         except AttributeError:
             # ImageFont.load_default() returns a slot-restricted object;
             # fall back to a module-level cache keyed by id().
@@ -291,9 +292,10 @@ def draw_status_bar(
     fg = state.foreground()
     fg_hex = _rgb_to_hex(fg)
 
-    # Measure pill width: max(60, text_width + 24)
+    # Measure pill width: max(60, text_width + 24). PIL's textbbox is typed
+    # as returning floats; coerce here so downstream pixel coords stay int.
     word_bbox = draw.textbbox((0, 0), word, font=font_body)
-    word_w = word_bbox[2] - word_bbox[0]
+    word_w = int(word_bbox[2] - word_bbox[0])
     pill_w = max(60, word_w + 24)
     pill_h = 22
 
@@ -309,10 +311,13 @@ def draw_status_bar(
         selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
         counter = f"{selected + 1}/{len(snapshot.settings_rows)}"
         counter_bbox = draw.textbbox((0, 0), counter, font=font_small)
-        counter_w = counter_bbox[2] - counter_bbox[0]
-        counter_h = counter_bbox[3] - counter_bbox[1]
+        # textbbox returns floats in current Pillow stubs; coerce so the
+        # downstream pixel coordinates stay strictly int.
+        counter_w = int(counter_bbox[2] - counter_bbox[0])
+        counter_h = int(counter_bbox[3] - counter_bbox[1])
+        counter_top = int(counter_bbox[1])
         counter_x = 232 - counter_w  # right-anchored, matching READY chip margin
-        counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_bbox[1]
+        counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_top
         _text(draw, counter_x, counter_y, counter, font_small, theme.label_secondary)
 
 

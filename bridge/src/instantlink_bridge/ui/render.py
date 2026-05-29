@@ -294,18 +294,30 @@ def draw_status_bar(
     word_w = word_bbox[2] - word_bbox[0]
     pill_w = max(60, word_w + 24)
     pill_h = 22
-    pill_x = 120 - pill_w // 2
-    pill_y = (STATUS_BAR_H - pill_h) // 2
 
-    draw_pill(draw, pill_x, pill_y, pill_w, pill_h, pill_bg_hex, fg_hex, word, font_body)
-
-    # Settings counter to the right of the pill
+    # In SETTINGS mode the page counter ("2/4") sits next to the pill —
+    # centre the combined block (pill + 6 px gap + counter) instead of the
+    # pill alone so the assembly stays visually centred on the bar.
+    counter = ""
+    counter_w = 0
     if snapshot.mode is UiMode.SETTINGS and snapshot.settings_rows:
         selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
         counter = f"{selected + 1}/{len(snapshot.settings_rows)}"
         counter_bbox = draw.textbbox((0, 0), counter, font=font_small)
+        counter_w = counter_bbox[2] - counter_bbox[0]
+
+    gap = 6 if counter else 0
+    block_w = pill_w + gap + counter_w
+    block_x = 120 - block_w // 2
+
+    pill_x = block_x
+    pill_y = (STATUS_BAR_H - pill_h) // 2
+
+    draw_pill(draw, pill_x, pill_y, pill_w, pill_h, pill_bg_hex, fg_hex, word, font_body)
+
+    if counter:
         counter_h = counter_bbox[3] - counter_bbox[1]
-        counter_x = pill_x + pill_w + 6
+        counter_x = pill_x + pill_w + gap
         counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_bbox[1]
         _text(draw, counter_x, counter_y, counter, font_small, theme.label_secondary)
 
@@ -700,7 +712,7 @@ def _no_film(
     theme: Theme,
 ) -> None:
     _center_lines(draw, [t("No film", snapshot.language)], 75, fonts["large"], theme.label_primary)
-    _text(draw, 18, 128, "No-film test is in Settings", fonts["small"], theme.label_secondary)
+    _center_lines(draw, [t("No-film test is in Settings", snapshot.language)], 128, fonts["small"], theme.label_secondary)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -715,33 +727,41 @@ def _printer_searching(
     message = snapshot.printer_status_message or t("Keep printer awake", snapshot.language)
     if message in {"Restart printer", "Close phone app"}:
         _center_lines(draw, [t("Blocked", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _text(draw, 18, 128, t("Close phone app or phone BT", snapshot.language), fonts["small"], theme.accent_yellow)
-        _text(draw, 18, 146, t("Power-cycle printer, then retry", snapshot.language), fonts["small"], theme.label_secondary)
+        _center_lines(draw, [t("Close phone app or phone BT", snapshot.language)], 128, fonts["small"], theme.accent_yellow)
+        _center_lines(draw, [t("Power-cycle printer, then retry", snapshot.language)], 146, fonts["small"], theme.label_secondary)
     elif message == "Printer seen; connecting":
         _center_lines(draw, [t("Connecting", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _text(draw, 18, 128, t("Opening Bluetooth session", snapshot.language), fonts["small"], theme.label_primary)
-        _text(draw, 18, 146, t("If stuck, close phone app", snapshot.language), fonts["small"], theme.label_secondary)
+        _center_lines(draw, [t("Opening Bluetooth session", snapshot.language)], 128, fonts["small"], theme.label_primary)
+        _center_lines(draw, [t("If stuck, close phone app", snapshot.language)], 146, fonts["small"], theme.label_secondary)
     elif message == "Saw other Instax":
         _center_lines(draw, [t("Wrong one", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _text(draw, 18, 128, t("Selected printer not visible", snapshot.language), fonts["small"], theme.label_primary)
-        _text(draw, 18, 146, t("Turn selected printer on", snapshot.language), fonts["small"], theme.accent_yellow)
+        _center_lines(draw, [t("Selected printer not visible", snapshot.language)], 128, fonts["small"], theme.label_primary)
+        _center_lines(draw, [t("Turn selected printer on", snapshot.language)], 146, fonts["small"], theme.accent_yellow)
     elif message in {"Scanning: 0 printers", "No printer signal"}:
         # No BLE signal yet — title names the active state, body gives the
         # action so a power-cycle is the obvious next step.
         _center_lines(draw, [t("Searching", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _text(draw, 18, 128, t("Turn printer on and keep awake", snapshot.language), fonts["small"], theme.label_primary)
-        _text(draw, 18, 146, t("Phone Bluetooth may grab it", snapshot.language), fonts["small"], theme.label_secondary)
+        _center_lines(draw, [t("Turn printer on and keep awake", snapshot.language)], 128, fonts["small"], theme.label_primary)
+        _center_lines(draw, [t("Phone Bluetooth may grab it", snapshot.language)], 146, fonts["small"], theme.label_secondary)
     else:
         # Title states the active state ("Searching"); body (status_message)
         # carries the live retry copy (e.g. "Looking for printer"). The
         # message is set by the controller in English; translate at the
         # render boundary so 中文 mode picks up the i18n entry.
-        _center_lines(draw, [t("Searching", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _text(
+        # Title + live retry message both centred so the screen reads as
+        # a vertically-stacked status block instead of a centred title
+        # over a left-aligned body string.
+        _center_lines(
             draw,
-            18,
+            [t("Searching", snapshot.language)],
+            75,
+            fonts["large"],
+            theme.label_primary,
+        )
+        _center_lines(
+            draw,
+            [_ellipsize(t(message, snapshot.language), 31)],
             128,
-            _ellipsize(t(message, snapshot.language), 31),
             fonts["body"],
             theme.label_primary,
         )
@@ -761,13 +781,13 @@ def _printer_offline(
         _center_lines(draw, [t("Checking", snapshot.language)], 75, fonts["large"], theme.label_primary)
     elif message == "Hold K3 to re-pair":
         _center_lines(draw, [t("No printer", snapshot.language)], 75, fonts["large"], theme.label_primary)
-        _text(draw, 18, 128, t("Printer not found nearby", snapshot.language), fonts["body"], theme.accent_yellow)
+        _center_lines(draw, [t("Printer not found nearby", snapshot.language)], 128, fonts["body"], theme.accent_yellow)
         hints = _mode_hints(snapshot)
         draw_hint_bar(draw, hints, fonts["hint"], theme)
         return
     else:
         _center_lines(draw, [t("Printer off", snapshot.language)], 75, fonts["large"], theme.label_primary)
-    _text(draw, 18, 128, t("Keep it awake near bridge", snapshot.language), fonts["body"], theme.label_primary)
+    _center_lines(draw, [t("Keep it awake near bridge", snapshot.language)], 128, fonts["body"], theme.label_primary)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)

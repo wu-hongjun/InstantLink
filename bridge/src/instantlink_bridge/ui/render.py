@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Iterable
+from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -594,15 +596,20 @@ def _ready(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    accepting = can_accept_images(snapshot)
-    if not accepting:
+    if not can_accept_images(snapshot):
         _validation(draw, snapshot, fonts, theme)
         return
+
+    # Hoist hot-path locals: `snapshot.language` and `fonts["small"]` are
+    # read 10+ times in this function. Pulling them into locals removes
+    # the repeated attribute / dict lookups from the render path.
+    lang = snapshot.language
+    font_small = fonts["small"]
 
     # Centered title — translated via i18n so it reads "就绪" / "Ready".
     # y=56 (was 75): pushes the title up so the info card at y=104 has a
     # comfortable ~18 px gap below the title instead of touching it.
-    _center_lines(draw, [t("Ready", snapshot.language)], 56, fonts["large"], theme.label_primary)
+    _center_lines(draw, [t("Ready", lang)], 56, fonts["large"], theme.label_primary)
 
     # Card spanning x=12..228, y=104..200
     card_x, card_y = 12, 104
@@ -616,12 +623,12 @@ def _ready(
     row_groups: list[list[tuple[str, str]]] = []
 
     if snapshot.paired_printer is not None:
-        row_groups.append([(t("Type", snapshot.language), _status_bar_printer_name(snapshot))])
+        row_groups.append([(t("Type", lang), _status_bar_printer_name(snapshot))])
 
     film_cell: tuple[str, str] | None = None
     if snapshot.film_remaining is not None:
         film_cell = (
-            t("Film", snapshot.language),
+            t("Film", lang),
             f"{snapshot.film_remaining}/{snapshot.film_capacity}",
         )
 
@@ -633,10 +640,7 @@ def _ready(
         # the user-facing value (percentage) is the part that matters at
         # arm's length. Battery-life is still surfaced via the helper for
         # the future Mac/headless views.
-        battery_cell = (
-            t("Battery", snapshot.language),
-            f"{snapshot.printer_battery}%{charging}",
-        )
+        battery_cell = (t("Battery", lang), f"{snapshot.printer_battery}%{charging}")
 
     # Pair Film + Battery on a single split row when both are present;
     # fall back to a single-row render if only one is available.
@@ -649,7 +653,7 @@ def _ready(
 
     if snapshot.paired_printer is not None:
         bare_id = snapshot.paired_printer.name.removeprefix("INSTAX-")
-        row_groups.append([(t("Printer", snapshot.language), bare_id)])
+        row_groups.append([(t("Printer", lang), bare_id)])
 
     # SSID row removed from READY body: the READY card is the *printer*
     # info section (type, film, battery, serial). The bridge hotspot SSID
@@ -658,73 +662,65 @@ def _ready(
 
     depth = snapshot.image_queue_depth
     if depth == 1:
-        row_groups.append([(t("Queue", snapshot.language), t("1 photo", snapshot.language))])
+        row_groups.append([(t("Queue", lang), t("1 photo", lang))])
     elif depth > 1:
-        photos_word = t("photos", snapshot.language)
-        if photos_word == "photos":
-            row_groups.append([(t("Queue", snapshot.language), f"{depth} photos")])
+        # `t()` falls through to the source on a miss, so wrapping the
+        # plural word always yields *some* string — no second branch
+        # needed. The conditional pluralisation lived here as a leftover
+        # from an earlier i18n design and was equivalent to its else arm.
+        row_groups.append([(t("Queue", lang), f"{depth} {t('photos', lang)}")])
+
+    if not row_groups:
+        hints = _mode_hints(snapshot)
+        draw_hint_bar(draw, hints, fonts["hint"], theme)
+        return
+
+    # Distribute groups within the card.
+    num_rows = len(row_groups)
+    row_h = min(card_h // num_rows, 20)  # cap to avoid oversized rows
+    total_content = num_rows * row_h
+    start_y = card_y + (card_h - total_content) // 2
+    # Vertical offset to the label baseline — constant across all rows
+    # so the font-height query happens once instead of once per loop iter.
+    label_dy = (row_h - _font_height(draw, "Ag", font_small)) // 2
+    label_x_full = card_x + 16
+    cell_w = (card_w - 32) // 2  # half-card width for split rows
+    divider_x = card_x + card_w // 2
+
+    for i, group in enumerate(row_groups):
+        ry = start_y + i * row_h
+        label_y = ry + label_dy
+
+        if len(group) == 1:
+            # Single full-width row — Type / Printer / Queue.
+            label, value = group[0]
+            prefix = f"{label}: "
+            lw = _text_width(draw, prefix, font_small)
+            _text(draw, label_x_full, label_y, prefix, font_small, theme.label_secondary)
+            _text(draw, label_x_full + lw, label_y, value, font_small, theme.label_primary)
         else:
-            row_groups.append([(t("Queue", snapshot.language), f"{depth} {photos_word}")])
-
-    # Distribute groups within the card
-    if row_groups:
-        num_rows = len(row_groups)
-        row_h = card_h // max(num_rows, 1)
-        row_h = min(row_h, 20)  # cap to avoid oversized rows with few items
-        total_content = num_rows * row_h
-        start_y = card_y + (card_h - total_content) // 2
-
-        for i, group in enumerate(row_groups):
-            ry = start_y + i * row_h
-            row_mid = ry + row_h // 2
-            label_y = row_mid - _font_height(draw, "Ag", fonts["small"]) // 2
-
-            if len(group) == 1:
-                # Single full-width row — keeps Type / Printer / Queue
-                # behaving exactly as before.
-                label, value = group[0]
+            # Split row: each cell takes a half-card with a vertical
+            # hairline divider between them. Labels keep the trailing
+            # ":" so the eye can still bind label↔value across the gap.
+            for cell_idx, (label, value) in enumerate(group):
+                cx = label_x_full + cell_idx * cell_w
                 prefix = f"{label}: "
-                lw = _text_width(draw, prefix, fonts["small"])
-                _text(
-                    draw, card_x + 16, label_y, prefix, fonts["small"], theme.label_secondary
-                )
-                _text(
-                    draw, card_x + 16 + lw, label_y, value, fonts["small"], theme.label_primary
-                )
-            else:
-                # Split row: each cell takes a half-card with a vertical
-                # hairline divider between them. Labels keep the trailing
-                # ":" so the eye can still bind label↔value across the gap.
-                cell_w = (card_w - 32) // 2
-                for cell_idx, (label, value) in enumerate(group):
-                    cx = card_x + 16 + cell_idx * cell_w
-                    prefix = f"{label}: "
-                    lw = _text_width(draw, prefix, fonts["small"])
-                    _text(
-                        draw, cx, label_y, prefix, fonts["small"], theme.label_secondary
-                    )
-                    _text(
-                        draw,
-                        cx + lw,
-                        label_y,
-                        value,
-                        fonts["small"],
-                        theme.label_primary,
-                    )
-                # Vertical divider — 1 px hairline in the same secondary
-                # tint as the row hairlines, inset from the row top/bottom
-                # so it reads as a slim "·" between the cells, not a frame.
-                divider_x = card_x + card_w // 2
-                draw.line(
-                    (divider_x, ry + 3, divider_x, ry + row_h - 5),
-                    fill=theme.separator,
-                    width=1,
-                )
+                lw = _text_width(draw, prefix, font_small)
+                _text(draw, cx, label_y, prefix, font_small, theme.label_secondary)
+                _text(draw, cx + lw, label_y, value, font_small, theme.label_primary)
+            # Vertical divider — 1 px hairline in the same secondary
+            # tint as the row hairlines, inset from the row top/bottom
+            # so it reads as a slim "·" between the cells, not a frame.
+            draw.line(
+                (divider_x, ry + 3, divider_x, ry + row_h - 5),
+                fill=theme.separator,
+                width=1,
+            )
 
-            # Hairline after row (except last) — 16 px leading inset matches
-            # iOS default UITableViewCell.separatorInset (16 pt leading).
-            if i < num_rows - 1:
-                draw_hairline(draw, card_x + 16, ry + row_h - 1, card_w - 32, theme)
+        # Hairline after row (except last) — 16 px leading inset matches
+        # iOS default UITableViewCell.separatorInset (16 pt leading).
+        if i < num_rows - 1:
+            draw_hairline(draw, label_x_full, ry + row_h - 1, card_w - 32, theme)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -955,6 +951,10 @@ def _settings(
     theme: Theme,
 ) -> None:
     rows = snapshot.settings_rows
+    # Hoist the language string out of the loop — it's hit twice per row
+    # for label/value translation, and reading the dataclass attr 30+
+    # times per Settings render adds up at 16 fps.
+    lang = snapshot.language
     font = fonts["small"]
     # The trailing chevron "›" (U+203A) is a Latin glyph; the CJK font used
     # when language=zh-Hans (wqy-zenhei / Hiragino fall-back) has no entry
@@ -963,7 +963,7 @@ def _settings(
     font_scale, row_scale = _scale_for_snapshot(snapshot)
     marker_font = _font(max(1, round(_BASE_FONTS["body"] * font_scale)), prefer_cjk=False)
     if not rows:
-        _text(draw, 18, 58, t("No settings available", snapshot.language), fonts["body"], theme.label_primary)
+        _text(draw, 18, 58, t("No settings available", lang), fonts["body"], theme.label_primary)
         draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
         return
 
@@ -1016,8 +1016,8 @@ def _settings(
         draw_settings_row(
             draw,
             y,
-            t(row.label, snapshot.language),
-            t(row.value, snapshot.language),
+            t(row.label, lang),
+            t(row.value, lang),
             row.hint,
             selected=index == selected,
             font=font,
@@ -1225,28 +1225,33 @@ def _center_lines(
         y += 26
 
 
-# Fallback CJK-sibling lookup for fonts that don't accept arbitrary attrs.
-# Keyed by id(primary_font); cleared between renders implicitly because the
-# primary fonts are rebuilt every render_snapshot call.
+# Fallback CJK-sibling lookup for fonts that don't accept arbitrary
+# attrs (`ImageFont.load_default()` is slot-restricted and rejects
+# attribute assignment). Keyed by ``id(primary_font)``. Since `_font` is
+# `lru_cache`d, the same primary objects are returned across renders and
+# this dict is naturally bounded to the same ~5-entry slot ladder; no
+# eviction logic needed.
 _CJK_SIBLING_BY_ID: dict[int, Font] = {}
 
 
+# Pre-compiled CJK detector. Covers CJK Unified Ideographs
+# (U+4E00–U+9FFF), Extension-A (U+3400–U+4DBF), and CJK Compatibility
+# Ideographs (U+F900–U+FAFF). Hiragana/Katakana aren't in WQY coverage
+# so we don't bother — the Chinese translations are pure Han.
+#
+# Compiled once at import time; the C-level scan via `re.search` is much
+# faster than the previous per-character Python loop with chained
+# comparisons. `_has_cjk` runs for every drawn string, including the hot
+# `_text_width` path used during row layout.
+_CJK_RE = re.compile(
+    "[一-鿿㐀-䶿豈-﫿]"
+)
+
+
 def _has_cjk(text: str) -> bool:
-    """Return True if ``text`` contains any CJK ideograph.
+    """Return True if ``text`` contains any CJK ideograph."""
 
-    Covers the three Unicode blocks the LCD is likely to encounter:
-    CJK Unified Ideographs, the Extension-A block, and the CJK
-    Compatibility Ideographs range. Hiragana/Katakana aren't in WQY
-    coverage so we don't bother — the Chinese translations are pure
-    Han characters.
-    """
-
-    return any(
-        "一" <= ch <= "鿿"
-        or "㐀" <= ch <= "䶿"
-        or "豈" <= ch <= "﫿"
-        for ch in text
-    )
+    return _CJK_RE.search(text) is not None
 
 
 def _cjk_font_for(font: Font) -> Font | None:
@@ -1349,7 +1354,19 @@ _CJK_FONT_PATHS: tuple[str, ...] = (
 )
 
 
+@lru_cache(maxsize=32)
 def _font(size: int, prefer_cjk: bool = False) -> Font:
+    """Return a TrueType font for ``size``, preferring CJK or Latin first.
+
+    Cached per ``(size, prefer_cjk)``. Without the cache, every
+    ``render_snapshot`` call re-opened the TTF from disk for every slot
+    (small/body/title/large/hint × Latin + CJK = 10 opens), and at the
+    16 fps breath rate that became ~160 disk reads/second on the Pi's
+    SD card. The bridge ships fewer than ten font slots even in the
+    worst case (3 font-size scales × {Latin, CJK} × {small, body,
+    title, large, hint}), so a 32-entry LRU is comfortably bounded.
+    """
+
     paths = (
         (*_CJK_FONT_PATHS, *_LATIN_FONT_PATHS)
         if prefer_cjk

@@ -107,8 +107,8 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     ),
     SettingsPage.NETWORK: (
         SettingKey.NETWORK_HOTSPOT_INFO,
-        SettingKey.NETWORK_HOTSPOT_SSID_INFO,
-        SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
+        # Hotspot SSID + password live on the Upload FTP page where the user is
+        # actively setting up the camera; deliberately not duplicated here.
         SettingKey.NETWORK_BLUETOOTH_INFO,
         SettingKey.NETWORK_WIFI_INFO,
         SettingKey.NETWORK_ETHERNET_INFO,

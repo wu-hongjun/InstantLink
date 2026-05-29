@@ -1427,7 +1427,7 @@ class BridgeUi:
         if self._camera_transport_message in {"Admin USB no IP", "USB IP missing"}:
             return "no IP"
         if self._usb_connected:
-            return f"SSH {self._config.ftp.host}"
+            return self._config.ftp.host
         return "off"
 
     def _wifi_network_value(self) -> str:

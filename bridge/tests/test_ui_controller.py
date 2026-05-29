@@ -1687,16 +1687,14 @@ async def test_settings_network_page_shows_connection_info() -> None:
     rows = display.snapshots[-1].settings_rows
     assert [row.label for row in rows] == [
         "Bridge FTP",
-        "Bridge Wi-Fi",
-        "Wi-Fi PIN",
         "Bluetooth",
         "Same Wi-Fi adv",
         "USB IP",
     ]
     assert rows[0].value == "192.168.8.1"
-    assert rows[3].value == "connected"
-    assert rows[4].value == "192.168.5.149"
-    assert rows[5].value == "SSH 192.168.7.1"
+    assert rows[1].value == "connected"
+    assert rows[2].value == "192.168.5.149"
+    assert rows[3].value == "192.168.7.1"
 
 
 @pytest.mark.asyncio
@@ -1995,8 +1993,8 @@ async def test_bluetooth_settings_do_not_claim_connected_while_searching() -> No
 
     ui._show_settings(page=SettingsPage.NETWORK)
 
-    assert display.snapshots[-1].settings_rows[3].label == "Bluetooth"
-    assert display.snapshots[-1].settings_rows[3].value == "searching"
+    assert display.snapshots[-1].settings_rows[1].label == "Bluetooth"
+    assert display.snapshots[-1].settings_rows[1].value == "searching"
 
 
 @pytest.mark.asyncio

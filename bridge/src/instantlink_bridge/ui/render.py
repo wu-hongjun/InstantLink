@@ -178,7 +178,7 @@ _MODE_STATUS_WORD: dict[UiMode, str] = {
     UiMode.PAIRING: "Pairing",
     UiMode.PAIR_FAILED: "Pair failed",
     UiMode.PRINTER_SEARCHING: "Searching",
-    UiMode.PRINTER_OFFLINE: "Offline",
+    UiMode.PRINTER_OFFLINE: "Disconnected",
     UiMode.VALIDATION: "Validating",
     UiMode.NO_FILM: "No film",
     UiMode.IMAGE_RECEIVED: "Received",
@@ -196,11 +196,36 @@ def status_bar_word(snapshot: UiSnapshot) -> str:
     READY is split into ``Connected`` (printer + FTP path are healthy) and
     ``Waiting`` (something is missing) so the user can tell at a glance
     whether the next ``FTP Trans. (This Img.)`` will actually print.
+
+    PRINTER_SEARCHING is split into ``Searching`` (actively probing) and
+    ``Disconnected`` (passively waiting on the user — the body says "Turn
+    printer on"). Pairs with the status indicator's NOT_READY-solid vs
+    SEARCHING-breathing split so the colour pattern and the word agree.
     """
 
-    if snapshot.mode is UiMode.READY:
+    mode = snapshot.mode
+    if mode is UiMode.READY:
         return "Connected" if can_accept_images(snapshot) else "Waiting"
-    return _MODE_STATUS_WORD.get(snapshot.mode, "")
+    if mode is UiMode.PRINTER_SEARCHING and _is_waiting_for_user_message(
+        snapshot.printer_status_message
+    ):
+        return "Disconnected"
+    return _MODE_STATUS_WORD.get(mode, "")
+
+
+# Lightweight mirror of status_indicator._WAITING_FOR_USER_MESSAGES so the
+# top-bar word can stay in lockstep with the indicator pattern without a
+# circular import. Update both when adding a new "no BLE signal" message.
+_TOP_BAR_WAITING_MESSAGES: frozenset[str] = frozenset(
+    {
+        "No printer signal",
+        "Scanning: 0 printers",
+    }
+)
+
+
+def _is_waiting_for_user_message(message: str | None) -> bool:
+    return message is not None and message in _TOP_BAR_WAITING_MESSAGES
 
 
 def draw_body_message(

@@ -121,6 +121,41 @@ def test_searching_modes_resolve_to_searching_breathing() -> None:
         assert state.pattern is StatusPattern.BREATHING, mode
 
 
+def test_printer_searching_with_no_signal_collapses_to_not_ready_solid() -> None:
+    """When the scan keeps returning zero BLE hits we're not really
+    searching — we're waiting on the user to power the printer on. The
+    indicator switches to solid yellow so the bar doesn't breathe over a
+    passive screen ("Turn printer on").
+    """
+
+    for message in ("No printer signal", "Scanning: 0 printers"):
+        state = derive_status(
+            _ready_snapshot(
+                mode=UiMode.PRINTER_SEARCHING,
+                printer_status_message=message,
+            )
+        )
+
+        assert state.signal is StatusSignal.NOT_READY, message
+        assert state.pattern is StatusPattern.SOLID, message
+
+
+def test_printer_searching_while_probing_stays_breathing() -> None:
+    """An active probe ("Looking for printer", "Printer seen; connecting")
+    keeps the breathing-yellow indicator because work is in progress."""
+
+    for message in ("Looking for printer", "Printer seen; connecting"):
+        state = derive_status(
+            _ready_snapshot(
+                mode=UiMode.PRINTER_SEARCHING,
+                printer_status_message=message,
+            )
+        )
+
+        assert state.signal is StatusSignal.SEARCHING, message
+        assert state.pattern is StatusPattern.BREATHING, message
+
+
 # ---------------------------------------------------------------------------
 # SETTINGS overlay inheritance
 # ---------------------------------------------------------------------------

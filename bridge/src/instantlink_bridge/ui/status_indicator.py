@@ -167,12 +167,19 @@ def derive_status(snapshot: UiSnapshot) -> StatusState:
     if mode in {UiMode.PRINTER_OFFLINE, UiMode.NEEDS_PAIRING, UiMode.PAIR_FAILED}:
         return _NOT_READY_SOLID
 
-    if mode in {
-        UiMode.BOOTING,
-        UiMode.PRINTER_SEARCHING,
-        UiMode.PAIRING,
-        UiMode.VALIDATION,
-    }:
+    if mode is UiMode.PRINTER_SEARCHING:
+        # PRINTER_SEARCHING covers two distinct user-perceived states:
+        #   * actively probing (BLE scan, connect, response wait) — breathing
+        #     yellow with "Searching" matches the live work.
+        #   * passively waiting on the user (no BLE signal returned, body says
+        #     "Turn printer on") — solid yellow with "Disconnected" reads as a
+        #     stable not-ready condition the user must act on. Breathing the
+        #     bar here was misleading because the bridge isn't doing anything.
+        if _is_waiting_for_user(snapshot.printer_status_message):
+            return _NOT_READY_SOLID
+        return _SEARCHING_BREATH
+
+    if mode in {UiMode.BOOTING, UiMode.PAIRING, UiMode.VALIDATION}:
         return _SEARCHING_BREATH
 
     # Defensive default: an unknown mode is treated as "not ready" rather than
@@ -190,6 +197,25 @@ def _settings_inherit(snapshot: UiSnapshot) -> StatusState:
     if snapshot.printer_status_fresh and _can_accept(snapshot):
         return _READY_SOLID
     return _SEARCHING_BREATH
+
+
+# PRINTER_SEARCHING messages that mean the bridge has stopped finding any
+# BLE advertisement and is now waiting on the user (the body line is "Turn
+# printer on and keep awake"). These collapse the indicator to NOT_READY
+# solid + "Disconnected" rather than the breathing "Searching" state used
+# while the bridge is actively probing.
+_WAITING_FOR_USER_MESSAGES: frozenset[str] = frozenset(
+    {
+        "No printer signal",
+        "Scanning: 0 printers",
+    }
+)
+
+
+def _is_waiting_for_user(message: str | None) -> bool:
+    """Return True when PRINTER_SEARCHING is passively awaiting user action."""
+
+    return message is not None and message in _WAITING_FOR_USER_MESSAGES
 
 
 def _can_accept(snapshot: UiSnapshot) -> bool:

@@ -73,10 +73,27 @@ def test_status_bar_word_resolves_per_mode() -> None:
     )
     assert status_bar_word(ready_connected) == "Connected"
     assert status_bar_word(ready_waiting) == "Waiting"
+    # PRINTER_SEARCHING with no specific message is still actively probing —
+    # the bridge is mid-scan or mid-connect, breathing yellow + "Searching".
     assert status_bar_word(UiSnapshot(mode=UiMode.PRINTER_SEARCHING, ftp_host="x")) == "Searching"
+    # PRINTER_SEARCHING after the scan returned zero hits is a passive state
+    # waiting on the user — solid yellow + "Disconnected" so the colour
+    # pattern (not breathing) and the word both signal "you must act".
+    assert (
+        status_bar_word(
+            UiSnapshot(
+                mode=UiMode.PRINTER_SEARCHING,
+                ftp_host="x",
+                printer_status_message="No printer signal",
+            )
+        )
+        == "Disconnected"
+    )
     assert status_bar_word(UiSnapshot(mode=UiMode.PRINTING, ftp_host="x")) == "Printing"
     assert status_bar_word(UiSnapshot(mode=UiMode.NO_FILM, ftp_host="x")) == "No film"
-    assert status_bar_word(UiSnapshot(mode=UiMode.PRINTER_OFFLINE, ftp_host="x")) == "Offline"
+    # PRINTER_OFFLINE is the explicit not-reachable mode — same vocabulary
+    # as the passive-search case so the user learns one term for "unreachable".
+    assert status_bar_word(UiSnapshot(mode=UiMode.PRINTER_OFFLINE, ftp_host="x")) == "Disconnected"
 
 
 def test_render_validation_screen_is_square_lcd_size() -> None:

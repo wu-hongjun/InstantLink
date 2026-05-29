@@ -1681,7 +1681,7 @@ class BridgeUi:
         if key is SettingKey.NETWORK_WIFI_INFO:
             return "Advanced: bridge on existing Wi-Fi"
         if key is SettingKey.NETWORK_ETHERNET_INFO:
-            return "USB-C network to Mac (setup, updates)"
+            return "USB network to Mac (setup, updates)"
         if key is SettingKey.SYSTEM_DEVICE_ID:
             return "Unique ID; used by the Mac app"
         if key is SettingKey.SYSTEM_APP_VERSION:
@@ -1711,7 +1711,7 @@ class BridgeUi:
         if key is SettingKey.OPEN_CAMERA:
             return "Wi-Fi mode and FTP credentials"
         if key is SettingKey.OPEN_NETWORK:
-            return "Wi-Fi, Bluetooth, USB-C info"
+            return "Wi-Fi, Bluetooth, USB info"
         if key is SettingKey.OPEN_PRINT:
             return "Photo size and print options"
         if key is SettingKey.OPEN_SYSTEM:

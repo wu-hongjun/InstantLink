@@ -277,7 +277,7 @@ def setting_action_hint(key: SettingKey) -> str:
 SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_PRINTER: "Printer pairing and status",
     SettingKey.OPEN_CAMERA: "Wi-Fi mode and FTP credentials",
-    SettingKey.OPEN_NETWORK: "Wi-Fi, Bluetooth, USB-C info",
+    SettingKey.OPEN_NETWORK: "Wi-Fi, Bluetooth, USB info",
     SettingKey.OPEN_PRINT: "Photo size and print options",
     SettingKey.OPEN_SYSTEM: "Device info and power",
     SettingKey.OPEN_ABOUT: "Versions and device identity",
@@ -292,7 +292,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.FTP_USERNAME_INFO: "Enter as FTP user in camera",
     SettingKey.FTP_PASSWORD_INFO: "PIN: enter as FTP password in camera",
     SettingKey.CAMERA_SETUP_INFO: "Any FTP client works (camera, app, scp)",
-    SettingKey.NETWORK_ETHERNET_INFO: "USB-C network to Mac (setup, updates)",
+    SettingKey.NETWORK_ETHERNET_INFO: "USB network to Mac (setup, updates)",
     SettingKey.NETWORK_WIFI_INFO: "Advanced: bridge on existing Wi-Fi",
     SettingKey.NETWORK_HOTSPOT_INFO: "Camera connects here for upload",
     SettingKey.NETWORK_HOTSPOT_SSID_INFO: "Bridge Wi-Fi name to join from camera",

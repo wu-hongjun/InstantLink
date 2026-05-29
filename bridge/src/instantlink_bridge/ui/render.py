@@ -190,34 +190,14 @@ def draw_pill(
 ) -> None:
     """Draw a capsule (rounded rect, radius = h//2) with centred text.
 
-    Liquid Glass polish:
-    - Edge-light: 1 px brighter top arc, 1 px darker bottom arc (glass rim).
-    - Specular shimmer: a 1 px lighter horizontal line at h//3 from top, inset
-      by radius on each side, simulating a top-light specular streak on the
-      curved glass surface. Two single-line draws — essentially free.
-
-    Used for the status bar live-indicator pill and hint chips.
+    Used for the status bar live-indicator pill and hint chips. We
+    *tried* edge-light + specular streak polish here but at 240×240 the
+    1 px highlights read as artefact lines, not glass depth — the shape
+    + frosted fill already carry the glass vocabulary. Plain rounded
+    rect + text wins on this hardware.
     """
     radius = h // 2
     draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=fill)
-
-    # --- Edge-light: 1 px top-arc brighter, 1 px bottom-arc darker ----------
-    # We clip the highlight to the inner inset rect so it follows the capsule
-    # silhouette without leaking onto the background.
-    edge_top = _lighten(fill, 50)
-    edge_bot = _darken(fill, 25)
-    # Top edge: draw a 1 px thick rounded rect just covering the top line
-    draw.rounded_rectangle((x, y, x + w, y + 1), radius=radius, fill=edge_top)
-    # Bottom edge
-    draw.rounded_rectangle((x, y + h - 1, x + w, y + h), radius=radius, fill=edge_bot)
-
-    # --- Specular shimmer: thin lighter streak in upper third ----------------
-    shimmer_y = y + h // 3
-    shimmer_x0 = x + radius
-    shimmer_x1 = x + w - radius
-    if shimmer_x1 > shimmer_x0:
-        shimmer_col = _lighten(fill, 65)
-        draw.line((shimmer_x0, shimmer_y, shimmer_x1, shimmer_y), fill=shimmer_col, width=1)
 
     # Centre text within the pill
     bbox = draw.textbbox((0, 0), text, font=font)
@@ -240,23 +220,16 @@ def draw_card(
 ) -> None:
     """Draw a rounded card surface.
 
-    ``elevated`` uses ``theme.surface_elevated`` and adds edge-light treatment.
+    ``elevated`` uses ``theme.surface_elevated`` instead of the default
+    surface. Corner radius matches Apple's grouped-list style (10 pt).
 
-    Liquid Glass polish (applied to every card, not just elevated):
-    - Corner radius 10 pt — matches Apple's grouped-list style (was 12).
-    - Edge-light: 1 px top edge at ``_lighten(fill, 35)`` simulates the bright
-      top rim of a frosted glass panel catching overhead light.
-    - Edge-shadow: 1 px bottom edge at ``_darken(fill, 20)`` anchors the card
-      visually without a drop-shadow (essentially free — two line draws).
+    The edge-light rim simulation was removed: at 240×240 the 1 px
+    accent strips read as bright/dark artefact bands above and below the
+    card rather than glass depth. The flat fill + rounded corners are
+    cleaner on this LCD.
     """
     fill = theme.surface_elevated if elevated else theme.surface
-    radius = 10  # Apple grouped-list corner radius (was 12)
-    draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=fill)
-
-    # Edge-light: top bright rim
-    draw.rounded_rectangle((x, y, x + w, y + 1), radius=radius, fill=_lighten(fill, 35))
-    # Edge-shadow: bottom dark rim
-    draw.rounded_rectangle((x, y + h - 1, x + w, y + h), radius=radius, fill=_darken(fill, 20))
+    draw.rounded_rectangle((x, y, x + w, y + h), radius=10, fill=fill)
 
 
 def draw_hairline(
@@ -532,23 +505,13 @@ def draw_settings_row(
         theme = theme_for("light")
 
     if selected:
-        # Selected row: vibrant accent fill, inverse text
+        # Selected row: flat vibrant accent fill (iOS picker style). The
+        # earlier "pressed into glass" inner highlight + lowlight read as
+        # 1 px scan lines on the LCD rather than glass depth — removed.
         draw.rounded_rectangle(
             (14, y, 226, y + row_height - 1),
             radius=4,
             fill=theme.accent_blue,
-        )
-        # Inner glass highlight: 1 px brighter top edge + 1 px darker bottom
-        # edge gives the "pressed into glass" Liquid Glass selection feel.
-        draw.rounded_rectangle(
-            (14, y, 226, y + 1),
-            radius=4,
-            fill=_lighten(theme.accent_blue, 40),
-        )
-        draw.rounded_rectangle(
-            (14, y + row_height - 2, 226, y + row_height - 1),
-            radius=4,
-            fill=_darken(theme.accent_blue, 25),
         )
         text_fill = theme.label_inverse
         value_fill = theme.label_inverse

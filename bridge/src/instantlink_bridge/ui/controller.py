@@ -1281,6 +1281,7 @@ class BridgeUi:
             replace(
                 self._settings_row_for_key(key, printer_name),
                 hint=setting_action_hint(key),
+                help=setting_help_text(key),
             )
             for key in SETTINGS_BY_PAGE[self._settings_page]
         )
@@ -1292,8 +1293,6 @@ class BridgeUi:
         return self._setting_picker_rows(key, self._snapshot.selected_index)
 
     def _settings_default_message(self) -> str | None:
-        if self._settings_page is SettingsPage.MAIN:
-            return "Choose category"
         if self._settings_page is SettingsPage.CAMERA:
             return "Wi-Fi + FTP credentials"
         return None

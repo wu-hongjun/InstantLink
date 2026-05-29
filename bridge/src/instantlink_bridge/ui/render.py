@@ -316,7 +316,6 @@ def _no_film(
 ) -> None:
     _center_lines(draw, ["Replace", "film pack"], 60, fonts["large"], TEXT)
     _text(draw, 18, 128, "No-film test is in Settings", fonts["small"], MUTED)
-    _text(draw, 18, 146, "K1 opens Settings", fonts["small"], YELLOW)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
@@ -339,7 +338,7 @@ def _printer_searching(
     elif message == "Saw other Instax":
         _center_lines(draw, ["Other printer", "seen"], 58, fonts["large"], TEXT)
         _text(draw, 18, 128, "Selected printer not visible", fonts["small"], TEXT)
-        _text(draw, 18, 146, "Hold K3 to choose again", fonts["small"], YELLOW)
+        _text(draw, 18, 146, "Turn selected printer on", fonts["small"], YELLOW)
     elif message in {"Scanning: 0 printers", "No printer signal"}:
         _center_lines(draw, ["Looking for", "printer"], 58, fonts["large"], TEXT)
         _text(draw, 18, 128, "Turn printer on and keep awake", fonts["small"], TEXT)
@@ -365,14 +364,13 @@ def _printer_offline(
         _center_lines(draw, ["Checking", "printer"], 62, fonts["large"], TEXT)
     elif message == "Hold K3 to re-pair":
         _center_lines(draw, ["Select", "printer"], 62, fonts["large"], TEXT)
-        _text(draw, 18, 128, "Hold K3 to scan again", fonts["body"], YELLOW)
+        _text(draw, 18, 128, "Printer not found nearby", fonts["body"], YELLOW)
         hints = _mode_hints(snapshot)
         draw_hint_bar(draw, hints, fonts["hint"])
         return
     else:
         _center_lines(draw, ["Turn", "printer on"], 62, fonts["large"], TEXT)
     _text(draw, 18, 128, "Keep it awake near bridge", fonts["body"], TEXT)
-    _text(draw, 18, 150, "K2 refreshes status", fonts["small"], MUTED)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
@@ -482,14 +480,28 @@ def _settings(
     body_height = HINT_BAR_Y - STATUS_BAR_H - 8
     visible_count = max(1, body_height // row_height)
 
-    # When a settings_message toast is showing, reserve the last visible row slot for the
-    # toast so it never overlaps with row content. Toast takes the row position the last
-    # row would have occupied; the page may scroll one row earlier as a result.
-    toast_shown = snapshot.settings_message is not None
-    if toast_shown and visible_count > 1:
+    selected = min(snapshot.selected_index, len(rows) - 1)
+    selected_row = rows[selected]
+
+    # Determine bottom line content: toast takes priority, then per-row help text.
+    toast_message = snapshot.settings_message
+    help_text = selected_row.help if selected_row.help else ""
+    if toast_message is not None:
+        bottom_text = toast_message
+        bottom_color = YELLOW
+    elif help_text:
+        bottom_text = help_text
+        bottom_color = MUTED
+    else:
+        bottom_text = ""
+        bottom_color = MUTED
+
+    # Reserve the last visible row slot for the bottom line only when we have
+    # something to show there, so it never overlaps with row content.
+    bottom_shown = bool(bottom_text)
+    if bottom_shown and visible_count > 1:
         visible_count -= 1
 
-    selected = min(snapshot.selected_index, len(rows) - 1)
     start = min(max(0, selected - 4), max(0, len(rows) - visible_count))
 
     for offset, row in enumerate(rows[start : start + visible_count]):
@@ -509,15 +521,12 @@ def _settings(
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
 
-    # settings_message toast occupies the slot below the last visible row (which we
-    # reserved above by reducing visible_count). Sits in MUTED-row territory but
-    # uses YELLOW to read as a transient message, not a row.
-    if toast_shown:
-        toast_y = STATUS_BAR_H + 4 + visible_count * row_height
-        toast_text = _fit_text_to_width(
-            draw, snapshot.settings_message or "", font, 220
-        )
-        _text(draw, 10, toast_y, toast_text, font, YELLOW)
+    # Bottom line occupies the slot below the last visible row (which we reserved
+    # above by reducing visible_count). Toast is YELLOW; help text is MUTED.
+    if bottom_shown:
+        bottom_y = STATUS_BAR_H + 4 + visible_count * row_height
+        fitted = _fit_text_to_width(draw, bottom_text, font, 220)
+        _text(draw, 10, bottom_y, fitted, font, bottom_color)
 
 
 def _pairing(
@@ -1148,12 +1157,12 @@ def error_copy_for_message(message: str | None) -> tuple[str, str, str | None]:
     """Return LCD-sized title, detail, and recovery hint for an error message."""
 
     if message is None:
-        return "Bridge error", "Check logs", "K2 refreshes status"
+        return "Bridge error", "Check logs", None
     normalized = message.lower()
     if "pair printer first" in normalized or "select printer first" in normalized:
         return "No printer selected", "Open Printer settings", "K3 starts scan"
     if "printer offline" in normalized:
-        return "Printer offline", "Turn printer on", "K2 refreshes status"
+        return "Printer offline", "Turn printer on", "Keep it awake near bridge"
     if "printer type unknown" in normalized:
         return "Printer type unknown", "Set Printer type", "Settings > Printer"
     if "printer timed out" in normalized:
@@ -1174,7 +1183,7 @@ def error_copy_for_message(message: str | None) -> tuple[str, str, str | None]:
         return "Image unsupported", "Use JPG, HIF, or ARW", "Check file type"
     if "preview failed" in normalized:
         return "Preview failed", "Image could not be prepared", "Cancel and retry"
-    return "Bridge error", message, "K2 refreshes status"
+    return "Bridge error", message, None
 
 
 def ftp_mode_label(snapshot: UiSnapshot) -> str:

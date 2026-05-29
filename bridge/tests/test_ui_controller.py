@@ -1446,15 +1446,17 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     assert display.snapshots[-1].settings_title == "Settings"
-    assert display.snapshots[-1].settings_message == "Choose category"
+    assert display.snapshots[-1].settings_message is None
     assert all(row.value == "" for row in display.snapshots[-1].settings_rows)
+    assert display.snapshots[-1].settings_rows[0].help == "Printer selection and status"
 
     await ui._handle_action(UiAction.DOWN)
 
     assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].label == (
         "Upload FTP"
     )
-    assert display.snapshots[-1].settings_message == "Choose category"
+    assert display.snapshots[-1].settings_message is None
+    assert display.snapshots[-1].settings_rows[1].help == "Wi-Fi and FTP credentials"
 
     await ui._handle_action(UiAction.HELP)
 
@@ -1499,7 +1501,7 @@ async def test_key3_help_explains_selected_settings_row() -> None:
 
     assert display.snapshots[-1].settings_title == "Print"
     assert display.snapshots[-1].settings_rows[2].label == "JPEG quality"
-    assert display.snapshots[-1].settings_message == "JPEG quality sent to printer"
+    assert display.snapshots[-1].settings_message == "Higher = better detail, slower"
 
 
 @pytest.mark.asyncio
@@ -1564,7 +1566,8 @@ async def test_settings_left_returns_from_subpage_to_main() -> None:
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "Settings"
     assert display.snapshots[-1].settings_rows[0].label == "Printer"
-    assert display.snapshots[-1].settings_message == "Choose category"
+    assert display.snapshots[-1].settings_message is None
+    assert display.snapshots[-1].settings_rows[0].help == "Printer selection and status"
 
 
 @pytest.mark.asyncio

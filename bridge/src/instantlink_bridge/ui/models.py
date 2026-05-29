@@ -59,6 +59,7 @@ class SettingsRow:
     label: str
     value: str
     hint: str = ""
+    help: str = ""
 
 
 @dataclass(frozen=True, slots=True)

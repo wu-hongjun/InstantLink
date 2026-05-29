@@ -870,8 +870,36 @@ main() {
     # cannot connect through. Restart bluetoothd first so each deploy starts from a clean BLE stack.
     # The runtime self-heal in instantlink-core handles crash/watchdog restarts; this just keeps
     # deploys clean.
-    "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
-      "sudo systemctl restart bluetooth.service && sleep 3 && sudo systemctl restart instantlink-bridge.service"
+    #
+    # `systemctl restart` returns as soon as the job is queued; the bridge takes ~12-15 s to come
+    # up (BLE init + UI render) and may briefly land in 'failed' if Restart=on-failure cycles.
+    # Poll is-active up to 30 s; if it's still not active, force-clear the failed marker and start
+    # again so the deploy never exits leaving the bridge inactive.
+    "${SSH_CMD[@]}" -T "${USER}@${HOST}" "sudo sh -s" <<'SH'
+set -eu
+systemctl restart bluetooth.service
+sleep 3
+systemctl restart instantlink-bridge.service
+for i in $(seq 1 30); do
+  state="$(systemctl is-active instantlink-bridge.service || true)"
+  if [ "${state}" = "active" ]; then
+    exit 0
+  fi
+  sleep 1
+done
+echo "WARN: instantlink-bridge.service did not become active within 30s; recovering" >&2
+systemctl reset-failed instantlink-bridge.service || true
+systemctl start instantlink-bridge.service
+for i in $(seq 1 15); do
+  state="$(systemctl is-active instantlink-bridge.service || true)"
+  if [ "${state}" = "active" ]; then
+    exit 0
+  fi
+  sleep 1
+done
+echo "ERROR: instantlink-bridge.service failed to start after recovery" >&2
+exit 1
+SH
   fi
 }
 

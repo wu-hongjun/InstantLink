@@ -237,6 +237,7 @@ class BridgeUi:
         # Monotonic timestamp of the last successful printer status. Readiness ("Ready to print")
         # is only asserted while this is within PRINTER_STATUS_FRESH_TTL_S; -inf means never proven.
         self._last_printer_status_ok_at: float = float("-inf")
+        self._image_queue_depth = 0
         self._actions: asyncio.Queue[UiAction] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
@@ -815,6 +816,14 @@ class BridgeUi:
         """Refresh the boot printer status after a modal print state."""
 
         await self._schedule_printer_status_refresh()
+
+    async def image_queue_changed(self, *, depth: int, max_size: int) -> None:
+        """Update the displayed receive queue depth."""
+
+        self._image_queue_depth = depth
+        self._snapshot = replace(self._snapshot, image_queue_depth=depth)
+        if self._snapshot.mode in STATUS_VISIBLE_MODES:
+            self._render()
 
     async def _run_actions(self) -> None:
         while True:
@@ -1874,6 +1883,7 @@ class BridgeUi:
             settings_rows=settings_rows,
             settings_message=settings_message,
             font_size=self._config.ui.font_size.value,
+            image_queue_depth=self._image_queue_depth,
         )
 
     def _cancel_image_reset(self) -> None:

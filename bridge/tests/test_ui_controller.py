@@ -2932,4 +2932,21 @@ async def test_close_cached_printer_session_resets_freshness_clock() -> None:
     await ui._close_cached_printer_session()
 
     assert ui._last_printer_status_ok_at == float("-inf")
+
+
+@pytest.mark.asyncio
+async def test_image_queue_changed_updates_snapshot_depth() -> None:
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    initial_mode = ui.snapshot.mode
+
+    await ui.image_queue_changed(depth=2, max_size=100)
+
+    assert ui.snapshot.image_queue_depth == 2
+    assert ui.snapshot.mode is initial_mode
     assert not ui._printer_status_is_fresh()

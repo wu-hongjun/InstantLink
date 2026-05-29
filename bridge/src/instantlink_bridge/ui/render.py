@@ -136,11 +136,10 @@ def draw_status_bar(
         fill=accent,
     )
 
-    # Printer name (left, after dot)
-    if snapshot.paired_printer is not None:
-        printer_name = snapshot.paired_printer.name
-    else:
-        printer_name = "No printer"
+    # Printer name (left, after dot) — prefer friendly model-derived name
+    # (e.g. "Instax Link Square") over the raw BLE name ("INSTAX-52006924"),
+    # which is shown separately on the READY body.
+    printer_name = _status_bar_printer_name(snapshot)
 
     # Right side: bridge battery (outermost) then film+printer-battery chip.
     # In SETTINGS mode, prepend the position counter (e.g. "3/10") so the user
@@ -273,11 +272,17 @@ def _ready(
         return
 
     _center_lines(draw, ["Ready"], 75, fonts["large"], TEXT)
-    # Body: waiting for upload + FTP address
+    # Body: waiting for upload + paired printer ID + FTP address
     _text(draw, 18, 120, "Waiting for upload", fonts["body"], TEXT)
+    if snapshot.paired_printer is not None:
+        _text(draw, 18, 140, snapshot.paired_printer.name, fonts["small"], MUTED)
     ftp_line = _ready_ftp_line(snapshot)
-    _text(draw, 18, 140, ftp_line, fonts["small"], MUTED)
-    _text(draw, 18, 156, "Next photo prints in order", fonts["small"], MUTED)
+    _text(draw, 18, 156, ftp_line, fonts["small"], MUTED)
+    depth = snapshot.image_queue_depth
+    if depth == 1:
+        _text(draw, 18, 172, "1 photo in queue", fonts["small"], MUTED)
+    elif depth > 1:
+        _text(draw, 18, 172, f"{depth} photos in queue", fonts["small"], MUTED)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"])
@@ -1010,6 +1015,29 @@ def _printer_model_short_text(snapshot: UiSnapshot) -> str:
         PrinterModel.WIDE: "Wide",
     }
     return labels.get(model, "Film")
+
+
+def _status_bar_printer_name(snapshot: UiSnapshot) -> str:
+    """Return a friendly printer name for the status bar.
+
+    Prefers a model-derived name (e.g. "Instax Link Square") over the raw BLE
+    identifier.  Falls back to the raw BLE name when the model is unknown, and
+    to "No printer" when no printer is paired.
+    """
+
+    if snapshot.paired_printer is None:
+        return "No printer"
+    model_names = {
+        PrinterModel.MINI: "Instax Link Mini",
+        PrinterModel.MINI_LINK3: "Instax Link Mini 3",
+        PrinterModel.SQUARE: "Instax Link Square",
+        PrinterModel.WIDE: "Instax Link Wide",
+    }
+    if snapshot.paired_printer.model is not None:
+        name = model_names.get(snapshot.paired_printer.model)
+        if name is not None:
+            return name
+    return snapshot.paired_printer.name
 
 
 def _status_bar_printer_chip(snapshot: UiSnapshot) -> str | None:

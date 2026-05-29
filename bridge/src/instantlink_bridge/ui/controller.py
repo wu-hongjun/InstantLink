@@ -298,6 +298,13 @@ class BridgeUi:
         self._pair_return_page: SettingsPage | None = None
         self._forget_confirm_pending = False
         self._pending_credential_reset = False
+        # Two-press confirm flags so destructive printer actions never fire on
+        # an accidental K1: each flag flips to True on the first press (showing
+        # an explicit "Press K1 again to <verb>" toast), and only the second
+        # press inside the same SETTINGS context actually runs the action. Any
+        # navigation or BACK clears them.
+        self._pending_reset_ble_link = False
+        self._pending_forget_and_repair = False
         self._credential_hotspot_task: asyncio.Task[None] | None = None
         self._pending_print_result: asyncio.Future[PrintEdit | None] | None = None
         self._preview_edit = PrintEdit()
@@ -1038,6 +1045,20 @@ class BridgeUi:
         )
         self._render()
 
+    def _clear_pending_confirms(self) -> None:
+        """Reset every two-press confirm flag.
+
+        Called on any navigation/back action so that moving away from a
+        primed destructive row cancels the half-armed confirm. Each per-row
+        confirm handler still owns the targeted flag (only clears its own on
+        success/cancel).
+        """
+
+        self._forget_confirm_pending = False
+        self._pending_credential_reset = False
+        self._pending_reset_ble_link = False
+        self._pending_forget_and_repair = False
+
     async def _handle_settings_action(self, action: UiAction) -> None:
         if self._settings_operation_pending:
             self._show_settings("Please wait")
@@ -1046,8 +1067,7 @@ class BridgeUi:
             await self._handle_setting_picker_action(action)
             return
         if action in {UiAction.HELP, UiAction.PAIR}:
-            self._forget_confirm_pending = False
-            self._pending_credential_reset = False
+            self._clear_pending_confirms()
             if self._settings_page is SettingsPage.MAIN:
                 self._show_settings("KEY1 opens category")
                 return
@@ -1055,16 +1075,14 @@ class BridgeUi:
             self._show_settings(self._settings_row_help(keys[self._snapshot.selected_index]))
             return
         if action in {UiAction.BACK, UiAction.LEFT}:
-            self._forget_confirm_pending = False
-            self._pending_credential_reset = False
+            self._clear_pending_confirms()
             if self._settings_page is SettingsPage.MAIN:
                 await self.refresh_printer_status()
             else:
                 self._show_settings(page=SettingsPage.MAIN)
             return
         if action in {UiAction.UP, UiAction.DOWN}:
-            self._forget_confirm_pending = False
-            self._pending_credential_reset = False
+            self._clear_pending_confirms()
             direction = -1 if action is UiAction.UP else 1
             keys = SETTINGS_BY_PAGE[self._settings_page]
             selected_index = (self._snapshot.selected_index + direction) % len(keys)
@@ -1089,17 +1107,19 @@ class BridgeUi:
             self._snapshot.selected_index,
         )
         if key in PAGE_FOR_OPEN_KEY:
-            self._forget_confirm_pending = False
+            self._clear_pending_confirms()
             self._show_settings(page=PAGE_FOR_OPEN_KEY[key])
             return
         if key is SettingKey.PAIR_PRINTER:
-            self._forget_confirm_pending = False
+            self._clear_pending_confirms()
             self._pair_return_page = self._settings_page
             await self._start_pairing()
             return
         if key is SettingKey.RESET_PRINTER_LINK:
-            self._forget_confirm_pending = False
-            await self._reset_printer_link_from_settings()
+            await self._confirm_or_reset_ble_link()
+            return
+        if key is SettingKey.FORGET_AND_REPAIR:
+            await self._confirm_or_forget_and_repair()
             return
         if key is SettingKey.FORGET_PRINTER:
             await self._confirm_or_forget_selected_printer()
@@ -1107,7 +1127,7 @@ class BridgeUi:
         if key is SettingKey.RESET_CREDENTIALS:
             await self._confirm_or_reset_credentials()
             return
-        self._forget_confirm_pending = False
+        self._clear_pending_confirms()
         if key is SettingKey.REFRESH_STATUS:
             await self._refresh_status_from_settings()
             return
@@ -1297,10 +1317,57 @@ class BridgeUi:
             return
         if not self._forget_confirm_pending:
             self._forget_confirm_pending = True
-            self._show_settings("Press again to forget")
+            # Explicit verb + key reminds the user K1 is the destructive press;
+            # uppercase FORGET signals destructive intent without needing color.
+            self._show_settings("Press K1 again to FORGET printer")
             return
         self._forget_confirm_pending = False
         await self._forget_selected_printer()
+
+    async def _confirm_or_reset_ble_link(self) -> None:
+        """Two-press confirm for the Reset BLE link action.
+
+        Reset BLE drops the live BlueZ session and re-establishes it. It's not
+        destructive but it does interrupt any in-flight print or pairing, so a
+        deliberate confirmation prevents accidental presses from killing a
+        running upload.
+        """
+
+        if self._snapshot.paired_printer is None:
+            self._pending_reset_ble_link = False
+            self._show_settings("No printer saved")
+            return
+        if not self._pending_reset_ble_link:
+            self._pending_reset_ble_link = True
+            self._show_settings("Press K1 again to RESET BLE link")
+            return
+        self._pending_reset_ble_link = False
+        await self._reset_printer_link_from_settings()
+
+    async def _confirm_or_forget_and_repair(self) -> None:
+        """Two-press confirm for the atomic Forget & re-pair action.
+
+        On the first press the toast asks for confirmation; on the second
+        press we wipe the saved pairing (BlueZ bond included) and immediately
+        kick off a fresh scan, so the user lands in the printer-picker without
+        a separate trip back into Settings.
+        """
+
+        if self._snapshot.paired_printer is None:
+            self._pending_forget_and_repair = False
+            self._show_settings("No printer saved")
+            return
+        if not self._pending_forget_and_repair:
+            self._pending_forget_and_repair = True
+            self._show_settings("Press K1 again to FORGET and re-pair")
+            return
+        self._pending_forget_and_repair = False
+        # Run the forget, then immediately enter pairing — the user requested
+        # this as an atomic single-action recovery so they don't have to
+        # navigate back into Settings between steps.
+        await self._forget_selected_printer()
+        self._pair_return_page = self._settings_page
+        await self._start_pairing()
 
     async def _forget_selected_printer(self) -> None:
         if self._snapshot.paired_printer is None:
@@ -1449,10 +1516,25 @@ class BridgeUi:
             return SettingsRow("Print", "")
         if key is SettingKey.OPEN_SYSTEM:
             return SettingsRow("System", "")
+        if key is SettingKey.PRINTER_SERIAL_INFO:
+            # Strip the verbose "INSTAX-" prefix so the saved serial fits on
+            # one row without clipping. When nothing is paired the row reads
+            # "Serial | none" so the user sees the slot is empty.
+            paired = self._snapshot.paired_printer
+            if paired is None:
+                return SettingsRow("Serial", "none")
+            return SettingsRow("Serial", paired.name.removeprefix("INSTAX-"))
         if key is SettingKey.PAIR_PRINTER:
-            return SettingsRow("Find printer", printer_name)
+            # Value is now a short action label; the saved serial lives on the
+            # PRINTER_SERIAL_INFO row above so this row stays unambiguous.
+            return SettingsRow("Find printer", "scan")
         if key is SettingKey.RESET_PRINTER_LINK:
             return SettingsRow("Reset BLE link", "run")
+        if key is SettingKey.FORGET_AND_REPAIR:
+            return SettingsRow(
+                "Forget & re-pair",
+                "Hold K1" if self._snapshot.paired_printer else "none",
+            )
         if key is SettingKey.FORGET_PRINTER:
             return SettingsRow(
                 "Forget printer",
@@ -1775,6 +1857,11 @@ class BridgeUi:
             if printer is not None:
                 return f"BT: {printer.name}"
             return "BT: not selected"
+        if key is SettingKey.PRINTER_SERIAL_INFO:
+            printer = self._snapshot.paired_printer
+            if printer is None:
+                return "Serial: no printer saved"
+            return f"Serial: {printer.name}"
         if key is SettingKey.SYSTEM_DEVICE_ID:
             return f"Device: {self._system_info_snapshot().device_id}"
         if key is SettingKey.SYSTEM_APP_VERSION:

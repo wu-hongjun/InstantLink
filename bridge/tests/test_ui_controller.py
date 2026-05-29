@@ -1335,7 +1335,12 @@ async def test_settings_save_failure_keeps_runtime_config(
 
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(4):
+    # PRINTER page row order is now:
+    #   0 PRINTER_SERIAL_INFO  1 PAIR_PRINTER  2 RESET_PRINTER_LINK
+    #   3 FORGET_AND_REPAIR    4 FORGET_PRINTER  5 PRINTER_MODEL
+    #   6 KEEPALIVE            7 SEARCH_INTERVAL
+    # Six DOWN presses from PRINTER_SERIAL_INFO lands on KEEPALIVE.
+    for _ in range(6):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.RIGHT)
@@ -1344,8 +1349,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     assert ui.config.printer.keepalive_interval_s == 10.0
     assert load_config(config_path).printer.keepalive_interval_s == 10.0
     assert display.snapshots[-1].settings_message == "Config not writable"
-    assert display.snapshots[-1].settings_rows[4].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[4].value == "10s"
+    assert display.snapshots[-1].settings_rows[6].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[6].value == "10s"
 
 
 @pytest.mark.asyncio
@@ -1464,11 +1469,14 @@ async def test_settings_rows_show_action_specific_hints() -> None:
     assert display.snapshots[-1].settings_rows[0].hint == "Right/KEY1 open"
 
     await ui._handle_action(UiAction.SELECT)
-    for _ in range(4):
+    # PRINTER page rows: 0 SERIAL  1 PAIR  2 RESET BLE  3 FORGET&RE-PAIR
+    #                    4 FORGET  5 MODEL  6 KEEPALIVE  7 SEARCH RATE.
+    # Six DOWN presses lands on KEEPALIVE (an adjustable picker row).
+    for _ in range(6):
         await ui._handle_action(UiAction.DOWN)
 
-    assert display.snapshots[-1].settings_rows[4].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[4].hint == "Right/KEY1 choose"
+    assert display.snapshots[-1].settings_rows[6].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[6].hint == "Right/KEY1 choose"
 
 
 @pytest.mark.asyncio
@@ -1818,13 +1826,19 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
 
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
+    # PRINTER rows: 0 SERIAL  1 PAIR  2 RESET BLE  3 FORGET&RE-PAIR ...
+    # Two DOWN presses lands on RESET_PRINTER_LINK.
     await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.DOWN)
+    # Reset BLE is now a two-press destructive confirm; the first SELECT only
+    # primes the confirmation toast, the second actually closes the cached
+    # session and schedules a fresh poll.
+    await ui._handle_action(UiAction.SELECT)
+    assert status_provider.close_cached_calls == 0
+    assert display.snapshots[-1].settings_message == "Press K1 again to RESET BLE link"
     await ui._handle_action(UiAction.SELECT)
     await asyncio.sleep(0)
 
-    # BLE reset releases the cached session and schedules a fresh status poll. The provider's
-    # transient ``close`` now happens on the poll task's own teardown, not inline on the action
-    # loop, so it is no longer asserted here (the reset must never block input/render).
     assert status_provider.close_cached_calls == 1
     assert ui._status_task is not None
     assert display.snapshots[-1].mode is UiMode.SETTINGS
@@ -1922,12 +1936,17 @@ async def test_forget_printer_requires_second_confirmation() -> None:
 
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.DOWN)
+    # PRINTER rows: 0 SERIAL  1 PAIR  2 RESET BLE  3 FORGET&RE-PAIR
+    #               4 FORGET  5 MODEL  6 KEEPALIVE  7 SEARCH RATE.
+    # Four DOWNs lands on the FORGET_PRINTER row.
+    for _ in range(4):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
 
     assert not pairer.forgot
-    assert display.snapshots[-1].settings_message == "Press again to forget"
+    # Confirm wording is now explicit about which key + which verb so the
+    # user knows K1 is the destructive press.
+    assert display.snapshots[-1].settings_message == "Press K1 again to FORGET printer"
 
     await ui._handle_action(UiAction.RIGHT)
 
@@ -1937,7 +1956,43 @@ async def test_forget_printer_requires_second_confirmation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_printing_mode_ignores_inputs_until_job_finishes() -> None:
+async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None:
+    """The new FORGET_AND_REPAIR row is the atomic recovery action.
+
+    First SELECT primes the destructive confirm toast; second SELECT both
+    wipes the saved printer (and BlueZ bond) AND kicks off a fresh pairing
+    scan in one shot so the user lands in the picker without re-navigating
+    back into Settings.
+    """
+
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    pairer = _FakePairer([printer])
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=pairer,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+
+    # MAIN → PRINTER page, then DOWN three times to land on FORGET_AND_REPAIR
+    # (index 3 after PRINTER_SERIAL_INFO/PAIR/RESET).
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.SELECT)
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+
+    # First press just primes the confirm — neither destructive step runs yet.
+    assert not pairer.forgot
+    assert display.snapshots[-1].settings_message == "Press K1 again to FORGET and re-pair"
+
+    await ui._handle_action(UiAction.SELECT)
+
+    # Second press atomically forgets and enters the pairing flow.
+    assert pairer.forgot
     display = _FakeDisplay()
     ui = BridgeUi(
         BridgeConfig(),

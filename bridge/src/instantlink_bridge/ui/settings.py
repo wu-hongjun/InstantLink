@@ -40,6 +40,8 @@ class SettingKey(StrEnum):
     SEARCH_INTERVAL = "search_interval"
     RESET_PRINTER_LINK = "reset_printer_link"
     FORGET_PRINTER = "forget_printer"
+    PRINTER_SERIAL_INFO = "printer_serial_info"
+    FORGET_AND_REPAIR = "forget_and_repair"
     SYSTEM_DEVICE_ID = "system_device_id"
     SYSTEM_APP_VERSION = "system_app_version"
     SYSTEM_PYTHON_VERSION = "system_python_version"
@@ -90,8 +92,14 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.OPEN_SYSTEM,
     ),
     SettingsPage.PRINTER: (
+        # Info row at the top so the user can confirm what's saved without
+        # accidentally triggering a scan/forget.
+        SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.PAIR_PRINTER,
         SettingKey.RESET_PRINTER_LINK,
+        # Atomic recovery: wipe pairing AND start a fresh scan in one action.
+        # The plain FORGET_PRINTER row stays for the "just forget" case.
+        SettingKey.FORGET_AND_REPAIR,
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
         SettingKey.KEEPALIVE,
@@ -170,6 +178,7 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.NETWORK_HOTSPOT_SSID_INFO,
         SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
         SettingKey.NETWORK_BLUETOOTH_INFO,
+        SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.SYSTEM_DEVICE_ID,
         SettingKey.SYSTEM_APP_VERSION,
         SettingKey.SYSTEM_PYTHON_VERSION,
@@ -186,6 +195,7 @@ ACTION_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.PAIR_PRINTER,
         SettingKey.RESET_PRINTER_LINK,
         SettingKey.FORGET_PRINTER,
+        SettingKey.FORGET_AND_REPAIR,
         SettingKey.REFRESH_STATUS,
         SettingKey.RESET_CREDENTIALS,
     }
@@ -256,7 +266,9 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.FTP_RECEIVE_MODE: "How camera reaches bridge",
     SettingKey.PAIR_PRINTER: "Scan and remember one Instax printer",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
-    SettingKey.FORGET_PRINTER: "Remove the saved printer",
+    SettingKey.FORGET_PRINTER: "Remove the saved printer (no re-pair)",
+    SettingKey.PRINTER_SERIAL_INFO: "Serial of the saved Instax printer",
+    SettingKey.FORGET_AND_REPAIR: "Wipe pairing, then start a fresh scan",
     SettingKey.FTP_MODE_INFO: "Path the camera actually used",
     SettingKey.FTP_HOST_INFO: "Enter as FTP server in camera",
     SettingKey.FTP_USERNAME_INFO: "Enter as FTP user in camera",

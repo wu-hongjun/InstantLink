@@ -1946,7 +1946,7 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     assert rows[3].value == "5.82"
 
     await ui._handle_action(UiAction.HELP)
-    assert display.snapshots[-1].settings_message == "Unique ID; used by the Mac app"
+    assert display.snapshots[-1].settings_message == "Unique ID; used by the desktop app"
 
     # BACK from About goes to its parent (System), not all the way to MAIN.
     await ui._handle_action(UiAction.BACK)

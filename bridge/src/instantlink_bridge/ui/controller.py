@@ -1703,9 +1703,9 @@ class BridgeUi:
         if key is SettingKey.NETWORK_WIFI_INFO:
             return "Advanced: bridge on existing Wi-Fi"
         if key is SettingKey.NETWORK_ETHERNET_INFO:
-            return "USB network to Mac (setup, updates)"
+            return "USB network to computer (setup, updates)"
         if key is SettingKey.SYSTEM_DEVICE_ID:
-            return "Unique ID; used by the Mac app"
+            return "Unique ID; used by the desktop app"
         if key is SettingKey.SYSTEM_APP_VERSION:
             return "Bridge software version"
         if key is SettingKey.SYSTEM_PYTHON_VERSION:

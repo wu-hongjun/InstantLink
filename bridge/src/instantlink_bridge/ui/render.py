@@ -257,7 +257,7 @@ def _booting(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Starting", "Checking printer"], 70, fonts["large"], TEXT)
+    _center_lines(draw, ["Starting"], 75, fonts["large"], TEXT)
     # No hint bar for BOOTING
 
 
@@ -322,7 +322,7 @@ def _no_film(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Replace", "film pack"], 60, fonts["large"], TEXT)
+    _center_lines(draw, ["No film"], 75, fonts["large"], TEXT)
     _text(draw, 18, 128, "No-film test is in Settings", fonts["small"], MUTED)
 
     hints = _mode_hints(snapshot)
@@ -336,19 +336,19 @@ def _printer_searching(
 ) -> None:
     message = snapshot.printer_status_message or "Keep printer awake"
     if message in {"Restart printer", "Close phone app"}:
-        _center_lines(draw, ["Printer seen", "connect blocked"], 58, fonts["large"], TEXT)
+        _center_lines(draw, ["Blocked"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, "Close phone app or phone BT", fonts["small"], YELLOW)
         _text(draw, 18, 146, "Power-cycle printer, then retry", fonts["small"], MUTED)
     elif message == "Printer seen; connecting":
-        _center_lines(draw, ["Printer seen", "connecting"], 58, fonts["large"], TEXT)
+        _center_lines(draw, ["Connecting"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, "Opening Bluetooth session", fonts["small"], TEXT)
         _text(draw, 18, 146, "If stuck, close phone app", fonts["small"], MUTED)
     elif message == "Saw other Instax":
-        _center_lines(draw, ["Other printer", "seen"], 58, fonts["large"], TEXT)
+        _center_lines(draw, ["Wrong one"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, "Selected printer not visible", fonts["small"], TEXT)
         _text(draw, 18, 146, "Turn selected printer on", fonts["small"], YELLOW)
     elif message in {"Scanning: 0 printers", "No printer signal"}:
-        _center_lines(draw, ["Looking for", "printer"], 58, fonts["large"], TEXT)
+        _center_lines(draw, ["Searching"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, "Turn printer on and keep awake", fonts["small"], TEXT)
         _text(draw, 18, 146, "Phone Bluetooth may grab it", fonts["small"], MUTED)
     else:
@@ -369,15 +369,15 @@ def _printer_offline(
 ) -> None:
     message = snapshot.printer_status_message or "Printer offline"
     if message == "Checking printer":
-        _center_lines(draw, ["Checking", "printer"], 62, fonts["large"], TEXT)
+        _center_lines(draw, ["Checking"], 75, fonts["large"], TEXT)
     elif message == "Hold K3 to re-pair":
-        _center_lines(draw, ["Select", "printer"], 62, fonts["large"], TEXT)
+        _center_lines(draw, ["No printer"], 75, fonts["large"], TEXT)
         _text(draw, 18, 128, "Printer not found nearby", fonts["body"], YELLOW)
         hints = _mode_hints(snapshot)
         draw_hint_bar(draw, hints, fonts["hint"])
         return
     else:
-        _center_lines(draw, ["Turn", "printer on"], 62, fonts["large"], TEXT)
+        _center_lines(draw, ["Printer off"], 75, fonts["large"], TEXT)
     _text(draw, 18, 128, "Keep it awake near bridge", fonts["body"], TEXT)
 
     hints = _mode_hints(snapshot)
@@ -389,7 +389,7 @@ def _image_received(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Image", "received"], 55, fonts["large"], TEXT)
+    _center_lines(draw, ["Received"], 75, fonts["large"], TEXT)
     if snapshot.last_image_name is not None:
         _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
     _text(draw, 18, 148, "Received over FTP", fonts["small"], MUTED)
@@ -448,7 +448,7 @@ def _print_complete(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Print", "sent"], 55, fonts["large"], TEXT)
+    _center_lines(draw, ["Sent"], 75, fonts["large"], TEXT)
     if snapshot.last_image_name is not None:
         _text(draw, 18, 126, _ellipsize(snapshot.last_image_name, 25), fonts["body"], TEXT)
     _text(draw, 18, 148, "Film should feed now", fonts["small"], MUTED)
@@ -461,7 +461,7 @@ def _needs_pairing(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["No printer", "selected"], 58, fonts["large"], TEXT)
+    _center_lines(draw, ["No printer"], 75, fonts["large"], TEXT)
     _menu_item(draw, 122, "Find printer", selected=True, font=fonts["body"])
     _text(draw, 18, 162, "Turn on printer first", fonts["small"], MUTED)
     _text(draw, 18, 178, "Then press K1", fonts["small"], MUTED)
@@ -555,7 +555,7 @@ def _pair_failed(
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
 ) -> None:
-    _center_lines(draw, ["Find", "failed"], 50, fonts["large"], TEXT)
+    _center_lines(draw, ["Failed"], 75, fonts["large"], TEXT)
     message = snapshot.message or "No INSTAX printer found"
     for index, line in enumerate(_wrap_words(message, 24)[:2]):
         _text(draw, 18, 126 + index * 17, line, fonts["small"], TEXT)

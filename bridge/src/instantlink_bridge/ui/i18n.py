@@ -368,7 +368,7 @@ _ZH_HANS: dict[str, str] = {
     "Info only": "仅供信息",
     "Screen text size": "屏幕文字大小",
     "Screen language (中文 / English)": "屏幕语言（中文 / English）",
-    "Light / Dark / System theme": "浅色 / 深色 / 跟随系统",
+    "Auto: light 07-19, dark overnight": "自动:7-19 点浅色,夜间深色",
     "Operating system version": "操作系统版本",
     "Operating system release": "操作系统版本",
     "Path the camera actually used": "相机实际使用的路径",

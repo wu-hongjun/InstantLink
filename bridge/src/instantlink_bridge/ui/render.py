@@ -956,12 +956,17 @@ def _settings(
 ) -> None:
     rows = snapshot.settings_rows
     font = fonts["small"]
+    # The trailing chevron "›" (U+203A) is a Latin glyph; the CJK font used
+    # when language=zh-Hans (wqy-zenhei / Hiragino fall-back) has no entry
+    # for it and would render tofu (□). Build a Latin-only body-sized font
+    # for the marker so the chevron lands cleanly in every language.
+    font_scale, row_scale = _scale_for_snapshot(snapshot)
+    marker_font = _font(max(1, round(_BASE_FONTS["body"] * font_scale)), prefer_cjk=False)
     if not rows:
         _text(draw, 18, 58, t("No settings available", snapshot.language), fonts["body"], theme.label_primary)
         draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
         return
 
-    _font_scale, row_scale = _scale_for_snapshot(snapshot)
     row_height = max(1, round(_BASE_ROW_HEIGHT * row_scale))
 
     selected = min(snapshot.selected_index, len(rows) - 1)
@@ -1016,11 +1021,11 @@ def _settings(
             row.hint,
             selected=index == selected,
             font=font,
-            # Chevron sits in the body font (≈1.4× the small row font) so
-            # the disclosure affordance reads from arm's length on the
-            # 240×240 panel. iOS uses a heavier weight; we approximate with
-            # size.
-            marker_font=fonts["body"],
+            # Chevron sits in a Latin body-sized font (≈1.4× the row font)
+            # so the disclosure affordance reads from arm's length on the
+            # 240×240 panel. Must be Latin-only — the CJK fonts used in
+            # zh-Hans mode have no glyph for "›" (U+203A) and would tofu.
+            marker_font=marker_font,
             theme=theme,
             row_height=row_height,
         )

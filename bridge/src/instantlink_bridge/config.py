@@ -68,16 +68,20 @@ class FontSize(StrEnum):
 
 
 class UiAppearance(StrEnum):
-    """User-selectable LCD appearance (light / dark / system).
+    """User-selectable LCD appearance (light / dark / auto).
 
-    SYSTEM tracks an ambient signal if hardware adds one in the future;
-    today it falls through to LIGHT in the renderer because the bridge
-    has no ambient sensor.
+    AUTO switches between LIGHT and DARK based on local clock time: the
+    bridge runs headless on a Raspberry Pi with no ambient sensor and no
+    user-visible host OS to inherit a theme from, so a wall-clock schedule
+    is the only practical "automatic" we can offer. The previous SYSTEM
+    value was effectively a no-op (it fell through to LIGHT) and is
+    retained here as a parse-time alias for backwards compatibility with
+    existing configs on deployed bridges.
     """
 
     LIGHT = "light"
     DARK = "dark"
-    SYSTEM = "system"
+    AUTO = "auto"
 
 
 class UiLanguage(StrEnum):
@@ -648,9 +652,17 @@ def parse_status_sink(value: object) -> StatusSinkKind:
 
 
 def parse_ui_appearance(value: object) -> UiAppearance:
-    """Parse a configured LCD appearance (light / dark / system)."""
+    """Parse a configured LCD appearance (light / dark / auto).
+
+    Legacy "system" configs roll forward to AUTO without erroring so a
+    bridge already in the field keeps booting after this release.
+    """
 
     text = str(value).strip().lower()
+    if text == "system":
+        # SYSTEM was a no-op on hardware that has no host OS theme and no
+        # ambient sensor; AUTO replaces it with a clock-time schedule.
+        return UiAppearance.AUTO
     try:
         return UiAppearance(text)
     except ValueError as exc:

@@ -266,7 +266,7 @@ LANGUAGE_OPTIONS: tuple[UiLanguage, ...] = (UiLanguage.EN, UiLanguage.ZH_HANS)
 APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
     UiAppearance.LIGHT,
     UiAppearance.DARK,
-    UiAppearance.SYSTEM,
+    UiAppearance.AUTO,
 )
 # Total scan period options. The minimum (5s) equals the active-scan window, so it scans
 # continuously (0 gap); larger values insert an idle gap between scans to save power.
@@ -328,7 +328,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
     SettingKey.FONT_SIZE: "Screen text size",
     SettingKey.LANGUAGE: "Screen language (中文 / English)",
-    SettingKey.APPEARANCE: "Light / Dark / System theme",
+    SettingKey.APPEARANCE: "Auto: light 07-19, dark overnight",
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
 }
@@ -520,7 +520,11 @@ def appearance_label(appearance: UiAppearance) -> str:
     labels = {
         UiAppearance.LIGHT: "Light",
         UiAppearance.DARK: "Dark",
-        UiAppearance.SYSTEM: "System",
+        # "Auto" runs the wall-clock schedule defined in ui.theme — light
+        # during the day, dark overnight. The user can't drive a "follow
+        # the host OS" mode on a headless Pi, so this replaces the old
+        # SYSTEM option that effectively did nothing.
+        UiAppearance.AUTO: "Auto",
     }
     return labels[appearance]
 

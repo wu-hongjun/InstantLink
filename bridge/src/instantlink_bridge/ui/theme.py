@@ -11,9 +11,9 @@ cheap PIL primitives that read as glassy without costing real-time blur:
 The :class:`Theme` dataclass owns the colour tokens; light and dark
 instances are defined as module constants. ``theme_for(appearance)`` is
 the lookup the renderer uses — it returns the right :class:`Theme` for
-the user's :class:`Appearance` choice. SYSTEM defaults to LIGHT because
-the bridge has no ambient sensor; revisit if a future hardware revision
-adds one.
+the user's :class:`Appearance` choice. AUTO follows a wall-clock
+schedule (light during the day, dark overnight) because the bridge has
+no ambient sensor and no host OS theme to inherit from.
 
 Colours follow Apple's system colour names (semantic) rather than
 literal hex names so swapping the palette in the future doesn't touch
@@ -22,14 +22,18 @@ renderer code.
 
 from __future__ import annotations
 
+import datetime as _dt
 from dataclasses import dataclass
 from enum import StrEnum
 
 __all__ = [
     "Appearance",
+    "AUTO_DARK_START_HOUR",
+    "AUTO_LIGHT_START_HOUR",
     "DARK_THEME",
     "LIGHT_THEME",
     "Theme",
+    "resolve_auto_appearance",
     "theme_for",
 ]
 
@@ -37,13 +41,26 @@ __all__ = [
 class Appearance(StrEnum):
     """User-selectable LCD appearance.
 
-    SYSTEM tracks an ambient signal when one is available; on the
-    current hardware (no ambient sensor) it falls through to LIGHT.
+    AUTO swaps between LIGHT and DARK based on the wall clock — see
+    :data:`AUTO_LIGHT_START_HOUR` / :data:`AUTO_DARK_START_HOUR` for the
+    window. SYSTEM is no longer a user-facing choice; the previous value
+    fell through to LIGHT because the bridge has no host OS theme and no
+    ambient sensor.
     """
 
     LIGHT = "light"
     DARK = "dark"
-    SYSTEM = "system"
+    AUTO = "auto"
+
+
+# Wall-clock window for the AUTO appearance. Light from 07:00 (inclusive)
+# until 19:00 (exclusive), dark otherwise. Picked to track typical room-
+# lighting habits without making the LCD blinding in early-evening use.
+# Two integers rather than one config-friendly object keeps the resolver
+# trivial; future revisions can promote these to UiConfig fields without
+# changing call sites because `resolve_auto_appearance` accepts overrides.
+AUTO_LIGHT_START_HOUR: int = 7
+AUTO_DARK_START_HOUR: int = 19
 
 
 # ---------------------------------------------------------------------------
@@ -143,19 +160,47 @@ DARK_THEME = Theme(
 )
 
 
+def resolve_auto_appearance(
+    now: _dt.datetime | None = None,
+    *,
+    light_start_hour: int = AUTO_LIGHT_START_HOUR,
+    dark_start_hour: int = AUTO_DARK_START_HOUR,
+) -> Appearance:
+    """Decide LIGHT vs DARK for the AUTO appearance given the wall clock.
+
+    Light from ``light_start_hour`` (inclusive) up to ``dark_start_hour``
+    (exclusive); dark for the rest of the day. ``now`` is overridable for
+    deterministic tests; production callers pass ``None`` and pick up the
+    local-system clock. Hours are interpreted in 24-hour local time —
+    timezone follows the Pi's system tz, which is set during provisioning.
+    """
+
+    current = now if now is not None else _dt.datetime.now()
+    hour = current.hour
+    if light_start_hour <= hour < dark_start_hour:
+        return Appearance.LIGHT
+    return Appearance.DARK
+
+
 def theme_for(appearance: Appearance | str) -> Theme:
     """Return the :class:`Theme` for the given appearance.
 
     Accepts a bare BCP-47-style string too so callers don't have to
-    convert the snapshot's string-typed field. Unknown values fall
-    through to LIGHT.
+    convert the snapshot's string-typed field. ``"system"`` is accepted
+    as a legacy alias for AUTO so an older config rolling forward still
+    renders the right theme. Unknown values fall through to LIGHT.
     """
 
     if isinstance(appearance, str):
-        try:
-            appearance = Appearance(appearance)
-        except ValueError:
-            return LIGHT_THEME
+        if appearance == "system":  # legacy config value, see UiAppearance
+            appearance = Appearance.AUTO
+        else:
+            try:
+                appearance = Appearance(appearance)
+            except ValueError:
+                return LIGHT_THEME
+    if appearance is Appearance.AUTO:
+        appearance = resolve_auto_appearance()
     if appearance is Appearance.DARK:
         return DARK_THEME
     return LIGHT_THEME

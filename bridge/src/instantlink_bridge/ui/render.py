@@ -433,7 +433,10 @@ def draw_hint_bar(
     centers = (40, 120, 200)
     # Pill is sized to host two lines comfortably. Single-line hints centre
     # vertically inside the same chip so all three chips share one height.
-    pill_h = HINT_BAR_H - 6
+    # pill_h trimmed from HINT_BAR_H - 6 → HINT_BAR_H - 10 so the chip leaves
+    # 5 px clear above + below it (was 3 px below), giving the bottom row
+    # breathing room from the screen edge — matches the top pill's gap.
+    pill_h = HINT_BAR_H - 10
     pill_radius = 8
 
     for text, cx in zip((left, center, right), centers, strict=True):
@@ -1285,29 +1288,53 @@ def _wrap_two_lines(
 ) -> list[str]:
     """Wrap ``text`` into at most two lines, each fitting ``max_width``.
 
-    Single line if the whole string fits. Otherwise we greedily fill line 1
-    word by word until adding the next word would overflow, then put the
-    rest on line 2 (ellipsised if it still overflows). Whitespace is the
-    only break point — CJK strings without spaces stay on one line and get
-    ellipsised by ``_fit_text_to_width``.
+    Strategy:
+
+    * Whole string fits → single line.
+    * Has spaces → greedy word-boundary wrap.
+    * Has spaces but the first "word" alone overflows, OR has no spaces
+      (CJK) → fall through to character-boundary wrap so Chinese strings
+      get two lines too. Without this, Chinese help text always stayed
+      on one ellipsised line because ``split(" ")`` produced a single
+      "word".
+
+    Remaining text after line 2 is ellipsised by ``_fit_text_to_width``.
     """
 
     if _text_width(draw, text, font) <= max_width:
         return [text]
-    words = text.split(" ")
-    line1_words: list[str] = []
-    i = 0
-    while i < len(words):
-        candidate = " ".join([*line1_words, words[i]])
+
+    # Word-boundary wrap first.
+    if " " in text:
+        words = text.split(" ")
+        line1_words: list[str] = []
+        i = 0
+        while i < len(words):
+            candidate = " ".join([*line1_words, words[i]])
+            if _text_width(draw, candidate, font) > max_width:
+                break
+            line1_words.append(words[i])
+            i += 1
+        if line1_words:
+            line1 = " ".join(line1_words)
+            rest = " ".join(words[i:])
+            line2 = _fit_text_to_width(draw, rest, font, max_width)
+            return [line1, line2]
+        # First word alone overflows — fall through to char wrap below.
+
+    # Character-boundary wrap (CJK or overflowing single word).
+    line1_chars: list[str] = []
+    j = 0
+    while j < len(text):
+        candidate = "".join([*line1_chars, text[j]])
         if _text_width(draw, candidate, font) > max_width:
             break
-        line1_words.append(words[i])
-        i += 1
-    # Avoid an empty line 1 when the first word alone overflows: ellipsise it.
-    if not line1_words:
+        line1_chars.append(text[j])
+        j += 1
+    if not line1_chars:
         return [_fit_text_to_width(draw, text, font, max_width)]
-    line1 = " ".join(line1_words)
-    rest = " ".join(words[i:])
+    line1 = "".join(line1_chars)
+    rest = text[j:]
     line2 = _fit_text_to_width(draw, rest, font, max_width)
     return [line1, line2]
 

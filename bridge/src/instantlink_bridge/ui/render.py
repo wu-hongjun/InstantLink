@@ -154,17 +154,31 @@ def draw_status_bar(
         selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
         counter = f"  {selected + 1}/{len(snapshot.settings_rows)}"
 
-    # Fit the status word in the centre and any counter to its right. We
-    # measure both so the combined block stays visually centred.
-    word_w = _text_width(draw, word, font_body)
-    counter_w = _text_width(draw, counter, font_small) if counter else 0
-    gap = 0 if counter == "" else 0  # the counter already has a leading "  "
-    total = word_w + gap + counter_w
+    # True vertical centring uses each font's bounding box (PIL's text() takes
+    # the top of the *full* box including ascender padding, so a naive
+    # ``STATUS_BAR_H/2 - font_size/2`` skews visually low for body fonts with
+    # large padding). We measure via textbbox and centre the box itself.
+    word_bbox = draw.textbbox((0, 0), word, font=font_body)
+    word_w = word_bbox[2] - word_bbox[0]
+    word_h = word_bbox[3] - word_bbox[1]
+
+    if counter:
+        counter_bbox = draw.textbbox((0, 0), counter, font=font_small)
+        counter_w = counter_bbox[2] - counter_bbox[0]
+        counter_h = counter_bbox[3] - counter_bbox[1]
+    else:
+        counter_w = 0
+        counter_h = 0
+
+    total = word_w + counter_w
     start_x = max(8, (240 - total) // 2)
-    word_y = STATUS_BAR_H // 2 - 7  # body font is ~14 px; vertically centred
-    counter_y = STATUS_BAR_H // 2 - 5
+    # bbox[1] is the offset from y=0 to the actual top of inked pixels;
+    # subtract it so the inked top sits where we asked. Then centre the
+    # inked box vertically inside the 30 px bar.
+    word_y = (STATUS_BAR_H - word_h) // 2 - word_bbox[1]
     _text(draw, start_x, word_y, word, font_body, fg)
     if counter:
+        counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_bbox[1]
         _text(draw, start_x + word_w, counter_y, counter, font_small, fg)
 
 
@@ -330,19 +344,26 @@ def _ready(
         _validation(draw, snapshot, fonts)
         return
 
-    # The top status bar carries the state word ("Connected"/"Waiting"); the
-    # body is purely informational. The old "Ready" title and "Waiting for
-    # upload" line were both removed — they restated what the bar already
-    # says. Each row is `Label   Value` with a fixed value column so the
-    # values line up vertically and the user can scan one column at a glance.
-    body_y = 46
+    # Centered "Ready" title (restored — it frames the info block and the
+    # status bar's "Connected" word reads as live state rather than a title).
+    _center_lines(draw, ["Ready"], 75, fonts["large"], TEXT)
+
+    # Info rows below the title use a single inline "Label: value" string so
+    # there's no fixed value column to widen — a fixed column at x=110 ate
+    # ~40 px of value width and clipped long printer names ("Instax Link
+    # Square" overran into the right margin). The label sits in MUTED, the
+    # value in TEXT, joined with a colon so it still reads as a key/value
+    # pair without committing screen space to a column gutter.
+    body_y = 116
     line_h = 18
     label_x = 18
-    value_x = 110  # value column anchor — keeps the right side aligned
 
     def row(label: str, value: str, y: int) -> None:
-        _text(draw, label_x, y, label, fonts["small"], MUTED)
-        _text(draw, value_x, y, value, fonts["small"], TEXT)
+        # Draw "<label>: " in MUTED, then the value in TEXT immediately after.
+        prefix = f"{label}: "
+        _text(draw, label_x, y, prefix, fonts["small"], MUTED)
+        prefix_w = _text_width(draw, prefix, fonts["small"])
+        _text(draw, label_x + prefix_w, y, value, fonts["small"], TEXT)
 
     # 1. Printer type — e.g. "Instax Link Square"
     if snapshot.paired_printer is not None:
@@ -364,7 +385,7 @@ def _ready(
         battery_val = f"{snapshot.printer_battery}%{charging}"
         life = printer_battery_life_text(snapshot)
         if life is not None:
-            battery_val = f"{battery_val}  ({life})"
+            battery_val = f"{battery_val} ({life})"
         row("Battery", battery_val, body_y)
         body_y += line_h
 

@@ -428,67 +428,69 @@ def draw_hint_bar(
 
     draw.rectangle((0, HINT_BAR_Y - 2, 239, 239), fill=theme.bg)
 
-    left, center, right = hints
-    zone_w = 80
-    zone_max = zone_w - 8  # 4 px padding each side
-    centers = (40, 120, 200)
-    # Pill sized to host two lines comfortably with breathing room above
-    # and below inside the band. HINT_BAR_H - 8 yields a 32 px chip that
-    # leaves ~4 px clear above + below it (matches the top pill's
-    # symmetric gap from the screen edge).
+    # Single uniform pill spanning the bottom bar with the three hints
+    # evenly distributed inside it. The previous three-individual-chip
+    # design introduced visual artefacts at the chip boundaries (extra
+    # spacing variations, asymmetric gaps when one chip was short and
+    # another long). A single bar is calmer to look at and reads as
+    # one cohesive control surface.
     pill_h = HINT_BAR_H - 8
-    pill_radius = 10
+    pill_radius = pill_h // 2  # full capsule
+    pill_x0 = 8
+    pill_x1 = 232
+    pill_y = HINT_BAR_Y + (HINT_BAR_H - pill_h) // 2
 
-    for text, cx in zip((left, center, right), centers, strict=True):
+    draw.rounded_rectangle(
+        (pill_x0, pill_y, pill_x1, pill_y + pill_h),
+        radius=pill_radius,
+        fill=theme.hint_bg,
+    )
+
+    # Three equal columns inside the pill; column centers at 1/6, 3/6, 5/6
+    # of the bar width so each label sits centred in its third regardless
+    # of its width.
+    bar_w = pill_x1 - pill_x0
+    col_centers = (
+        pill_x0 + bar_w // 6,
+        pill_x0 + bar_w // 2,
+        pill_x0 + bar_w * 5 // 6,
+    )
+    # Per-column text width budget — leave a small horizontal inset so
+    # adjacent columns never visually merge. The capsule radius eats some
+    # space on the outer columns, so cap conservatively.
+    col_max_w = bar_w // 3 - 8
+
+    for text, cx in zip(hints, col_centers, strict=True):
         if not text:
             continue
 
         # Split first token (the key) from the rest of the action label.
-        # "K1 Setting" → ("K1", "Setting"); "Hold K3" → ("Hold", "K3");
+        # "KEY1 Setting" → ("KEY1", "Setting"); "Hold KEY3" → ("Hold", "KEY3");
         # "Done" → ("Done", "").
         if " " in text:
             line1, line2 = text.split(" ", 1)
         else:
             line1, line2 = text, ""
 
-        fitted1 = _fit_text_to_width(draw, line1, font, zone_max)
-        fitted2 = _fit_text_to_width(draw, line2, font, zone_max)
+        fitted1 = _fit_text_to_width(draw, line1, font, col_max_w)
+        fitted2 = _fit_text_to_width(draw, line2, font, col_max_w)
         tw1 = _text_width(draw, fitted1, font)
         tw2 = _text_width(draw, fitted2, font)
 
-        # Generous horizontal padding around the text — 7 px each side felt
-        # cramped at small font where the text hugged the rounded edge.
-        # 12 px each side gives the chip room for the text to breathe;
-        # the 80 px zone budget can still hold the widest two-line hint.
-        pill_w = max(tw1, tw2) + 24
-        pill_w = max(pill_w, 36)
-        pill_x = cx - pill_w // 2
-        pill_y = HINT_BAR_Y + (HINT_BAR_H - pill_h) // 2
-
-        draw.rounded_rectangle(
-            (pill_x, pill_y, pill_x + pill_w, pill_y + pill_h),
-            radius=pill_radius,
-            fill=theme.hint_bg,
-        )
-
-        # Two-line layout: line 1 at the top third, line 2 at the bottom
-        # third; the small font is ~10 px so two lines fit in ~22 px.
         bbox1 = draw.textbbox((0, 0), fitted1, font=font)
         line_h = bbox1[3] - bbox1[1]
         if fitted2:
-            # 4 px between the key label (line 1) and the action label (line 2)
-            # gives the chip clear breathing room instead of stacking them flush.
             gap = 4
             total_h = line_h * 2 + gap
             line1_y = pill_y + (pill_h - total_h) // 2 - bbox1[1]
             line2_y = line1_y + line_h + gap
-            tx1 = pill_x + (pill_w - tw1) // 2 - bbox1[0]
-            tx2 = pill_x + (pill_w - tw2) // 2 - draw.textbbox((0, 0), fitted2, font=font)[0]
+            tx1 = cx - tw1 // 2 - bbox1[0]
+            tx2 = cx - tw2 // 2 - draw.textbbox((0, 0), fitted2, font=font)[0]
             draw.text((tx1, line1_y), fitted1, fill=theme.hint_fg, font=font)
             draw.text((tx2, line2_y), fitted2, fill=theme.hint_fg, font=font)
         else:
             line1_y = pill_y + (pill_h - line_h) // 2 - bbox1[1]
-            tx1 = pill_x + (pill_w - tw1) // 2 - bbox1[0]
+            tx1 = cx - tw1 // 2 - bbox1[0]
             draw.text((tx1, line1_y), fitted1, fill=theme.hint_fg, font=font)
 
 

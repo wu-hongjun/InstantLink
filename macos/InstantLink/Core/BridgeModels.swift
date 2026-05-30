@@ -22,6 +22,7 @@ struct BridgeAPIEnvelope: Codable, Equatable {
     var backup: BridgeBackupResult?
     var restore: BridgeBackupRestoreResult?
     var upload: BridgeUploadResult?
+    var config: BridgeConfig?
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
@@ -42,6 +43,7 @@ struct BridgeAPIEnvelope: Codable, Equatable {
         case backup
         case restore
         case upload
+        case config
     }
 
     func requireOK() throws {
@@ -140,6 +142,14 @@ struct BridgeAPIEnvelope: Codable, Equatable {
             throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "upload")
         }
         return upload
+    }
+
+    func requireConfig() throws -> BridgeConfig {
+        try requireOK()
+        guard let config else {
+            throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "config")
+        }
+        return config
     }
 }
 

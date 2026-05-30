@@ -606,6 +606,36 @@ final class BridgeControlCoordinator: ObservableObject {
         await runStatusFetch()
     }
 
+    // MARK: Config
+
+    /// Fetch the current bridge config via signed `GET /v1/config`. Called by
+    /// the Settings tab on `.onAppear` and after a successful Apply.
+    func fetchConfig() async throws -> BridgeConfig {
+        guard let device = currentDevice() else {
+            throw BridgeAPIError(
+                requestID: "local-no-device",
+                code: .deviceUnavailable,
+                payload: BridgeErrorPayload(message: "No Bridge is currently discovered.")
+            )
+        }
+        return try await transport.getConfig(device: device)
+    }
+
+    /// Apply a partial config diff via signed `PUT /v1/config`. Returns the
+    /// bridge's fresh canonical state on success; throws
+    /// ``BridgeConfigValidationError`` on 422 and ``BridgeAPIError`` on
+    /// other failures.
+    func applyConfig(diff: [String: Any]) async throws -> BridgeConfig {
+        guard let device = currentDevice() else {
+            throw BridgeAPIError(
+                requestID: "local-no-device",
+                code: .deviceUnavailable,
+                payload: BridgeErrorPayload(message: "No Bridge is currently discovered.")
+            )
+        }
+        return try await transport.putConfig(device: device, diff: diff)
+    }
+
     private func runStatusFetch() async {
         guard case .paired = snapshot.pairing, let device = currentDevice() else { return }
         do {

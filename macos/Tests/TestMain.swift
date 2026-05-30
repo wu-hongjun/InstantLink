@@ -203,6 +203,78 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeControlCoordinatorTests.testLastAutoTrustEventPublishedOnSuccess", {
                 try await BridgeControlCoordinatorTests().testLastAutoTrustEventPublishedOnSuccess()
             }),
+            ("BridgeConfigTests.testBridgeConfigDecodesFullPayload", {
+                try BridgeConfigTests().testBridgeConfigDecodesFullPayload()
+            }),
+            ("BridgeConfigTests.testBridgeConfigEncodesPayload", {
+                try BridgeConfigTests().testBridgeConfigEncodesPayload()
+            }),
+            ("BridgeConfigTests.testFTPReceiveModeAllValuesDecode", {
+                try BridgeConfigTests().testFTPReceiveModeAllValuesDecode()
+            }),
+            ("BridgeConfigTests.testDatestampFormatAllValuesDecode", {
+                try BridgeConfigTests().testDatestampFormatAllValuesDecode()
+            }),
+            ("BridgeConfigTests.testUnknownEnumValueFailsGracefully", {
+                try BridgeConfigTests().testUnknownEnumValueFailsGracefully()
+            }),
+            ("BridgeSettingsDraftTests.testLoadSetsDraftEqualToCanonical", {
+                try BridgeSettingsDraftTests().testLoadSetsDraftEqualToCanonical()
+            }),
+            ("BridgeSettingsDraftTests.testRevertResetsToLoaded", {
+                try BridgeSettingsDraftTests().testRevertResetsToLoaded()
+            }),
+            ("BridgeSettingsDraftTests.testIsDirtyDetectsSingleFieldChange", {
+                try BridgeSettingsDraftTests().testIsDirtyDetectsSingleFieldChange()
+            }),
+            ("BridgeSettingsDraftTests.testDiffIncludesOnlyChangedFields", {
+                try BridgeSettingsDraftTests().testDiffIncludesOnlyChangedFields()
+            }),
+            ("BridgeSettingsDraftTests.testDiffOmitsSectionWhenNoFieldsChanged", {
+                try BridgeSettingsDraftTests().testDiffOmitsSectionWhenNoFieldsChanged()
+            }),
+            ("BridgeSettingsDraftTests.testValidateRejectsNegativeKeepalive", {
+                try BridgeSettingsDraftTests().testValidateRejectsNegativeKeepalive()
+            }),
+            ("BridgeSettingsDraftTests.testValidateRejectsJPEGQualityOutOfRange", {
+                try BridgeSettingsDraftTests().testValidateRejectsJPEGQualityOutOfRange()
+            }),
+            ("BridgeSettingsDraftTests.testValidatePassesOnDefaults", {
+                try BridgeSettingsDraftTests().testValidatePassesOnDefaults()
+            }),
+            ("BridgeSettingsDraftTests.testApplyStateTransitionsThroughSuccess", {
+                try BridgeSettingsDraftTests().testApplyStateTransitionsThroughSuccess()
+            }),
+            ("BridgeSettingsDraftTests.testApplyStateTransitionsThroughFailure", {
+                try BridgeSettingsDraftTests().testApplyStateTransitionsThroughFailure()
+            }),
+            ("BridgeSettingsApplyFlowTests.testApplyHappyPath", {
+                try await BridgeSettingsApplyFlowTests().testApplyHappyPath()
+            }),
+            ("BridgeSettingsApplyFlowTests.testApplyValidationErrorSurfacesFieldErrors", {
+                try await BridgeSettingsApplyFlowTests().testApplyValidationErrorSurfacesFieldErrors()
+            }),
+            ("BridgeSettingsApplyFlowTests.testApplyNetworkErrorShowsManagementUnavailable", {
+                try await BridgeSettingsApplyFlowTests().testApplyNetworkErrorShowsManagementUnavailable()
+            }),
+            ("BridgeSettingsApplyFlowTests.testApplySkippedWhenClientValidationFails", {
+                try await BridgeSettingsApplyFlowTests().testApplySkippedWhenClientValidationFails()
+            }),
+            ("BridgeSettingsApplyFlowTests.testApplyDoesNotMutateLoadedOnFailure", {
+                try await BridgeSettingsApplyFlowTests().testApplyDoesNotMutateLoadedOnFailure()
+            }),
+            ("BridgeSettingsApplyFlowTests.testApplyAcceptsServerCounterproposal", {
+                try await BridgeSettingsApplyFlowTests().testApplyAcceptsServerCounterproposal()
+            }),
+            ("BridgeHTTPTransportTests.testGetConfigSignsAndDecodes", {
+                try await BridgeHTTPTransportTests().testGetConfigSignsAndDecodes()
+            }),
+            ("BridgeHTTPTransportTests.testPutConfigSignsAndSendsDiff", {
+                try await BridgeHTTPTransportTests().testPutConfigSignsAndSendsDiff()
+            }),
+            ("BridgeHTTPTransportTests.testPutConfigSurfacesValidationError", {
+                try await BridgeHTTPTransportTests().testPutConfigSurfacesValidationError()
+            }),
         ]
 
         var failures = 0

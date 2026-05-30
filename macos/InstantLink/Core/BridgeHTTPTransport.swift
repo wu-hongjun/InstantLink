@@ -146,6 +146,54 @@ final class BridgeHTTPTransport: BridgeTransport {
         return try envelope.requireStatus()
     }
 
+    func getConfig(device: BridgeDevice) async throws -> BridgeConfig {
+        let envelope = try await send(
+            try makeRequest(method: "GET", path: "/v1/config", signedFor: device)
+        )
+        return try envelope.requireConfig()
+    }
+
+    func putConfig(device: BridgeDevice, diff: [String: Any]) async throws -> BridgeConfig {
+        let body = try JSONSerialization.data(
+            withJSONObject: ["config": diff],
+            options: [.sortedKeys]
+        )
+        do {
+            let envelope = try await send(
+                try makeRequest(
+                    method: "PUT",
+                    path: "/v1/config",
+                    body: body,
+                    signedFor: device
+                )
+            )
+            return try envelope.requireConfig()
+        } catch let error as BridgeAPIError where error.code == "config_validation_failed" {
+            throw Self.makeValidationError(from: error)
+        }
+    }
+
+    private static func makeValidationError(from error: BridgeAPIError) -> BridgeConfigValidationError {
+        var fieldErrors: [String: String] = [:]
+        if case .object(let detailObject) = error.payload.details["field_errors"] {
+            for (key, value) in detailObject {
+                if case .string(let message) = value {
+                    fieldErrors[key] = message
+                }
+            }
+        } else {
+            for (key, value) in error.payload.details {
+                if case .string(let message) = value {
+                    fieldErrors[key] = message
+                }
+            }
+        }
+        return BridgeConfigValidationError(
+            fieldErrors: fieldErrors,
+            message: error.payload.message
+        )
+    }
+
     func preflightUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdatePreflight {
         let envelope = try await send(
             try makeRequest(

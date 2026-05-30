@@ -363,6 +363,88 @@ final class BridgeHTTPTransportTests {
         try expectTrue(state.isTerminal)
     }
 
+    func testGetConfigSignsAndDecodes() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let session = makeSession { request in
+            try expectEqual(request.url?.path, "/v1/config")
+            try expectEqual(request.httpMethod, "GET")
+            try expectTrue(
+                request.value(forHTTPHeaderField: BridgeManagementAuth.signatureHeader)?.isEmpty == false
+            )
+            return .json(200, Self.configEnvelope)
+        }
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://192.168.7.1:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1000) },
+            nonce: { "nonce-0001" }
+        )
+
+        let config = try await transport.getConfig(device: makeDevice())
+        try expectEqual(config.printer.quality, 100)
+        try expectEqual(config.ftp.mode, .hotspot)
+        try expectFalse(config.ftp.passwordSet)
+    }
+
+    func testPutConfigSignsAndSendsDiff() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let session = makeSession { request in
+            try expectEqual(request.url?.path, "/v1/config")
+            try expectEqual(request.httpMethod, "PUT")
+            let body = requestBody(from: request)
+            let json = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+            let configDiff = json?["config"] as? [String: Any]
+            let printerDiff = configDiff?["printer"] as? [String: Any]
+            try expectEqual(printerDiff?["quality"] as? Int, 80)
+            try expectTrue(
+                request.value(forHTTPHeaderField: BridgeManagementAuth.signatureHeader)?.isEmpty == false
+            )
+            return .json(200, Self.configEnvelope)
+        }
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://192.168.7.1:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1000) },
+            nonce: { "nonce-0001" }
+        )
+
+        let result = try await transport.putConfig(
+            device: makeDevice(),
+            diff: ["printer": ["quality": 80]]
+        )
+        try expectEqual(result.printer.quality, 100)
+    }
+
+    func testPutConfigSurfacesValidationError() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let session = makeSession { _ in
+            .json(422, Self.validationErrorEnvelope)
+        }
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://192.168.7.1:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1000) },
+            nonce: { "nonce-0001" }
+        )
+
+        do {
+            _ = try await transport.putConfig(
+                device: makeDevice(),
+                diff: ["printer": ["quality": 0]]
+            )
+            throw MacTestFailure(
+                file: #filePath,
+                line: #line,
+                message: "Expected validation error"
+            )
+        } catch let error as BridgeConfigValidationError {
+            try expectEqual(error.fieldErrors["printer.quality"], "Quality must be an integer in [1, 100].")
+        }
+    }
+
     func testRollbackUpdatePostsReasonAndDecodesState() async throws {
         let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
         let session = makeSession { request in
@@ -384,6 +466,63 @@ final class BridgeHTTPTransportTests {
         try expectEqual(state.safeState, .previousVersionRestored)
         try expectTrue(state.isTerminal)
     }
+
+    private static let configEnvelope = """
+    {
+      "schema_version": 1,
+      "request_id": "req-config",
+      "ok": true,
+      "config": {
+        "ftp": {
+          "mode": "hotspot",
+          "username": "ib",
+          "password_set": false
+        },
+        "printer": {
+          "model": "auto",
+          "fit": "auto",
+          "quality": 100,
+          "keepalive_interval_s": 10,
+          "search_interval_s": 5
+        },
+        "workflow": {
+          "auto_print_delay_s": 5,
+          "allow_print_without_film": false
+        },
+        "power": {
+          "backend": "x306",
+          "idle_poweroff_enabled": false,
+          "idle_poweroff_after_s": 7200
+        },
+        "ui": {
+          "appearance": "light",
+          "font_size": "medium",
+          "language": "en"
+        },
+        "adjustments": {
+          "watermark_text": "",
+          "datestamp_format": "quartz_date"
+        }
+      }
+    }
+    """
+
+    private static let validationErrorEnvelope = """
+    {
+      "schema_version": 1,
+      "request_id": "req-config-error",
+      "ok": false,
+      "error_code": "config_validation_failed",
+      "error": {
+        "message": "One or more configuration values are invalid.",
+        "details": {
+          "field_errors": {
+            "printer.quality": "Quality must be an integer in [1, 100]."
+          }
+        }
+      }
+    }
+    """
 
     private static let uploadEnvelope = """
     {

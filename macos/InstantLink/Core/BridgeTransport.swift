@@ -14,6 +14,8 @@ protocol BridgeTransport {
     ) async throws -> BridgePairingCompletion
     func forgetLocalAuth(device: BridgeDevice) async throws
     func status(device: BridgeDevice) async throws -> BridgeStatus
+    func getConfig(device: BridgeDevice) async throws -> BridgeConfig
+    func putConfig(device: BridgeDevice, diff: [String: Any]) async throws -> BridgeConfig
     func preflightUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdatePreflight
     func uploadUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUploadResult
     func startUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdateState
@@ -51,6 +53,9 @@ actor InMemoryBridgeTransport: BridgeTransport {
     private var nextOperationNumber: Int
     private(set) var usbAutoTrustCalls: Int
     private var usbAutoTrustShouldRejectDeviceIDs: Set<String>
+    private var configs: [String: BridgeConfig]
+    private var configValidationErrors: [String: [String: String]]
+    private(set) var putConfigCalls: Int
 
     init(
         devices: [BridgeDevice] = [],
@@ -68,6 +73,20 @@ actor InMemoryBridgeTransport: BridgeTransport {
         self.nextOperationNumber = 1
         self.usbAutoTrustCalls = 0
         self.usbAutoTrustShouldRejectDeviceIDs = []
+        self.configs = [:]
+        self.configValidationErrors = [:]
+        self.putConfigCalls = 0
+    }
+
+    func setConfig(_ config: BridgeConfig, for deviceID: String) {
+        configs[deviceID] = config
+    }
+
+    /// Script the bridge to respond with a typed validation error on the
+    /// next `putConfig` call for a given device, simulating a 422
+    /// `config_validation_failed` response from the management API.
+    func setConfigValidationError(_ errors: [String: String], for deviceID: String) {
+        configValidationErrors[deviceID] = errors
     }
 
     func setUSBAutoTrustShouldReject(_ reject: Bool, for deviceID: String) {
@@ -205,6 +224,94 @@ actor InMemoryBridgeTransport: BridgeTransport {
             throw BridgeTransportError.deviceNotFound(device.deviceID)
         }
         return status
+    }
+
+    func getConfig(device: BridgeDevice) async throws -> BridgeConfig {
+        try requireAuthorized(device)
+        return configs[device.deviceID] ?? .defaults
+    }
+
+    func putConfig(device: BridgeDevice, diff: [String: Any]) async throws -> BridgeConfig {
+        try requireAuthorized(device)
+        putConfigCalls += 1
+        if let scriptedErrors = configValidationErrors.removeValue(forKey: device.deviceID) {
+            throw BridgeConfigValidationError(
+                fieldErrors: scriptedErrors,
+                message: "Configuration validation failed."
+            )
+        }
+        var current = configs[device.deviceID] ?? .defaults
+        Self.apply(diff: diff, to: &current)
+        configs[device.deviceID] = current
+        return current
+    }
+
+    /// Minimal in-memory diff application that mirrors the bridge's
+    /// allow-list. The mock intentionally accepts only the same editable
+    /// surface the real bridge handler exposes so tests cannot pass with
+    /// fields the real bridge would reject.
+    private static func apply(diff: [String: Any], to config: inout BridgeConfig) {
+        if let printer = diff["printer"] as? [String: Any] {
+            if let raw = printer["model"] as? String { config.printer.model = raw }
+            if let raw = printer["fit"] as? String { config.printer.fit = raw }
+            if let raw = printer["quality"] as? Int { config.printer.quality = raw }
+            if let raw = printer["keepalive_interval_s"] as? Double {
+                config.printer.keepaliveIntervalSeconds = raw
+            }
+            if let raw = printer["search_interval_s"] as? Double {
+                config.printer.searchIntervalSeconds = raw
+            }
+        }
+        if let ftp = diff["ftp"] as? [String: Any] {
+            if let raw = ftp["mode"] as? String, let mode = BridgeFTPReceiveMode(rawValue: raw) {
+                config.ftp.mode = mode
+            }
+            if let raw = ftp["username"] as? String { config.ftp.username = raw }
+            if (ftp["password"] as? String)?.isEmpty == false { config.ftp.passwordSet = true }
+        }
+        if let workflow = diff["workflow"] as? [String: Any] {
+            if let raw = workflow["auto_print_delay_s"] {
+                if let string = raw as? String, string.lowercased() == "off" {
+                    config.workflow.autoPrintDelaySeconds = nil
+                } else if let value = raw as? Double {
+                    config.workflow.autoPrintDelaySeconds = value
+                } else if let value = raw as? Int {
+                    config.workflow.autoPrintDelaySeconds = Double(value)
+                }
+            }
+            if let value = workflow["allow_print_without_film"] as? Bool {
+                config.workflow.allowPrintWithoutFilm = value
+            }
+        }
+        if let power = diff["power"] as? [String: Any] {
+            if let value = power["idle_poweroff_enabled"] as? Bool {
+                config.power.idlePoweroffEnabled = value
+            }
+            if let value = power["idle_poweroff_after_s"] as? Double {
+                config.power.idlePoweroffAfterSeconds = value
+            }
+        }
+        if let ui = diff["ui"] as? [String: Any] {
+            if let raw = ui["appearance"] as? String,
+               let value = BridgeUIAppearance(rawValue: raw) {
+                config.ui.appearance = value
+            }
+            if let raw = ui["font_size"] as? String,
+               let value = BridgeFontSize(rawValue: raw) {
+                config.ui.fontSize = value
+            }
+            if let raw = ui["language"] as? String,
+               let value = BridgeUILanguage(rawValue: raw) {
+                config.ui.language = value
+            }
+        }
+        if let adj = diff["adjustments"] as? [String: Any] {
+            if let raw = adj["watermark_text"] as? String { config.adjustments.watermarkText = raw }
+            if let raw = adj["datestamp_format"] as? String,
+               let value = BridgeDatestampFormat(rawValue: raw) {
+                config.adjustments.datestampFormat = value
+            }
+        }
     }
 
     func preflightUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdatePreflight {

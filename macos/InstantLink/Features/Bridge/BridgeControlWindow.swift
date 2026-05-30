@@ -114,7 +114,7 @@ struct BridgeControlWindow: View {
         case .overview:
             BridgeOverviewView(coordinator: coordinator)
         case .settings:
-            placeholder(L("Coming soon"))
+            BridgeSettingsView(coordinator: coordinator)
         case .updates:
             placeholder(L("Coming soon"))
         case .backup:

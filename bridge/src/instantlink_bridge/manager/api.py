@@ -11,7 +11,7 @@ from typing import Any, cast
 
 from aiohttp import web
 
-from instantlink_bridge.config import DEFAULT_CONFIG_PATH
+from instantlink_bridge.config import DEFAULT_CONFIG_PATH, write_config
 from instantlink_bridge.manager import status as manager_status
 from instantlink_bridge.manager.auth import (
     DEFAULT_CLIENTS_DIR,
@@ -22,6 +22,11 @@ from instantlink_bridge.manager.auth import (
     PairingWindowStore,
     SignedRequestVerifier,
     utc_timestamp,
+)
+from instantlink_bridge.manager.config_payload import (
+    ConfigValidationError,
+    apply_config_diff,
+    serialize_config,
 )
 from instantlink_bridge.manager.contract import (
     ADMIN_ROUTES,
@@ -578,7 +583,127 @@ async def handle_backup_restore(request: web.Request) -> web.Response:
     return json_success(request, payload)
 
 
+async def handle_config_get(request: web.Request) -> web.Response:
+    """Return the current bridge config in the management JSON shape.
+
+    Secrets (FTP password) are masked via ``serialize_config``; the Mac
+    surfaces a "set"/"unset" indicator instead of the cleartext value.
+    """
+
+    snapshot = manager_status.read_config_snapshot(config_path_for(request))
+    if snapshot.error_code is not None:
+        return json_failure(
+            request,
+            status=503,
+            error_code=snapshot.error_code,
+            message=snapshot.message or "Config could not be loaded.",
+            recommended_action="Fix the Bridge config file and restart the manager.",
+        )
+    return json_success(request, {"config": serialize_config(snapshot.config)})
+
+
+async def handle_config_put(request: web.Request) -> web.Response:
+    """Apply a partial config diff and persist it atomically.
+
+    The diff payload is shaped ``{section: {field: value}}``; any section
+    or field outside the editable surface listed in
+    ``config_payload.ALLOWED_FIELDS`` is rejected with
+    ``config_validation_failed``.
+    """
+
+    payload = await read_json_object_compatible(request)
+    diff = payload.get("config")
+    if diff is None:
+        diff = {k: v for k, v in payload.items() if k != "schema_version"}
+    if not isinstance(diff, dict):
+        return json_failure(
+            request,
+            status=400,
+            error_code="invalid_request",
+            message="Request body must include a config diff object.",
+            recommended_action="Send a JSON body with a 'config' object.",
+        )
+
+    snapshot = manager_status.read_config_snapshot(config_path_for(request))
+    if snapshot.error_code is not None:
+        return json_failure(
+            request,
+            status=503,
+            error_code=snapshot.error_code,
+            message=snapshot.message or "Config could not be loaded.",
+            recommended_action="Fix the Bridge config file and restart the manager.",
+        )
+
+    try:
+        new_config = apply_config_diff(snapshot.config, cast(dict[str, Any], diff))
+    except ConfigValidationError as exc:
+        return web.json_response(
+            error_response(
+                "config_validation_failed",
+                "One or more configuration values are invalid.",
+                request_id=request_id_for(request),
+                recommended_action="Fix the highlighted fields and apply again.",
+                details={"field_errors": cast("dict[str, Any]", exc.field_errors)},
+            ),
+            status=422,
+        )
+    except ValueError as exc:
+        return json_failure(
+            request,
+            status=422,
+            error_code="config_validation_failed",
+            message=str(exc),
+            recommended_action="Fix the configuration values and apply again.",
+        )
+
+    try:
+        await asyncio.to_thread(write_config, new_config, config_path_for(request))
+    except OSError as exc:
+        LOGGER.exception("manager.config_put.write_failed")
+        return json_failure(
+            request,
+            status=500,
+            error_code="config_write_failed",
+            message=str(exc),
+            recommended_action="Check disk space and Bridge permissions, then retry.",
+        )
+
+    return json_success(request, {"config": serialize_config(new_config)})
+
+
+async def read_json_object_compatible(request: web.Request) -> dict[str, Any]:
+    """Parse a JSON object body, returning ``{}`` for an empty body.
+
+    Unlike :func:`read_json_object`, this helper does not raise on an
+    empty body — used by config PUT so an empty payload becomes a
+    no-op rather than a 400.
+    """
+
+    body = await request.read()
+    if not body:
+        return {}
+    try:
+        value = await request.json()
+    except ValueError as exc:
+        raise UpdateFlowError(
+            "invalid_request",
+            "Request body must be valid JSON.",
+            http_status=400,
+            recommended_action="Send a valid JSON object body.",
+        ) from exc
+    if not isinstance(value, dict):
+        raise UpdateFlowError(
+            "invalid_request",
+            "Request body must be a JSON object.",
+            http_status=400,
+            recommended_action="Send a JSON object body.",
+        )
+    return cast("dict[str, Any]", value)
+
+
 ADMIN_OPERATION_HANDLERS: dict[str, AdminHandler] = {
+    "config_get": handle_config_get,
+    "config_put": handle_config_put,
     "update_preflight": handle_update_preflight,
     "update_upload": handle_update_upload,
     "update_install": handle_update_install,

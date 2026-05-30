@@ -558,15 +558,26 @@ class BridgeUi:
         model = await self._resolve_printer_model_for_preview()
         if model is None:
             raise ImagePipelineError("printer type unknown")
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+        from dataclasses import replace as _replace
 
+        from instantlink_bridge.imaging.postprocess import (
+            AdjustmentProfile,
+            read_exif_datestamp_text,
+        )
+
+        adjustments = AdjustmentProfile.from_config(self._config.adjustments)
+        if self._config.adjustments.datestamp:
+            datestamp_text = read_exif_datestamp_text(
+                received.path, self._config.ui.language.value
+            )
+            adjustments = _replace(adjustments, datestamp_text=datestamp_text)
         prepared = await prepare_for_instax_async(
             received.path,
             model,
             fit=self._config.printer.fit,
             quality=self._config.printer.quality,
             edit=edit,
-            adjustments=AdjustmentProfile.from_config(self._config.adjustments),
+            adjustments=adjustments,
             timeout_s=PREVIEW_BUILD_TIMEOUT_S,
         )
         return await asyncio.to_thread(create_preview_from_prepared, prepared)
@@ -1620,6 +1631,10 @@ class BridgeUi:
         if key is SettingKey.ADJUST_HUE:
             adj = self._config.adjustments
             return SettingsRow("Hue", format_int_with_sign(adj.hue))
+        if key is SettingKey.ADJUST_DATESTAMP:
+            return SettingsRow("Datestamp", bool_label(self._config.adjustments.datestamp))
+        if key is SettingKey.ADJUST_WATERMARK:
+            return SettingsRow("Watermark", bool_label(self._config.adjustments.watermark))
         if key is SettingKey.PRINTER_SERIAL_INFO:
             # Strip the verbose "INSTAX-" prefix so the saved serial fits on
             # one row without clipping. When nothing is paired the row reads

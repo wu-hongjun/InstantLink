@@ -368,6 +368,15 @@ class AdjustmentsConfig:
     hue: int = 0
     """Hue rotation. -100 = -180 deg, 0 = unchanged, +100 = +180 deg."""
 
+    datestamp: bool = False
+    """Render EXIF DateTimeOriginal in the bottom-right corner when True."""
+
+    watermark: bool = False
+    """Render watermark_text in the top-right corner when True."""
+
+    watermark_text: str = "InstantLink"
+    """Text to stamp as a watermark. Empty string disables rendering."""
+
     def __post_init__(self) -> None:
         for field_name in ("saturation", "exposure", "sharpness", "hue"):
             value = getattr(self, field_name)
@@ -506,6 +515,9 @@ def render_config(config: BridgeConfig) -> str:
             f"exposure = {config.adjustments.exposure}",
             f"sharpness = {config.adjustments.sharpness}",
             f"hue = {config.adjustments.hue}",
+            f"datestamp = {_toml_bool(config.adjustments.datestamp)}",
+            f"watermark = {_toml_bool(config.adjustments.watermark)}",
+            f"watermark_text = {_toml_string(config.adjustments.watermark_text)}",
             "",
         ]
     )
@@ -655,6 +667,9 @@ def _load_adjustments_config(data: object) -> AdjustmentsConfig:
         exposure=_adjustment_int(data.get("exposure", 0), "[adjustments].exposure"),
         sharpness=_adjustment_int(data.get("sharpness", 0), "[adjustments].sharpness"),
         hue=_adjustment_int(data.get("hue", 0), "[adjustments].hue"),
+        datestamp=_parse_bool(data.get("datestamp", False), "[adjustments].datestamp"),
+        watermark=_parse_bool(data.get("watermark", False), "[adjustments].watermark"),
+        watermark_text=str(data.get("watermark_text", "InstantLink")),
     )
 
 

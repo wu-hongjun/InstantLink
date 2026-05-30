@@ -7,14 +7,15 @@ colour space; the model-size JPEG encode is the last step.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 if TYPE_CHECKING:
     from instantlink_bridge.config import AdjustmentsConfig  # pragma: no cover
 
-__all__ = ["AdjustmentProfile", "apply_adjustments"]
+__all__ = ["AdjustmentProfile", "apply_adjustments", "read_exif_datestamp_text"]
 
 # The five discrete picker values exposed in UI (-100, -50, 0, +50, +100).
 ADJUSTMENT_PICKER_VALUES: tuple[int, ...] = (-100, -50, 0, 50, 100)
@@ -54,10 +55,20 @@ class AdjustmentProfile:
     """Degrees of HSV hue rotation. 0 = unchanged."""
 
     datestamp: bool = False
-    """Overlay flag. Renders EXIF DateTimeOriginal in the bottom-right corner."""
+    """Overlay flag. When True and datestamp_text is non-empty, renders it bottom-right."""
 
     watermark: bool = False
-    """Overlay flag. Configurable text and position lands in phase 4."""
+    """Overlay flag. When True and watermark_text is non-empty, renders it top-right."""
+
+    datestamp_text: str = ""
+    """Pre-formatted datestamp string. Empty string disables the overlay even if datestamp=True.
+
+    The controller formats EXIF DateTimeOriginal + locale before building the profile so
+    apply_adjustments stays locale-agnostic.
+    """
+
+    watermark_text: str = ""
+    """Watermark label to stamp. Empty string disables the overlay even if watermark=True."""
 
     @classmethod
     def from_config(cls, config: AdjustmentsConfig) -> AdjustmentProfile:
@@ -72,22 +83,39 @@ class AdjustmentProfile:
           -100 => 0.0 (blurred), 0 => 1.0, +100 => 2.0.
         * hue: ``degrees = value * 1.8``
           -100 => -180 deg, 0 => 0 deg, +100 => +180 deg.
+
+        Note: datestamp_text is NOT set here — the caller (controller / app.py)
+        must read EXIF and format the date, then pass datestamp_text explicitly.
+        watermark_text is taken from config.watermark_text.
         """
         return cls(
             saturation=1.0 + config.saturation / 100.0,
             exposure=2.0 ** (config.exposure / 100.0),
             sharpness=1.0 + config.sharpness / 100.0,
             hue=int(config.hue * 1.8),
+            datestamp=config.datestamp,
+            watermark=config.watermark,
+            datestamp_text="",  # caller fills this in after reading EXIF
+            watermark_text=config.watermark_text if config.watermark else "",
         )
 
 
 _IDENTITY = AdjustmentProfile()
 
+# Overlay rendering constants.
+# Margin from edge: at least 16 px, scaled to image height.
+_OVERLAY_MARGIN_DIVISOR = 40
+_OVERLAY_MARGIN_MIN = 16
+# Font size: image.height // 30, clamped to [12, 48].
+_OVERLAY_FONT_SIZE_DIVISOR = 30
+_OVERLAY_FONT_SIZE_MIN = 12
+_OVERLAY_FONT_SIZE_MAX = 48
+
 
 def apply_adjustments(image: Image.Image, profile: AdjustmentProfile) -> Image.Image:
     """Apply colour/overlay adjustments to ``image`` in place semantically.
 
-    Application order: hue → saturation → exposure → sharpness.
+    Application order: hue → saturation → exposure → sharpness → datestamp → watermark.
 
     Hue is applied first because it operates on the original colour space;
     the subsequent saturation, exposure, and sharpness adjustments are linear
@@ -102,7 +130,9 @@ def apply_adjustments(image: Image.Image, profile: AdjustmentProfile) -> Image.I
     An identity profile (all defaults) returns the input image object
     unchanged — no copy, no PIL call.
 
-    Datestamp and watermark overlays land in phase 4.
+    Overlays (datestamp, watermark) are applied BEFORE _fit_image so the
+    full-resolution canvas carries the text and _fit_image resamples it
+    cleanly into the model's print pixels.
 
     Parameters
     ----------
@@ -145,7 +175,160 @@ def apply_adjustments(image: Image.Image, profile: AdjustmentProfile) -> Image.I
 
         out = ImageEnhance.Sharpness(out).enhance(profile.sharpness)
 
+    # --- Datestamp (bottom-right, white text + 2px black stroke) ---------
+    # Both the bool flag AND a non-empty text string are required. The caller
+    # (controller / app.py) formats the EXIF date before building the profile;
+    # if no EXIF date was found it passes datestamp_text="" which no-ops here.
+    if profile.datestamp and profile.datestamp_text:
+        out = _render_overlay(out, profile.datestamp_text, anchor="rs")
+
+    # --- Watermark (top-right, same style) --------------------------------
+    if profile.watermark and profile.watermark_text:
+        out = _render_overlay(out, profile.watermark_text, anchor="rt")
+
     return out
+
+
+def _render_overlay(
+    image: Image.Image,
+    text: str,
+    anchor: str,
+) -> Image.Image:
+    """Render ``text`` onto ``image`` at the corner determined by ``anchor``.
+
+    ``anchor`` follows PIL anchor semantics:
+    * ``"rs"`` — right-bottom (datestamp).
+    * ``"rt"`` — right-top (watermark).
+
+    Style: white fill, 2 px black stroke for legibility on busy photos.
+    Margin from edge: ``max(image.height // 40, 16)`` px.
+    Font size: ``image.height // 30`` clamped to [12, 48].
+    """
+    if image.mode != "RGB":
+        out = image.convert("RGB")
+    else:
+        # Ensure we have a mutable copy so prior pipeline stages are not
+        # mutated in place (PIL images share pixel buffers on copy=False).
+        out = image.copy()
+
+    w, h = out.size
+    margin = max(h // _OVERLAY_MARGIN_DIVISOR, _OVERLAY_MARGIN_MIN)
+    font_size = max(
+        _OVERLAY_FONT_SIZE_MIN,
+        min(h // _OVERLAY_FONT_SIZE_DIVISOR, _OVERLAY_FONT_SIZE_MAX),
+    )
+
+    # prefer_cjk: heuristic — if any character is outside the Latin BMP
+    # block, try a CJK font first so characters render as glyphs not tofu.
+    prefer_cjk = any(ord(c) > 0x007F for c in text)
+    font = _overlay_font(font_size, prefer_cjk=prefer_cjk)
+
+    draw = ImageDraw.Draw(out)
+
+    if anchor == "rs":
+        # right-bottom: position is (right_edge - margin, bottom_edge - margin)
+        x, y = w - margin, h - margin
+    else:
+        # anchor == "rt": right-top
+        x, y = w - margin, margin
+
+    draw.text(
+        (x, y),
+        text,
+        font=font,
+        fill="white",
+        stroke_width=2,
+        stroke_fill="black",
+        anchor=anchor,
+    )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Font loading for overlays
+# ---------------------------------------------------------------------------
+# Note: this mirrors the fallback ladder in ui/render.py:_font. That function
+# lives in the UI module and is not importable from imaging/ without creating
+# a circular dependency (ui imports imaging). We duplicate the path lists and
+# the lru_cache logic here so postprocess.py stays independent of the UI layer.
+# If the path lists ever need updating, keep both in sync.
+
+_LATIN_FONT_PATHS: tuple[str, ...] = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+)
+
+_CJK_FONT_PATHS: tuple[str, ...] = (
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+    "/System/Library/Fonts/STHeiti Light.ttc",
+    "/System/Library/Fonts/STHeiti Medium.ttc",
+)
+
+
+@lru_cache(maxsize=16)
+def _overlay_font(
+    size: int, prefer_cjk: bool = False
+) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
+    """Return a TrueType font for overlay rendering.
+
+    Mirrors ui/render.py:_font but lives here to avoid a circular import.
+    Cached per (size, prefer_cjk).
+    """
+    paths = (
+        (*_CJK_FONT_PATHS, *_LATIN_FONT_PATHS)
+        if prefer_cjk
+        else (*_LATIN_FONT_PATHS, *_CJK_FONT_PATHS)
+    )
+    for path in paths:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def read_exif_datestamp_text(path: object, language: str) -> str:
+    """Read EXIF DateTimeOriginal from ``path`` and return a formatted date string.
+
+    Returns an empty string when the tag is absent or the file cannot be read,
+    so the caller can safely pass the result as ``datestamp_text`` — an empty
+    string is a no-op in :func:`apply_adjustments`.
+
+    EXIF tag 36867 is ``DateTimeOriginal`` in ``"YYYY:MM:DD HH:MM:SS"`` format.
+    The ``path`` argument is typed as ``object`` so callers can pass a
+    ``pathlib.Path`` or ``str`` without importing ``Path`` here.
+
+    Locale mapping:
+    * ``zh-Hans`` / ``zh*``: ``yyyy年M月d日``
+    * everything else (default EN): ``MMM d, yyyy`` (e.g. ``"May 3, 2026"``)
+    """
+    import datetime
+
+    try:
+        with Image.open(path) as img:  # type: ignore[arg-type]
+            exif = img.getexif()
+            raw = exif.get(36867)  # DateTimeOriginal
+    except Exception:
+        return ""
+    if not raw or not isinstance(raw, str):
+        return ""
+    try:
+        dt = datetime.datetime.strptime(raw[:10], "%Y:%m:%d")
+    except ValueError:
+        return ""
+    if language.lower().startswith("zh"):
+        return f"{dt.year}年{dt.month}月{dt.day}日"
+    # English default: "May 3, 2026" (%-d is POSIX-only; use lstrip on Windows)
+    try:
+        return dt.strftime("%b %-d, %Y")
+    except ValueError:
+        # Windows strftime does not support %-d; fall back to zero-padded form.
+        return dt.strftime("%b %d, %Y").replace(" 0", " ")
 
 
 def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:

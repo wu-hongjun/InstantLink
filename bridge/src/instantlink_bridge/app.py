@@ -615,9 +615,16 @@ async def send_print_to_printer(
 ) -> None:
     """Print a received file through the model-detecting BLE path."""
 
-    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+    from dataclasses import replace as _replace
+
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile, read_exif_datestamp_text
 
     adjustments = AdjustmentProfile.from_config(config.adjustments)
+    # If datestamp is enabled, read EXIF and format the date now so
+    # apply_adjustments stays locale-agnostic.
+    if config.adjustments.datestamp:
+        datestamp_text = read_exif_datestamp_text(received.path, config.ui.language.value)
+        adjustments = _replace(adjustments, datestamp_text=datestamp_text)
     if instantlink_backend_enabled():
         await print_file_to_printer_instantlink(
             printer.address,

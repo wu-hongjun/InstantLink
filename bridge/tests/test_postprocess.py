@@ -1,4 +1,4 @@
-"""Tests for instantlink_bridge.imaging.postprocess (phase 3)."""
+"""Tests for instantlink_bridge.imaging.postprocess (phases 3 and 4)."""
 
 from __future__ import annotations
 
@@ -236,3 +236,71 @@ def test_from_config_hue_minus100_maps_to_minus180_degrees() -> None:
     cfg = AdjustmentsConfig(hue=-100)
     profile = AdjustmentProfile.from_config(cfg)
     assert profile.hue == -180
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: datestamp overlay
+# ---------------------------------------------------------------------------
+
+
+def _make_jpeg_with_exif(exif_date: str, size: tuple[int, int] = (200, 200)) -> bytes:
+    """Return JPEG bytes for an image with DateTimeOriginal set."""
+    img = Image.new("RGB", size, (180, 140, 100))
+    exif = img.getexif()
+    exif[36867] = exif_date  # DateTimeOriginal
+    buf = BytesIO()
+    img.save(buf, format="JPEG", exif=exif.tobytes())
+    return buf.getvalue()
+
+
+def test_datestamp_renders_when_text_set() -> None:
+    """datestamp=True with non-empty datestamp_text changes the bottom-right region."""
+    img = _make_rgb(size=(200, 200))
+    profile = AdjustmentProfile(datestamp=True, datestamp_text="May 3, 2026")
+    result = apply_adjustments(img.copy(), profile)
+
+    # Bottom-right quadrant must differ from the plain colour fill.
+    orig = img.crop((100, 100, 200, 200))
+    stamped = result.crop((100, 100, 200, 200))
+    assert orig.tobytes() != stamped.tobytes(), (
+        "Bottom-right region should differ when datestamp_text is set"
+    )
+
+
+def test_datestamp_no_op_when_text_empty() -> None:
+    """datestamp=True but empty datestamp_text must leave the image unchanged."""
+    img = _make_rgb(size=(200, 200))
+    profile = AdjustmentProfile(datestamp=True, datestamp_text="")
+    result = apply_adjustments(img.copy(), profile)
+    assert img.tobytes() == result.tobytes(), (
+        "Image should be unchanged when datestamp_text is empty"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: watermark overlay
+# ---------------------------------------------------------------------------
+
+
+def test_watermark_renders_when_text_set() -> None:
+    """watermark=True with non-empty watermark_text changes the top-right region."""
+    img = _make_rgb(size=(200, 200))
+    profile = AdjustmentProfile(watermark=True, watermark_text="InstantLink")
+    result = apply_adjustments(img.copy(), profile)
+
+    # Top-right quadrant must differ from the plain colour fill.
+    orig = img.crop((100, 0, 200, 100))
+    stamped = result.crop((100, 0, 200, 100))
+    assert orig.tobytes() != stamped.tobytes(), (
+        "Top-right region should differ when watermark_text is set"
+    )
+
+
+def test_watermark_no_op_when_text_empty() -> None:
+    """watermark=True but empty watermark_text must leave the image unchanged."""
+    img = _make_rgb(size=(200, 200))
+    profile = AdjustmentProfile(watermark=True, watermark_text="")
+    result = apply_adjustments(img.copy(), profile)
+    assert img.tobytes() == result.tobytes(), (
+        "Image should be unchanged when watermark_text is empty"
+    )

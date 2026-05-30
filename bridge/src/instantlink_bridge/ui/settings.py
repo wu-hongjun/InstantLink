@@ -35,6 +35,9 @@ class SettingKey(StrEnum):
     ADJUST_EXPOSURE = "adjust_exposure"
     ADJUST_SHARPNESS = "adjust_sharpness"
     ADJUST_HUE = "adjust_hue"
+    # Adjustments sub-page overlay toggles (plan 035 phase 4).
+    ADJUST_DATESTAMP = "adjust_datestamp"
+    ADJUST_WATERMARK = "adjust_watermark"
     FTP_RECEIVE_MODE = "ftp_receive_mode"
     PAIR_PRINTER = "pair_printer"
     FTP_MODE_INFO = "ftp_mode_info"
@@ -149,12 +152,15 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
     ),
-    # ADJUSTMENTS: four colour/tone adjustment knobs (plan 035 phase 3).
+    # ADJUSTMENTS: four colour/tone adjustment knobs + two overlay toggles
+    # (plan 035 phases 3 and 4).
     SettingsPage.ADJUSTMENTS: (
         SettingKey.ADJUST_SATURATION,
         SettingKey.ADJUST_EXPOSURE,
         SettingKey.ADJUST_SHARPNESS,
         SettingKey.ADJUST_HUE,
+        SettingKey.ADJUST_DATESTAMP,
+        SettingKey.ADJUST_WATERMARK,
     ),
     # TRANSFORM: image-fit mode and JPEG encode quality.
     SettingsPage.TRANSFORM: (
@@ -311,6 +317,9 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.ADJUST_EXPOSURE,
         SettingKey.ADJUST_SHARPNESS,
         SettingKey.ADJUST_HUE,
+        # Adjustments overlay toggles (plan 035 phase 4).
+        SettingKey.ADJUST_DATESTAMP,
+        SettingKey.ADJUST_WATERMARK,
     }
 )
 
@@ -389,6 +398,9 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.ADJUST_EXPOSURE: "Brightness in EV stops. ±100 = ±1 EV",
     SettingKey.ADJUST_SHARPNESS: "Edge contrast. Negative softens, positive crisps",
     SettingKey.ADJUST_HUE: "Hue rotation in degrees. ±100 = ±180°",
+    # Adjustments overlay toggles (plan 035 phase 4).
+    SettingKey.ADJUST_DATESTAMP: "Stamp the photo's date in the bottom-right corner",
+    SettingKey.ADJUST_WATERMARK: "Stamp a short label in the top-right corner",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
@@ -485,6 +497,10 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         SettingKey.ADJUST_HUE,
     }:
         return ADJUSTMENT_OPTIONS
+    if key is SettingKey.ADJUST_DATESTAMP:
+        return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
+    if key is SettingKey.ADJUST_WATERMARK:
+        return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     return ()
 
 
@@ -544,6 +560,10 @@ def config_with_setting_value(
         return replace(config, adjustments=replace(config.adjustments, sharpness=value))
     if key is SettingKey.ADJUST_HUE and isinstance(value, int):
         return replace(config, adjustments=replace(config.adjustments, hue=value))
+    if key is SettingKey.ADJUST_DATESTAMP and isinstance(value, bool):
+        return replace(config, adjustments=replace(config.adjustments, datestamp=value))
+    if key is SettingKey.ADJUST_WATERMARK and isinstance(value, bool):
+        return replace(config, adjustments=replace(config.adjustments, watermark=value))
     return config
 
 
@@ -632,6 +652,10 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.adjustments.sharpness
     if key is SettingKey.ADJUST_HUE:
         return config.adjustments.hue
+    if key is SettingKey.ADJUST_DATESTAMP:
+        return config.adjustments.datestamp
+    if key is SettingKey.ADJUST_WATERMARK:
+        return config.adjustments.watermark
     return None
 
 

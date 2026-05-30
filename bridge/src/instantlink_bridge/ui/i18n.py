@@ -361,6 +361,11 @@ _ZH_HANS: dict[str, str] = {
     "Brightness in EV stops. ±100 = ±1 EV": "亮度（EV 档）。±100 = ±1 EV",
     "Edge contrast. Negative softens, positive crisps": "边缘对比度。负值柔化，正值锐化",
     "Hue rotation in degrees. ±100 = ±180°": "色相旋转角度。±100 = ±180°",
+    # --- Adjustments overlay toggle labels (plan 035 phase 4) ------------
+    "Datestamp": "日期戳",
+    "Watermark": "水印",
+    "Stamp the photo's date in the bottom-right corner": "在照片右下角加盖拍摄日期",
+    "Stamp a short label in the top-right corner": "在照片右上角加盖短标签",
     # --- Misc short LCD copy ---------------------------------------------
     "Advanced Same-Wi-Fi status": "高级同 Wi-Fi 状态",
     "Allow 10 min idle shutdown": "允许 10 分钟空闲关机",

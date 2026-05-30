@@ -15,7 +15,12 @@ from PIL import Image, ImageDraw, ImageFont
 if TYPE_CHECKING:
     from instantlink_bridge.config import AdjustmentsConfig  # pragma: no cover
 
-__all__ = ["AdjustmentProfile", "apply_adjustments", "read_exif_datestamp_text"]
+__all__ = [
+    "AdjustmentProfile",
+    "apply_adjustments",
+    "read_exif_datestamp_text",
+    "render_adjustments_preview",
+]
 
 # The five discrete picker values exposed in UI (-100, -50, 0, +50, +100).
 ADJUSTMENT_PICKER_VALUES: tuple[int, ...] = (-100, -50, 0, 50, 100)
@@ -393,6 +398,53 @@ def read_exif_datestamp_text(path: object, language: str) -> str:
     except ValueError:
         # Windows strftime does not support %-d; fall back to zero-padded form.
         return dt.strftime("%b %d, %Y").replace(" 0", " ")
+
+
+@lru_cache(maxsize=4)
+def _load_example_photo_resized(size: tuple[int, int]) -> Image.Image:
+    """Load and resize the built-in example photo, cached per output size.
+
+    Uses ``importlib.resources`` so the asset is accessible from a wheel
+    install as well as an editable source install.  The returned image is
+    read-only (do not mutate it); callers must copy before applying adjustments.
+    """
+    import importlib.resources
+
+    ref = importlib.resources.files("instantlink_bridge.imaging").joinpath(
+        "_example_photo.jpg"
+    )
+    with importlib.resources.as_file(ref) as path:
+        with Image.open(path) as raw:
+            resized = raw.resize(size, Image.Resampling.LANCZOS).convert("RGB")
+    return resized
+
+
+def render_adjustments_preview(
+    profile: AdjustmentProfile,
+    *,
+    size: tuple[int, int] = (88, 88),
+) -> Image.Image:
+    """Load the built-in example photo, resize to ``size``, apply ``profile``.
+
+    Returns an RGB ``Image.Image``.  The default ``(88, 88)`` matches the
+    list-mode preview tile; phase 4 will pass larger sizes for the edit-mode
+    view.
+
+    Performance
+    -----------
+    The decoded-and-resized source image is LRU-cached keyed on ``size`` so
+    repeated calls with different profiles only pay the adjustment cost, not
+    the JPEG decode + resize.  The identity profile short-circuits via
+    ``apply_adjustments`` (returns the cached source directly — no copy).
+
+    Phase 4 note: the cached image must not be mutated.  ``apply_adjustments``
+    only mutates for hue rotation (returns a new array-backed image), so the
+    identity path is safe.  Any future PIL in-place operation must copy first.
+    """
+    source = _load_example_photo_resized(size)
+    # apply_adjustments returns ``source`` unchanged (same object) for the
+    # identity profile — that's fine because we never mutate the cached object.
+    return apply_adjustments(source, profile)
 
 
 def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:

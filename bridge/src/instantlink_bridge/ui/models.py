@@ -8,6 +8,7 @@ from enum import StrEnum
 from PIL import Image
 
 from instantlink_bridge.ble.models import PrinterModel
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 
 
 class UiMode(StrEnum):
@@ -114,3 +115,4 @@ class UiSnapshot:
     language: str = "en"
     appearance: str = "light"
     image_queue_depth: int = 0
+    adjustments_profile: AdjustmentProfile | None = None

@@ -127,7 +127,7 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
         _ready(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.SETTINGS:
         if snapshot.settings_title == "Adjustments":
-            _adjustments(draw, snapshot, fonts, theme)
+            _adjustments(image, draw, snapshot, fonts, theme)
         else:
             _settings(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.VALIDATION:
@@ -1489,25 +1489,32 @@ _ADJ_SLIDER_W = 100
 
 
 def _adjustments(
+    image: Image.Image,
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    """Render the Adjustments settings page with slider rows.
+    """Render the Adjustments settings page with slider rows + live preview.
 
-    Dispatched from ``render_snapshot`` when ``snapshot.settings_title``
-    is ``"Adjustments"``.  Replaces the generic ``_settings`` renderer for
-    this page so that:
+    Phase 3 layout (plan 036):
+
+    - x=16..103, y=42..129: 88×88 example-photo preview tile (left column).
+    - Rows 0-4 (Preset, Saturation, Exposure, Sharpness, Hue): right column
+      only (x=107..226). Label zone: x=109..150.  Slider zone: x=153..220.
+    - Hairline at y=130 separates the two-column zone from the full-width zone.
+    - Rows 5-8 (Vignette, Datestamp, Watermark, Save): full card width below
+      the preview tile, starting at y≈130+.
 
     - Saturation / Exposure / Sharpness / Hue → slider row (symmetric).
     - Vignette → slider row (asymmetric, [0, 100]).
     - Datestamp / Watermark → label + On/Off value (no slider, no chevron).
-    - Preset / Save current → existing picker-style row (chevron retained).
-
-    Phase 3 will add an 88 × 88 example-photo preview on the left; for now
-    the left zone intentionally reads as WIP (no content drawn there).
+    - Preset / Save current → picker-style row (chevron retained).
     """
+    from instantlink_bridge.imaging.postprocess import (
+        AdjustmentProfile,
+        render_adjustments_preview,
+    )
 
     rows = snapshot.settings_rows
     lang = snapshot.language
@@ -1551,6 +1558,36 @@ def _adjustments(
 
     draw_card(draw, 12, card_top, 216, card_h, theme)
 
+    # ------------------------------------------------------------------
+    # Preview tile (plan 036 phase 3): 88×88 at x=16, y=42
+    # ------------------------------------------------------------------
+    _ADJ_TILE_X = 16
+    _ADJ_TILE_Y = 42
+    _ADJ_TILE_SIZE = 88
+
+    profile = snapshot.adjustments_profile or AdjustmentProfile()
+    try:
+        preview_img = render_adjustments_preview(profile, size=(_ADJ_TILE_SIZE, _ADJ_TILE_SIZE))
+        image.paste(preview_img, (_ADJ_TILE_X, _ADJ_TILE_Y))
+    except Exception:
+        pass  # preview failure must never crash the renderer
+
+    # Border around the tile — 1 px in theme.separator, radius=4
+    draw.rounded_rectangle(
+        (_ADJ_TILE_X, _ADJ_TILE_Y, _ADJ_TILE_X + _ADJ_TILE_SIZE, _ADJ_TILE_Y + _ADJ_TILE_SIZE),
+        radius=4,
+        outline=theme.separator,
+        width=1,
+    )
+
+    # ------------------------------------------------------------------
+    # Row rendering: top zone (rows 0-4) right-column; bottom zone full-width
+    # ------------------------------------------------------------------
+    # Indices 0-4 in the *full* row list are right-column.  Once the scroll
+    # offset is applied, we compare the absolute row index to _ADJ_TILE_ROWS.
+    _ADJ_TILE_ROWS = 5  # Preset + Saturation + Exposure + Sharpness + Hue
+    _ADJ_ZONE_BOUNDARY_Y = _ADJ_TILE_Y + _ADJ_TILE_SIZE  # y=130
+
     for offset, row in enumerate(rows[start : start + visible_count]):
         index = start + offset
         row_y = card_top + 4 + offset * row_height
@@ -1558,7 +1595,23 @@ def _adjustments(
         label_str = t(row.label, lang)
         value_str = t(row.value, lang)
 
-        if row.label in _SLIDER_ROW_LABELS:
+        # Determine column zone by absolute row index (not scroll offset).
+        in_right_col = index < _ADJ_TILE_ROWS
+
+        if row.label in _SLIDER_ROW_LABELS and in_right_col:
+            _draw_adjustments_slider_row_right(
+                draw,
+                row_y,
+                row_height,
+                label_str,
+                row.label,
+                value_str,
+                selected=is_selected,
+                font=font,
+                theme=theme,
+            )
+        elif row.label in _SLIDER_ROW_LABELS:
+            # Vignette — full-width slider row
             _draw_adjustments_slider_row(
                 draw,
                 row_y,
@@ -1582,23 +1635,44 @@ def _adjustments(
                 theme=theme,
             )
         else:
-            # Preset, Save current — picker style with chevron
-            draw_settings_row(
-                draw,
-                row_y,
-                label_str,
-                value_str,
-                row.hint,
-                selected=is_selected,
-                font=font,
-                marker_font=marker_font,
-                theme=theme,
-                row_height=row_height,
-            )
+            # Preset (right-col), Save current (full-width after tile zone)
+            if in_right_col:
+                _draw_adjustments_picker_row_right(
+                    draw,
+                    row_y,
+                    row_height,
+                    label_str,
+                    value_str,
+                    row.hint,
+                    selected=is_selected,
+                    font=font,
+                    marker_font=marker_font,
+                    theme=theme,
+                )
+            else:
+                draw_settings_row(
+                    draw,
+                    row_y,
+                    label_str,
+                    value_str,
+                    row.hint,
+                    selected=is_selected,
+                    font=font,
+                    marker_font=marker_font,
+                    theme=theme,
+                    row_height=row_height,
+                )
 
         if offset < visible_count - 1:
             separator_y = row_y + row_height
-            draw_hairline(draw, 16, separator_y, 210, theme)
+            # Separators in the right-column zone only span x=107..226
+            if index < _ADJ_TILE_ROWS - 1:
+                draw_hairline(draw, 107, separator_y, 119, theme)
+            else:
+                draw_hairline(draw, 16, separator_y, 210, theme)
+
+    # Hairline at y=_ADJ_ZONE_BOUNDARY_Y separating two-column / full-width zones
+    draw_hairline(draw, 16, _ADJ_ZONE_BOUNDARY_Y, 210, theme)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -1729,6 +1803,126 @@ def _draw_adjustments_toggle_row(
 
     val_w = _text_width(draw, value_str, font)
     _text(draw, 218 - val_w, y + 3, value_str, font, value_fill)
+
+
+def _draw_adjustments_slider_row_right(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    row_height: int,
+    label_str: str,
+    label_key: str,
+    value_str: str,
+    *,
+    selected: bool,
+    font: Font,
+    theme: Theme,
+) -> None:
+    """Render a slider row in the right column of the Adjustments page.
+
+    Right-column layout (plan 036 phase 3):
+    - Highlight zone: x=107..226 (so it does not overlap the preview tile).
+    - Label zone: x=109..150 (41 px, narrower than full-width rows).
+    - Slider zone: x=153..220 (67 px wide).
+    - Value label drawn above the thumb (centred on thumb_cx).
+    """
+    min_val, max_val = _SLIDER_RANGE.get(label_key, (-100, 100))
+    symmetric = min_val < 0
+
+    try:
+        numeric_value = int(value_str.lstrip("+"))
+    except ValueError:
+        numeric_value = 0
+
+    row_cy = y + row_height // 2
+
+    if selected:
+        draw.rounded_rectangle(
+            (107, y, 226, y + row_height - 1),
+            radius=8,
+            fill=theme.accent_blue,
+        )
+        label_fill = theme.label_inverse
+    else:
+        label_fill = theme.label_primary
+
+    # Label in the narrow right-column label zone
+    label_max = 38  # x=109 to x=147
+    label_fitted = _fit_text_to_width(draw, label_str, font, label_max)
+    _text(draw, 109, y + 3, label_fitted, font, label_fill)
+
+    # Slider (67 px wide, x=153)
+    _ADJ_RC_SLIDER_X = 153
+    _ADJ_RC_SLIDER_W = 67
+    track_height = 6
+    slider_y = row_cy - track_height // 2
+    thumb_cx = draw_slider(
+        draw,
+        _ADJ_RC_SLIDER_X,
+        slider_y,
+        _ADJ_RC_SLIDER_W,
+        numeric_value,
+        min_val,
+        max_val,
+        theme=theme,
+        track_height=track_height,
+        symmetric=symmetric,
+    )
+
+    # Value label above the thumb
+    if symmetric:
+        val_label = format_int_with_sign(numeric_value)
+    else:
+        val_label = str(numeric_value)
+    val_w = _text_width(draw, val_label, font)
+    val_x = thumb_cx - val_w // 2
+    val_x = max(109, min(val_x, 224 - val_w))
+    val_y = slider_y - 10
+    _text(draw, val_x, val_y, val_label, font, theme.label_secondary)
+
+
+def _draw_adjustments_picker_row_right(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    row_height: int,
+    label_str: str,
+    value_str: str,
+    hint: str,
+    *,
+    selected: bool,
+    font: Font,
+    marker_font: Font,
+    theme: Theme,
+) -> None:
+    """Render a picker-style row (Preset) in the right column.
+
+    Uses the right-column highlight zone (x=107..226) and positions label +
+    value + chevron within that narrower zone.
+    """
+    if selected:
+        draw.rounded_rectangle(
+            (107, y, 226, y + row_height - 1),
+            radius=8,
+            fill=theme.accent_blue,
+        )
+        label_fill = theme.label_inverse
+        value_fill = theme.label_inverse
+        marker_fill = theme.label_inverse
+    else:
+        label_fill = theme.label_primary
+        value_fill = theme.label_secondary
+        marker_fill = theme.label_secondary
+
+    label_max = 38
+    label_fitted = _fit_text_to_width(draw, label_str, font, label_max)
+    _text(draw, 109, y + 3, label_fitted, font, label_fill)
+
+    # Chevron marker on the right edge
+    _text(draw, 218, y + 3, "›", marker_font, marker_fill)
+
+    # Value to the left of the chevron
+    val_w = _text_width(draw, value_str, font)
+    val_x = max(148, 215 - val_w)
+    _text(draw, val_x, y + 3, value_str, font, value_fill)
 
 
 def _pairing(

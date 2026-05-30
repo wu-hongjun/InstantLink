@@ -798,6 +798,7 @@ def _adjustments_snapshot(
     selected_index: int = 0,
 ) -> UiSnapshot:
     """Build a UiSnapshot for the Adjustments settings page."""
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
     from instantlink_bridge.ui.settings import format_int_with_sign
 
     rows = (
@@ -811,6 +812,13 @@ def _adjustments_snapshot(
         SettingsRow("Watermark", "Off", hint="Right/KEY1 choose"),
         SettingsRow("Save current", "", hint="Right/KEY1 run"),
     )
+    profile = AdjustmentProfile(
+        saturation=1.0 + saturation / 100.0,
+        exposure=2.0 ** (exposure / 100.0),
+        sharpness=1.0 + sharpness / 100.0,
+        hue=int(hue * 1.8),
+        vignette=vignette,
+    )
     return UiSnapshot(
         mode=UiMode.SETTINGS,
         ftp_host="192.168.7.1",
@@ -819,14 +827,26 @@ def _adjustments_snapshot(
         selected_index=selected_index,
         appearance=appearance,
         language=language,
+        adjustments_profile=profile,
     )
 
 
 def test_adjustments_page_renders_without_error_all_zeros() -> None:
     """Adjustments page with all axes at 0 renders to a 240×240 image."""
+    from instantlink_bridge.ui.theme import theme_for
+
     snapshot = _adjustments_snapshot()
     image = render_snapshot(snapshot)
     assert image.size == (240, 240)
+
+    # Phase 3: tile centre pixel (50, 86) must not be the page background colour.
+    bg_colour = theme_for("light").bg
+    h = bg_colour.lstrip("#")
+    bg_rgb = (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+    tile_px = image.getpixel((50, 86))
+    assert tile_px != bg_rgb, (
+        f"Tile centre pixel at (50, 86) should not be background {bg_rgb}, got {tile_px}"
+    )
 
 
 def test_adjustments_page_renders_without_error_mixed_values() -> None:

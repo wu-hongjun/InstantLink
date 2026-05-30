@@ -1105,6 +1105,8 @@ class BridgeUi:
         keys = self._visible_keys_for_page(self._settings_page)
         selected_index = min(self._settings_indices[self._settings_page], len(keys) - 1)
         self._settings_indices[self._settings_page] = selected_index
+        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
+
         self._snapshot = replace(
             self._snapshot,
             mode=UiMode.SETTINGS,
@@ -1112,6 +1114,7 @@ class BridgeUi:
             settings_title=PAGE_TITLES[self._settings_page],
             settings_rows=self._settings_rows(),
             settings_message=message if message is not None else self._settings_default_message(),
+            adjustments_profile=_AdjProf.from_config(self._config.adjustments),
         )
         self._render()
 
@@ -2418,6 +2421,9 @@ class BridgeUi:
         settings_message: str | None = None,
         settings_title: str = "Settings",
     ) -> UiSnapshot:
+        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
+
+        adjustments_profile = _AdjProf.from_config(self._config.adjustments)
         return UiSnapshot(
             mode=mode,
             ftp_host=self._config.ftp.host,
@@ -2458,6 +2464,7 @@ class BridgeUi:
             language=self._config.ui.language.value,
             appearance=self._config.ui.appearance.value,
             image_queue_depth=self._image_queue_depth,
+            adjustments_profile=adjustments_profile,
         )
 
     def _cancel_image_reset(self) -> None:

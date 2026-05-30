@@ -7,7 +7,11 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile, apply_adjustments
+from instantlink_bridge.imaging.postprocess import (
+    AdjustmentProfile,
+    apply_adjustments,
+    render_adjustments_preview,
+)
 
 
 def _make_rgb(
@@ -375,4 +379,67 @@ def test_vignette_runs_before_overlays() -> None:
     vignette_br = vignette_only.crop((100, 100, 200, 200))
     assert result_br.tobytes() != vignette_br.tobytes(), (
         "Bottom-right region should differ from vignette-only — datestamp should be on top"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Plan 036 phase 3: render_adjustments_preview
+# ---------------------------------------------------------------------------
+
+
+def test_render_adjustments_preview_identity_loads_unchanged() -> None:
+    """Identity profile returns an 88×88 RGB image with a non-empty pixel buffer."""
+    identity = AdjustmentProfile()
+    result = render_adjustments_preview(identity, size=(88, 88))
+
+    assert result.size == (88, 88), f"Expected size (88, 88), got {result.size}"
+    assert result.mode == "RGB", f"Expected mode RGB, got {result.mode}"
+    # Non-empty pixel buffer: at least one non-zero pixel
+    assert any(v > 0 for v in result.getpixel((44, 44))), (  # type: ignore[arg-type]
+        "Centre pixel of identity preview should have non-zero values"
+    )
+
+
+def test_render_adjustments_preview_non_identity_differs() -> None:
+    """Identity vs non-identity outputs have different pixel bytes."""
+    identity = AdjustmentProfile()
+    active = AdjustmentProfile(saturation=2.0, exposure=1.5)
+
+    identity_result = render_adjustments_preview(identity, size=(88, 88))
+    active_result = render_adjustments_preview(active, size=(88, 88))
+
+    assert identity_result.tobytes() != active_result.tobytes(), (
+        "Non-identity profile should produce visibly different preview output"
+    )
+
+
+def test_render_adjustments_preview_uses_lru_cache_for_source_load() -> None:
+    """Multiple calls with the same size only load the source image once."""
+    import unittest.mock as mock
+
+    from instantlink_bridge.imaging import postprocess as pp
+
+    call_count = 0
+    original_load = pp._load_example_photo_resized.__wrapped__  # type: ignore[attr-defined]
+
+    def counting_load(size: tuple[int, int]) -> object:
+        nonlocal call_count
+        call_count += 1
+        return original_load(size)
+
+    # Clear the LRU cache so we can observe fresh loads.
+    pp._load_example_photo_resized.cache_clear()
+
+    with mock.patch.object(pp, "_load_example_photo_resized", wraps=pp._load_example_photo_resized):
+        # Call twice with the same size — second call must be a cache hit.
+        r1 = render_adjustments_preview(AdjustmentProfile(), size=(88, 88))
+        r2 = render_adjustments_preview(AdjustmentProfile(saturation=1.5), size=(88, 88))
+
+    # Both calls returned valid images.
+    assert r1.size == (88, 88)
+    assert r2.size == (88, 88)
+    # The LRU cache info should show at least one hit after the second call.
+    cache_info = pp._load_example_photo_resized.cache_info()
+    assert cache_info.hits >= 1, (
+        f"Expected at least 1 LRU cache hit for same-size calls, got {cache_info.hits}"
     )

@@ -879,6 +879,15 @@ main() {
 set -eu
 systemctl restart bluetooth.service
 sleep 3
+# Restart the management API too. Both services share the same on-disk
+# Python source under /opt/InstantLinkBridge; restarting only the print
+# bridge after a code deploy leaves the manager running stale code in
+# memory, so new routes (e.g. /v1/pairing/usb_auto_trust) return 404
+# until someone notices. Manager has no BLE dependency so it restarts
+# quickly and cleanly.
+if systemctl list-unit-files instantlink-bridge-manager.service >/dev/null 2>&1; then
+  systemctl restart instantlink-bridge-manager.service || true
+fi
 systemctl restart instantlink-bridge.service
 for i in $(seq 1 30); do
   state="$(systemctl is-active instantlink-bridge.service || true)"

@@ -617,9 +617,10 @@ async def send_print_to_printer(
 
     from dataclasses import replace as _replace
 
-    from instantlink_bridge.imaging.postprocess import AdjustmentProfile, read_exif_datestamp_text
+    from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text
+    from instantlink_bridge.imaging.presets import resolve_preset
 
-    adjustments = AdjustmentProfile.from_config(config.adjustments)
+    adjustments = resolve_preset(config.adjustments)
     # If datestamp is enabled, read EXIF and format the date now so
     # apply_adjustments stays locale-agnostic.
     if config.adjustments.datestamp:

@@ -64,7 +64,9 @@ from instantlink_bridge.ui.settings import (
     PAGE_TITLES,
     SETTINGS_BY_PAGE,
     SETTINGS_PARENT_PAGE,
+    USER_PRESET_SLOT_NAMES,
     SettingKey,
+    SettingOption,
     SettingsPage,
     WifiMode,
     appearance_label,
@@ -75,6 +77,7 @@ from instantlink_bridge.ui.settings import (
     ftp_receive_mode_label,
     language_label,
     model_label,
+    preset_options,
     seconds_label,
     selected_option_index,
     setting_action_hint,
@@ -321,6 +324,11 @@ class BridgeUi:
         self._ignore_actions_until = 0.0
         self._settings_page = SettingsPage.MAIN
         self._settings_indices: dict[SettingsPage, int] = {page: 0 for page in SETTINGS_BY_PAGE}
+        # User-defined custom presets loaded from /etc/InstantLinkBridge/presets.toml.
+        # Populated at startup; empty dict until then.
+        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AP
+
+        self._user_presets: dict[str, _AP] = {}
 
     @property
     def config(self) -> BridgeConfig:
@@ -347,6 +355,7 @@ class BridgeUi:
             self._input.start(self._actions, loop)
         except Exception:
             LOGGER.exception("ui.input_start_failed")
+        self._reload_user_presets()
         await self._refresh_network_status()
         self._action_task = asyncio.create_task(self._run_actions())
         self._render_tick_task = asyncio.create_task(self._run_render_tick())
@@ -560,12 +569,10 @@ class BridgeUi:
             raise ImagePipelineError("printer type unknown")
         from dataclasses import replace as _replace
 
-        from instantlink_bridge.imaging.postprocess import (
-            AdjustmentProfile,
-            read_exif_datestamp_text,
-        )
+        from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text
+        from instantlink_bridge.imaging.presets import resolve_preset
 
-        adjustments = AdjustmentProfile.from_config(self._config.adjustments)
+        adjustments = resolve_preset(self._config.adjustments, self._user_presets)
         if self._config.adjustments.datestamp:
             datestamp_text = read_exif_datestamp_text(
                 received.path, self._config.ui.language.value
@@ -1204,12 +1211,29 @@ class BridgeUi:
         if key is SettingKey.REFRESH_STATUS:
             await self._refresh_status_from_settings()
             return
+        if key is SettingKey.ADJUST_SAVE_CUSTOM:
+            await self._save_current_as_preset()
+            return
         if key in INFO_SETTING_KEYS:
             self._show_settings(self._info_message_for_setting(key))
+            return
+        # Colour-axis rows are read-only when a non-Custom preset is active.
+        # KEY1 on a locked row shows a toast directing the user to set Custom.
+        _COLOUR_AXIS_KEYS = frozenset({
+            SettingKey.ADJUST_SATURATION,
+            SettingKey.ADJUST_EXPOSURE,
+            SettingKey.ADJUST_SHARPNESS,
+            SettingKey.ADJUST_HUE,
+        })
+        if key in _COLOUR_AXIS_KEYS and self._config.adjustments.preset != "Custom":
+            self._show_settings("Edit by setting Preset → Custom")
             return
         if key not in ADJUSTABLE_SETTING_KEYS:
             LOGGER.error("ui.setting_unhandled key=%s", key.value)
             self._show_settings("Not implemented")
+            return
+        if key is SettingKey.ADJUST_PRESET:
+            self._show_preset_picker()
             return
         self._show_setting_picker(key)
 
@@ -1230,26 +1254,88 @@ class BridgeUi:
         )
         self._render()
 
+    def _show_preset_picker(self, message: str | None = None) -> None:
+        """Open the preset picker with live user-custom names merged in."""
+
+        user_names = tuple(
+            slot for slot in USER_PRESET_SLOT_NAMES if slot in self._user_presets
+        )
+        options = preset_options(user_names)
+        current_preset = self._config.adjustments.preset
+        selected_index = next(
+            (i for i, opt in enumerate(options) if opt.value == current_preset),
+            0,
+        )
+        self._settings_picker_key = SettingKey.ADJUST_PRESET
+        self._snapshot = replace(
+            self._snapshot,
+            mode=UiMode.SETTINGS,
+            selected_index=selected_index,
+            settings_title="Preset",
+            settings_rows=tuple(
+                SettingsRow(
+                    opt.label,
+                    "saved" if opt.value == current_preset else "",
+                    "KEY1 save",
+                )
+                for opt in options
+            ),
+            settings_message=message or "Choose option",
+        )
+        self._render()
+
+    def _preset_picker_options(self) -> tuple[SettingOption, ...]:
+        """Return live preset options including any loaded user custom slots."""
+
+        user_names = tuple(
+            slot for slot in USER_PRESET_SLOT_NAMES if slot in self._user_presets
+        )
+        return preset_options(user_names)
+
     async def _handle_setting_picker_action(self, action: UiAction) -> None:
         key = self._settings_picker_key
         if key is None:
             return
-        options = setting_options(key)
+        # The preset picker uses live user-preset options; other pickers use
+        # the static setting_options() table.
+        if key is SettingKey.ADJUST_PRESET:
+            options = self._preset_picker_options()
+        else:
+            options = setting_options(key)
         if action in {UiAction.BACK, UiAction.LEFT}:
             self._show_settings()
             return
         if action in {UiAction.HELP, UiAction.PAIR}:
-            self._show_setting_picker(key, setting_help_text(key))
+            if key is SettingKey.ADJUST_PRESET:
+                self._show_preset_picker(setting_help_text(key))
+            else:
+                self._show_setting_picker(key, setting_help_text(key))
             return
         if action in {UiAction.UP, UiAction.DOWN, UiAction.RIGHT}:
             direction = -1 if action is UiAction.UP else 1
             selected_index = (self._snapshot.selected_index + direction) % len(options)
-            self._snapshot = replace(
-                self._snapshot,
-                selected_index=selected_index,
-                settings_rows=self._setting_picker_rows(key, selected_index),
-                settings_message=None,
-            )
+            if key is SettingKey.ADJUST_PRESET:
+                current_preset = self._config.adjustments.preset
+                self._snapshot = replace(
+                    self._snapshot,
+                    selected_index=selected_index,
+                    settings_rows=tuple(
+                        SettingsRow(
+                            opt.label,
+                            "saved" if opt.value == current_preset else "",
+                            "KEY1 save",
+                        )
+                        for opt in options
+                    ),
+                    settings_message=None,
+                )
+            else:
+                self._snapshot = replace(
+                    self._snapshot,
+                    selected_index=selected_index,
+                    settings_rows=self._setting_picker_rows(key, selected_index),
+                    settings_message=None,
+                )
             self._render()
             return
         if action is not UiAction.SELECT:
@@ -1512,6 +1598,74 @@ class BridgeUi:
             return False
         return True
 
+    def _reload_user_presets(self) -> None:
+        """Load user custom presets from disk into ``self._user_presets``."""
+
+        from instantlink_bridge.imaging.presets import USER_PRESETS_PATH, load_user_presets
+
+        try:
+            self._user_presets = load_user_presets(USER_PRESETS_PATH)
+        except Exception:
+            LOGGER.exception("ui.user_presets_load_failed")
+            self._user_presets = {}
+
+    async def _save_current_as_preset(self) -> None:
+        """Snapshot the current four colour axes into the next free Custom slot.
+
+        Finds the first of Custom1…Custom4 that is not already occupied.
+        If all four are full, shows a toast and returns without saving.
+        After a successful save, switches the active preset to the new slot
+        so the user sees the save reflected immediately.
+        """
+
+        from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+        from instantlink_bridge.imaging.presets import (
+            USER_PRESETS_PATH,
+            load_user_presets,
+            save_user_presets,
+        )
+
+        # Reload from disk first so we see any saves made in a prior session.
+        try:
+            current_saved = load_user_presets(USER_PRESETS_PATH)
+        except Exception:
+            current_saved = dict(self._user_presets)
+
+        # Find the first free slot.
+        free_slot: str | None = None
+        for slot in USER_PRESET_SLOT_NAMES:
+            if slot not in current_saved:
+                free_slot = slot
+                break
+
+        if free_slot is None:
+            self._show_settings("4 custom slots full")
+            return
+
+        # Build the profile from the current per-axis config values.
+        adj = self._config.adjustments
+        new_profile = AdjustmentProfile.from_config(adj)
+        current_saved[free_slot] = new_profile
+
+        try:
+            await asyncio.to_thread(save_user_presets, USER_PRESETS_PATH, current_saved)
+        except Exception:
+            LOGGER.exception("ui.preset_save_failed")
+            self._show_settings("Save failed")
+            return
+
+        # Update in-memory cache.
+        self._user_presets = current_saved
+
+        # Switch active preset to the new slot.
+        from dataclasses import replace as _replace
+
+        updated = _replace(
+            self._config,
+            adjustments=_replace(self._config.adjustments, preset=free_slot),
+        )
+        await self._set_config(updated, message="Saved")
+
     async def _reset_credentials(self) -> None:
         new_ssid = f"InstantLink-{secrets.token_hex(2).upper()}"
         new_psk = f"{secrets.randbelow(90_000_000) + 10_000_000}"
@@ -1619,18 +1773,38 @@ class BridgeUi:
             return SettingsRow("Auto print", "")
         if key is SettingKey.ADJUSTMENTS_COMING_SOON:
             return SettingsRow("Coming soon", "")
+        if key is SettingKey.ADJUST_PRESET:
+            return SettingsRow("Preset", self._config.adjustments.preset)
+        if key is SettingKey.ADJUST_SAVE_CUSTOM:
+            return SettingsRow("Save current", "")
+        # The four colour-axis rows are editable only when preset == "Custom".
+        # When a named preset is active they display the preset's effective
+        # value as a read-only string — no chevron, KEY1 shows a toast.
+        _is_custom_preset = self._config.adjustments.preset == "Custom"
         if key is SettingKey.ADJUST_SATURATION:
-            adj = self._config.adjustments
-            return SettingsRow("Saturation", format_int_with_sign(adj.saturation))
+            if _is_custom_preset:
+                adj = self._config.adjustments
+                return SettingsRow("Saturation", format_int_with_sign(adj.saturation))
+            value = self._resolved_preset_value_str("saturation")
+            return SettingsRow("Saturation", value)
         if key is SettingKey.ADJUST_EXPOSURE:
-            adj = self._config.adjustments
-            return SettingsRow("Exposure", format_int_with_sign(adj.exposure))
+            if _is_custom_preset:
+                adj = self._config.adjustments
+                return SettingsRow("Exposure", format_int_with_sign(adj.exposure))
+            value = self._resolved_preset_value_str("exposure")
+            return SettingsRow("Exposure", value)
         if key is SettingKey.ADJUST_SHARPNESS:
-            adj = self._config.adjustments
-            return SettingsRow("Sharpness", format_int_with_sign(adj.sharpness))
+            if _is_custom_preset:
+                adj = self._config.adjustments
+                return SettingsRow("Sharpness", format_int_with_sign(adj.sharpness))
+            value = self._resolved_preset_value_str("sharpness")
+            return SettingsRow("Sharpness", value)
         if key is SettingKey.ADJUST_HUE:
-            adj = self._config.adjustments
-            return SettingsRow("Hue", format_int_with_sign(adj.hue))
+            if _is_custom_preset:
+                adj = self._config.adjustments
+                return SettingsRow("Hue", format_int_with_sign(adj.hue))
+            value = self._resolved_preset_value_str("hue")
+            return SettingsRow("Hue", value)
         if key is SettingKey.ADJUST_DATESTAMP:
             return SettingsRow("Datestamp", bool_label(self._config.adjustments.datestamp))
         if key is SettingKey.ADJUST_WATERMARK:
@@ -1754,6 +1928,36 @@ class BridgeUi:
             # Info-only section divider — no value, no action.
             return SettingsRow("Advanced", "")
         return SettingsRow("Unknown", "")
+
+    def _resolved_preset_value_str(self, axis: str) -> str:
+        """Return a display string for a colour axis's effective value under the active preset.
+
+        Used when preset != "Custom" to show the preset's baked-in values as
+        read-only info (no chevron, no picker).  Converts internal float factors
+        back to the ±100 integer scale for display consistency with Custom mode.
+        """
+
+        from instantlink_bridge.imaging.presets import resolve_preset
+
+        profile = resolve_preset(self._config.adjustments, self._user_presets)
+        if axis == "saturation":
+            # factor = 1.0 + value/100  →  value = (factor - 1.0) * 100
+            ui_val = round((profile.saturation - 1.0) * 100)
+            return format_int_with_sign(ui_val)
+        if axis == "exposure":
+            import math
+
+            # factor = 2^(value/100)  →  value = log2(factor) * 100
+            ui_val = round(math.log2(max(profile.exposure, 1e-9)) * 100)
+            return format_int_with_sign(ui_val)
+        if axis == "sharpness":
+            ui_val = round((profile.sharpness - 1.0) * 100)
+            return format_int_with_sign(ui_val)
+        if axis == "hue":
+            # degrees = hue_int; ui_val = degrees / 1.8
+            ui_val = round(profile.hue / 1.8) if profile.hue != 0 else 0
+            return format_int_with_sign(ui_val)
+        return "0"
 
     def _settings_row_help(self, key: SettingKey) -> str:
         """Return per-key help text, embedding current config values where useful."""

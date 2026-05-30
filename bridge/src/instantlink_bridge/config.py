@@ -347,6 +347,24 @@ class FirmwareUpdateConfig:
 
 _ADJUSTMENT_VALID_VALUES: frozenset[int] = frozenset({-100, -50, 0, 50, 100})
 
+# Valid preset names: built-ins + user custom slots + the "Custom" sentinel.
+# Keep in sync with VALID_PRESET_NAMES in imaging/presets.py (imported lazily
+# to avoid a circular dependency at module load time).
+_ADJUSTMENT_VALID_PRESET_NAMES: frozenset[str] = frozenset(
+    {
+        "Default",
+        "Vivid",
+        "Soft",
+        "B&W",
+        "Instax Film",
+        "Custom1",
+        "Custom2",
+        "Custom3",
+        "Custom4",
+        "Custom",
+    }
+)
+
 
 @dataclass(frozen=True, slots=True)
 class AdjustmentsConfig:
@@ -355,6 +373,9 @@ class AdjustmentsConfig:
     All values must be one of {-100, -50, 0, 50, 100}. Zero is the
     identity for every axis — no adjustments applied.
     """
+
+    preset: str = "Default"
+    """Active preset name.  Must be in the known preset name set."""
 
     saturation: int = 0
     """Colour intensity. -100 = greyscale, 0 = unchanged, +100 = double."""
@@ -378,6 +399,11 @@ class AdjustmentsConfig:
     """Text to stamp as a watermark. Empty string disables rendering."""
 
     def __post_init__(self) -> None:
+        if self.preset not in _ADJUSTMENT_VALID_PRESET_NAMES:
+            raise ValueError(
+                f"[adjustments].preset must be one of "
+                f"{sorted(_ADJUSTMENT_VALID_PRESET_NAMES)}; got {self.preset!r}"
+            )
         for field_name in ("saturation", "exposure", "sharpness", "hue"):
             value = getattr(self, field_name)
             if value not in _ADJUSTMENT_VALID_VALUES:
@@ -511,6 +537,7 @@ def render_config(config: BridgeConfig) -> str:
             f"appearance = {_toml_string(config.ui.appearance.value)}",
             "",
             "[adjustments]",
+            f"preset = {_toml_string(config.adjustments.preset)}",
             f"saturation = {config.adjustments.saturation}",
             f"exposure = {config.adjustments.exposure}",
             f"sharpness = {config.adjustments.sharpness}",
@@ -662,7 +689,14 @@ def _load_firmware_config(data: object) -> FirmwareUpdateConfig:
 def _load_adjustments_config(data: object) -> AdjustmentsConfig:
     if not isinstance(data, dict):
         raise ValueError("[adjustments] must be a TOML table")
+    raw_preset = str(data.get("preset", "Default"))
+    if raw_preset not in _ADJUSTMENT_VALID_PRESET_NAMES:
+        raise ValueError(
+            f"[adjustments].preset must be one of "
+            f"{sorted(_ADJUSTMENT_VALID_PRESET_NAMES)}; got {raw_preset!r}"
+        )
     return AdjustmentsConfig(
+        preset=raw_preset,
         saturation=_adjustment_int(data.get("saturation", 0), "[adjustments].saturation"),
         exposure=_adjustment_int(data.get("exposure", 0), "[adjustments].exposure"),
         sharpness=_adjustment_int(data.get("sharpness", 0), "[adjustments].sharpness"),

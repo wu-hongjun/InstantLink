@@ -38,6 +38,9 @@ class SettingKey(StrEnum):
     # Adjustments sub-page overlay toggles (plan 035 phase 4).
     ADJUST_DATESTAMP = "adjust_datestamp"
     ADJUST_WATERMARK = "adjust_watermark"
+    # Adjustments sub-page preset picker + save action (plan 035 phase 5).
+    ADJUST_PRESET = "adjust_preset"
+    ADJUST_SAVE_CUSTOM = "adjust_save_custom"
     FTP_RECEIVE_MODE = "ftp_receive_mode"
     PAIR_PRINTER = "pair_printer"
     FTP_MODE_INFO = "ftp_mode_info"
@@ -152,15 +155,20 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
     ),
-    # ADJUSTMENTS: four colour/tone adjustment knobs + two overlay toggles
-    # (plan 035 phases 3 and 4).
+    # ADJUSTMENTS: preset picker (top) + four colour/tone knobs + two overlay
+    # toggles + save action (bottom) (plan 035 phases 3, 4, and 5).
+    # When preset != "Custom", the four colour rows are read-only displays;
+    # the controller branches on config.adjustments.preset in
+    # _settings_row_for_key and _activate_setting.
     SettingsPage.ADJUSTMENTS: (
+        SettingKey.ADJUST_PRESET,
         SettingKey.ADJUST_SATURATION,
         SettingKey.ADJUST_EXPOSURE,
         SettingKey.ADJUST_SHARPNESS,
         SettingKey.ADJUST_HUE,
         SettingKey.ADJUST_DATESTAMP,
         SettingKey.ADJUST_WATERMARK,
+        SettingKey.ADJUST_SAVE_CUSTOM,
     ),
     # TRANSFORM: image-fit mode and JPEG encode quality.
     SettingsPage.TRANSFORM: (
@@ -295,6 +303,8 @@ ACTION_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.FORGET_AND_REPAIR,
         SettingKey.REFRESH_STATUS,
         SettingKey.RESET_CREDENTIALS,
+        # Preset save action (plan 035 phase 5).
+        SettingKey.ADJUST_SAVE_CUSTOM,
     }
 )
 
@@ -320,11 +330,30 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         # Adjustments overlay toggles (plan 035 phase 4).
         SettingKey.ADJUST_DATESTAMP,
         SettingKey.ADJUST_WATERMARK,
+        # Preset picker (plan 035 phase 5).
+        SettingKey.ADJUST_PRESET,
     }
 )
 
 HANDLED_SETTING_KEYS: frozenset[SettingKey] = (
     frozenset(PAGE_FOR_OPEN_KEY) | INFO_SETTING_KEYS | ACTION_SETTING_KEYS | ADJUSTABLE_SETTING_KEYS
+)
+
+# Stable built-in preset names for the picker.  User custom slots are
+# appended dynamically by the controller once user presets are loaded.
+# "Custom" is always the final option (sentinel for per-axis editing).
+BUILTIN_PRESET_NAMES: tuple[str, ...] = (
+    "Default",
+    "Vivid",
+    "Soft",
+    "B&W",
+    "Instax Film",
+)
+USER_PRESET_SLOT_NAMES: tuple[str, ...] = (
+    "Custom1",
+    "Custom2",
+    "Custom3",
+    "Custom4",
 )
 
 # Five-position discrete picker for all four colour adjustment axes.
@@ -367,6 +396,17 @@ APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
 
 
+def preset_options(user_preset_names: tuple[str, ...] = ()) -> tuple[SettingOption, ...]:
+    """Return picker options for the preset row.
+
+    Built-ins come first, then any loaded user custom names, then ``"Custom"``
+    (the always-present per-axis editing sentinel).
+    """
+
+    names = (*BUILTIN_PRESET_NAMES, *user_preset_names, "Custom")
+    return tuple(SettingOption(name, name) for name in names)
+
+
 def setting_action_hint(key: SettingKey) -> str:
     """Return the short joystick hint for a settings row."""
 
@@ -401,6 +441,9 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     # Adjustments overlay toggles (plan 035 phase 4).
     SettingKey.ADJUST_DATESTAMP: "Stamp the photo's date in the bottom-right corner",
     SettingKey.ADJUST_WATERMARK: "Stamp a short label in the top-right corner",
+    # Preset picker and save action (plan 035 phase 5).
+    SettingKey.ADJUST_PRESET: "Bundle of colour and overlay defaults",
+    SettingKey.ADJUST_SAVE_CUSTOM: "Store current values as a custom preset",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
@@ -501,6 +544,11 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.ADJUST_WATERMARK:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
+    if key is SettingKey.ADJUST_PRESET:
+        # Without live user-preset names the picker shows built-ins + Custom.
+        # The controller passes user_preset_names when it calls setting_options
+        # indirectly; direct callers see the minimal set.
+        return preset_options()
     return ()
 
 
@@ -564,6 +612,8 @@ def config_with_setting_value(
         return replace(config, adjustments=replace(config.adjustments, datestamp=value))
     if key is SettingKey.ADJUST_WATERMARK and isinstance(value, bool):
         return replace(config, adjustments=replace(config.adjustments, watermark=value))
+    if key is SettingKey.ADJUST_PRESET and isinstance(value, str):
+        return replace(config, adjustments=replace(config.adjustments, preset=value))
     return config
 
 
@@ -656,6 +706,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.adjustments.datestamp
     if key is SettingKey.ADJUST_WATERMARK:
         return config.adjustments.watermark
+    if key is SettingKey.ADJUST_PRESET:
+        return config.adjustments.preset
     return None
 
 

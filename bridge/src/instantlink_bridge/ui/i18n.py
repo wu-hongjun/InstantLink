@@ -234,6 +234,12 @@ _ZH_HANS: dict[str, str] = {
     # iOS confirms reuse 取消/确认; we keep K1/K2 labels in Latin since the
     # bridge surfaces those physical key names verbatim on the LCD.
     "Already selected": "已选择",
+    "Built-in preset cannot be edited": "内置预设不可编辑",
+    "Overwrite with current": "用当前值覆盖",
+    "Delete preset": "删除预设",
+    "Choose action": "请选择操作",
+    "Deleted": "已删除",
+    "Delete failed": "删除失败",
     "BLE link reset": "BLE 连接已还原",
     "Bridge battery critical": "桥接电量过低",
     "Cancel": "取消",
@@ -349,8 +355,10 @@ _ZH_HANS: dict[str, str] = {
     "same Wi-Fi adv": "同 Wi-Fi 通告",
     "searching": "搜索中",
     "see Network": "见网络",
-    # --- Section-divider row labels (plan 034 items 9 and 18) ------------
+    # --- Section-divider row labels (plan 034 items 9 and 18; plan 036 phase 5) ---
     "Diagnostics": "诊断",
+    "Personalisation": "个性化",
+    "Theme, text size, and language": "主题、文字大小与语言",
     # --- Adjustments sub-page row labels (plan 035 phase 3) --------------
     # Voice: Apple iOS Photos app (色彩, 饱和度, 曝光, 锐度, 色相).
     "Saturation": "饱和度",
@@ -361,7 +369,7 @@ _ZH_HANS: dict[str, str] = {
     "Colour intensity. Negative dulls, positive boosts": "色彩强度。负值降低，正值增强",
     "Brightness in EV stops. ±100 = ±1 EV": "亮度（EV 档）。±100 = ±1 EV",
     "Edge contrast. Negative softens, positive crisps": "边缘对比度。负值柔化，正值锐化",
-    "Hue rotation in degrees. ±100 = ±180°": "色相旋转角度。±100 = ±180°",
+    "Colour shift. Negative warms, positive cools": "色彩偏移。负值偏暖，正值偏冷",
     # --- Vignette picker (plan 035 phase 6) --------------------------------
     "Vignette": "暗角",
     "Darken the corners to simulate Instax film": "将四角变暗以模拟 Instax 胶片",
@@ -376,18 +384,18 @@ _ZH_HANS: dict[str, str] = {
     "Default": "默认",
     "Vivid": "鲜艳",
     "Soft": "柔和",
-    "B&W": "黑白",
+    "Black & white": "黑白",
     "Instax Film": "Instax 胶片",
-    "Custom": "自定",
     "Custom1": "自定 1",
     "Custom2": "自定 2",
     "Custom3": "自定 3",
     "Custom4": "自定 4",
+    "Custom5": "自定 5",
+    "Custom6": "自定 6",
     "Save current as preset": "将当前值另存为预设",
     "Save current": "另存当前",
-    "4 custom slots full": "自定预设已满（最多 4 个）",
-    "Edit by setting Preset → Custom": "将预设设为自定后即可编辑",
-    "Bundle of colour and overlay defaults": "色彩与叠加预设组合",
+    "6 custom slots full": "自定预设已满（最多 6 个）",
+    "Choose a look, or tweak the sliders below": "选择一种风格，或调整下方滑块",
     "Store current values as a custom preset": "将当前数值保存为自定预设",
     # --- Misc short LCD copy ---------------------------------------------
     "Advanced Same-Wi-Fi status": "高级同 Wi-Fi 状态",

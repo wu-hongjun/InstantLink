@@ -1931,10 +1931,10 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "System"
 
-    # System rows after the Accessibility merge: 0 Battery  1 Idle
-    # 2 Idle poweroff  3 Refresh status  4 Appearance  5 Text size
-    # 6 Language  7 About. Seven DOWNs lands on About.
-    for _ in range(7):
+    # System rows after plan 036 phase 5: 0 Battery  1 Idle  2 Idle poweroff
+    # 3 Refresh status  4 Personalisation (divider)  5 Appearance  6 Text size
+    # 7 Language  8 About. Eight DOWNs lands on About.
+    for _ in range(8):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"
@@ -3535,3 +3535,384 @@ async def test_adjustment_edit_datestamp_row_does_not_enter_edit(tmp_path: Path)
     # The picker opened for Datestamp, so settings_picker_key is set.
     assert ui._settings_picker_key is SettingKey.ADJUST_DATESTAMP
     assert ui._adjustment_edit_key is None
+
+
+# ---------------------------------------------------------------------------
+# Plan 036 Phase 5 — Drop Custom gate; preset stamping; save two-press confirm;
+#                    long-press sub-menu; slot cap 6; B&W → Black & white
+# ---------------------------------------------------------------------------
+
+
+def _make_adj_ui_phase5(
+    tmp_path: Path,
+    *,
+    preset: str = "Default",
+    saturation: int = 0,
+) -> BridgeUi:
+    """Build a BridgeUi on the Adjustments page (no Custom requirement)."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        f'[adjustments]\npreset = "{preset}"\nsaturation = {saturation}\n',
+        encoding="utf-8",
+    )
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    return ui
+
+
+@pytest.mark.asyncio
+async def test_adjustments_slider_editable_without_custom_preset(tmp_path: Path) -> None:
+    """KEY1 on a slider row enters edit mode regardless of preset name (no Custom gate)."""
+    from instantlink_bridge.ui.settings import SettingKey
+    ui = _make_adj_ui_phase5(tmp_path, preset="Vivid", saturation=50)
+    # Navigate to Saturation row (index 1).
+    await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+
+    assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
+    assert ui._snapshot.adjustment_edit_key == SettingKey.ADJUST_SATURATION
+
+
+@pytest.mark.asyncio
+async def test_adjustments_slider_editable_with_default_preset(tmp_path: Path) -> None:
+    """KEY1 on a slider row enters edit mode when preset='Default'."""
+    ui = _make_adj_ui_phase5(tmp_path, preset="Default", saturation=0)
+    await ui._handle_action(UiAction.DOWN)  # Saturation
+    await ui._handle_action(UiAction.SELECT)
+
+    assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
+
+
+@pytest.mark.asyncio
+async def test_adjustments_slider_editable_with_instax_film_preset(tmp_path: Path) -> None:
+    """KEY1 on a slider row enters edit mode when preset='Instax Film'."""
+    ui = _make_adj_ui_phase5(tmp_path, preset="Instax Film", saturation=0)
+    await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+
+    assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
+
+
+@pytest.mark.asyncio
+async def test_save_preset_requires_two_presses(tmp_path: Path) -> None:
+    """First KEY1 on Save current → arms confirm toast; no file written yet."""
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\nsaturation = 30\n', encoding="utf-8")
+    display = _FakeDisplay()
+    presets_path = tmp_path / "presets.toml"
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+
+    # Navigate to "Save current" row (last row, index 8).
+    for _ in range(8):
+        await ui._handle_action(UiAction.DOWN)
+
+    # First KEY1 → destructive toast, no file write.
+    import unittest.mock
+
+    with unittest.mock.patch(
+        "instantlink_bridge.imaging.presets.USER_PRESETS_PATH", presets_path
+    ):
+        await ui._handle_action(UiAction.SELECT)
+
+    assert ui._pending_save_preset is True
+    msg = ui._snapshot.settings_message or ""
+    assert "Press KEY1 again" in msg
+    assert "Custom" in msg
+    # No file written yet.
+    assert not presets_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_save_preset_second_press_writes_file(tmp_path: Path) -> None:
+    """Second KEY1 on Save current → writes the preset file and switches preset label."""
+    import unittest.mock
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\nsaturation = 30\n', encoding="utf-8")
+    display = _FakeDisplay()
+    presets_path = tmp_path / "presets.toml"
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+
+    # Navigate to "Save current" (index 8).
+    for _ in range(8):
+        await ui._handle_action(UiAction.DOWN)
+
+    with unittest.mock.patch(
+        "instantlink_bridge.imaging.presets.USER_PRESETS_PATH", presets_path
+    ):
+        await ui._handle_action(UiAction.SELECT)  # first press — arms confirm
+        await ui._handle_action(UiAction.SELECT)  # second press — commits
+
+    # File was written and preset label switched.
+    assert presets_path.exists()
+    assert ui._config.adjustments.preset == "Custom1"
+
+
+@pytest.mark.asyncio
+async def test_save_preset_cancel_between_presses(tmp_path: Path) -> None:
+    """KEY2 between first and second KEY1 on Save current → no save."""
+    import unittest.mock
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\nsaturation = 10\n', encoding="utf-8")
+    display = _FakeDisplay()
+    presets_path = tmp_path / "presets.toml"
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+
+    for _ in range(8):
+        await ui._handle_action(UiAction.DOWN)
+
+    with unittest.mock.patch(
+        "instantlink_bridge.imaging.presets.USER_PRESETS_PATH", presets_path
+    ):
+        await ui._handle_action(UiAction.SELECT)  # first press
+        assert ui._pending_save_preset is True
+        await ui._handle_action(UiAction.BACK)  # cancel
+
+    assert not presets_path.exists()
+    assert ui._pending_save_preset is False
+
+
+@pytest.mark.asyncio
+async def test_long_press_on_builtin_preset_shows_toast(tmp_path: Path) -> None:
+    """Long-press (HELP) on a built-in preset in picker → toast, no sub-menu."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\n', encoding="utf-8")
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    # Open preset picker.
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.settings_title == "Preset"
+
+    # Focus row 0 = Default (built-in); long-press.
+    await ui._handle_action(UiAction.HELP)
+
+    # No sub-menu; still in the picker; toast displayed.
+    assert ui._preset_submenu_slot is None
+    assert ui._snapshot.settings_message is not None
+    assert "cannot be edited" in ui._snapshot.settings_message
+
+
+@pytest.mark.asyncio
+async def test_long_press_on_user_preset_opens_submenu(tmp_path: Path) -> None:
+    """Long-press on a saved custom preset → opens overwrite/delete sub-menu."""
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\n', encoding="utf-8")
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    # Inject a saved user preset into memory.
+    ui._user_presets = {"Custom1": AdjustmentProfile(saturation=1.5)}
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    # Open preset picker.
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.settings_title == "Preset"
+
+    # Built-ins: Default(0), Vivid(1), Soft(2), Black & white(3), Instax Film(4).
+    # Custom1 is at index 5. Navigate there.
+    for _ in range(5):
+        await ui._handle_action(UiAction.DOWN)
+
+    # Long-press on Custom1.
+    await ui._handle_action(UiAction.HELP)
+
+    # Sub-menu opened.
+    assert ui._preset_submenu_slot == "Custom1"
+    rows = ui._snapshot.settings_rows
+    assert len(rows) == 2
+    assert "Overwrite" in rows[0].label
+    assert "Delete" in rows[1].label
+
+
+@pytest.mark.asyncio
+async def test_overwrite_preset_two_press_confirm(tmp_path: Path) -> None:
+    """Overwrite row in sub-menu requires two KEY1 presses."""
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\nsaturation = 20\n', encoding="utf-8")
+    display = _FakeDisplay()
+    presets_path = tmp_path / "presets.toml"
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._user_presets = {"Custom1": AdjustmentProfile(saturation=1.0)}
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    # Open preset picker.
+    await ui._handle_action(UiAction.SELECT)
+    # Navigate to Custom1 (index 5).
+    for _ in range(5):
+        await ui._handle_action(UiAction.DOWN)
+    # Long-press to open sub-menu.
+    await ui._handle_action(UiAction.HELP)
+    assert ui._preset_submenu_slot == "Custom1"
+
+    import unittest.mock
+    with unittest.mock.patch(
+        "instantlink_bridge.imaging.presets.USER_PRESETS_PATH", presets_path
+    ):
+        # First SELECT on Overwrite row → arms confirm, no write yet.
+        await ui._handle_action(UiAction.SELECT)
+        assert ui._preset_submenu_pending_overwrite is True
+        assert not presets_path.exists()
+        msg = ui._snapshot.settings_message or ""
+        assert "Press KEY1 again" in msg
+
+        # Second SELECT → commits overwrite.
+        await ui._handle_action(UiAction.SELECT)
+
+    assert presets_path.exists()
+    assert ui._config.adjustments.preset == "Custom1"
+
+
+@pytest.mark.asyncio
+async def test_delete_preset_two_press_confirm(tmp_path: Path) -> None:
+    """Delete row in sub-menu requires two KEY1 presses."""
+    import unittest.mock
+
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\n', encoding="utf-8")
+    display = _FakeDisplay()
+    presets_path = tmp_path / "presets.toml"
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._user_presets = {"Custom1": AdjustmentProfile(saturation=1.5)}
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    await ui._handle_action(UiAction.SELECT)  # open preset picker
+    # Navigate to Custom1 (index 5).
+    for _ in range(5):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.HELP)  # open sub-menu
+
+    # Navigate to Delete row (index 1).
+    await ui._handle_action(UiAction.DOWN)
+
+    with unittest.mock.patch(
+        "instantlink_bridge.imaging.presets.USER_PRESETS_PATH", presets_path
+    ):
+        # First SELECT → arms confirm.
+        await ui._handle_action(UiAction.SELECT)
+        assert ui._preset_submenu_pending_delete is True
+        msg = ui._snapshot.settings_message or ""
+        assert "Press KEY1 again" in msg
+
+        # Second SELECT → deletes; preset falls back to Default since it was active.
+        await ui._handle_action(UiAction.SELECT)
+
+    assert "Custom1" not in ui._user_presets
+    assert ui._config.adjustments.preset == "Default"
+
+
+@pytest.mark.asyncio
+async def test_selecting_preset_stamps_values_into_config(tmp_path: Path) -> None:
+    """Selecting 'Vivid' from the preset picker stamps Vivid's values into config."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\nsaturation = 0\n', encoding="utf-8")
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    # Open preset picker (row 0).
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.settings_title == "Preset"
+
+    # Navigate to Vivid (index 1).
+    await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+
+    # Vivid's saturation UI value is +50.
+    assert ui._config.adjustments.saturation == 50
+    assert ui._config.adjustments.preset == "Vivid"
+
+
+@pytest.mark.asyncio
+async def test_selecting_black_and_white_preset_stamps_values(tmp_path: Path) -> None:
+    """Selecting 'Black & white' stamps saturation=-100 into config."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[adjustments]\npreset = "Default"\nsaturation = 0\n', encoding="utf-8")
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._show_settings(page=SettingsPage.ADJUSTMENTS)
+    await ui._handle_action(UiAction.SELECT)  # open preset picker
+    # Navigate to "Black & white" (index 3).
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+
+    assert ui._config.adjustments.saturation == -100
+    assert ui._config.adjustments.preset == "Black & white"

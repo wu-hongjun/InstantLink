@@ -345,23 +345,36 @@ class FirmwareUpdateConfig:
     trusted_public_keys: tuple[FirmwareTrustedPublicKeyConfig, ...] = ()
 
 
-# Valid preset names: built-ins + user custom slots + the "Custom" sentinel.
-# Keep in sync with VALID_PRESET_NAMES in imaging/presets.py (imported lazily
-# to avoid a circular dependency at module load time).
+# Valid preset names: built-ins + user custom slots (plan 036 phase 5).
+# "Custom" sentinel and "B&W" have been removed; both are migrated on load
+# (see _load_adjustments_config).  Keep in sync with VALID_PRESET_NAMES in
+# imaging/presets.py (imported lazily to avoid a circular dependency).
 _ADJUSTMENT_VALID_PRESET_NAMES: frozenset[str] = frozenset(
     {
         "Default",
         "Vivid",
         "Soft",
-        "B&W",
+        "Black & white",
         "Instax Film",
         "Custom1",
         "Custom2",
         "Custom3",
         "Custom4",
-        "Custom",
+        "Custom5",
+        "Custom6",
     }
 )
+
+# Legacy names that migrate forward on load.  The values are the replacement
+# preset names written into AdjustmentsConfig.preset.
+_PRESET_MIGRATIONS: dict[str, str] = {
+    # "Custom" sentinel → "Default" (the user's per-axis values are kept;
+    # the preset label no longer acts as a gate so "Default" is the safest
+    # display name for a previously-unlocked editing session).
+    "Custom": "Default",
+    # "B&W" renamed to "Black & white" (critic P2, plan 036 phase 5).
+    "B&W": "Black & white",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -696,13 +709,18 @@ def _load_adjustments_config(data: object) -> AdjustmentsConfig:
     if not isinstance(data, dict):
         raise ValueError("[adjustments] must be a TOML table")
     raw_preset = str(data.get("preset", "Default"))
-    if raw_preset not in _ADJUSTMENT_VALID_PRESET_NAMES:
-        raise ValueError(
-            f"[adjustments].preset must be one of "
-            f"{sorted(_ADJUSTMENT_VALID_PRESET_NAMES)}; got {raw_preset!r}"
+    # Migrate legacy preset names forward (plan 036 phase 5).
+    # "Custom" → "Default" (sentinel removed; per-axis values still load).
+    # "B&W" → "Black & white" (renamed preset, critic P2).
+    preset = _PRESET_MIGRATIONS.get(raw_preset, raw_preset)
+    if preset not in _ADJUSTMENT_VALID_PRESET_NAMES:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "config.unknown_preset name=%r — falling back to Default", preset
         )
+        preset = "Default"
     return AdjustmentsConfig(
-        preset=raw_preset,
+        preset=preset,
         saturation=_adjustment_int(data.get("saturation", 0), "[adjustments].saturation"),
         exposure=_adjustment_int(data.get("exposure", 0), "[adjustments].exposure"),
         sharpness=_adjustment_int(data.get("sharpness", 0), "[adjustments].sharpness"),

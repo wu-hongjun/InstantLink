@@ -69,6 +69,7 @@ class SettingKey(StrEnum):
     FORGET_AND_REPAIR = "forget_and_repair"
     NETWORK_DIAGNOSTICS_HEADER = "network_diagnostics_header"
     PRINT_ADVANCED_HEADER = "print_advanced_header"
+    SYSTEM_PERSONALISATION_HEADER = "system_personalisation_header"
     OPEN_ABOUT = "open_about"
     SYSTEM_DEVICE_ID = "system_device_id"
     SYSTEM_APP_VERSION = "system_app_version"
@@ -220,6 +221,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.SYSTEM_IDLE_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
         SettingKey.REFRESH_STATUS,
+        SettingKey.SYSTEM_PERSONALISATION_HEADER,
         SettingKey.APPEARANCE,
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
@@ -286,6 +288,7 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.NETWORK_BLUETOOTH_INFO,
         SettingKey.NETWORK_DIAGNOSTICS_HEADER,
         SettingKey.PRINT_ADVANCED_HEADER,
+        SettingKey.SYSTEM_PERSONALISATION_HEADER,
         SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.SYSTEM_DEVICE_ID,
         SettingKey.SYSTEM_APP_VERSION,
@@ -346,12 +349,12 @@ HANDLED_SETTING_KEYS: frozenset[SettingKey] = (
 
 # Stable built-in preset names for the picker.  User custom slots are
 # appended dynamically by the controller once user presets are loaded.
-# "Custom" is always the final option (sentinel for per-axis editing).
+# Phase 5 (plan 036): "Custom" sentinel removed; "B&W" renamed to "Black & white".
 BUILTIN_PRESET_NAMES: tuple[str, ...] = (
     "Default",
     "Vivid",
     "Soft",
-    "B&W",
+    "Black & white",
     "Instax Film",
 )
 USER_PRESET_SLOT_NAMES: tuple[str, ...] = (
@@ -359,6 +362,8 @@ USER_PRESET_SLOT_NAMES: tuple[str, ...] = (
     "Custom2",
     "Custom3",
     "Custom4",
+    "Custom5",
+    "Custom6",
 )
 
 # Five-position discrete picker for all four colour adjustment axes.
@@ -414,11 +419,12 @@ SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
 def preset_options(user_preset_names: tuple[str, ...] = ()) -> tuple[SettingOption, ...]:
     """Return picker options for the preset row.
 
-    Built-ins come first, then any loaded user custom names, then ``"Custom"``
-    (the always-present per-axis editing sentinel).
+    Built-ins come first, then any loaded user custom names.  Phase 5
+    (plan 036): the ``"Custom"`` sentinel has been removed — every preset
+    is now a starting template and all sliders are always editable.
     """
 
-    names = (*BUILTIN_PRESET_NAMES, *user_preset_names, "Custom")
+    names = (*BUILTIN_PRESET_NAMES, *user_preset_names)
     return tuple(SettingOption(name, name) for name in names)
 
 
@@ -452,14 +458,14 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.ADJUST_SATURATION: "Colour intensity. Negative dulls, positive boosts",
     SettingKey.ADJUST_EXPOSURE: "Brightness in EV stops. ±100 = ±1 EV",
     SettingKey.ADJUST_SHARPNESS: "Edge contrast. Negative softens, positive crisps",
-    SettingKey.ADJUST_HUE: "Hue rotation in degrees. ±100 = ±180°",
+    SettingKey.ADJUST_HUE: "Colour shift. Negative warms, positive cools",
     # Vignette picker (plan 035 phase 6).
     SettingKey.ADJUST_VIGNETTE: "Darken the corners to simulate Instax film",
     # Adjustments overlay toggles (plan 035 phase 4).
     SettingKey.ADJUST_DATESTAMP: "Stamp the photo's date in the bottom-right corner",
     SettingKey.ADJUST_WATERMARK: "Stamp a short label in the top-right corner",
-    # Preset picker and save action (plan 035 phase 5).
-    SettingKey.ADJUST_PRESET: "Bundle of colour and overlay defaults",
+    # Preset picker and save action (plan 035 phase 5; updated plan 036 phase 5).
+    SettingKey.ADJUST_PRESET: "Choose a look, or tweak the sliders below",
     SettingKey.ADJUST_SAVE_CUSTOM: "Store current values as a custom preset",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
@@ -505,6 +511,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     # Separator rows — info-only, no interactive action.
     SettingKey.NETWORK_DIAGNOSTICS_HEADER: "Read-only connection diagnostics",
     SettingKey.PRINT_ADVANCED_HEADER: "Power-user polling intervals",
+    SettingKey.SYSTEM_PERSONALISATION_HEADER: "Theme, text size, and language",
 }
 
 

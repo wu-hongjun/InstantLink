@@ -251,11 +251,16 @@ def _apply_vignette(image: Image.Image, strength: int) -> Image.Image:
     # Darkening factor: 1.0 at centre, 1-(strength/100) at corners.
     factor = 1.0 - (r_norm**_GAMMA) * (strength / 100.0)  # shape (h, w)
 
-    # Apply to all three RGB channels simultaneously via broadcasting.
-    arr = np.asarray(image, dtype=np.float32)  # H×W×3
-    arr_out = arr * factor[:, :, np.newaxis]
-    out_u8 = np.clip(arr_out, 0.0, 255.0).astype(np.uint8)
-    return Image.fromarray(out_u8, mode="RGB")
+    # Apply to all three RGB channels in-place to halve peak memory usage.
+    # Strategy: multiply the source array in-place (arr *= factor[..., np.newaxis])
+    # rather than creating a separate arr_out copy.  Peak allocation is reduced
+    # from ~H×W×3×2 floats (source + output) to ~H×W×3×1 float (source only,
+    # factor map is H×W×1 = one channel).  Same pixel output, lower peak RSS
+    # — important on the Pi Zero 2 W with 512 MB RAM.
+    arr = np.array(image, dtype=np.float32)  # H×W×3 — copy so we can mutate
+    arr *= factor[:, :, np.newaxis]          # in-place multiply (no second H×W×3 alloc)
+    np.clip(arr, 0.0, 255.0, out=arr)        # in-place clip
+    return Image.fromarray(arr.astype(np.uint8), mode="RGB")
 
 
 def _render_overlay(

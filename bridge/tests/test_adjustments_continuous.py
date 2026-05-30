@@ -69,7 +69,7 @@ def test_adjustments_config_off_grid_round_trips_via_write_config(tmp_path: Path
     original = replace(
         BridgeConfig(),
         adjustments=AdjustmentsConfig(
-            preset="Custom",
+            preset="Default",
             saturation=7,
             exposure=-33,
             sharpness=88,
@@ -89,7 +89,7 @@ def test_adjustments_config_off_grid_round_trips_via_write_config(tmp_path: Path
 
 def test_adjustments_config_off_grid_round_trips_via_render_config() -> None:
     """render_config encodes off-grid values as plain integers that re-parse cleanly."""
-    cfg = AdjustmentsConfig(preset="Custom", saturation=7, exposure=-33, sharpness=88, hue=-45)
+    cfg = AdjustmentsConfig(preset="Default", saturation=7, exposure=-33, sharpness=88, hue=-45)
     text = render_config(BridgeConfig(adjustments=cfg))
     assert "saturation = 7" in text
     assert "exposure = -33" in text

@@ -3,6 +3,19 @@
 A preset is a named profile; the active preset name lives in
 ``AdjustmentsConfig.preset``.  Built-ins are defined here; user customs
 persist in ``/etc/InstantLinkBridge/presets.toml``.
+
+Phase 5 (plan 036) semantics
+-----------------------------
+Presets are now *starting templates*, not gates.  The ``"Custom"`` sentinel
+has been removed.  Selecting a preset stamps its values into the live config;
+the ``preset`` field on ``AdjustmentsConfig`` is a display label — it records
+which template was last loaded, not an immutable lock.  Every slider is always
+editable regardless of the active preset name.
+
+``resolve_preset`` always reads the per-axis integer values from ``config``
+(saturation / exposure / sharpness / hue / vignette) and builds an
+``AdjustmentProfile`` from them, with overlay settings (datestamp, watermark)
+applied on top.  The ``preset`` field is purely informational.
 """
 
 from __future__ import annotations
@@ -10,7 +23,6 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +32,7 @@ if TYPE_CHECKING:
     from instantlink_bridge.config import AdjustmentsConfig  # pragma: no cover
 
 __all__ = [
+    "BUILTIN_PRESET_VALUES",
     "PRESETS",
     "PRESET_ORDER",
     "USER_PRESETS_PATH",
@@ -27,6 +40,7 @@ __all__ = [
     "load_user_presets",
     "resolve_preset",
     "save_user_presets",
+    "stamp_preset_into_config",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -37,10 +51,10 @@ USER_PRESETS_PATH = Path("/etc/InstantLinkBridge/presets.toml")
 # Built-in presets
 # ---------------------------------------------------------------------------
 # Values here are the *internal* AdjustmentProfile float factors, NOT the
-# -100…+100 UI integers.  A preset can encode any float; the UI picker only
-# constrains user-driven per-axis edits in "Custom" mode.
+# -100…+100 UI integers.  A preset can encode any float; the pipeline accepts
+# any float but the UI editor constrains per-axis edits to [-100, +100] ints.
 #
-# NOTE: "Instax Film" values filled in Phase 6:
+# NOTE: "Instax Film" values:
 #   saturation=0.9  (-10 on ±100 UI scale → factor 1.0 + (-10)/100 = 0.9)
 #   sharpness=0.9   (-10 on ±100 UI scale → factor 1.0 + (-10)/100 = 0.9)
 #   vignette=50     (50 on 0…100 one-sided scale)
@@ -64,7 +78,7 @@ PRESETS: dict[str, AdjustmentProfile] = {
         sharpness=0.75,   # -25 on UI scale → factor 0.75
         hue=0,
     ),
-    "B&W": AdjustmentProfile(
+    "Black & white": AdjustmentProfile(
         saturation=0.0,   # -100 → greyscale
         exposure=1.0,
         sharpness=1.0,
@@ -79,39 +93,50 @@ PRESETS: dict[str, AdjustmentProfile] = {
     ),
 }
 
-# Stable picker order: built-ins first, then user custom slots, then the
-# always-present "Custom" sentinel.  The user-custom slots are appended by
-# callers that merge PRESET_ORDER with loaded user presets.
+# Stable picker order: built-ins first, then user custom slots appended
+# dynamically by callers after loading user presets.
 PRESET_ORDER: tuple[str, ...] = (
     "Default",
     "Vivid",
     "Soft",
-    "B&W",
+    "Black & white",
     "Instax Film",
-    # User custom slots are not listed here — callers insert them between
-    # "Instax Film" and "Custom" after calling load_user_presets().
-    "Custom",
+    # User custom slots are not listed here — callers insert them after
+    # "Instax Film" after calling load_user_presets().
 )
 
-# The full set of valid preset names across built-ins, user custom slots, and
-# the "Custom" sentinel.  Used for config validation.
+# The full set of valid preset names across built-ins and user custom slots.
+# Used for config validation.  "Custom" is retained in the legacy set only
+# for migration (see _load_adjustments_config in config.py).
 VALID_PRESET_NAMES: frozenset[str] = frozenset(
     {
         "Default",
         "Vivid",
         "Soft",
-        "B&W",
+        "Black & white",
         "Instax Film",
         "Custom1",
         "Custom2",
         "Custom3",
         "Custom4",
-        "Custom",
+        "Custom5",
+        "Custom6",
     }
 )
 
-_MAX_USER_PRESETS = 4
-_USER_PRESET_SLOTS = ("Custom1", "Custom2", "Custom3", "Custom4")
+# Per-axis UI integer values (saturation, exposure, sharpness, hue, vignette)
+# corresponding to each built-in preset.  Used by stamp_preset_into_config to
+# write back into AdjustmentsConfig when the user selects a preset.
+BUILTIN_PRESET_VALUES: dict[str, dict[str, int]] = {
+    "Default": {"saturation": 0, "exposure": 0, "sharpness": 0, "hue": 0, "vignette": 0},
+    "Vivid": {"saturation": 50, "exposure": 0, "sharpness": 25, "hue": 0, "vignette": 0},
+    "Soft": {"saturation": -25, "exposure": 0, "sharpness": -25, "hue": 0, "vignette": 0},
+    "Black & white": {"saturation": -100, "exposure": 0, "sharpness": 0, "hue": 0, "vignette": 0},
+    "Instax Film": {"saturation": -10, "exposure": 0, "sharpness": -10, "hue": 0, "vignette": 50},
+}
+
+_MAX_USER_PRESETS = 6
+_USER_PRESET_SLOTS = ("Custom1", "Custom2", "Custom3", "Custom4", "Custom5", "Custom6")
 
 
 # ---------------------------------------------------------------------------
@@ -166,24 +191,78 @@ def load_user_presets(path: Path = USER_PRESETS_PATH) -> dict[str, AdjustmentPro
     return result
 
 
+def stamp_preset_into_config(
+    name: str,
+    user_presets: dict[str, AdjustmentProfile] | None = None,
+) -> dict[str, int]:
+    """Return per-axis UI integer values for the named preset.
+
+    Used when the user selects a preset from the picker: the controller
+    stamps these values into ``AdjustmentsConfig`` and persists, making the
+    preset a one-shot starting template rather than a permanent override.
+
+    For built-in presets, values come from ``BUILTIN_PRESET_VALUES``.
+    For user custom slots, values are reverse-converted from the stored
+    ``AdjustmentProfile`` floats.  Unknown names return all-zero values
+    (same as ``Default``).
+
+    Parameters
+    ----------
+    name:
+        Preset name to look up (e.g. ``"Vivid"``, ``"Custom1"``).
+    user_presets:
+        Loaded user custom presets (from ``load_user_presets``).
+
+    Returns
+    -------
+    dict with keys ``saturation``, ``exposure``, ``sharpness``, ``hue``,
+    ``vignette`` — all UI integers suitable for ``AdjustmentsConfig``.
+    """
+    import math
+
+    if user_presets is None:
+        user_presets = {}
+
+    if name in BUILTIN_PRESET_VALUES:
+        return dict(BUILTIN_PRESET_VALUES[name])
+
+    profile = user_presets.get(name)
+    if profile is None:
+        LOGGER.warning("presets.stamp_unknown name=%r — using zero values", name)
+        return {"saturation": 0, "exposure": 0, "sharpness": 0, "hue": 0, "vignette": 0}
+
+    sat_ui = _factor_to_ui_int(profile.saturation - 1.0)
+    exp_ui = _factor_to_ui_int_exposure(profile.exposure)
+    shr_ui = _factor_to_ui_int(profile.sharpness - 1.0)
+    hue_ui = round(profile.hue / 1.8) if profile.hue != 0 else 0
+    _ = math  # used via _factor_to_ui_int_exposure
+    return {
+        "saturation": max(-100, min(100, sat_ui)),
+        "exposure": max(-100, min(100, exp_ui)),
+        "sharpness": max(-100, min(100, shr_ui)),
+        "hue": max(-100, min(100, hue_ui)),
+        "vignette": max(0, min(100, profile.vignette)),
+    }
+
+
 def save_user_presets(
     path: Path,
     presets: dict[str, AdjustmentProfile],
 ) -> None:
     """Persist ``presets`` to ``path`` atomically.
 
-    Uses tempfile + ``os.replace`` — the same pattern as
-    ``_atomic_write_credential_file`` in ``ui/controller.py`` — so a write
-    failure mid-stream never corrupts the existing file.  Mode 0o600: the
-    file may contain user-chosen labels so it is kept readable only by the
-    service user.
+    Uses tempfile + ``fp.flush() + os.fsync() + os.replace`` — the same
+    pattern as ``write_config`` in ``config.py`` — so a write failure
+    mid-stream never corrupts the existing file, and the data is durable
+    before the rename commits it.  Mode 0o600: the file may contain
+    user-chosen labels so it is kept readable only by the service user.
 
     Parameters
     ----------
     path:
         Destination file (normally ``USER_PRESETS_PATH``).
     presets:
-        Mapping of slot name (``"Custom1"``…``"Custom4"``) to profile.
+        Mapping of slot name (``"Custom1"``…``"Custom6"``) to profile.
         Only valid slot names are written; others are silently dropped.
     """
 
@@ -211,6 +290,11 @@ def save_user_presets(
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fp:
             fp.write(text)
+            # Flush Python buffers then fsync to storage — same durability
+            # pattern as write_config() in config.py.  Without fsync the OS
+            # may reorder the rename ahead of the write on a power failure.
+            fp.flush()
+            os.fsync(fp.fileno())
         os.chmod(tmp_path, 0o600)
         os.replace(tmp_path, path)
     except Exception:
@@ -230,21 +314,16 @@ def resolve_preset(
     config: AdjustmentsConfig,
     user_presets: dict[str, AdjustmentProfile] | None = None,
 ) -> AdjustmentProfile:
-    """Return the ``AdjustmentProfile`` for the active preset in ``config``.
+    """Return the ``AdjustmentProfile`` for the current adjustments in ``config``.
 
-    Resolution rules:
+    Phase 5 (plan 036) semantics: presets are now *templates*, not gates.
+    This function ALWAYS builds the profile from the per-axis integer values
+    stored in ``config`` (saturation / exposure / sharpness / hue / vignette)
+    plus overlay settings (datestamp / watermark / watermark_text).
 
-    * ``preset == "Custom"`` → build a profile from the per-axis int values
-      stored in ``config`` (saturation, exposure, sharpness, hue) plus the
-      overlay settings.  This is effectively ``AdjustmentProfile.from_config``
-      minus the datestamp_text fill (the caller must set that from EXIF).
-    * ``preset`` is a known built-in name → return the built-in profile, but
-      overlay the user's ``datestamp`` / ``watermark`` / ``watermark_text``
-      settings on top (overlays are orthogonal to colour presets).
-    * ``preset`` is a user custom slot → look it up in ``user_presets`` and
-      apply overlays as above.
-    * Unknown name (stale custom that was deleted) → log a warning, fall
-      back to the ``"Default"`` profile with overlays applied.
+    The ``config.preset`` field is a display label only — it records which
+    template was last loaded but has no effect on the returned profile.  Any
+    slider value the user edits is immediately live.
 
     This function never raises.  Callers can always expect a valid profile.
 
@@ -254,33 +333,10 @@ def resolve_preset(
     """
 
     if user_presets is None:
-        user_presets = {}
+        user_presets = {}  # kept for API compatibility; no longer used
 
-    name = config.preset
-
-    if name == "Custom":
-        return AdjustmentProfile.from_config(config)
-
-    # Look up built-in or user custom.
-    profile = PRESETS.get(name) or user_presets.get(name)
-
-    if profile is None:
-        LOGGER.warning(
-            "presets.unknown_preset name=%r — falling back to Default",
-            name,
-        )
-        profile = PRESETS["Default"]
-
-    # Overlays (datestamp, watermark) are orthogonal to colour presets — the
-    # user's overlay settings are always applied on top.
-    profile = replace(
-        profile,
-        datestamp=config.datestamp,
-        watermark=config.watermark,
-        datestamp_text="",  # caller fills from EXIF
-        watermark_text=config.watermark_text if config.watermark else "",
-    )
-    return profile
+    # Always derive from the live per-axis config values.
+    return AdjustmentProfile.from_config(config)
 
 
 # ---------------------------------------------------------------------------

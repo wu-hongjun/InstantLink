@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import Combine
 import CoreImage
 import ImageIO
 import SwiftUI
@@ -305,6 +306,14 @@ class ViewModel: ObservableObject {
 
     private var autoRefreshTimer: Timer?
 
+    // Bridge Control (plan 038 phase A)
+    let bridgeCoordinator: BridgeControlCoordinator = BridgeControlCoordinator(
+        transport: BridgeHTTPTransport(baseURL: URL(string: "http://192.168.7.1:8742")!)
+    )
+    @Published var bridgeSnapshot: BridgeControlSnapshot = .empty
+    private var bridgeSnapshotCancellable: AnyCancellable?
+    private var bridgeStarted = false
+
     init() {
         guard let f = InstantLinkFFI() else {
             fatalError("Failed to load InstantLink native library. The app bundle may be corrupted.")
@@ -320,6 +329,19 @@ class ViewModel: ObservableObject {
                 await self.refreshStatus()
             }
         }
+        bridgeSnapshotCancellable = bridgeCoordinator.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.bridgeSnapshot = snapshot
+            }
+    }
+
+    /// Idempotently starts the Bridge discovery + status loops. Safe to call
+    /// from `.onAppear`.
+    func startBridgeCoordinator() {
+        guard !bridgeStarted else { return }
+        bridgeStarted = true
+        bridgeCoordinator.start()
     }
 
     deinit {

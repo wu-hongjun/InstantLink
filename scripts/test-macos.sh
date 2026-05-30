@@ -20,11 +20,17 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Core/BridgeFirmwareBundle.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeModels.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeAuth.swift"
+  "$REPO_ROOT/macos/InstantLink/Core/BridgeKeychain.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeTransport.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeHTTPTransport.swift"
+  "$REPO_ROOT/macos/InstantLink/Core/BridgeControlCoordinator.swift"
   "$REPO_ROOT/macos/InstantLink/Core/AppRuntimeServices.swift"
   "$REPO_ROOT/macos/InstantLink/Core/QueueEditCoordinator.swift"
   "$REPO_ROOT/macos/InstantLink/Core/PrinterConnectionCoordinator.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeDiscoveryBanner.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeOverviewView.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgePairingView.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeControlWindow.swift"
 )
 
 TESTS=(
@@ -34,6 +40,9 @@ TESTS=(
   "$REPO_ROOT/macos/Tests/BridgeModelsTests.swift"
   "$REPO_ROOT/macos/Tests/BridgeHTTPTransportTests.swift"
   "$REPO_ROOT/macos/Tests/BridgeTransportTests.swift"
+  "$REPO_ROOT/macos/Tests/BridgeKeychainTests.swift"
+  "$REPO_ROOT/macos/Tests/BridgePairingViewModelTests.swift"
+  "$REPO_ROOT/macos/Tests/BridgeControlCoordinatorTests.swift"
   "$REPO_ROOT/macos/Tests/AppRuntimeServicesTests.swift"
   "$REPO_ROOT/macos/Tests/QueueEditCoordinatorTests.swift"
   "$REPO_ROOT/macos/Tests/PrinterConnectionCoordinatorTests.swift"

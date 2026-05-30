@@ -4,11 +4,16 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var viewModel: ViewModel
+    @Environment(\.openWindow) private var openWindow
     @State private var isQueueStripVisible = false
     @State private var lastQueueCount = 0
 
     var body: some View {
         VStack(spacing: 0) {
+            BridgeDiscoveryBanner(snapshot: viewModel.bridgeSnapshot) {
+                openWindow(id: "BridgeControl")
+            }
+
             if let error = viewModel.updateError {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle")
@@ -319,6 +324,9 @@ struct MainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .checkForUpdates)) { _ in
             Task { await viewModel.checkForUpdates() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openBridgeControl)) { _ in
+            openWindow(id: "BridgeControl")
         }
         .onDisappear {
             if viewModel.captureMode == .camera {

@@ -140,6 +140,48 @@ struct InstantLinkMacOSTestRunner {
             ("PrinterConnectionCoordinatorTests.testStopPairingLoopPreventsDelayedReconnectFromApplying", {
                 try await PrinterConnectionCoordinatorTests().testStopPairingLoopPreventsDelayedReconnectFromApplying()
             }),
+            ("BridgeKeychainTests.testSaveAndLoadIdentityRoundTrip", {
+                try BridgeKeychainTests().testSaveAndLoadIdentityRoundTrip()
+            }),
+            ("BridgeKeychainTests.testDeleteIdentityRemovesEntry", {
+                try BridgeKeychainTests().testDeleteIdentityRemovesEntry()
+            }),
+            ("BridgeKeychainTests.testListIdentitiesReturnsAllSavedDevices", {
+                try BridgeKeychainTests().testListIdentitiesReturnsAllSavedDevices()
+            }),
+            ("BridgeKeychainTests.testLoadMissingIdentityReturnsNil", {
+                try BridgeKeychainTests().testLoadMissingIdentityReturnsNil()
+            }),
+            ("BridgePairingViewModelTests.testCodeValidationRejectsNonDigits", {
+                try BridgePairingViewModelTests().testCodeValidationRejectsNonDigits()
+            }),
+            ("BridgePairingViewModelTests.testCodeValidationRequiresSixDigits", {
+                try BridgePairingViewModelTests().testCodeValidationRequiresSixDigits()
+            }),
+            ("BridgePairingViewModelTests.testSanitizeTruncatesToMaximum", {
+                try BridgePairingViewModelTests().testSanitizeTruncatesToMaximum()
+            }),
+            ("BridgeControlCoordinatorTests.testDiscoveryFoundEmitsDeviceSnapshot", {
+                try await BridgeControlCoordinatorTests().testDiscoveryFoundEmitsDeviceSnapshot()
+            }),
+            ("BridgeControlCoordinatorTests.testDiscoveryLossClearsSnapshot", {
+                try await BridgeControlCoordinatorTests().testDiscoveryLossClearsSnapshot()
+            }),
+            ("BridgeControlCoordinatorTests.testPairingStateProgressesOnSuccessfulCompletion", {
+                try await BridgeControlCoordinatorTests().testPairingStateProgressesOnSuccessfulCompletion()
+            }),
+            ("BridgeControlCoordinatorTests.testPairingFailureSurfaceErrorAndStaysUnpaired", {
+                try await BridgeControlCoordinatorTests().testPairingFailureSurfaceErrorAndStaysUnpaired()
+            }),
+            ("BridgeControlCoordinatorTests.testStatusPollingPopulatesStatusWhenPaired", {
+                try await BridgeControlCoordinatorTests().testStatusPollingPopulatesStatusWhenPaired()
+            }),
+            ("BridgeControlCoordinatorTests.testForgetClearsIdentityAndReturnsToUnpaired", {
+                try await BridgeControlCoordinatorTests().testForgetClearsIdentityAndReturnsToUnpaired()
+            }),
+            ("BridgeControlCoordinatorTests.testCoordinatorPausesPollingWhenWindowHides", {
+                try await BridgeControlCoordinatorTests().testCoordinatorPausesPollingWhenWindowHides()
+            }),
         ]
 
         var failures = 0

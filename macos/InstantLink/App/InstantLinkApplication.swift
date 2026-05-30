@@ -35,11 +35,27 @@ enum AppRelauncher {
 struct InstantLinkApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var viewModel = ViewModel()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup {
             MainView()
                 .environmentObject(viewModel)
+                .onAppear {
+                    viewModel.startBridgeCoordinator()
+                }
+        }
+        .commands {
+            CommandGroup(after: .windowArrangement) {
+                Button(L("Bridge Control…")) {
+                    openWindow(id: "BridgeControl")
+                }
+                .keyboardShortcut("B", modifiers: [.command, .shift])
+            }
+        }
+
+        WindowGroup(L("Bridge Control"), id: "BridgeControl") {
+            BridgeControlWindow(coordinator: viewModel.bridgeCoordinator)
         }
     }
 }
@@ -60,6 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: L("Find Printer"), action: #selector(findPrinter), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: L("Refresh Status"), action: #selector(refreshStatus), keyEquivalent: ""))
         menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: L("Bridge Control…"), action: #selector(openBridgeControl), keyEquivalent: "B"))
         menu.addItem(NSMenuItem(title: L("Settings"), action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: L("Check for Updates"), action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(.separator())
@@ -88,6 +105,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.post(name: .openSettings, object: nil)
     }
 
+    @objc func openBridgeControl() {
+        NotificationCenter.default.post(name: .openBridgeControl, object: nil)
+    }
+
     @objc func checkForUpdates() {
         NotificationCenter.default.post(name: .checkForUpdates, object: nil)
     }
@@ -103,6 +124,7 @@ extension Notification.Name {
     static let refreshStatus = Notification.Name("refreshStatus")
     static let openSettings = Notification.Name("openSettings")
     static let checkForUpdates = Notification.Name("checkForUpdates")
+    static let openBridgeControl = Notification.Name("openBridgeControl")
 }
 
 enum CaptureMode { case file, camera }

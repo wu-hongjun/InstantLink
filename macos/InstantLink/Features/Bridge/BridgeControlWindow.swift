@@ -1,0 +1,167 @@
+import SwiftUI
+
+enum BridgeControlTab: String, CaseIterable, Identifiable {
+    case overview
+    case settings
+    case updates
+    case backup
+    case diagnostics
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .overview: return L("bridge_tab_overview")
+        case .settings: return L("bridge_tab_settings")
+        case .updates: return L("bridge_tab_updates")
+        case .backup: return L("bridge_tab_backup")
+        case .diagnostics: return L("bridge_tab_diagnostics")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .overview: return "gauge.with.dots.needle.bottom.50percent"
+        case .settings: return "slider.horizontal.3"
+        case .updates: return "arrow.triangle.2.circlepath"
+        case .backup: return "externaldrive"
+        case .diagnostics: return "stethoscope"
+        }
+    }
+}
+
+/// Top-level window for the Bridge Control surface. Phase A only ships the
+/// Overview tab; the rest are placeholders for upcoming phases.
+struct BridgeControlWindow: View {
+    @ObservedObject var coordinator: BridgeControlCoordinator
+    @State private var selectedTab: BridgeControlTab = .overview
+
+    var body: some View {
+        NavigationSplitView {
+            List(BridgeControlTab.allCases, selection: $selectedTab) { tab in
+                NavigationLink(value: tab) {
+                    Label(tab.label, systemImage: tab.systemImage)
+                }
+            }
+            .navigationTitle(L("bridge_control_title"))
+            .frame(minWidth: 180)
+        } detail: {
+            VStack(spacing: 0) {
+                toolbar
+                Divider()
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Divider()
+                statusBar
+            }
+        }
+        .frame(minWidth: 720, minHeight: 520)
+        .onAppear {
+            coordinator.onWindowVisibilityChanged(true)
+        }
+        .onDisappear {
+            coordinator.onWindowVisibilityChanged(false)
+        }
+    }
+
+    // MARK: - Sections
+
+    private var toolbar: some View {
+        HStack(spacing: 10) {
+            chip
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private var chip: some View {
+        let snapshot = coordinator.snapshot
+        let title: String
+        let icon: String
+        let tint: Color
+        switch snapshot.discovery {
+        case .found(let device):
+            title = "\(device.deviceID) — v\(device.softwareVersion)"
+            icon = "antenna.radiowaves.left.and.right"
+            tint = .accentColor
+        case .lost(let device, _):
+            title = device.map { "\($0.deviceID) — \(L("disconnected"))" } ?? L("bridge_disconnected")
+            icon = "antenna.radiowaves.left.and.right.slash"
+            tint = .secondary
+        case .searching:
+            title = L("bridge_searching")
+            icon = "magnifyingglass"
+            tint = .secondary
+        }
+        return HStack(spacing: 6) {
+            Image(systemName: icon)
+            Text(title)
+                .font(.callout)
+        }
+        .foregroundColor(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(tint.opacity(0.10))
+        )
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch selectedTab {
+        case .overview:
+            BridgeOverviewView(coordinator: coordinator)
+        case .settings:
+            placeholder(L("bridge_tab_settings_coming_soon"))
+        case .updates:
+            placeholder(L("bridge_tab_updates_coming_soon"))
+        case .backup:
+            placeholder(L("bridge_tab_backup_coming_soon"))
+        case .diagnostics:
+            placeholder(L("bridge_tab_diagnostics_coming_soon"))
+        }
+    }
+
+    private func placeholder(_ text: String) -> some View {
+        VStack {
+            Spacer()
+            Text(text)
+                .font(.callout)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var statusBar: some View {
+        HStack(spacing: 8) {
+            if let updated = coordinator.snapshot.lastUpdated {
+                Text(lastUpdatedLabel(date: updated))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else {
+                Text(L("bridge_status_never_updated"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button {
+                Task { await coordinator.refreshNow() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.borderless)
+            .help(L("bridge_status_refresh"))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+    }
+
+    private func lastUpdatedLabel(date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return L("bridge_status_updated_prefix") + " " + formatter.localizedString(for: date, relativeTo: Date())
+    }
+}

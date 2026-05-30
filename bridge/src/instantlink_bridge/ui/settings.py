@@ -23,6 +23,13 @@ class SettingKey(StrEnum):
     OPEN_NETWORK = "open_network"
     OPEN_SYSTEM = "open_system"
     OPEN_ACCESSIBILITY = "open_accessibility"
+    # Print hub → sub-page openers (phase 1, plan 035).
+    OPEN_PRINTER = "open_printer"
+    OPEN_ADJUSTMENTS = "open_adjustments"
+    OPEN_TRANSFORM = "open_transform"
+    OPEN_AUTO_PRINT = "open_auto_print"
+    # Adjustments sub-page placeholder (phase 1 only — replaced by real rows in phase 3).
+    ADJUSTMENTS_COMING_SOON = "adjustments_coming_soon"
     FTP_RECEIVE_MODE = "ftp_receive_mode"
     PAIR_PRINTER = "pair_printer"
     FTP_MODE_INFO = "ftp_mode_info"
@@ -73,6 +80,11 @@ class SettingsPage(StrEnum):
     into PRINT and NETWORK respectively; the obsolete enum values were
     removed. MAIN now has four top-level entries: Print, Network, System,
     Accessibility.
+
+    Phase 1 (plan 035): PRINT becomes a hub with four sub-pages —
+    PRINTER, ADJUSTMENTS, TRANSFORM, AUTO_PRINT. BACK from any sub-page
+    returns to PRINT (wired via SETTINGS_PARENT_PAGE), and BACK from
+    PRINT returns to MAIN.
     """
 
     MAIN = "main"
@@ -81,6 +93,11 @@ class SettingsPage(StrEnum):
     SYSTEM = "system"
     ABOUT = "about"
     ACCESSIBILITY = "accessibility"
+    # Print sub-pages (plan 035 phase 1).
+    PRINTER = "printer"
+    ADJUSTMENTS = "adjustments"
+    TRANSFORM = "transform"
+    AUTO_PRINT = "auto_print"
 
 
 class WifiMode(StrEnum):
@@ -106,13 +123,15 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.OPEN_SYSTEM,
         SettingKey.OPEN_ACCESSIBILITY,
     ),
-    # PRINT subsumes the old Printer page. Printer-pairing rows come first
-    # (Serial, Pair, Reconnect, Forget, Printer type) so the user can
-    # confirm/recover the bonded printer before tweaking print-time options.
-    # PRINT_ADVANCED_HEADER separates the power-user knobs (Keepalive,
-    # Search rate) from the common print options so they read as developer
-    # knobs rather than everyday settings (plan 034 item 18, Option B).
-    #
+    # PRINT is now a 4-row hub (plan 035 phase 1). Each row opens a
+    # dedicated sub-page; BACK from any sub-page returns here.
+    SettingsPage.PRINT: (
+        SettingKey.OPEN_PRINTER,
+        SettingKey.OPEN_ADJUSTMENTS,
+        SettingKey.OPEN_TRANSFORM,
+        SettingKey.OPEN_AUTO_PRINT,
+    ),
+    # PRINTER: pairing actions and model selection.
     # PAIR_PRINTER is the single pair/re-pair surface: when no printer is
     # saved it shows "Pair" and starts a scan; when one is saved it shows
     # "Re-pair" and routes through the destructive Forget+scan confirm
@@ -120,15 +139,27 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     # and FORGET_PRINTER are only useful when there's something to operate
     # on, so the controller filters them out when nothing is paired —
     # they stay listed here as the canonical paired-state row order.
-    SettingsPage.PRINT: (
+    SettingsPage.PRINTER: (
         SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.PAIR_PRINTER,
         SettingKey.RESET_PRINTER_LINK,
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
-        SettingKey.AUTO_PRINT_DELAY,
+    ),
+    # ADJUSTMENTS: placeholder until phases 3–4 add colour controls.
+    SettingsPage.ADJUSTMENTS: (SettingKey.ADJUSTMENTS_COMING_SOON,),
+    # TRANSFORM: image-fit mode and JPEG encode quality.
+    SettingsPage.TRANSFORM: (
         SettingKey.IMAGE_FIT,
         SettingKey.JPEG_QUALITY,
+    ),
+    # AUTO_PRINT: workflow behaviour and BLE polling knobs.
+    # PRINT_ADVANCED_HEADER separates the power-user polling knobs
+    # (Keepalive, Search rate) from the common workflow options so they
+    # read as developer knobs rather than everyday settings (plan 034
+    # item 18, Option B; kept here under the Auto print sub-page).
+    SettingsPage.AUTO_PRINT: (
+        SettingKey.AUTO_PRINT_DELAY,
         SettingKey.ALLOW_PRINT_WITHOUT_FILM,
         SettingKey.PRINT_ADVANCED_HEADER,
         SettingKey.KEEPALIVE,
@@ -184,6 +215,11 @@ PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.SYSTEM: "System",
     SettingsPage.ABOUT: "About",
     SettingsPage.ACCESSIBILITY: "Accessibility",
+    # Print sub-page titles (plan 035 phase 1).
+    SettingsPage.PRINTER: "Printer",
+    SettingsPage.ADJUSTMENTS: "Adjustments",
+    SettingsPage.TRANSFORM: "Transform",
+    SettingsPage.AUTO_PRINT: "Auto print",
 }
 
 PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
@@ -192,6 +228,11 @@ PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
     SettingKey.OPEN_SYSTEM: SettingsPage.SYSTEM,
     SettingKey.OPEN_ABOUT: SettingsPage.ABOUT,
     SettingKey.OPEN_ACCESSIBILITY: SettingsPage.ACCESSIBILITY,
+    # Print hub → sub-page openers (plan 035 phase 1).
+    SettingKey.OPEN_PRINTER: SettingsPage.PRINTER,
+    SettingKey.OPEN_ADJUSTMENTS: SettingsPage.ADJUSTMENTS,
+    SettingKey.OPEN_TRANSFORM: SettingsPage.TRANSFORM,
+    SettingKey.OPEN_AUTO_PRINT: SettingsPage.AUTO_PRINT,
 }
 
 # Parent for each sub-page when the user presses BACK/LEFT. Only pages nested
@@ -199,6 +240,11 @@ PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
 # MAIN in the controller back-nav branch.
 SETTINGS_PARENT_PAGE: dict[SettingsPage, SettingsPage] = {
     SettingsPage.ABOUT: SettingsPage.SYSTEM,
+    # Print sub-pages all return to the Print hub (plan 035 phase 1).
+    SettingsPage.PRINTER: SettingsPage.PRINT,
+    SettingsPage.ADJUSTMENTS: SettingsPage.PRINT,
+    SettingsPage.TRANSFORM: SettingsPage.PRINT,
+    SettingsPage.AUTO_PRINT: SettingsPage.PRINT,
 }
 
 INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
@@ -225,6 +271,8 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.SYSTEM_POWER_INFO,
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_INFO,
+        # Adjustments sub-page placeholder (plan 035 phase 1).
+        SettingKey.ADJUSTMENTS_COMING_SOON,
     }
 )
 
@@ -309,6 +357,13 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_SYSTEM: "bridge health and updates",
     SettingKey.OPEN_ABOUT: "Versions and device identity",
     SettingKey.OPEN_ACCESSIBILITY: "Text size, language, and appearance",
+    # Print hub → sub-page opener help strings (plan 035 phase 1).
+    SettingKey.OPEN_PRINTER: "Pairing and printer model",
+    SettingKey.OPEN_ADJUSTMENTS: "Colour and overlay adjustments",
+    SettingKey.OPEN_TRANSFORM: "Fit-to-film and JPEG quality",
+    SettingKey.OPEN_AUTO_PRINT: "Auto-print delay and connection knobs",
+    # Adjustments placeholder help (phase 1 only — replaced by real copy in phase 3).
+    SettingKey.ADJUSTMENTS_COMING_SOON: "Saturation, exposure, sharpness coming in v2",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",

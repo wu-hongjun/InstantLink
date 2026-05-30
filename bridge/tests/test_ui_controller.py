@@ -1290,15 +1290,14 @@ async def test_settings_menu_persists_adjusted_image_fit(tmp_path: Path) -> None
 
     await ui._handle_action(UiAction.SELECT)
     # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 0 DOWNs lands on Print; SELECT enters it.
+    # 0 DOWNs lands on Print; SELECT enters the Print hub.
     await ui._handle_action(UiAction.SELECT)
-    # PRINT page row order (unpaired): 0 Serial  1 Pair  2 Printer type
-    #   3 Auto print  4 Image fit  5 JPEG quality  6 No-film test
-    #   7 Keepalive  8 Search rate. Reconnect / Forget are hidden when no
-    #   printer is saved (the controller filters them via _visible_keys_for_page).
-    # 4 DOWNs lands on Image fit.
-    for _ in range(4):
-        await ui._handle_action(UiAction.DOWN)
+    # Print hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print.
+    # Navigate into Transform (row 2) where Image fit lives.
+    # Option B: navigate directly to Transform sub-page for row content test.
+    ui._show_settings(page=SettingsPage.TRANSFORM)
+    # TRANSFORM: 0 Image fit  1 JPEG quality.
+    # 0 DOWNs lands on Image fit (already selected at index 0).
     await ui._handle_action(UiAction.RIGHT)
     assert _printer_fit(ui) is FitMode.CROP
     assert display.snapshots[-1].settings_title == "Image fit"
@@ -1340,17 +1339,13 @@ async def test_settings_save_failure_keeps_runtime_config(
     )
 
     await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 0 DOWNs; SELECT enters the Print page.
-    await ui._handle_action(UiAction.SELECT)
-    # PRINT page row order (unpaired):
-    #   0 Serial  1 Pair  2 Printer type  3 Auto print  4 Image fit
-    #   5 JPEG quality  6 No-film test  7 Advanced  8 KEEPALIVE  9 Search rate.
-    # Reconnect / Forget rows are hidden when nothing is saved; the
-    # PRINT_ADVANCED_HEADER divider at index 7 separates everyday options
-    # from the power-user polling knobs (plan 034 item 18).
-    # Eight DOWN presses from Serial lands on KEEPALIVE.
-    for _ in range(8):
+    # Option B: navigate directly to AUTO_PRINT sub-page; this test's intent
+    # is that a config-write failure keeps the runtime value intact, not that
+    # the navigation path to Keepalive is exercised.
+    ui._show_settings(page=SettingsPage.AUTO_PRINT)
+    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
+    # Three DOWN presses from Auto print lands on Keepalive (index 3).
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.RIGHT)
@@ -1359,8 +1354,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     assert ui.config.printer.keepalive_interval_s == 10.0
     assert load_config(config_path).printer.keepalive_interval_s == 10.0
     assert display.snapshots[-1].settings_message == "Config not writable"
-    assert display.snapshots[-1].settings_rows[8].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[8].value == "10s"
+    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[3].value == "10s"
 
 
 @pytest.mark.asyncio
@@ -1492,19 +1487,16 @@ async def test_settings_rows_show_action_specific_hints() -> None:
 
     assert display.snapshots[-1].settings_rows[0].hint == "Right/KEY1 open"
 
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # SELECT enters Print (row 0).
-    await ui._handle_action(UiAction.SELECT)
-    # PRINT page rows (unpaired): 0 Serial  1 Pair  2 Printer type
-    #   3 Auto print  4 Image fit  5 JPEG quality  6 No-film test
-    #   7 Advanced  8 KEEPALIVE  9 Search rate. Reconnect / Forget hidden
-    # when unpaired; Advanced separator at 7 fences off the polling knobs.
-    # Eight DOWN presses lands on KEEPALIVE (an adjustable picker row).
-    for _ in range(8):
+    # Option B: navigate directly to AUTO_PRINT sub-page to check
+    # Keepalive's hint — the test intent is the hint value, not the path.
+    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
+    ui._show_settings(page=SettingsPage.AUTO_PRINT)
+    # Three DOWN presses lands on Keepalive (index 3, an adjustable picker row).
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
 
-    assert display.snapshots[-1].settings_rows[8].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[8].hint == "Right/KEY1 choose"
+    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[3].hint == "Right/KEY1 choose"
 
 
 @pytest.mark.asyncio
@@ -1572,16 +1564,16 @@ async def test_key3_help_explains_selected_settings_row() -> None:
     # MAIN: Print (0), Network (1), System (2), Accessibility (3).
     # 0 DOWNs; SELECT enters Print (row 0).
     await ui._handle_action(UiAction.SELECT)
-    # PRINT page (unpaired): 0 Serial  1 Pair  2 Printer type  3 Auto print
-    #   4 Image fit  5 JPEG quality  6 No-film test  7 Keepalive
-    #   8 Search rate. Reconnect / Forget hidden when nothing paired.
-    # 5 DOWNs lands on JPEG quality.
-    for _ in range(5):
-        await ui._handle_action(UiAction.DOWN)
+    # Option B: navigate directly to TRANSFORM sub-page to verify JPEG quality
+    # help text — the test intent is the help content, not the navigation path.
+    # TRANSFORM: 0 Image fit  1 JPEG quality.
+    ui._show_settings(page=SettingsPage.TRANSFORM)
+    # 1 DOWN lands on JPEG quality (index 1).
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Print"
-    assert display.snapshots[-1].settings_rows[5].label == "JPEG quality"
+    assert display.snapshots[-1].settings_title == "Transform"
+    assert display.snapshots[-1].settings_rows[1].label == "JPEG quality"
     assert display.snapshots[-1].settings_message == (
         "Trade-off: higher = bigger, sharper. Current: 100"
     )
@@ -1733,12 +1725,12 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     # MAIN: Print (0), Network (1), System (2), Accessibility (3).
     # 0 DOWNs; SELECT enters Print (row 0).
     await ui._handle_action(UiAction.SELECT)
-    # PRINT page (unpaired): 0 Serial  1 Pair  2 Printer type  3 Auto print
-    #   4 Image fit  5 JPEG quality  6 No-film test  7 Keepalive
-    #   8 Search rate. Reconnect / Forget hidden when nothing paired.
-    # 6 DOWNs lands on No-film test.
-    for _ in range(6):
-        await ui._handle_action(UiAction.DOWN)
+    # Option B: navigate directly to AUTO_PRINT sub-page to toggle
+    # No-film test — the test intent is toggling the value, not the path.
+    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
+    ui._show_settings(page=SettingsPage.AUTO_PRINT)
+    # 1 DOWN lands on No-film test (index 1).
+    await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     assert not ui.config.workflow.allow_print_without_film
     assert display.snapshots[-1].settings_title == "No-film test"
@@ -1746,8 +1738,8 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     assert ui.config.workflow.allow_print_without_film
-    assert display.snapshots[-1].settings_rows[6].label == "No-film test"
-    assert display.snapshots[-1].settings_rows[6].value == "On"
+    assert display.snapshots[-1].settings_rows[1].label == "No-film test"
+    assert display.snapshots[-1].settings_rows[1].value == "On"
 
 
 @pytest.mark.asyncio
@@ -1877,10 +1869,15 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
         printer_battery=88,
     )
 
+    # Option A: exercise the full navigation path because this test's value
+    # is in verifying the nav chain MAIN → Print hub → Printer → Reconnect.
     await ui._handle_action(UiAction.SELECT)
+    # MAIN: Print (row 0). SELECT enters the Print hub.
     await ui._handle_action(UiAction.SELECT)
-    # PRINTER rows: 0 SERIAL  1 PAIR  2 RESET BLE  3 FORGET&RE-PAIR ...
-    # Two DOWN presses lands on RESET_PRINTER_LINK.
+    # Print hub: Printer (row 0). SELECT enters the Printer sub-page.
+    await ui._handle_action(UiAction.SELECT)
+    # PRINTER (paired): 0 Serial  1 Pair/Re-pair  2 Reconnect  3 Forget  4 Printer type.
+    # Two DOWN presses lands on Reconnect (RESET_PRINTER_LINK, index 2).
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.DOWN)
     # Reset BLE is now a two-press destructive confirm; the first SELECT only
@@ -1895,7 +1892,7 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     assert status_provider.close_cached_calls == 1
     assert ui._status_task is not None
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Print"
+    assert display.snapshots[-1].settings_title == "Printer"
     assert display.snapshots[-1].settings_message == "BLE link reset"
     assert display.snapshots[-1].paired_printer == replace(printer, model=PrinterModel.SQUARE)
     await ui._cancel_status_refresh()
@@ -2008,13 +2005,16 @@ async def test_forget_printer_requires_second_confirmation() -> None:
     )
     ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
 
+    # MAIN → Print hub → Printer sub-page (plan 035 phase 1).
+    # Print hub rows: 0 Printer  1 Adjustments  2 Transform  3 Auto print.
+    # SELECT enters Print hub, second SELECT enters the Printer sub-page
+    # (row 0), which holds the pairing rows that used to live on the flat
+    # Print page.
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
-    # PRINT page (paired): 0 SERIAL  1 RE-PAIR  2 RECONNECT  3 FORGET
-    #                      4 PRINTER TYPE  ... (action rows visible because
-    # a printer is saved). FORGET_AND_REPAIR was consolidated into the
-    # state-aware PAIR_PRINTER row, so it no longer occupies its own index.
-    # Three DOWNs lands on the FORGET_PRINTER row.
+    await ui._handle_action(UiAction.SELECT)
+    # PRINTER sub-page (paired): 0 SERIAL  1 RE-PAIR  2 RECONNECT  3 FORGET
+    #                            4 PRINTER TYPE. Three DOWNs lands on FORGET.
     for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
@@ -2056,8 +2056,11 @@ async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None
     )
     ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
 
-    # MAIN → PRINT page (paired): 0 Serial  1 Re-pair  ...
-    # One DOWN past Serial lands on Re-pair (the consolidated row).
+    # MAIN → Print hub → Printer sub-page: 0 Serial  1 Re-pair  ...
+    # Three SELECTs drill in (open Settings, open Print hub, open Printer
+    # sub-page). One DOWN past Serial lands on Re-pair (the consolidated
+    # state-aware pair/re-pair row).
+    await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.DOWN)

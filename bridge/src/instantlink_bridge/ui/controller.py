@@ -1053,7 +1053,7 @@ class BridgeUi:
     def _visible_keys_for_page(self, page: SettingsPage) -> tuple[SettingKey, ...]:
         """Return the settings rows actually shown for ``page``.
 
-        The static SETTINGS_BY_PAGE table is the canonical order. The PRINT
+        The static SETTINGS_BY_PAGE table is the canonical order. The PRINTER
         page additionally hides RESET_PRINTER_LINK and FORGET_PRINTER when
         no printer is saved — there's nothing to reconnect to or forget,
         and surfacing them just clutters the menu for first-time users.
@@ -1062,7 +1062,7 @@ class BridgeUi:
         """
 
         keys = SETTINGS_BY_PAGE[page]
-        if page is not SettingsPage.PRINT or self._snapshot.paired_printer is not None:
+        if page is not SettingsPage.PRINTER or self._snapshot.paired_printer is not None:
             return keys
         return tuple(
             k
@@ -1595,6 +1595,17 @@ class BridgeUi:
             return SettingsRow("Accessibility", "")
         if key is SettingKey.OPEN_ABOUT:
             return SettingsRow("About", "")
+        # Print hub → sub-page opener rows (plan 035 phase 1).
+        if key is SettingKey.OPEN_PRINTER:
+            return SettingsRow("Printer", "")
+        if key is SettingKey.OPEN_ADJUSTMENTS:
+            return SettingsRow("Adjustments", "")
+        if key is SettingKey.OPEN_TRANSFORM:
+            return SettingsRow("Transform", "")
+        if key is SettingKey.OPEN_AUTO_PRINT:
+            return SettingsRow("Auto print", "")
+        if key is SettingKey.ADJUSTMENTS_COMING_SOON:
+            return SettingsRow("Coming soon", "")
         if key is SettingKey.PRINTER_SERIAL_INFO:
             # Strip the verbose "INSTAX-" prefix so the saved serial fits on
             # one row without clipping. When nothing is paired the row reads

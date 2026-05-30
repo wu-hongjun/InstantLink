@@ -39,7 +39,7 @@ struct BridgePairingView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(L("bridge_pairing_title"))
+            Text(L("Pair Bridge"))
                 .font(.title2.weight(.semibold))
             Spacer()
             Button(L("Cancel")) {
@@ -67,13 +67,13 @@ struct BridgePairingView: View {
 
     private var instructionsStep: some View {
         VStack(alignment: .leading, spacing: 10) {
-            stepHeader(number: 1, title: L("bridge_pairing_step_open_lcd"))
-            Text(L("bridge_pairing_instructions_open_window"))
+            stepHeader(number: 1, title: L("Open the pairing window on the Bridge"))
+            Text(L("On the Bridge LCD, open Settings → Network → Authorize Mac. Hold KEY3 for one second to start."))
                 .font(.callout)
                 .foregroundColor(.secondary)
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text(L("bridge_pairing_waiting_window"))
+                Text(L("Waiting for the Bridge to open its pairing window…"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -82,12 +82,12 @@ struct BridgePairingView: View {
 
     private var codeEntryStep: some View {
         VStack(alignment: .leading, spacing: 10) {
-            stepHeader(number: 2, title: L("bridge_pairing_step_enter_code"))
-            Text(L("bridge_pairing_instructions_enter_code"))
+            stepHeader(number: 2, title: L("Enter the 6-digit code"))
+            Text(L("Enter the 6-digit code shown on the Bridge."))
                 .font(.callout)
                 .foregroundColor(.secondary)
 
-            TextField(L("bridge_pairing_code_placeholder"), text: $code)
+            TextField(L("000000"), text: $code)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 22, weight: .semibold, design: .monospaced))
                 .frame(maxWidth: 220)
@@ -97,10 +97,10 @@ struct BridgePairingView: View {
                 .disableAutocorrection(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(L("bridge_pairing_display_name_label"))
+                Text(L("This Mac's name"))
                     .font(.caption)
                     .foregroundColor(.secondary)
-                TextField(L("bridge_pairing_display_name_placeholder"), text: $displayName)
+                TextField(L("Mac"), text: $displayName)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
             }
@@ -125,7 +125,7 @@ struct BridgePairingView: View {
     private var completingStep: some View {
         HStack(spacing: 10) {
             ProgressView().controlSize(.small)
-            Text(L("bridge_pairing_submitting"))
+            Text(L("Submitting…"))
                 .font(.callout)
         }
     }
@@ -135,10 +135,10 @@ struct BridgePairingView: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundColor(.green)
-                Text(L("bridge_pairing_succeeded_title"))
+                Text(L("Bridge paired"))
                     .font(.title3.weight(.semibold))
             }
-            Text(L("bridge_pairing_succeeded_message"))
+            Text(L("Pairing complete. You can now manage this Bridge from here."))
                 .font(.callout)
                 .foregroundColor(.secondary)
         }
@@ -149,7 +149,7 @@ struct BridgePairingView: View {
             HStack(spacing: 8) {
                 Image(systemName: "xmark.octagon.fill")
                     .foregroundColor(.red)
-                Text(L("bridge_pairing_failed_title"))
+                Text(L("Pairing failed"))
                     .font(.title3.weight(.semibold))
             }
             Text(reason.localizedMessage)
@@ -164,7 +164,7 @@ struct BridgePairingView: View {
             Spacer()
             switch coordinator.snapshot.pairing {
             case .pairingWindowOpen, .awaitingCode:
-                Button(L("bridge_pairing_submit")) {
+                Button(L("Pair")) {
                     Task { await submit() }
                 }
                 .keyboardShortcut(.defaultAction)
@@ -214,15 +214,15 @@ struct BridgePairingView: View {
         guard let expiresAt else { return nil }
         let remaining = Int(expiresAt.timeIntervalSince(nowTick))
         if remaining <= 0 {
-            return L("bridge_pairing_window_expired")
+            return L("Pairing window expired")
         }
-        return "\(L("bridge_pairing_window_remaining")): \(remaining)s"
+        return "\(L("Time remaining")): \(remaining)s"
     }
 
     private func submit() async {
         guard !submitting else { return }
         guard Self.validate(code: code, expected: codeLength) else {
-            localError = L("bridge_pairing_invalid_code")
+            localError = L("Enter the 6-digit code from the Bridge.")
             return
         }
         submitting = true

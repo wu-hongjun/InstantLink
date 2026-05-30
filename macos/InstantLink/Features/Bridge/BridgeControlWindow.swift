@@ -11,11 +11,11 @@ enum BridgeControlTab: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .overview: return L("bridge_tab_overview")
-        case .settings: return L("bridge_tab_settings")
-        case .updates: return L("bridge_tab_updates")
-        case .backup: return L("bridge_tab_backup")
-        case .diagnostics: return L("bridge_tab_diagnostics")
+        case .overview: return L("Overview")
+        case .settings: return L("Settings")
+        case .updates: return L("Updates")
+        case .backup: return L("Backup")
+        case .diagnostics: return L("Diagnostics")
         }
     }
 
@@ -43,7 +43,7 @@ struct BridgeControlWindow: View {
                     Label(tab.label, systemImage: tab.systemImage)
                 }
             }
-            .navigationTitle(L("bridge_control_title"))
+            .navigationTitle(L("Bridge Control"))
             .frame(minWidth: 180)
         } detail: {
             VStack(spacing: 0) {
@@ -86,11 +86,11 @@ struct BridgeControlWindow: View {
             icon = "antenna.radiowaves.left.and.right"
             tint = .accentColor
         case .lost(let device, _):
-            title = device.map { "\($0.deviceID) — \(L("disconnected"))" } ?? L("bridge_disconnected")
+            title = device.map { "\($0.deviceID) — \(L("Disconnected"))" } ?? L("Bridge disconnected")
             icon = "antenna.radiowaves.left.and.right.slash"
             tint = .secondary
         case .searching:
-            title = L("bridge_searching")
+            title = L("Looking for Bridge")
             icon = "magnifyingglass"
             tint = .secondary
         }
@@ -114,13 +114,13 @@ struct BridgeControlWindow: View {
         case .overview:
             BridgeOverviewView(coordinator: coordinator)
         case .settings:
-            placeholder(L("bridge_tab_settings_coming_soon"))
+            placeholder(L("Coming soon"))
         case .updates:
-            placeholder(L("bridge_tab_updates_coming_soon"))
+            placeholder(L("Coming soon"))
         case .backup:
-            placeholder(L("bridge_tab_backup_coming_soon"))
+            placeholder(L("Coming soon"))
         case .diagnostics:
-            placeholder(L("bridge_tab_diagnostics_coming_soon"))
+            placeholder(L("Coming soon"))
         }
     }
 
@@ -142,7 +142,7 @@ struct BridgeControlWindow: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             } else {
-                Text(L("bridge_status_never_updated"))
+                Text(L("Not updated yet"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -153,7 +153,7 @@ struct BridgeControlWindow: View {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help(L("bridge_status_refresh"))
+            .help(L("Refresh"))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
@@ -162,6 +162,6 @@ struct BridgeControlWindow: View {
     private func lastUpdatedLabel(date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        return L("bridge_status_updated_prefix") + " " + formatter.localizedString(for: date, relativeTo: Date())
+        return L("Updated") + " " + formatter.localizedString(for: date, relativeTo: Date())
     }
 }

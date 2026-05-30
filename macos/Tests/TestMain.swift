@@ -146,17 +146,32 @@ struct InstantLinkMacOSTestRunner {
             ("PrinterConnectionCoordinatorTests.testStopPairingLoopPreventsDelayedReconnectFromApplying", {
                 try await PrinterConnectionCoordinatorTests().testStopPairingLoopPreventsDelayedReconnectFromApplying()
             }),
-            ("BridgeKeychainTests.testSaveAndLoadIdentityRoundTrip", {
-                try BridgeKeychainTests().testSaveAndLoadIdentityRoundTrip()
+            ("BridgeClientFileStoreTests.testSaveAndLoadIdentityRoundTrip", {
+                try BridgeClientFileStoreTests().testSaveAndLoadIdentityRoundTrip()
             }),
-            ("BridgeKeychainTests.testDeleteIdentityRemovesEntry", {
-                try BridgeKeychainTests().testDeleteIdentityRemovesEntry()
+            ("BridgeClientFileStoreTests.testDeleteIdentityRemovesEntry", {
+                try BridgeClientFileStoreTests().testDeleteIdentityRemovesEntry()
             }),
-            ("BridgeKeychainTests.testListIdentitiesReturnsAllSavedDevices", {
-                try BridgeKeychainTests().testListIdentitiesReturnsAllSavedDevices()
+            ("BridgeClientFileStoreTests.testListIdentitiesReturnsAllSaved", {
+                try BridgeClientFileStoreTests().testListIdentitiesReturnsAllSaved()
             }),
-            ("BridgeKeychainTests.testLoadMissingIdentityReturnsNil", {
-                try BridgeKeychainTests().testLoadMissingIdentityReturnsNil()
+            ("BridgeClientFileStoreTests.testLoadMissingIdentityReturnsNil", {
+                try BridgeClientFileStoreTests().testLoadMissingIdentityReturnsNil()
+            }),
+            ("BridgeClientFileStoreTests.testCreatesParentDirectoryWhenMissing", {
+                try BridgeClientFileStoreTests().testCreatesParentDirectoryWhenMissing()
+            }),
+            ("BridgeClientFileStoreTests.testFileHas0600Permissions", {
+                try BridgeClientFileStoreTests().testFileHas0600Permissions()
+            }),
+            ("BridgeClientFileStoreTests.testAtomicWriteIsTornWriteSafe", {
+                try BridgeClientFileStoreTests().testAtomicWriteIsTornWriteSafe()
+            }),
+            ("BridgeClientFileStoreTests.testSigningKeyRoundTripsAsBase64URL", {
+                try BridgeClientFileStoreTests().testSigningKeyRoundTripsAsBase64URL()
+            }),
+            ("BridgeClientFileStoreTests.testPersistsAcrossInstanceReloads", {
+                try BridgeClientFileStoreTests().testPersistsAcrossInstanceReloads()
             }),
             ("BridgePairingViewModelTests.testCodeValidationRejectsNonDigits", {
                 try BridgePairingViewModelTests().testCodeValidationRejectsNonDigits()

@@ -37,7 +37,7 @@ final class BridgeHTTPTransport: BridgeTransport {
     init(
         baseURL: URL,
         session: URLSession = .shared,
-        keyStore: BridgeClientKeyStore = KeychainBridgeClientKeyStore(),
+        keyStore: BridgeClientKeyStore = BridgeClientFileStore(),
         clientName: String = BridgeHTTPTransport.defaultClientName(),
         now: @escaping () -> Date = Date.init,
         nonce: @escaping () -> String = BridgeManagementAuth.makeNonce

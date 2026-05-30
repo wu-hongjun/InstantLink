@@ -163,7 +163,7 @@ final class BridgeControlCoordinator: ObservableObject {
     @Published private(set) var snapshot: BridgeControlSnapshot
     private(set) var transport: BridgeTransport
 
-    private let keychain: BridgeKeychain
+    private let clientStore: BridgeClientFileStore
     private let probe: BridgeDiscoveryProbe
     private let config: BridgeControlCoordinatorConfig
     private let now: () -> Date
@@ -181,7 +181,7 @@ final class BridgeControlCoordinator: ObservableObject {
 
     init(
         transport: BridgeTransport,
-        keychain: BridgeKeychain = BridgeKeychain(),
+        clientStore: BridgeClientFileStore = BridgeClientFileStore(),
         probe: BridgeDiscoveryProbe = HTTPBridgeDiscoveryProbe(),
         config: BridgeControlCoordinatorConfig = .default,
         clientNameProvider: @escaping () -> String = {
@@ -190,7 +190,7 @@ final class BridgeControlCoordinator: ObservableObject {
         now: @escaping () -> Date = Date.init
     ) {
         self.transport = transport
-        self.keychain = keychain
+        self.clientStore = clientStore
         self.probe = probe
         self.config = config
         self.clientNameProvider = clientNameProvider
@@ -310,11 +310,11 @@ final class BridgeControlCoordinator: ObservableObject {
         mutated.lastUpdated = nowDate
         snapshot = mutated
 
-        // Try to recover identity from keychain so we transition directly to paired
-        // without forcing the user back through the wizard.
+        // Try to recover identity from the on-disk client store so we transition
+        // directly to paired without forcing the user back through the wizard.
         if case .paired = snapshot.pairing {
             // Already paired in-memory; nothing to do.
-        } else if let restored = try? keychain.loadIdentity(deviceID: device.deviceID) {
+        } else if let restored = try? clientStore.loadIdentity(deviceID: device.deviceID) {
             mutateSnapshot { snapshot in
                 snapshot.pairing = .paired(restored.0)
             }
@@ -363,12 +363,15 @@ final class BridgeControlCoordinator: ObservableObject {
                 clientID: completion.clientID,
                 clientName: clientName
             )
+            // The transport's BridgeClientFileStore already persisted the signing
+            // material under the same on-disk record. Refresh the display
+            // metadata fields (display_name, paired_at) so the file mirrors the
+            // current pairing event.
             do {
-                let privateKey = Curve25519.Signing.PrivateKey()
-                try keychain.saveIdentity(identity, privateKey: privateKey)
+                if let existing = try clientStore.loadIdentity(deviceID: device.deviceID) {
+                    try clientStore.saveIdentity(identity, privateKey: existing.1)
+                }
             } catch {
-                // Metadata save failure is non-fatal; the transport keystore
-                // already holds the signing material we need.
                 mutateSnapshot { snapshot in
                     snapshot.lastError = BridgeErrorPayload(
                         message: "Failed to cache identity metadata: \(error)"
@@ -513,17 +516,14 @@ final class BridgeControlCoordinator: ObservableObject {
                 clientName: clientName
             )
 
-            // Identity is persisted by the transport's keystore. We also stash a
-            // lightweight metadata copy in our own keychain wrapper for listing.
-            // The transport's existing KeychainBridgeClientKeyStore holds the actual
-            // signing material; we mirror display metadata to BridgeKeychain so the
-            // UI can list known bridges.
+            // Identity is persisted by the transport's BridgeClientFileStore.
+            // Refresh display metadata on the shared on-disk record so the file
+            // mirrors the latest pairing event (display name + paired_at).
             do {
-                let privateKey = Curve25519.Signing.PrivateKey()
-                try keychain.saveIdentity(identity, privateKey: privateKey)
+                if let existing = try clientStore.loadIdentity(deviceID: device.deviceID) {
+                    try clientStore.saveIdentity(identity, privateKey: existing.1)
+                }
             } catch {
-                // Metadata save failed; not fatal — signing identity is already
-                // persisted by the transport. Surface in lastError for visibility.
                 mutateSnapshot { snapshot in
                     snapshot.lastError = BridgeErrorPayload(message: "Failed to cache identity metadata: \(error)")
                 }
@@ -566,7 +566,7 @@ final class BridgeControlCoordinator: ObservableObject {
         statusTask = nil
         do {
             try await transport.forgetLocalAuth(device: device)
-            try keychain.deleteIdentity(deviceID: device.deviceID)
+            try clientStore.deleteIdentity(deviceID: device.deviceID)
         } catch {
             mutateSnapshot { snapshot in
                 snapshot.lastError = BridgeErrorPayload(message: "Failed to forget: \(error)")

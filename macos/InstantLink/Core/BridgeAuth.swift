@@ -1,6 +1,5 @@
 import CryptoKit
 import Foundation
-import Security
 
 protocol BridgeClientKeyStore {
     func loadIdentity(for bridgeID: String) throws -> BridgeSigningIdentity?
@@ -11,8 +10,6 @@ protocol BridgeClientKeyStore {
 
 enum BridgeAuthError: Error, Equatable {
     case invalidBodyDigest(String)
-    case keychain(OSStatus)
-    case invalidKeychainRecord
 }
 
 struct BridgeSigningIdentity: Codable, Equatable {
@@ -161,83 +158,3 @@ enum BridgeManagementAuth {
     }
 }
 
-final class KeychainBridgeClientKeyStore: BridgeClientKeyStore {
-    private let service: String
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
-
-    init(service: String = "com.instantlink.bridge.management") {
-        self.service = service
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
-    }
-
-    func loadIdentity(for bridgeID: String) throws -> BridgeSigningIdentity? {
-        var query = baseQuery(for: bridgeID)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        if status == errSecItemNotFound {
-            return nil
-        }
-        guard status == errSecSuccess else {
-            throw BridgeAuthError.keychain(status)
-        }
-        guard let data = item as? Data else {
-            throw BridgeAuthError.invalidKeychainRecord
-        }
-        do {
-            return try decoder.decode(BridgeSigningIdentity.self, from: data)
-        } catch {
-            throw BridgeAuthError.invalidKeychainRecord
-        }
-    }
-
-    func createIdentity(for bridgeID: String, clientName: String) throws -> BridgeSigningIdentity {
-        try BridgeSigningIdentity.generate(
-            bridgeID: bridgeID,
-            clientName: clientName,
-            algorithm: BridgeManagementAuth.productionSigningAlgorithm
-        )
-    }
-
-    func saveIdentity(_ identity: BridgeSigningIdentity, for bridgeID: String) throws {
-        let data = try encoder.encode(identity)
-        var query = baseQuery(for: bridgeID)
-
-        let attributes: [String: Any] = [
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus == errSecSuccess {
-            return
-        }
-        guard updateStatus == errSecItemNotFound else {
-            throw BridgeAuthError.keychain(updateStatus)
-        }
-
-        query.merge(attributes) { _, newValue in newValue }
-        let addStatus = SecItemAdd(query as CFDictionary, nil)
-        guard addStatus == errSecSuccess else {
-            throw BridgeAuthError.keychain(addStatus)
-        }
-    }
-
-    func deleteIdentity(for bridgeID: String) throws {
-        let status = SecItemDelete(baseQuery(for: bridgeID) as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw BridgeAuthError.keychain(status)
-        }
-    }
-
-    private func baseQuery(for bridgeID: String) -> [String: Any] {
-        [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: "bridge:\(bridgeID)",
-        ]
-    }
-}

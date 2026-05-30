@@ -25,6 +25,13 @@ final class BridgeControlCoordinatorTests {
 
     // MARK: - Helpers
 
+    /// Each test gets a fresh tmp file path for its client store so they cannot
+    /// see one another's pairings.
+    private static func makeTmpStorePath() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("instantlink-bridge-clients-\(UUID().uuidString).json")
+    }
+
     @MainActor
     private func makeDevice(
         deviceID: String = "IB-TESTABCD",
@@ -68,7 +75,7 @@ final class BridgeControlCoordinatorTests {
         status: BridgeStatus,
         authRequired: Bool = false,
         probeResult: Result<BridgeDevice, Error>? = nil,
-        keychainBackend: BridgeKeychainBackend = InMemoryBridgeKeychainBackend(),
+        clientStore: BridgeClientFileStore? = nil,
         config: BridgeControlCoordinatorConfig = .init(
             probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
             discoveryIntervalUnpaired: 0.05,
@@ -84,10 +91,10 @@ final class BridgeControlCoordinatorTests {
             authRequiredDeviceIDs: authRequired ? [device.deviceID] : []
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: probeResult ?? .success(device))
-        let keychain = BridgeKeychain(backend: keychainBackend)
+        let resolvedClientStore = clientStore ?? BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: resolvedClientStore,
             probe: probe,
             config: config,
             clientNameProvider: { "Test Mac" }
@@ -171,10 +178,10 @@ final class BridgeControlCoordinatorTests {
         )
 
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.8.1:8742")!],
@@ -239,11 +246,10 @@ final class BridgeControlCoordinatorTests {
             for: device.deviceID
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychainBackend = InMemoryBridgeKeychainBackend()
-        let keychain = BridgeKeychain(backend: keychainBackend)
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.8.1:8742")!],
@@ -271,7 +277,7 @@ final class BridgeControlCoordinatorTests {
         default:
             throw MacTestFailure(file: #filePath, line: #line, message: "expected pairing to land in .failed")
         }
-        let identities = try keychain.listIdentities()
+        let identities = try clientStore.listIdentities()
         try expectEqual(identities.count, 0)
     }
 
@@ -284,10 +290,10 @@ final class BridgeControlCoordinatorTests {
             statuses: [device.deviceID: status]
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
 
         // Pre-seed an identity so the coordinator transitions to .paired on discovery hit.
-        try keychain.saveIdentity(
+        try clientStore.saveIdentity(
             BridgeIdentity(
                 deviceID: device.deviceID,
                 displayName: device.displayName,
@@ -300,7 +306,7 @@ final class BridgeControlCoordinatorTests {
 
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
@@ -327,9 +333,8 @@ final class BridgeControlCoordinatorTests {
             devices: [device],
             statuses: [device.deviceID: makeStatus()]
         )
-        let backend = InMemoryBridgeKeychainBackend()
-        let keychain = BridgeKeychain(backend: backend)
-        try keychain.saveIdentity(
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
+        try clientStore.saveIdentity(
             BridgeIdentity(
                 deviceID: device.deviceID,
                 displayName: device.displayName,
@@ -342,7 +347,7 @@ final class BridgeControlCoordinatorTests {
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
@@ -373,7 +378,7 @@ final class BridgeControlCoordinatorTests {
         }
         try expectTrue(unpaired)
 
-        let identities = try keychain.listIdentities()
+        let identities = try clientStore.listIdentities()
         try expectEqual(identities.count, 0)
     }
 
@@ -389,10 +394,10 @@ final class BridgeControlCoordinatorTests {
             authRequiredDeviceIDs: [device.deviceID]
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
@@ -454,10 +459,10 @@ final class BridgeControlCoordinatorTests {
             for: device.deviceID
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.8.1:8742")!],
@@ -502,10 +507,10 @@ final class BridgeControlCoordinatorTests {
         )
         await transport.setUSBAutoTrustShouldReject(true, for: device.deviceID)
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
@@ -547,9 +552,9 @@ final class BridgeControlCoordinatorTests {
             devices: [device],
             statuses: [device.deviceID: makeStatus()]
         )
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         // Pre-seed a saved identity for this device.
-        try keychain.saveIdentity(
+        try clientStore.saveIdentity(
             BridgeIdentity(
                 deviceID: device.deviceID,
                 displayName: device.displayName,
@@ -562,7 +567,7 @@ final class BridgeControlCoordinatorTests {
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
@@ -597,10 +602,10 @@ final class BridgeControlCoordinatorTests {
             authRequiredDeviceIDs: [device.deviceID]
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],
@@ -629,8 +634,8 @@ final class BridgeControlCoordinatorTests {
             statuses: [device.deviceID: makeStatus()]
         )
         let probe = ScriptedBridgeDiscoveryProbe(initial: .success(device))
-        let keychain = BridgeKeychain(backend: InMemoryBridgeKeychainBackend())
-        try keychain.saveIdentity(
+        let clientStore = BridgeClientFileStore(path: Self.makeTmpStorePath())
+        try clientStore.saveIdentity(
             BridgeIdentity(
                 deviceID: device.deviceID,
                 displayName: device.displayName,
@@ -642,7 +647,7 @@ final class BridgeControlCoordinatorTests {
         )
         let coordinator = BridgeControlCoordinator(
             transport: transport,
-            keychain: keychain,
+            clientStore: clientStore,
             probe: probe,
             config: .init(
                 probeEndpoints: [URL(string: "http://192.168.7.1:8742")!],

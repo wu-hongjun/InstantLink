@@ -14,6 +14,7 @@ from typing import Any, Protocol, cast
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from instantlink_bridge.ble.models import PrinterModel, spec_for
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile, apply_adjustments
 
 
 class ImagePipelineError(RuntimeError):
@@ -164,6 +165,21 @@ def _prepare_for_model(
     edit: PrintEdit | None,
     apply_model_flip: bool,
 ) -> PreparedImage:
+    """Prepare a source image for the given printer model.
+
+    Pipeline stage order (must not be reordered):
+
+    1. decode via ``_open_source_image`` (JPEG / HEIF / RAW)
+    2. ``Image.draft`` hint for JPEG sources
+    3. ``ImageOps.exif_transpose`` — correct camera orientation
+    4. ``convert("RGB")`` — normalise colour space
+    5. ``apply_adjustments`` — colour/overlay adjustments at full source
+       resolution (identity profile in phase 2; wired to user settings
+       in phase 3)
+    6. ``_apply_print_edit`` — per-photo interactive rotate / zoom / offset
+    7. ``_fit_image`` — model-aware crop / contain / stretch to print size
+    8. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
+    """
     spec = spec_for(model)
     working_size = _working_size_for_model(spec.width, spec.height)
     minimum_source_edge = max(spec.width, spec.height)
@@ -181,6 +197,7 @@ def _prepare_for_model(
         if transposed is None:
             transposed = image.copy()
         prepared = transposed.convert("RGB")
+        prepared = apply_adjustments(prepared, AdjustmentProfile())
         prepared = _apply_print_edit(prepared, edit)
         fitted = _fit_image(prepared, spec.width, spec.height, fit)
     except IMAGE_DECODE_ERRORS as error:

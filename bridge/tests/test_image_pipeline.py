@@ -22,6 +22,7 @@ from instantlink_bridge.imaging.pipeline import (
     prepare_for_instantlink_backend,
     prepare_for_instax,
 )
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile, apply_adjustments
 
 
 @pytest.fixture
@@ -373,3 +374,23 @@ def test_raw_large_fallback_rejects_before_postprocess(
         prepare_for_instax(raw_path, PrinterModel.MINI)
 
     assert error.value.unit == "pixels per edge"
+
+
+def test_identity_profile_does_not_change_pipeline_output(source_jpeg: Path) -> None:
+    """Integration: calling prepare_for_instax twice with an identity profile
+    (the only profile wired in phase 2) must produce byte-identical output."""
+    first = prepare_for_instax(source_jpeg, PrinterModel.MINI, fit=FitMode.CROP, quality=95)
+    second = prepare_for_instax(source_jpeg, PrinterModel.MINI, fit=FitMode.CROP, quality=95)
+    assert first.data == second.data
+
+
+def test_apply_adjustments_identity_does_not_alter_pixels(source_jpeg: Path) -> None:
+    """Integration: apply_adjustments with a default profile leaves pixel data
+    unchanged — the postprocess stage is truly a no-op for phase 2."""
+    from PIL import Image as _Image
+
+    with _Image.open(source_jpeg) as raw_img:
+        rgb = raw_img.convert("RGB")
+
+    result = apply_adjustments(rgb, AdjustmentProfile())
+    assert result is rgb

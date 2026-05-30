@@ -1893,6 +1893,67 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#phase-4-customizable-watermark-datestamp-format-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Customizable watermark + datestamp format presets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4 — Customizable watermark + datestamp format presets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#postprocess" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Postprocess
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2123,8 +2184,83 @@ edit mode so the user sees the rendered overlay before committing.</p>
 <li><code>test_toggle_key2_cancels_without_commit</code></li>
 <li><code>test_adjustment_edit_renders_toggle_row</code> (snapshot-style)</li>
 </ul>
+<h3 id="phase-4-customizable-watermark-datestamp-format-presets">Phase 4 — Customizable watermark + datestamp format presets<a class="headerlink" href="#phase-4-customizable-watermark-datestamp-format-presets" title="Permanent link">&para;</a></h3>
+<p>User feedback after Phases 1-3 landed:</p>
+<blockquote>
+<p>"Users would want to be able to customize the watermark and
+datestamp, nobody want an InstantLink watermark on the photo, it
+doesn't make sense. We might just borrow instantlink's
+implementation."</p>
+</blockquote>
+<p>The macOS app already ships 5 <code>DateStampPreset</code> entries
+(Quartz Date / Olympus / Contax / Modern / Lab Print) with custom
+DSEG7 / Matrix fonts, glow, and light-bleed effects. The Pi can't
+ship those exotic fonts, but it CAN port the layout / separator
+identity of each preset so the macOS app and bridge speak the
+same vocabulary.</p>
+<p>Scope:</p>
+<ul>
+<li><strong>Drop the "InstantLink" default watermark.</strong> <code>watermark_text</code>
+  defaults to empty. When empty AND watermark=True, the overlay
+  guard <code>if profile.watermark and profile.watermark_text:</code> already
+  no-ops. So enabling the toggle with no text simply renders
+  nothing — no more hardcoded brand on the photo.</li>
+<li><strong>Show the current text in the Watermark row value</strong> so users
+  see what's set without entering edit mode. Empty → "(no text)".</li>
+<li><strong>Datestamp format picker</strong> — 5 presets matching macOS names:</li>
+<li>Quartz Date (<code>YY.MM.DD</code>)</li>
+<li>Olympus (<code>YY M D</code>)</li>
+<li>Contax (<code>'YY Mᴹ D</code>)</li>
+<li>Modern (<code>YY.MM.DD</code> — visually = Quartz on Pi without DSEG7)</li>
+<li>Lab Print (<code>YY-MM-DD</code>)</li>
+<li>Bridge keeps both names so macOS app + bridge speak the same
+  vocabulary, even though Quartz / Modern collapse visually on Pi.</li>
+</ul>
+<h4 id="config">Config<a class="headerlink" href="#config" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>AdjustmentsConfig.watermark_text</code> default → <code>""</code> (was
+  <code>"InstantLink"</code>).</li>
+<li>New <code>AdjustmentsConfig.datestamp_format: DatestampFormat</code>
+  enum field, default <code>DatestampFormat.QUARTZ_DATE</code>.</li>
+<li>TOML round-trip + parse with safe default for missing field.</li>
+</ul>
+<h4 id="postprocess">Postprocess<a class="headerlink" href="#postprocess" title="Permanent link">&para;</a></h4>
+<ul>
+<li>New <code>format_datestamp(date, fmt) -&gt; str</code> in
+  <code>imaging/postprocess.py</code>. Pure function, 5-branch switch.</li>
+<li>Caller wiring: <code>read_exif_datestamp_text</code> (or the controller path
+  that formats it) accepts a <code>DatestampFormat</code> and dispatches.</li>
+</ul>
+<h4 id="settings-ui">Settings UI<a class="headerlink" href="#settings-ui" title="Permanent link">&para;</a></h4>
+<ul>
+<li>New <code>SettingKey.ADJUST_DATESTAMP_FORMAT</code>. Insert into the
+  ADJUSTMENTS page row tuple immediately after <code>ADJUST_DATESTAMP</code>.</li>
+<li>Picker with the 5 format names. Default selected reflects
+  current config.</li>
+<li>Row value shows the current format name.</li>
+<li><code>_settings_row_for_key(ADJUST_WATERMARK)</code>: when watermark is On
+  AND text is non-empty, show value as <code>On · "Hello"</code> (truncated
+  to fit). When On AND empty, <code>On · (no text)</code>. When Off, <code>Off</code>.</li>
+<li>Datestamp live-preview (Phase 3): format the placeholder date
+  using the configured format so the preview matches what'll print.</li>
+</ul>
+<h4 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>test_watermark_text_default_is_empty</code></li>
+<li><code>test_format_datestamp_quartz_date</code> (and 4 more for each preset)</li>
+<li><code>test_datestamp_format_round_trip_toml</code></li>
+<li><code>test_datestamp_format_picker_options</code></li>
+<li><code>test_adjustments_page_includes_datestamp_format_row</code></li>
+<li><code>test_watermark_row_shows_current_text_when_set</code></li>
+<li><code>test_watermark_row_shows_no_text_hint_when_empty</code></li>
+</ul>
 <h2 id="out-of-scope">Out of scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
 <ul>
+<li>Custom datestamp fonts (DSEG7 / MatrixSans) — macOS-only for now.</li>
+<li>Datestamp colour / glow / light-bleed effects — macOS-only.</li>
+<li>A bridge-side text editor for watermark text. Power users edit
+  <code>/etc/InstantLinkBridge/config.toml</code> or push the value via the
+  macOS management API (plan 029 / 030).</li>
 <li>Status bar battery indicator (already exists, separately driven).</li>
 <li>PiSugar telemetry rendering on the row when present (already works).</li>
 <li>Headless SKU (plan 033 phase 5).</li>

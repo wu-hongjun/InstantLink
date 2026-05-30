@@ -183,8 +183,85 @@ edit mode so the user sees the rendered overlay before committing.
   - `test_toggle_key2_cancels_without_commit`
   - `test_adjustment_edit_renders_toggle_row` (snapshot-style)
 
+### Phase 4 — Customizable watermark + datestamp format presets
+
+User feedback after Phases 1-3 landed:
+
+> "Users would want to be able to customize the watermark and
+> datestamp, nobody want an InstantLink watermark on the photo, it
+> doesn't make sense. We might just borrow instantlink's
+> implementation."
+
+The macOS app already ships 5 `DateStampPreset` entries
+(Quartz Date / Olympus / Contax / Modern / Lab Print) with custom
+DSEG7 / Matrix fonts, glow, and light-bleed effects. The Pi can't
+ship those exotic fonts, but it CAN port the layout / separator
+identity of each preset so the macOS app and bridge speak the
+same vocabulary.
+
+Scope:
+
+- **Drop the "InstantLink" default watermark.** `watermark_text`
+  defaults to empty. When empty AND watermark=True, the overlay
+  guard `if profile.watermark and profile.watermark_text:` already
+  no-ops. So enabling the toggle with no text simply renders
+  nothing — no more hardcoded brand on the photo.
+- **Show the current text in the Watermark row value** so users
+  see what's set without entering edit mode. Empty → "(no text)".
+- **Datestamp format picker** — 5 presets matching macOS names:
+  - Quartz Date (`YY.MM.DD`)
+  - Olympus (`YY M D`)
+  - Contax (`'YY Mᴹ D`)
+  - Modern (`YY.MM.DD` — visually = Quartz on Pi without DSEG7)
+  - Lab Print (`YY-MM-DD`)
+- Bridge keeps both names so macOS app + bridge speak the same
+  vocabulary, even though Quartz / Modern collapse visually on Pi.
+
+#### Config
+
+- `AdjustmentsConfig.watermark_text` default → `""` (was
+  `"InstantLink"`).
+- New `AdjustmentsConfig.datestamp_format: DatestampFormat`
+  enum field, default `DatestampFormat.QUARTZ_DATE`.
+- TOML round-trip + parse with safe default for missing field.
+
+#### Postprocess
+
+- New `format_datestamp(date, fmt) -> str` in
+  `imaging/postprocess.py`. Pure function, 5-branch switch.
+- Caller wiring: `read_exif_datestamp_text` (or the controller path
+  that formats it) accepts a `DatestampFormat` and dispatches.
+
+#### Settings UI
+
+- New `SettingKey.ADJUST_DATESTAMP_FORMAT`. Insert into the
+  ADJUSTMENTS page row tuple immediately after `ADJUST_DATESTAMP`.
+- Picker with the 5 format names. Default selected reflects
+  current config.
+- Row value shows the current format name.
+- `_settings_row_for_key(ADJUST_WATERMARK)`: when watermark is On
+  AND text is non-empty, show value as `On · "Hello"` (truncated
+  to fit). When On AND empty, `On · (no text)`. When Off, `Off`.
+- Datestamp live-preview (Phase 3): format the placeholder date
+  using the configured format so the preview matches what'll print.
+
+#### Tests
+
+- `test_watermark_text_default_is_empty`
+- `test_format_datestamp_quartz_date` (and 4 more for each preset)
+- `test_datestamp_format_round_trip_toml`
+- `test_datestamp_format_picker_options`
+- `test_adjustments_page_includes_datestamp_format_row`
+- `test_watermark_row_shows_current_text_when_set`
+- `test_watermark_row_shows_no_text_hint_when_empty`
+
 ## Out of scope
 
+- Custom datestamp fonts (DSEG7 / MatrixSans) — macOS-only for now.
+- Datestamp colour / glow / light-bleed effects — macOS-only.
+- A bridge-side text editor for watermark text. Power users edit
+  `/etc/InstantLinkBridge/config.toml` or push the value via the
+  macOS management API (plan 029 / 030).
 - Status bar battery indicator (already exists, separately driven).
 - PiSugar telemetry rendering on the row when present (already works).
 - Headless SKU (plan 033 phase 5).

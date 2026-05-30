@@ -10,6 +10,7 @@ import secrets
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Protocol, cast
 
@@ -32,6 +33,7 @@ from instantlink_bridge.imaging.pipeline import (
     PrintEdit,
     create_preview_from_prepared,
 )
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 from instantlink_bridge.imaging.worker import prepare_for_instax_async
 from instantlink_bridge.net.health import (
     ConnectionHealth,
@@ -119,6 +121,34 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 #     signature will recur but we fall back to normal backoff instead of looping.
 AUTO_REBOND_SIGNATURE_THRESHOLD = 1
 AUTO_REBOND_COOLDOWN_S = 120.0
+
+# Adjustments page row classes.
+#   _COLOUR_AXIS_KEYS  — slider rows (-100..+100 or 0..100) that open the
+#                        focused ADJUSTMENT_EDIT mode with a live preview tile.
+#   _OVERLAY_TOGGLE_KEYS — boolean overlay rows (datestamp / watermark) that
+#                          also open ADJUSTMENT_EDIT but render an Off/On pill
+#                          row instead of a slider, with a live preview that
+#                          shows the overlay applied (plan 037 phase 3).
+_COLOUR_AXIS_KEYS: frozenset[SettingKey] = frozenset(
+    {
+        SettingKey.ADJUST_SATURATION,
+        SettingKey.ADJUST_EXPOSURE,
+        SettingKey.ADJUST_SHARPNESS,
+        SettingKey.ADJUST_HUE,
+        SettingKey.ADJUST_VIGNETTE,
+    }
+)
+_OVERLAY_TOGGLE_KEYS: frozenset[SettingKey] = frozenset(
+    {
+        SettingKey.ADJUST_DATESTAMP,
+        SettingKey.ADJUST_WATERMARK,
+    }
+)
+# Placeholder text used by the toggle-edit live preview so the overlay is
+# actually visible while the user is deciding. The committed config can still
+# carry an empty datestamp_text (no EXIF date yet) or watermark_text — the
+# preview substitutes a sample so the bottom-left / bottom-right glyphs paint.
+_PREVIEW_PLACEHOLDER_WATERMARK = "Sample"
 # Silent-link recovery: when a bonded printer is power-cycled, BlueZ frequently auto-reconnects it
 # and holds a silent link. A connected peripheral stops advertising, so InstantLink's
 # advertisement-based scan can never find it and status connects loop on PrinterNotFound forever
@@ -1274,14 +1304,10 @@ class BridgeUi:
             return
         # Slider rows on the Adjustments page always enter focused edit mode
         # (plan 036 phase 5: the Custom read-only gate has been removed).
-        _COLOUR_AXIS_KEYS = frozenset({
-            SettingKey.ADJUST_SATURATION,
-            SettingKey.ADJUST_EXPOSURE,
-            SettingKey.ADJUST_SHARPNESS,
-            SettingKey.ADJUST_HUE,
-            SettingKey.ADJUST_VIGNETTE,
-        })
-        if key in _COLOUR_AXIS_KEYS:
+        # The two overlay toggles (datestamp, watermark) share the same edit
+        # mode so the user previews the rendered overlay before committing
+        # (plan 037 phase 3).
+        if key in _COLOUR_AXIS_KEYS or key in _OVERLAY_TOGGLE_KEYS:
             self._enter_adjustment_edit(key)
             return
         if key not in ADJUSTABLE_SETTING_KEYS:
@@ -1441,13 +1467,26 @@ class BridgeUi:
         return replace(self._config, adjustments=new_adj)
 
     def _enter_adjustment_edit(self, key: SettingKey) -> None:
-        """Enter ADJUSTMENT_EDIT mode for the given colour-axis key."""
-        original = self._adjustment_current_value(key)
+        """Enter ADJUSTMENT_EDIT mode for a slider axis or overlay toggle.
+
+        Slider axes store the int value directly. Overlay toggles
+        (``ADJUST_DATESTAMP`` / ``ADJUST_WATERMARK``) are bools coerced to
+        ``0`` / ``1`` so the existing ``adjustment_edit_value: int`` field can
+        carry both row classes without an extra union type.
+        """
+        if key in _OVERLAY_TOGGLE_KEYS:
+            current_bool = (
+                self._config.adjustments.datestamp
+                if key is SettingKey.ADJUST_DATESTAMP
+                else self._config.adjustments.watermark
+            )
+            original = 1 if current_bool else 0
+        else:
+            original = self._adjustment_current_value(key)
         self._adjustment_edit_key = key
         self._adjustment_edit_value = original
         self._adjustment_edit_original = original
         self._adjustment_edit_row_index = self._snapshot.selected_index
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
 
         self._snapshot = replace(
             self._snapshot,
@@ -1455,9 +1494,43 @@ class BridgeUi:
             adjustment_edit_key=key.value,
             adjustment_edit_value=original,
             adjustment_edit_original=original,
-            adjustments_profile=_AdjProf.from_config(self._config.adjustments),
+            adjustments_profile=self._adjustment_edit_preview_profile(key, original),
         )
         self._render()
+
+    def _adjustment_edit_preview_profile(
+        self, key: SettingKey, working_value: int
+    ) -> AdjustmentProfile:
+        """Build the AdjustmentProfile for the live preview tile.
+
+        For slider axes, apply the working int to the corresponding field via
+        ``_apply_adjustment_value`` then take ``from_config``. For overlay
+        toggles, take ``from_config`` of the committed adjustments (so the
+        other overlay is rendered as-configured), then override the toggled
+        flag and inject placeholder text so the overlay is visible even when
+        the persisted *_text field is empty (e.g. no EXIF date available yet).
+        """
+        if key in _OVERLAY_TOGGLE_KEYS:
+            profile = AdjustmentProfile.from_config(self._config.adjustments)
+            working_bool = bool(working_value)
+            if key is SettingKey.ADJUST_DATESTAMP:
+                preview_text = date.today().isoformat()
+                profile = replace(
+                    profile,
+                    datestamp=working_bool,
+                    datestamp_text=preview_text if working_bool else "",
+                )
+            else:  # SettingKey.ADJUST_WATERMARK
+                configured = self._config.adjustments.watermark_text
+                preview_text = configured if configured else _PREVIEW_PLACEHOLDER_WATERMARK
+                profile = replace(
+                    profile,
+                    watermark=working_bool,
+                    watermark_text=preview_text if working_bool else "",
+                )
+            return profile
+        working_config = self._apply_adjustment_value(key, working_value)
+        return AdjustmentProfile.from_config(working_config.adjustments)
 
     def _update_adjustment_edit_value(self, delta: int) -> None:
         """Nudge the working value by ``delta``, clamped to the axis range, and re-render."""
@@ -1467,15 +1540,28 @@ class BridgeUi:
         lo, hi = self._ADJUSTMENT_AXIS_RANGE.get(key, (-100, 100))
         new_value = max(lo, min(hi, self._adjustment_edit_value + delta))
         self._adjustment_edit_value = new_value
-        # Build a working AdjustmentProfile with the new value for the live preview.
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
-
-        working_config = self._apply_adjustment_value(key, new_value)
-        working_profile = _AdjProf.from_config(working_config.adjustments)
         self._snapshot = replace(
             self._snapshot,
             adjustment_edit_value=new_value,
-            adjustments_profile=working_profile,
+            adjustments_profile=self._adjustment_edit_preview_profile(key, new_value),
+        )
+        self._render()
+
+    def _set_adjustment_edit_toggle(self, new_value: int) -> None:
+        """Overwrite the working toggle value (0/1) and re-render.
+
+        Used by the toggle-edit branch where UP/DOWN/LEFT/RIGHT *flip* the
+        bool rather than nudging within a numeric range — so we cannot route
+        through ``_update_adjustment_edit_value`` (which uses a delta).
+        """
+        key = self._adjustment_edit_key
+        if key is None:
+            return
+        self._adjustment_edit_value = new_value
+        self._snapshot = replace(
+            self._snapshot,
+            adjustment_edit_value=new_value,
+            adjustments_profile=self._adjustment_edit_preview_profile(key, new_value),
         )
         self._render()
 
@@ -1485,7 +1571,17 @@ class BridgeUi:
         if key is None:
             return
         row_index = self._adjustment_edit_row_index
-        new_config = self._apply_adjustment_value(key, self._adjustment_edit_value)
+        working_value = self._adjustment_edit_value
+        if key in _OVERLAY_TOGGLE_KEYS:
+            working_bool = bool(working_value)
+            adj = self._config.adjustments
+            if key is SettingKey.ADJUST_DATESTAMP:
+                new_adj = replace(adj, datestamp=working_bool)
+            else:  # SettingKey.ADJUST_WATERMARK
+                new_adj = replace(adj, watermark=working_bool)
+            new_config = replace(self._config, adjustments=new_adj)
+        else:
+            new_config = self._apply_adjustment_value(key, working_value)
         self._adjustment_edit_key = None
         # Restore cursor before _set_config so _show_settings picks it up.
         self._settings_indices[SettingsPage.ADJUSTMENTS] = row_index
@@ -1506,6 +1602,28 @@ class BridgeUi:
         if key is None:
             # Shouldn't happen; just escape back to settings.
             self._show_settings(page=SettingsPage.ADJUSTMENTS)
+            return
+        # Overlay toggles (datestamp / watermark) share the focused-edit mode
+        # with sliders but have a binary working value. UP/DOWN/LEFT/RIGHT all
+        # *flip* it (so the preview updates without committing); KEY1 commits
+        # the working value; KEY2 cancels. KEY3 shows help without exiting.
+        if key in _OVERLAY_TOGGLE_KEYS:
+            if action in {UiAction.UP, UiAction.DOWN, UiAction.LEFT, UiAction.RIGHT}:
+                self._set_adjustment_edit_toggle(0 if self._adjustment_edit_value else 1)
+                return
+            if action is UiAction.SELECT:
+                await self._commit_adjustment_edit()
+                return
+            if action is UiAction.BACK:
+                self._cancel_adjustment_edit()
+                return
+            if action in {UiAction.HELP, UiAction.PAIR}:
+                self._snapshot = replace(
+                    self._snapshot,
+                    settings_message=setting_help_text(key),
+                )
+                self._render()
+                return
             return
         if action is UiAction.UP:
             self._update_adjustment_edit_value(5)

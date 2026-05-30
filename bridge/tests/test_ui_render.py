@@ -977,6 +977,65 @@ def test_adjustment_edit_mode_vignette_renders() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Plan 037 Phase 3 — toggle (datestamp / watermark) ADJUSTMENT_EDIT renderer
+# ---------------------------------------------------------------------------
+
+
+def _toggle_edit_snapshot(
+    axis_key: str = "adjust_datestamp",
+    value: int = 1,
+    *,
+    language: str = "en",
+) -> UiSnapshot:
+    """Build a UiSnapshot for ADJUSTMENT_EDIT mode on an overlay toggle key."""
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
+    profile = AdjustmentProfile(
+        datestamp=axis_key == "adjust_datestamp" and bool(value),
+        datestamp_text="2026-05-30" if axis_key == "adjust_datestamp" and bool(value) else "",
+        watermark=axis_key == "adjust_watermark" and bool(value),
+        watermark_text="Sample" if axis_key == "adjust_watermark" and bool(value) else "",
+    )
+    return UiSnapshot(
+        mode=UiMode.ADJUSTMENT_EDIT,
+        ftp_host="192.168.7.1",
+        adjustment_edit_key=axis_key,
+        adjustment_edit_value=value,
+        adjustment_edit_original=0,
+        adjustments_profile=profile,
+        language=language,
+    )
+
+
+def test_adjustment_edit_renders_toggle_row_datestamp() -> None:
+    """ADJUSTMENT_EDIT for the datestamp toggle renders without error."""
+    snapshot = _toggle_edit_snapshot(axis_key="adjust_datestamp", value=1)
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)
+
+
+def test_adjustment_edit_renders_toggle_row_watermark() -> None:
+    """ADJUSTMENT_EDIT for the watermark toggle renders without error."""
+    snapshot = _toggle_edit_snapshot(axis_key="adjust_watermark", value=0)
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)
+
+
+def test_adjustment_edit_toggle_off_vs_on_differs() -> None:
+    """The toggle pill row should look different when On vs Off."""
+    off = render_snapshot(_toggle_edit_snapshot("adjust_datestamp", value=0))
+    on = render_snapshot(_toggle_edit_snapshot("adjust_datestamp", value=1))
+    assert off.tobytes() != on.tobytes()
+
+
+def test_adjustment_edit_toggle_renders_zh_hans() -> None:
+    """Toggle edit renders cleanly under zh-Hans (CJK help strip)."""
+    snapshot = _toggle_edit_snapshot(axis_key="adjust_watermark", value=1, language="zh-Hans")
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)
+
+
+# ---------------------------------------------------------------------------
 # Plan 036 P1 fixes — render regression tests
 # ---------------------------------------------------------------------------
 

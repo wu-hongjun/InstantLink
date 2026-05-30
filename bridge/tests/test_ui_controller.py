@@ -3588,14 +3588,27 @@ async def test_adjustment_edit_preset_row_does_not_enter_edit(tmp_path: Path) ->
     assert ui._adjustment_edit_key is None
 
 
-@pytest.mark.asyncio
-async def test_adjustment_edit_datestamp_row_does_not_enter_edit(tmp_path: Path) -> None:
-    """SELECT on Datestamp opens the bool picker, not the slider edit mode."""
-    from instantlink_bridge.ui.settings import SettingKey, SettingsPage
+# ---------------------------------------------------------------------------
+# Plan 037 Phase 3 — Overlay toggles (datestamp / watermark) share the focused
+#                    ADJUSTMENT_EDIT mode with sliders so the user sees the
+#                    rendered overlay before committing.
+# ---------------------------------------------------------------------------
 
+
+def _make_overlay_ui(
+    tmp_path: Path,
+    *,
+    datestamp: bool = False,
+    watermark: bool = False,
+) -> BridgeUi:
+    """Build a BridgeUi positioned on the Adjustments page with overlay flags."""
     config_path = tmp_path / "config.toml"
     config_path.write_text(
-        '[adjustments]\npreset = "Custom"\ndatestamp = false\n', encoding="utf-8"
+        "[adjustments]\n"
+        'preset = "Custom"\n'
+        f"datestamp = {str(datestamp).lower()}\n"
+        f"watermark = {str(watermark).lower()}\n",
+        encoding="utf-8",
     )
     display = _FakeDisplay()
     ui = BridgeUi(
@@ -3607,16 +3620,132 @@ async def test_adjustment_edit_datestamp_row_does_not_enter_edit(tmp_path: Path)
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
     ui._show_settings(page=SettingsPage.ADJUSTMENTS)
-    # Navigate to Datestamp row (index 6: Preset=0 Sat=1 Exp=2 Sharp=3 Hue=4 Vig=5 Datestamp=6).
+    return ui
+
+
+async def _navigate_to_datestamp(ui: BridgeUi) -> None:
+    """Walk the cursor down to the Datestamp row (index 6)."""
     for _ in range(6):
         await ui._handle_action(UiAction.DOWN)
+
+
+async def _navigate_to_watermark(ui: BridgeUi) -> None:
+    """Walk the cursor down to the Watermark row (index 7)."""
+    for _ in range(7):
+        await ui._handle_action(UiAction.DOWN)
+
+
+@pytest.mark.asyncio
+async def test_toggle_activate_enters_edit_mode_not_picker(tmp_path: Path) -> None:
+    """KEY1 on Datestamp enters ADJUSTMENT_EDIT (plan 037), not the bool picker."""
+    from instantlink_bridge.ui.settings import SettingKey
+
+    ui = _make_overlay_ui(tmp_path, datestamp=False)
+    await _navigate_to_datestamp(ui)
     await ui._handle_action(UiAction.SELECT)
 
-    # Mode stays SETTINGS (bool picker opens), not ADJUSTMENT_EDIT.
+    assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
+    assert ui._adjustment_edit_key is SettingKey.ADJUST_DATESTAMP
+    assert ui._settings_picker_key is None
+
+
+@pytest.mark.asyncio
+async def test_toggle_key1_commits_flipped_value_and_exits(tmp_path: Path) -> None:
+    """UP flips working value; KEY1 commits and exits to SETTINGS."""
+
+    ui = _make_overlay_ui(tmp_path, watermark=False)
+    await _navigate_to_watermark(ui)
+    await ui._handle_action(UiAction.SELECT)  # enter edit, working=0
+    await ui._handle_action(UiAction.UP)  # flip to 1
+    assert ui._adjustment_edit_value == 1
+    # Not committed yet — config still shows False.
+    assert ui._config.adjustments.watermark is False
+
+    await ui._handle_action(UiAction.SELECT)  # KEY1 commits
+
     assert ui._snapshot.mode is UiMode.SETTINGS
-    # The picker opened for Datestamp, so settings_picker_key is set.
-    assert ui._settings_picker_key is SettingKey.ADJUST_DATESTAMP
+    assert ui._config.adjustments.watermark is True
     assert ui._adjustment_edit_key is None
+
+
+@pytest.mark.asyncio
+async def test_toggle_key2_cancels_without_commit(tmp_path: Path) -> None:
+    """KEY2 (BACK) reverts: working flip is discarded, config unchanged."""
+
+    ui = _make_overlay_ui(tmp_path, watermark=True)
+    await _navigate_to_watermark(ui)
+    await ui._handle_action(UiAction.SELECT)  # enter, working=1
+    await ui._handle_action(UiAction.UP)  # flip to 0
+
+    await ui._handle_action(UiAction.BACK)  # KEY2 cancel
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert ui._config.adjustments.watermark is True  # unchanged
+    assert ui._adjustment_edit_key is None
+
+
+@pytest.mark.asyncio
+async def test_toggle_up_flips_without_commit(tmp_path: Path) -> None:
+    """UP in toggle edit mode flips the working value without writing config."""
+
+    ui = _make_overlay_ui(tmp_path, watermark=False)
+    await _navigate_to_watermark(ui)
+    await ui._handle_action(UiAction.SELECT)  # working=0
+
+    await ui._handle_action(UiAction.UP)
+
+    assert ui._adjustment_edit_value == 1
+    assert ui._snapshot.adjustment_edit_value == 1
+    assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
+    assert ui._config.adjustments.watermark is False  # NOT committed
+
+
+@pytest.mark.asyncio
+async def test_toggle_select_commits_unchanged_value(tmp_path: Path) -> None:
+    """KEY1 immediately after entering edit mode commits the current value as-is."""
+
+    ui = _make_overlay_ui(tmp_path, watermark=True)
+    await _navigate_to_watermark(ui)
+    await ui._handle_action(UiAction.SELECT)  # working=1
+
+    await ui._handle_action(UiAction.SELECT)  # commit unchanged
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert ui._config.adjustments.watermark is True  # still on, written
+
+
+@pytest.mark.asyncio
+async def test_toggle_down_left_right_all_flip(tmp_path: Path) -> None:
+    """DOWN / LEFT / RIGHT in toggle edit mode also flip the working value."""
+
+    for action in (UiAction.DOWN, UiAction.LEFT, UiAction.RIGHT):
+        ui = _make_overlay_ui(tmp_path, datestamp=False)
+        await _navigate_to_datestamp(ui)
+        await ui._handle_action(UiAction.SELECT)  # working=0
+        await ui._handle_action(action)
+        assert ui._adjustment_edit_value == 1, f"{action} did not flip"
+        assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
+
+
+@pytest.mark.asyncio
+async def test_toggle_preview_profile_carries_working_value(tmp_path: Path) -> None:
+    """The snapshot's adjustments_profile reflects the working toggle bool + placeholder text."""
+
+    ui = _make_overlay_ui(tmp_path, watermark=False)
+    await _navigate_to_watermark(ui)
+    await ui._handle_action(UiAction.SELECT)  # working=0
+    # Off state: watermark flag in preview profile is False (no overlay drawn).
+    profile_off = ui._snapshot.adjustments_profile
+    assert profile_off is not None
+    assert profile_off.watermark is False
+
+    await ui._handle_action(UiAction.UP)  # working=1
+    profile_on = ui._snapshot.adjustments_profile
+    assert profile_on is not None
+    assert profile_on.watermark is True
+    # Placeholder text is injected so the overlay actually paints in the preview
+    # even though the persisted config has the default watermark_text.
+    assert profile_on.watermark_text != ""
 
 
 # ---------------------------------------------------------------------------

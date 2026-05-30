@@ -19,6 +19,12 @@ from instantlink_bridge.ui.theme import Theme, theme_for
 LCD_SIZE = (240, 240)
 Font = ImageFont.ImageFont | ImageFont.FreeTypeFont
 
+# SettingKey values whose ADJUSTMENT_EDIT mode renders Off/On pills instead of
+# a slider (plan 037 phase 3). Kept as raw strings here so render.py does not
+# depend on the SettingKey enum — snapshot.adjustment_edit_key is already the
+# enum's `.value`.
+_OVERLAY_TOGGLE_EDIT_KEYS: frozenset[str] = frozenset({"adjust_datestamp", "adjust_watermark"})
+
 # ---------------------------------------------------------------------------
 # Legacy colour constants — kept as fallbacks; theme tokens take precedence
 # ---------------------------------------------------------------------------
@@ -1875,55 +1881,98 @@ def _adjustment_edit(
         "adjust_sharpness": "Sharpness",
         "adjust_hue": "Hue",
         "adjust_vignette": "Vignette",
+        "adjust_datestamp": "Datestamp",
+        "adjust_watermark": "Watermark",
     }
     axis_label = t(_KEY_TO_LABEL.get(edit_key, edit_key.replace("adjust_", "").capitalize()), lang)
     current_value = snapshot.adjustment_edit_value
-
-    # Determine symmetric vs asymmetric (vignette is [0, 100])
-    symmetric = edit_key != "adjust_vignette"
-    val_str = format_int_with_sign(current_value) if symmetric else str(current_value)
+    is_toggle = edit_key in _OVERLAY_TOGGLE_EDIT_KEYS
 
     label_y = 155
     _text(draw, 22, label_y, axis_label, font_body, theme.label_primary)
-    val_w = _text_width(draw, val_str, font_body)
-    _text(draw, 222 - val_w, label_y, val_str, font_body, theme.accent_blue)
+    if not is_toggle:
+        # Slider rows show a numeric value beside the axis label; toggles
+        # show their state via the Off/On pills below so the right-aligned
+        # number would be redundant.
+        symmetric = edit_key != "adjust_vignette"
+        val_str = format_int_with_sign(current_value) if symmetric else str(current_value)
+        val_w = _text_width(draw, val_str, font_body)
+        _text(draw, 222 - val_w, label_y, val_str, font_body, theme.accent_blue)
 
-    # --- Slider track -------------------------------------------------------
-    # slider_y moved from 168 → 164 (item 6, plan 036 audit follow-up):
-    # range labels render at slider_y+track_h+4=176, help strip at card_y1+3=191,
-    # giving 15 px clearance instead of 11 — prevents CJK range-label / hint
-    # overlap when zh-Hans line heights are taller.
-    slider_x = 22
-    slider_y = 164
-    slider_w = 196
-    slider_track_h = 8
-    lo, hi = ((-100, 100) if symmetric else (0, 100))
-    draw_slider(
-        draw,
-        slider_x,
-        slider_y,
-        slider_w,
-        current_value,
-        lo,
-        hi,
-        theme=theme,
-        track_height=slider_track_h,
-        thumb_width=10,
-        thumb_height=14,
-        symmetric=symmetric,
-    )
+    if is_toggle:
+        # --- Off / On pills -------------------------------------------------
+        # Two pills centred horizontally beside (or at) where the slider
+        # would sit. Working value 0 → Off pill active, 1 → On pill active.
+        # Active pill: accent_blue fill, label_inverse text.
+        # Inactive pill: surface fill, label_secondary text.
+        pill_w = 70
+        pill_h = 24
+        gap = 8
+        total_w = pill_w * 2 + gap
+        pills_y = 164
+        left_x = (240 - total_w) // 2
+        right_x = left_x + pill_w + gap
+        off_active = current_value == 0
+        on_active = current_value != 0
+        for px, label, active in (
+            (left_x, t("Off", lang), off_active),
+            (right_x, t("On", lang), on_active),
+        ):
+            fill = theme.accent_blue if active else theme.surface
+            text_colour = theme.label_inverse if active else theme.label_secondary
+            draw.rounded_rectangle(
+                (px, pills_y, px + pill_w, pills_y + pill_h),
+                radius=12,
+                fill=fill,
+                outline=theme.separator,
+                width=1,
+            )
+            label_w = _text_width(draw, label, font_body)
+            label_x = px + (pill_w - label_w) // 2
+            # Approximate vertical centring for body font: descent ~ 4 px.
+            label_y_inner = pills_y + (pill_h - 14) // 2
+            _text(draw, label_x, label_y_inner, label, font_body, text_colour)
 
-    # --- Range labels -------------------------------------------------------
-    range_y = slider_y + slider_track_h + 4
-    left_label = "−100" if symmetric else "0"
-    right_label = "+100" if symmetric else "100"
-    _text(draw, slider_x, range_y, left_label, font_small, theme.label_secondary)
-    right_w = _text_width(draw, right_label, font_small)
-    right_x = slider_x + slider_w - right_w
-    _text(draw, right_x, range_y, right_label, font_small, theme.label_secondary)
+        help_strip = t("KEY1 commit · KEY2 cancel", lang)
+    else:
+        # --- Slider track ---------------------------------------------------
+        # slider_y moved from 168 → 164 (item 6, plan 036 audit follow-up):
+        # range labels render at slider_y+track_h+4=176, help strip at
+        # card_y1+3=191, giving 15 px clearance instead of 11 — prevents CJK
+        # range-label / hint overlap when zh-Hans line heights are taller.
+        symmetric = edit_key != "adjust_vignette"
+        slider_x = 22
+        slider_y = 164
+        slider_w = 196
+        slider_track_h = 8
+        lo, hi = ((-100, 100) if symmetric else (0, 100))
+        draw_slider(
+            draw,
+            slider_x,
+            slider_y,
+            slider_w,
+            current_value,
+            lo,
+            hi,
+            theme=theme,
+            track_height=slider_track_h,
+            thumb_width=10,
+            thumb_height=14,
+            symmetric=symmetric,
+        )
+
+        # --- Range labels ---------------------------------------------------
+        range_y = slider_y + slider_track_h + 4
+        left_label = "−100" if symmetric else "0"
+        right_label = "+100" if symmetric else "100"
+        _text(draw, slider_x, range_y, left_label, font_small, theme.label_secondary)
+        right_w = _text_width(draw, right_label, font_small)
+        right_x = slider_x + slider_w - right_w
+        _text(draw, right_x, range_y, right_label, font_small, theme.label_secondary)
+
+        help_strip = t("Up/Dn ±5 · Left/Right ±25", lang)
 
     # --- Help strip ---------------------------------------------------------
-    help_strip = t("Up/Dn ±5 · Left/Right ±25", lang)
     help_y = card_y1 + 3
     help_w = _text_width(draw, help_strip, font_small)
     help_x = (240 - help_w) // 2

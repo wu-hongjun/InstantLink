@@ -245,7 +245,8 @@ def test_instax_film_preset_resolves_for_pipeline() -> None:
     assert profile.sharpness == pytest.approx(instax.sharpness)
 
 
-def test_vignette_invalid_value_raises() -> None:
-    """AdjustmentsConfig with vignette not in {0, 25, 50, 75, 100} raises ValueError."""
-    with pytest.raises(ValueError, match="vignette"):
-        AdjustmentsConfig(vignette=33)
+def test_vignette_any_value_in_range_is_valid() -> None:
+    """AdjustmentsConfig accepts any vignette integer in [0, 100] (continuous range)."""
+    for v in (0, 1, 33, 50, 99, 100):
+        cfg = AdjustmentsConfig(vignette=v)
+        assert cfg.vignette == v

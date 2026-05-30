@@ -345,9 +345,6 @@ class FirmwareUpdateConfig:
     trusted_public_keys: tuple[FirmwareTrustedPublicKeyConfig, ...] = ()
 
 
-_ADJUSTMENT_VALID_VALUES: frozenset[int] = frozenset({-100, -50, 0, 50, 100})
-_VIGNETTE_VALID_VALUES: frozenset[int] = frozenset({0, 25, 50, 75, 100})
-
 # Valid preset names: built-ins + user custom slots + the "Custom" sentinel.
 # Keep in sync with VALID_PRESET_NAMES in imaging/presets.py (imported lazily
 # to avoid a circular dependency at module load time).
@@ -371,8 +368,9 @@ _ADJUSTMENT_VALID_PRESET_NAMES: frozenset[str] = frozenset(
 class AdjustmentsConfig:
     """Colour-adjustment settings.
 
-    All values must be one of {-100, -50, 0, 50, 100}. Zero is the
-    identity for every axis — no adjustments applied.
+    Colour axes (saturation, exposure, sharpness, hue) accept any integer
+    in ``[-100, 100]``; zero is the identity for each axis. Vignette
+    accepts any integer in ``[0, 100]``; zero disables it.
     """
 
     preset: str = "Default"
@@ -400,7 +398,7 @@ class AdjustmentsConfig:
     """Text to stamp as a watermark. Empty string disables rendering."""
 
     vignette: int = 0
-    """Corner-darkening strength. One of {0, 25, 50, 75, 100}. 0 = off (identity)."""
+    """Corner-darkening strength. Any integer in [0, 100]. 0 = off (identity)."""
 
     def __post_init__(self) -> None:
         if self.preset not in _ADJUSTMENT_VALID_PRESET_NAMES:
@@ -410,15 +408,13 @@ class AdjustmentsConfig:
             )
         for field_name in ("saturation", "exposure", "sharpness", "hue"):
             value = getattr(self, field_name)
-            if value not in _ADJUSTMENT_VALID_VALUES:
+            if not isinstance(value, int) or not -100 <= value <= 100:
                 raise ValueError(
-                    f"[adjustments].{field_name} must be one of "
-                    f"{sorted(_ADJUSTMENT_VALID_VALUES)}; got {value!r}"
+                    f"[adjustments].{field_name} must be an integer in [-100, 100]; got {value!r}"
                 )
-        if self.vignette not in _VIGNETTE_VALID_VALUES:
+        if not isinstance(self.vignette, int) or not 0 <= self.vignette <= 100:
             raise ValueError(
-                f"[adjustments].vignette must be one of "
-                f"{sorted(_VIGNETTE_VALID_VALUES)}; got {self.vignette!r}"
+                f"[adjustments].vignette must be an integer in [0, 100]; got {self.vignette!r}"
             )
 
 
@@ -720,21 +716,17 @@ def _load_adjustments_config(data: object) -> AdjustmentsConfig:
 
 def _adjustment_int(value: object, field_name: str) -> int:
     if not isinstance(value, int):
-        raise ValueError(f"{field_name} must be an integer")
-    if value not in _ADJUSTMENT_VALID_VALUES:
-        raise ValueError(
-            f"{field_name} must be one of {sorted(_ADJUSTMENT_VALID_VALUES)}; got {value!r}"
-        )
+        raise ValueError(f"{field_name} must be an integer in [-100, 100]")
+    if not -100 <= value <= 100:
+        raise ValueError(f"{field_name} must be an integer in [-100, 100]; got {value!r}")
     return value
 
 
 def _vignette_int(value: object, field_name: str) -> int:
     if not isinstance(value, int):
-        raise ValueError(f"{field_name} must be an integer")
-    if value not in _VIGNETTE_VALID_VALUES:
-        raise ValueError(
-            f"{field_name} must be one of {sorted(_VIGNETTE_VALID_VALUES)}; got {value!r}"
-        )
+        raise ValueError(f"{field_name} must be an integer in [0, 100]")
+    if not 0 <= value <= 100:
+        raise ValueError(f"{field_name} must be an integer in [0, 100]; got {value!r}")
     return value
 
 

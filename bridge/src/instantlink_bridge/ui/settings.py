@@ -572,13 +572,31 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
 
 
 def selected_option_index(config: BridgeConfig, key: SettingKey) -> int:
-    """Return the current option index for an adjustable setting."""
+    """Return the current option index for an adjustable setting.
+
+    For integer-valued axes (saturation, exposure, sharpness, hue, vignette)
+    an off-grid value (e.g. saturation=7, not in the 5-position picker) falls
+    back to the nearest discrete option by absolute distance.  Ties are broken
+    towards lower indices (i.e. the lower-valued option wins).
+    """
 
     options = setting_options(key)
     current = _setting_value(config, key)
     for index, option in enumerate(options):
         if option.value == current:
             return index
+    # Nearest-option fallback for integer axes with off-grid values.
+    if isinstance(current, int) and options:
+        best_index = 0
+        best_dist = abs(current - options[0].value) if isinstance(options[0].value, int) else None
+        for index, option in enumerate(options):
+            if not isinstance(option.value, int):
+                continue
+            dist = abs(current - option.value)
+            if best_dist is None or dist < best_dist:
+                best_dist = dist
+                best_index = index
+        return best_index
     return 0
 
 

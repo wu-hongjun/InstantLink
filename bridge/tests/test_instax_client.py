@@ -299,6 +299,7 @@ async def test_print_file_to_printer_reuses_cached_session_without_reconnecting(
         fit: FitMode,
         quality: int,
         edit: PrintEdit | None,
+        adjustments: object = None,
         timeout_s: float | None,
     ) -> PreparedImage:
         assert source_path == image_path

@@ -117,6 +117,7 @@ def prepare_for_instax(
     fit: FitMode = FitMode.AUTO,
     quality: int = 100,
     edit: PrintEdit | None = None,
+    adjustments: AdjustmentProfile | None = None,
 ) -> PreparedImage:
     """Convert a camera still image into a model-specific Instax JPEG."""
 
@@ -126,6 +127,7 @@ def prepare_for_instax(
         fit=fit,
         quality=quality,
         edit=edit,
+        adjustments=adjustments,
         apply_model_flip=True,
     )
 
@@ -137,6 +139,7 @@ def prepare_for_instantlink_backend(
     fit: FitMode = FitMode.AUTO,
     quality: int = 100,
     edit: PrintEdit | None = None,
+    adjustments: AdjustmentProfile | None = None,
 ) -> PreparedImage:
     """Prepare an edited, model-sized JPEG for InstantLink to send.
 
@@ -152,6 +155,7 @@ def prepare_for_instantlink_backend(
         fit=fit,
         quality=quality,
         edit=edit,
+        adjustments=adjustments,
         apply_model_flip=False,
     )
 
@@ -163,6 +167,7 @@ def _prepare_for_model(
     fit: FitMode,
     quality: int,
     edit: PrintEdit | None,
+    adjustments: AdjustmentProfile | None,
     apply_model_flip: bool,
 ) -> PreparedImage:
     """Prepare a source image for the given printer model.
@@ -197,7 +202,8 @@ def _prepare_for_model(
         if transposed is None:
             transposed = image.copy()
         prepared = transposed.convert("RGB")
-        prepared = apply_adjustments(prepared, AdjustmentProfile())
+        profile = adjustments if adjustments is not None else AdjustmentProfile()
+        prepared = apply_adjustments(prepared, profile)
         prepared = _apply_print_edit(prepared, edit)
         fitted = _fit_image(prepared, spec.width, spec.height, fit)
     except IMAGE_DECODE_ERRORS as error:

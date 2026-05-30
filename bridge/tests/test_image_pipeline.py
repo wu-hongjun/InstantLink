@@ -378,7 +378,7 @@ def test_raw_large_fallback_rejects_before_postprocess(
 
 def test_identity_profile_does_not_change_pipeline_output(source_jpeg: Path) -> None:
     """Integration: calling prepare_for_instax twice with an identity profile
-    (the only profile wired in phase 2) must produce byte-identical output."""
+    must produce byte-identical output."""
     first = prepare_for_instax(source_jpeg, PrinterModel.MINI, fit=FitMode.CROP, quality=95)
     second = prepare_for_instax(source_jpeg, PrinterModel.MINI, fit=FitMode.CROP, quality=95)
     assert first.data == second.data
@@ -386,7 +386,7 @@ def test_identity_profile_does_not_change_pipeline_output(source_jpeg: Path) -> 
 
 def test_apply_adjustments_identity_does_not_alter_pixels(source_jpeg: Path) -> None:
     """Integration: apply_adjustments with a default profile leaves pixel data
-    unchanged — the postprocess stage is truly a no-op for phase 2."""
+    unchanged — the postprocess stage is a no-op for the identity profile."""
     from PIL import Image as _Image
 
     with _Image.open(source_jpeg) as raw_img:
@@ -394,3 +394,27 @@ def test_apply_adjustments_identity_does_not_alter_pixels(source_jpeg: Path) -> 
 
     result = apply_adjustments(rgb, AdjustmentProfile())
     assert result is rgb
+
+
+def test_non_identity_adjustments_change_pipeline_output(source_jpeg: Path) -> None:
+    """Integration (phase 3): a BridgeConfig with non-default adjustments produces
+    output bytes that differ from the identity-profile output for the same fixture."""
+    from instantlink_bridge.config import AdjustmentsConfig
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
+    identity = prepare_for_instax(
+        source_jpeg,
+        PrinterModel.MINI,
+        fit=FitMode.CROP,
+        quality=95,
+        adjustments=AdjustmentProfile(),
+    )
+    # Saturation=2.0 is a visible change on the non-grey fixture (20, 90, 160).
+    adjusted = prepare_for_instax(
+        source_jpeg,
+        PrinterModel.MINI,
+        fit=FitMode.CROP,
+        quality=95,
+        adjustments=AdjustmentProfile.from_config(AdjustmentsConfig(saturation=100)),
+    )
+    assert identity.data != adjusted.data, "Expected adjusted output to differ from identity output"

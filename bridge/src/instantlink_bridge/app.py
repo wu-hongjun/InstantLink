@@ -615,6 +615,9 @@ async def send_print_to_printer(
 ) -> None:
     """Print a received file through the model-detecting BLE path."""
 
+    from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
+    adjustments = AdjustmentProfile.from_config(config.adjustments)
     if instantlink_backend_enabled():
         await print_file_to_printer_instantlink(
             printer.address,
@@ -626,6 +629,7 @@ async def send_print_to_printer(
             print_option=config.printer.print_option,
             model=config.printer.model,
             progress=progress,
+            adjustments=adjustments,
         )
     else:
         await print_file_to_printer_bleak(
@@ -638,6 +642,7 @@ async def send_print_to_printer(
             print_option=config.printer.print_option,
             model=config.printer.model,
             progress=progress,
+            adjustments=adjustments,
         )
 
 

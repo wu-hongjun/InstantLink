@@ -71,6 +71,7 @@ from instantlink_bridge.ui.settings import (
     bool_label,
     config_with_setting_value,
     fit_label,
+    format_int_with_sign,
     ftp_receive_mode_label,
     language_label,
     model_label,
@@ -557,12 +558,15 @@ class BridgeUi:
         model = await self._resolve_printer_model_for_preview()
         if model is None:
             raise ImagePipelineError("printer type unknown")
+        from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+
         prepared = await prepare_for_instax_async(
             received.path,
             model,
             fit=self._config.printer.fit,
             quality=self._config.printer.quality,
             edit=edit,
+            adjustments=AdjustmentProfile.from_config(self._config.adjustments),
             timeout_s=PREVIEW_BUILD_TIMEOUT_S,
         )
         return await asyncio.to_thread(create_preview_from_prepared, prepared)
@@ -1604,6 +1608,18 @@ class BridgeUi:
             return SettingsRow("Auto print", "")
         if key is SettingKey.ADJUSTMENTS_COMING_SOON:
             return SettingsRow("Coming soon", "")
+        if key is SettingKey.ADJUST_SATURATION:
+            adj = self._config.adjustments
+            return SettingsRow("Saturation", format_int_with_sign(adj.saturation))
+        if key is SettingKey.ADJUST_EXPOSURE:
+            adj = self._config.adjustments
+            return SettingsRow("Exposure", format_int_with_sign(adj.exposure))
+        if key is SettingKey.ADJUST_SHARPNESS:
+            adj = self._config.adjustments
+            return SettingsRow("Sharpness", format_int_with_sign(adj.sharpness))
+        if key is SettingKey.ADJUST_HUE:
+            adj = self._config.adjustments
+            return SettingsRow("Hue", format_int_with_sign(adj.hue))
         if key is SettingKey.PRINTER_SERIAL_INFO:
             # Strip the verbose "INSTAX-" prefix so the saved serial fits on
             # one row without clipping. When nothing is paired the row reads

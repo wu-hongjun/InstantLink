@@ -20,6 +20,7 @@ from instantlink_bridge.imaging.pipeline import (
     UnsupportedImageError,
     prepare_for_instax,
 )
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 
 
 class ImageWorkerError(ImagePipelineError):
@@ -39,6 +40,7 @@ class ImagePreparationRequest:
     fit: FitMode = FitMode.AUTO
     quality: int = 100
     edit: PrintEdit | None = None
+    adjustments: AdjustmentProfile | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +131,7 @@ class ImagePreparationWorker:
         fit: FitMode = FitMode.AUTO,
         quality: int = 100,
         edit: PrintEdit | None = None,
+        adjustments: AdjustmentProfile | None = None,
         timeout_s: float | None = None,
     ) -> PreparedImage:
         """Prepare an image asynchronously in a killable worker process."""
@@ -139,6 +142,7 @@ class ImagePreparationWorker:
             fit=fit,
             quality=quality,
             edit=edit,
+            adjustments=adjustments,
         )
         async with self._lock:
             if self._termination_failed:
@@ -281,6 +285,7 @@ async def prepare_for_instax_async(
     fit: FitMode = FitMode.AUTO,
     quality: int = 100,
     edit: PrintEdit | None = None,
+    adjustments: AdjustmentProfile | None = None,
     timeout_s: float | None = None,
     worker: ImagePreparationWorker | None = None,
 ) -> PreparedImage:
@@ -293,6 +298,7 @@ async def prepare_for_instax_async(
         fit=fit,
         quality=quality,
         edit=edit,
+        adjustments=adjustments,
         timeout_s=timeout_s,
     )
 
@@ -322,6 +328,7 @@ def _run_prepare_in_child(
             fit=request.fit,
             quality=request.quality,
             edit=request.edit,
+            adjustments=request.adjustments,
         )
         result_writer.send(_PreparedImageResult(prepared))
     except ImageTooLargeError as error:

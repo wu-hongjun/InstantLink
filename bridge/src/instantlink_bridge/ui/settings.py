@@ -27,8 +27,14 @@ class SettingKey(StrEnum):
     OPEN_ADJUSTMENTS = "open_adjustments"
     OPEN_TRANSFORM = "open_transform"
     OPEN_AUTO_PRINT = "open_auto_print"
-    # Adjustments sub-page placeholder (phase 1 only — replaced by real rows in phase 3).
+    # Adjustments sub-page placeholder (phase 1 only; kept for back-compat but no
+    # longer surfaced in any page — replaced by the four real rows below).
     ADJUSTMENTS_COMING_SOON = "adjustments_coming_soon"
+    # Adjustments sub-page rows (plan 035 phase 3).
+    ADJUST_SATURATION = "adjust_saturation"
+    ADJUST_EXPOSURE = "adjust_exposure"
+    ADJUST_SHARPNESS = "adjust_sharpness"
+    ADJUST_HUE = "adjust_hue"
     FTP_RECEIVE_MODE = "ftp_receive_mode"
     PAIR_PRINTER = "pair_printer"
     FTP_MODE_INFO = "ftp_mode_info"
@@ -143,8 +149,13 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.FORGET_PRINTER,
         SettingKey.PRINTER_MODEL,
     ),
-    # ADJUSTMENTS: placeholder until phases 3–4 add colour controls.
-    SettingsPage.ADJUSTMENTS: (SettingKey.ADJUSTMENTS_COMING_SOON,),
+    # ADJUSTMENTS: four colour/tone adjustment knobs (plan 035 phase 3).
+    SettingsPage.ADJUSTMENTS: (
+        SettingKey.ADJUST_SATURATION,
+        SettingKey.ADJUST_EXPOSURE,
+        SettingKey.ADJUST_SHARPNESS,
+        SettingKey.ADJUST_HUE,
+    ),
     # TRANSFORM: image-fit mode and JPEG encode quality.
     SettingsPage.TRANSFORM: (
         SettingKey.IMAGE_FIT,
@@ -267,8 +278,6 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.SYSTEM_POWER_INFO,
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_INFO,
-        # Adjustments sub-page placeholder (plan 035 phase 1).
-        SettingKey.ADJUSTMENTS_COMING_SOON,
     }
 )
 
@@ -297,11 +306,27 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
         SettingKey.APPEARANCE,
+        # Adjustments sub-page pickers (plan 035 phase 3).
+        SettingKey.ADJUST_SATURATION,
+        SettingKey.ADJUST_EXPOSURE,
+        SettingKey.ADJUST_SHARPNESS,
+        SettingKey.ADJUST_HUE,
     }
 )
 
 HANDLED_SETTING_KEYS: frozenset[SettingKey] = (
     frozenset(PAGE_FOR_OPEN_KEY) | INFO_SETTING_KEYS | ACTION_SETTING_KEYS | ADJUSTABLE_SETTING_KEYS
+)
+
+# Five-position discrete picker for all four colour adjustment axes.
+# Labels use the Unicode minus sign (U+2212) for negative values and a
+# leading "+" for positive values; zero has no sign.
+ADJUSTMENT_OPTIONS: tuple[SettingOption, ...] = (
+    SettingOption("−100", -100),
+    SettingOption("−50", -50),
+    SettingOption("0", 0),
+    SettingOption("+50", 50),
+    SettingOption("+100", 100),
 )
 
 MODEL_OPTIONS: tuple[PrinterModel | None, ...] = (
@@ -357,8 +382,13 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_ADJUSTMENTS: "Colour and overlay adjustments",
     SettingKey.OPEN_TRANSFORM: "Fit-to-film and JPEG quality",
     SettingKey.OPEN_AUTO_PRINT: "Auto-print delay and connection knobs",
-    # Adjustments placeholder help (phase 1 only — replaced by real copy in phase 3).
+    # Adjustments placeholder help (phase 1 only — no longer surfaced in any page).
     SettingKey.ADJUSTMENTS_COMING_SOON: "Saturation, exposure, sharpness coming in v2",
+    # Adjustments sub-page rows (plan 035 phase 3).
+    SettingKey.ADJUST_SATURATION: "Colour intensity. Negative dulls, positive boosts",
+    SettingKey.ADJUST_EXPOSURE: "Brightness in EV stops. ±100 = ±1 EV",
+    SettingKey.ADJUST_SHARPNESS: "Edge contrast. Negative softens, positive crisps",
+    SettingKey.ADJUST_HUE: "Hue rotation in degrees. ±100 = ±180°",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
@@ -448,6 +478,13 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(SettingOption(language_label(value), value) for value in LANGUAGE_OPTIONS)
     if key is SettingKey.APPEARANCE:
         return tuple(SettingOption(appearance_label(value), value) for value in APPEARANCE_OPTIONS)
+    if key in {
+        SettingKey.ADJUST_SATURATION,
+        SettingKey.ADJUST_EXPOSURE,
+        SettingKey.ADJUST_SHARPNESS,
+        SettingKey.ADJUST_HUE,
+    }:
+        return ADJUSTMENT_OPTIONS
     return ()
 
 
@@ -499,6 +536,14 @@ def config_with_setting_value(
         return replace(config, ui=replace(config.ui, language=value))
     if key is SettingKey.APPEARANCE and isinstance(value, UiAppearance):
         return replace(config, ui=replace(config.ui, appearance=value))
+    if key is SettingKey.ADJUST_SATURATION and isinstance(value, int):
+        return replace(config, adjustments=replace(config.adjustments, saturation=value))
+    if key is SettingKey.ADJUST_EXPOSURE and isinstance(value, int):
+        return replace(config, adjustments=replace(config.adjustments, exposure=value))
+    if key is SettingKey.ADJUST_SHARPNESS and isinstance(value, int):
+        return replace(config, adjustments=replace(config.adjustments, sharpness=value))
+    if key is SettingKey.ADJUST_HUE and isinstance(value, int):
+        return replace(config, adjustments=replace(config.adjustments, hue=value))
     return config
 
 
@@ -579,7 +624,30 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.ui.language
     if key is SettingKey.APPEARANCE:
         return config.ui.appearance
+    if key is SettingKey.ADJUST_SATURATION:
+        return config.adjustments.saturation
+    if key is SettingKey.ADJUST_EXPOSURE:
+        return config.adjustments.exposure
+    if key is SettingKey.ADJUST_SHARPNESS:
+        return config.adjustments.sharpness
+    if key is SettingKey.ADJUST_HUE:
+        return config.adjustments.hue
     return None
+
+
+def format_int_with_sign(value: int) -> str:
+    """Format an integer with an explicit sign for non-zero values.
+
+    Zero is returned as ``"0"`` (no sign). Positive values are prefixed
+    with ``"+"``; negative values use the Unicode minus sign (U+2212) to
+    match the picker labels in ``ADJUSTMENT_OPTIONS``.
+    """
+    if value == 0:
+        return "0"
+    if value > 0:
+        return f"+{value}"
+    # Use the Unicode minus sign (U+2212) to match the picker labels.
+    return f"−{abs(value)}"
 
 
 def appearance_label(appearance: UiAppearance) -> str:

@@ -37,6 +37,7 @@ from instantlink_bridge.imaging.pipeline import (
     PrintEdit,
     prepare_for_instantlink_backend,
 )
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
 
 LOGGER = logging.getLogger(__name__)
@@ -201,6 +202,7 @@ async def print_file_to_printer(
     print_option: int = 0,
     model: PrinterModel | None = None,
     progress: PrintProgressCallback | None = None,
+    adjustments: AdjustmentProfile | None = None,
 ) -> None:
     """Print a file through InstantLink's Rust transport."""
 
@@ -214,6 +216,7 @@ async def print_file_to_printer(
         print_option=print_option,
         model_override=model,
         progress=progress,
+        adjustments=adjustments,
     )
 
 
@@ -260,6 +263,7 @@ class InstantLinkBackend:
         print_option: int = 0,
         model_override: PrinterModel | None = None,
         progress: PrintProgressCallback | None = None,
+        adjustments: AdjustmentProfile | None = None,
     ) -> None:
         """Prepare an edited image and send it through InstantLink."""
 
@@ -275,6 +279,7 @@ class InstantLinkBackend:
                 print_option,
                 model_override,
                 progress,
+                adjustments,
             ),
         )
 
@@ -471,6 +476,7 @@ class InstantLinkBackend:
         print_option: int,
         model_override: PrinterModel | None,
         progress: PrintProgressCallback | None,
+        adjustments: AdjustmentProfile | None = None,
     ) -> None:
         _emit_progress(
             progress,
@@ -492,6 +498,7 @@ class InstantLinkBackend:
                 fit=fit,
                 quality=quality,
                 edit=edit,
+                adjustments=adjustments,
             )
         except ImagePipelineError:
             raise

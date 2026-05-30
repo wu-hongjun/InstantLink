@@ -345,6 +345,39 @@ class FirmwareUpdateConfig:
     trusted_public_keys: tuple[FirmwareTrustedPublicKeyConfig, ...] = ()
 
 
+_ADJUSTMENT_VALID_VALUES: frozenset[int] = frozenset({-100, -50, 0, 50, 100})
+
+
+@dataclass(frozen=True, slots=True)
+class AdjustmentsConfig:
+    """Colour-adjustment settings.
+
+    All values must be one of {-100, -50, 0, 50, 100}. Zero is the
+    identity for every axis — no adjustments applied.
+    """
+
+    saturation: int = 0
+    """Colour intensity. -100 = greyscale, 0 = unchanged, +100 = double."""
+
+    exposure: int = 0
+    """Brightness in EV stops. -100 ≈ -1 EV (0.5×), +100 ≈ +1 EV (2×)."""
+
+    sharpness: int = 0
+    """Edge contrast. -100 = blurred, 0 = unchanged, +100 = double."""
+
+    hue: int = 0
+    """Hue rotation. -100 = -180 deg, 0 = unchanged, +100 = +180 deg."""
+
+    def __post_init__(self) -> None:
+        for field_name in ("saturation", "exposure", "sharpness", "hue"):
+            value = getattr(self, field_name)
+            if value not in _ADJUSTMENT_VALID_VALUES:
+                raise ValueError(
+                    f"[adjustments].{field_name} must be one of "
+                    f"{sorted(_ADJUSTMENT_VALID_VALUES)}; got {value!r}"
+                )
+
+
 @dataclass(frozen=True, slots=True)
 class BridgeConfig:
     """Top-level bridge configuration."""
@@ -355,6 +388,7 @@ class BridgeConfig:
     power: PowerConfig = PowerConfig()
     firmware: FirmwareUpdateConfig = FirmwareUpdateConfig()
     ui: UiConfig = UiConfig()
+    adjustments: AdjustmentsConfig = AdjustmentsConfig()
 
 
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
@@ -370,6 +404,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
         power=_load_power_config(data.get("power", {})),
         firmware=_load_firmware_config(data.get("firmware", {})),
         ui=_load_ui_config(data.get("ui", {})),
+        adjustments=_load_adjustments_config(data.get("adjustments", {})),
     )
 
 
@@ -465,6 +500,12 @@ def render_config(config: BridgeConfig) -> str:
             f"status_sink = {_toml_string(config.ui.status_sink.value)}",
             f"language = {_toml_string(config.ui.language.value)}",
             f"appearance = {_toml_string(config.ui.appearance.value)}",
+            "",
+            "[adjustments]",
+            f"saturation = {config.adjustments.saturation}",
+            f"exposure = {config.adjustments.exposure}",
+            f"sharpness = {config.adjustments.sharpness}",
+            f"hue = {config.adjustments.hue}",
             "",
         ]
     )
@@ -604,6 +645,27 @@ def _load_firmware_config(data: object) -> FirmwareUpdateConfig:
         records.append(FirmwareTrustedPublicKeyConfig(key_id=key_id, public_key=public_key))
 
     return FirmwareUpdateConfig(trusted_public_keys=tuple(records))
+
+
+def _load_adjustments_config(data: object) -> AdjustmentsConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[adjustments] must be a TOML table")
+    return AdjustmentsConfig(
+        saturation=_adjustment_int(data.get("saturation", 0), "[adjustments].saturation"),
+        exposure=_adjustment_int(data.get("exposure", 0), "[adjustments].exposure"),
+        sharpness=_adjustment_int(data.get("sharpness", 0), "[adjustments].sharpness"),
+        hue=_adjustment_int(data.get("hue", 0), "[adjustments].hue"),
+    )
+
+
+def _adjustment_int(value: object, field_name: str) -> int:
+    if not isinstance(value, int):
+        raise ValueError(f"{field_name} must be an integer")
+    if value not in _ADJUSTMENT_VALID_VALUES:
+        raise ValueError(
+            f"{field_name} must be one of {sorted(_ADJUSTMENT_VALID_VALUES)}; got {value!r}"
+        )
+    return value
 
 
 def _load_ui_config(data: object) -> UiConfig:

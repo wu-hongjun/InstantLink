@@ -55,6 +55,7 @@ allowed-confusables = [
     "≈",  # ALMOST EQUAL TO          — approximations in docstrings
     "—",  # EM DASH                  — typographic dash in prose
     "–",  # EN DASH                  — ranges ("07–19")
+    "−",  # MINUS SIGN               — signed integer UI labels ("−100", "−50")
     "›",  # SINGLE RIGHT GUILLEMET   — iOS-style settings disclosure chevron
     "…",  # HORIZONTAL ELLIPSIS      — typographic ellipsis
     "·",  # MIDDLE DOT               — inline divider / list separator

@@ -16,6 +16,7 @@ from instantlink_bridge.ble.instax import InstaxProtocolClient
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.ble.session import InstaxBleSessionManager, PrinterEndpoint
 from instantlink_bridge.imaging.pipeline import FitMode, PrintEdit
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 from instantlink_bridge.imaging.worker import prepare_for_instax_async
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
 
@@ -306,6 +307,7 @@ async def print_file_to_printer(
     print_option: int = 0,
     model: PrinterModel | None = None,
     progress: PrintProgressCallback | None = None,
+    adjustments: AdjustmentProfile | None = None,
     session_manager: InstaxBleSessionManager[ConnectedInstaxPrinter] | None = None,
 ) -> None:
     """Connect, prepare for the detected model, print, and disconnect."""
@@ -337,6 +339,7 @@ async def print_file_to_printer(
             fit=fit,
             quality=quality,
             edit=edit,
+            adjustments=adjustments,
             timeout_s=IMAGE_PREP_TIMEOUT_S,
         )
         LOGGER.info(

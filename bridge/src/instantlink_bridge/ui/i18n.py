@@ -350,6 +350,17 @@ _ZH_HANS: dict[str, str] = {
     "see Network": "见网络",
     # --- Section-divider row labels (plan 034 items 9 and 18) ------------
     "Diagnostics": "诊断",
+    # --- Adjustments sub-page row labels (plan 035 phase 3) --------------
+    # Voice: Apple iOS Photos app (色彩, 饱和度, 曝光, 锐度, 色相).
+    "Saturation": "饱和度",
+    "Exposure": "曝光",
+    "Sharpness": "锐度",
+    "Hue": "色相",
+    # Help strings — iOS Photos-voice, sentence case, Arabic numerals.
+    "Colour intensity. Negative dulls, positive boosts": "色彩强度。负值降低，正值增强",
+    "Brightness in EV stops. ±100 = ±1 EV": "亮度（EV 档）。±100 = ±1 EV",
+    "Edge contrast. Negative softens, positive crisps": "边缘对比度。负值柔化，正值锐化",
+    "Hue rotation in degrees. ±100 = ±180°": "色相旋转角度。±100 = ±180°",
     # --- Misc short LCD copy ---------------------------------------------
     "Advanced Same-Wi-Fi status": "高级同 Wi-Fi 状态",
     "Allow 10 min idle shutdown": "允许 10 分钟空闲关机",

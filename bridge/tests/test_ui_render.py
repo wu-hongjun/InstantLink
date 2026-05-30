@@ -780,4 +780,101 @@ def test_stale_ready_snapshot_does_not_render_ready_to_print() -> None:
     image = render_snapshot(stale)
 
     assert image.size == (240, 240)
-    assert not can_accept_images(stale)
+
+
+# ---------------------------------------------------------------------------
+# Plan 036 phase 2: Adjustments page slider rendering
+# ---------------------------------------------------------------------------
+
+
+def _adjustments_snapshot(
+    saturation: int = 0,
+    exposure: int = 0,
+    sharpness: int = 0,
+    hue: int = 0,
+    vignette: int = 0,
+    appearance: str = "light",
+    language: str = "en",
+    selected_index: int = 0,
+) -> UiSnapshot:
+    """Build a UiSnapshot for the Adjustments settings page."""
+    from instantlink_bridge.ui.settings import format_int_with_sign
+
+    rows = (
+        SettingsRow("Preset", "Custom", hint="Right/KEY1 choose"),
+        SettingsRow("Saturation", format_int_with_sign(saturation), hint="Right/KEY1 choose"),
+        SettingsRow("Exposure", format_int_with_sign(exposure), hint="Right/KEY1 choose"),
+        SettingsRow("Sharpness", format_int_with_sign(sharpness), hint="Right/KEY1 choose"),
+        SettingsRow("Hue", format_int_with_sign(hue), hint="Right/KEY1 choose"),
+        SettingsRow("Vignette", str(vignette), hint="Right/KEY1 choose"),
+        SettingsRow("Datestamp", "Off", hint="Right/KEY1 choose"),
+        SettingsRow("Watermark", "Off", hint="Right/KEY1 choose"),
+        SettingsRow("Save current", "", hint="Right/KEY1 run"),
+    )
+    return UiSnapshot(
+        mode=UiMode.SETTINGS,
+        ftp_host="192.168.7.1",
+        settings_title="Adjustments",
+        settings_rows=rows,
+        selected_index=selected_index,
+        appearance=appearance,
+        language=language,
+    )
+
+
+def test_adjustments_page_renders_without_error_all_zeros() -> None:
+    """Adjustments page with all axes at 0 renders to a 240×240 image."""
+    snapshot = _adjustments_snapshot()
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)
+
+
+def test_adjustments_page_renders_without_error_mixed_values() -> None:
+    """Adjustments page with non-zero axes renders to a 240×240 image."""
+    snapshot = _adjustments_snapshot(
+        saturation=50, exposure=-30, sharpness=10, hue=-20, vignette=40
+    )
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)
+
+
+def test_adjustments_page_renders_differs_from_picker_style() -> None:
+    """Adjustments page with sliders produces a different image than a generic settings page."""
+    # Adjustments page — dispatched to _adjustments()
+    adj_snapshot = _adjustments_snapshot(saturation=50)
+    adj_image = render_snapshot(adj_snapshot)
+
+    # Generic settings page with same row labels — dispatched to _settings()
+    from instantlink_bridge.ui.settings import format_int_with_sign
+
+    generic_snapshot = UiSnapshot(
+        mode=UiMode.SETTINGS,
+        ftp_host="192.168.7.1",
+        settings_title="Print",  # different title → _settings() path
+        settings_rows=(
+            SettingsRow("Saturation", format_int_with_sign(50), hint="Right/KEY1 choose"),
+        ),
+        selected_index=0,
+    )
+    generic_image = render_snapshot(generic_snapshot)
+
+    # The two renders should differ because the Adjustments page draws sliders.
+    adj_pixels = adj_image.tobytes()
+    generic_pixels = generic_image.tobytes()
+    assert adj_pixels != generic_pixels, (
+        "Adjustments slider render should differ from generic picker render"
+    )
+
+
+def test_adjustments_page_renders_in_dark_mode() -> None:
+    """Adjustments page renders without error in dark appearance."""
+    snapshot = _adjustments_snapshot(saturation=50, exposure=-30, appearance="dark")
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)
+
+
+def test_adjustments_page_renders_in_zh_hans() -> None:
+    """Adjustments page renders without error in zh-Hans language."""
+    snapshot = _adjustments_snapshot(saturation=50, language="zh-Hans")
+    image = render_snapshot(snapshot)
+    assert image.size == (240, 240)

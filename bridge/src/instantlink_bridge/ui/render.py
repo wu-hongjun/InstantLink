@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.ui.i18n import t
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
+from instantlink_bridge.ui.settings import format_int_with_sign
 from instantlink_bridge.ui.status_indicator import StatusState, derive_status
 from instantlink_bridge.ui.theme import Theme, theme_for
 
@@ -125,7 +126,10 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
     if snapshot.mode is UiMode.READY:
         _ready(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.SETTINGS:
-        _settings(draw, snapshot, fonts, theme)
+        if snapshot.settings_title == "Adjustments":
+            _adjustments(draw, snapshot, fonts, theme)
+        else:
+            _settings(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.VALIDATION:
         _validation(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.NO_FILM:
@@ -245,6 +249,106 @@ def draw_hairline(
 ) -> None:
     """Draw a 1 px horizontal separator line."""
     draw.line((x, y, x + w, y), fill=theme.separator, width=1)
+
+
+def draw_slider(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    w: int,
+    value: int,
+    min_value: int,
+    max_value: int,
+    *,
+    theme: Theme,
+    track_height: int = 6,
+    thumb_width: int = 8,
+    thumb_height: int = 12,
+    symmetric: bool = True,
+) -> int:
+    """Draw a horizontal slider track + filled region + thumb.
+
+    Returns the pixel x-coordinate of the thumb centre.
+
+    Track colour: ``theme.surface_elevated``.
+    Fill colour: ``theme.accent_blue``.
+    Thumb fill: ``theme.label_inverse``; 1 px outline ``theme.separator``.
+    Zero-line marker (symmetric mode, value != 0): ``theme.separator``.
+    """
+    # Edge case: degenerate range — draw thumb centred, skip fill.
+    if min_value == max_value:
+        thumb_cx = x + w // 2
+        _draw_slider_thumb(draw, thumb_cx, y, track_height, thumb_width, thumb_height, theme)
+        return thumb_cx
+
+    # Track
+    track_radius = track_height // 2
+    draw.rounded_rectangle(
+        (x, y, x + w, y + track_height),
+        radius=track_radius,
+        fill=theme.surface_elevated,
+    )
+
+    # Thumb position (clamped so the thumb never exits the track ends)
+    raw_cx = x + int(w * (value - min_value) / (max_value - min_value))
+    thumb_cx = max(x + thumb_width // 2, min(x + w - thumb_width // 2, raw_cx))
+
+    # Fill region
+    if symmetric:
+        zero_x = x + int(w * (0 - min_value) / (max_value - min_value))
+        if value > 0:
+            draw.rectangle(
+                (zero_x, y, thumb_cx, y + track_height),
+                fill=theme.accent_blue,
+            )
+        elif value < 0:
+            draw.rectangle(
+                (thumb_cx, y, zero_x, y + track_height),
+                fill=theme.accent_blue,
+            )
+        # Zero-line marker when value != 0
+        if value != 0:
+            draw.line(
+                (zero_x, y - 2, zero_x, y + track_height + 2),
+                fill=theme.separator,
+                width=1,
+            )
+    else:
+        # Asymmetric: fill from left edge to thumb
+        if thumb_cx > x:
+            draw.rectangle(
+                (x, y, thumb_cx, y + track_height),
+                fill=theme.accent_blue,
+            )
+
+    # Thumb
+    _draw_slider_thumb(draw, thumb_cx, y, track_height, thumb_width, thumb_height, theme)
+
+    return thumb_cx
+
+
+def _draw_slider_thumb(
+    draw: ImageDraw.ImageDraw,
+    thumb_cx: int,
+    track_y: int,
+    track_height: int,
+    thumb_width: int,
+    thumb_height: int,
+    theme: Theme,
+) -> None:
+    """Draw the slider thumb centred vertically on the track."""
+    track_cy = track_y + track_height // 2
+    tx0 = thumb_cx - thumb_width // 2
+    ty0 = track_cy - thumb_height // 2
+    tx1 = tx0 + thumb_width
+    ty1 = ty0 + thumb_height
+    draw.rounded_rectangle(
+        (tx0, ty0, tx1, ty1),
+        radius=4,
+        fill=theme.label_inverse,
+        outline=theme.separator,
+        width=1,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1352,6 +1456,279 @@ def _settings(
         lines = _wrap_two_lines(draw, bottom_text, font, max_w)
         for i, line in enumerate(lines):
             _text(draw, 16, bottom_y + i * 12, line, font, bottom_color)
+
+
+# ---------------------------------------------------------------------------
+# Adjustments page — dedicated renderer (plan 036 phase 2, Option A)
+# ---------------------------------------------------------------------------
+
+# Rows rendered as sliders (label as stored in SettingsRow.label).
+# Preset + Save keep the picker-style chevron; Datestamp + Watermark get
+# a plain label + On/Off value; all others become slider rows.
+_SLIDER_ROW_LABELS: frozenset[str] = frozenset(
+    {"Saturation", "Exposure", "Sharpness", "Hue", "Vignette"}
+)
+_TOGGLE_ROW_LABELS: frozenset[str] = frozenset({"Datestamp", "Watermark"})
+_PICKER_ROW_LABELS: frozenset[str] = frozenset({"Preset", "Save current"})
+
+# Slider range per label.  Vignette is [0, 100] (asymmetric); all colour
+# axes are [-100, +100] (symmetric).
+_SLIDER_RANGE: dict[str, tuple[int, int]] = {
+    "Saturation": (-100, 100),
+    "Exposure": (-100, 100),
+    "Sharpness": (-100, 100),
+    "Hue": (-100, 100),
+    "Vignette": (0, 100),
+}
+
+# Slider track width and x-origin on the Adjustments page.
+# LCD is 240 px.  Label zone: x=18 .. ~96 (78 px).  Slider zone: 100..200
+# (100 px wide) leaving 40 px right-margin for the value label.
+_ADJ_SLIDER_X = 100
+_ADJ_SLIDER_W = 100
+
+
+def _adjustments(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+    theme: Theme,
+) -> None:
+    """Render the Adjustments settings page with slider rows.
+
+    Dispatched from ``render_snapshot`` when ``snapshot.settings_title``
+    is ``"Adjustments"``.  Replaces the generic ``_settings`` renderer for
+    this page so that:
+
+    - Saturation / Exposure / Sharpness / Hue → slider row (symmetric).
+    - Vignette → slider row (asymmetric, [0, 100]).
+    - Datestamp / Watermark → label + On/Off value (no slider, no chevron).
+    - Preset / Save current → existing picker-style row (chevron retained).
+
+    Phase 3 will add an 88 × 88 example-photo preview on the left; for now
+    the left zone intentionally reads as WIP (no content drawn there).
+    """
+
+    rows = snapshot.settings_rows
+    lang = snapshot.language
+    font = fonts["small"]
+    font_scale, row_scale = _scale_for_snapshot(snapshot)
+    marker_font = _font(max(1, round(_BASE_FONTS["body"] * font_scale)), prefer_cjk=False)
+
+    if not rows:
+        _text(draw, 18, 58, t("No settings available", lang), fonts["body"], theme.label_primary)
+        draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
+        return
+
+    row_height = max(1, round(_BASE_ROW_HEIGHT * row_scale))
+
+    selected = min(snapshot.selected_index, len(rows) - 1)
+    selected_row = rows[selected]
+
+    # Toast / help strip (same logic as _settings)
+    toast_message = snapshot.settings_message
+    help_text = selected_row.help if selected_row.help else ""
+    if toast_message is not None:
+        bottom_text = toast_message
+        if toast_message.startswith("Press KEY1 again"):
+            bottom_color = theme.accent_destructive
+        else:
+            bottom_color = theme.accent_yellow
+    elif help_text:
+        bottom_text = help_text
+        bottom_color = theme.label_secondary
+    else:
+        bottom_text = ""
+        bottom_color = theme.label_secondary
+    bottom_shown = bool(bottom_text)
+
+    card_top = STATUS_BAR_H + 2
+    card_bottom = (HINT_BAR_Y - 28) if bottom_shown else (HINT_BAR_Y - 4)
+    card_h = card_bottom - card_top
+    body_height = card_h - 8
+    visible_count = max(1, body_height // row_height)
+    start = min(max(0, selected - 4), max(0, len(rows) - visible_count))
+
+    draw_card(draw, 12, card_top, 216, card_h, theme)
+
+    for offset, row in enumerate(rows[start : start + visible_count]):
+        index = start + offset
+        row_y = card_top + 4 + offset * row_height
+        is_selected = index == selected
+        label_str = t(row.label, lang)
+        value_str = t(row.value, lang)
+
+        if row.label in _SLIDER_ROW_LABELS:
+            _draw_adjustments_slider_row(
+                draw,
+                row_y,
+                row_height,
+                label_str,
+                row.label,
+                value_str,
+                selected=is_selected,
+                font=font,
+                theme=theme,
+            )
+        elif row.label in _TOGGLE_ROW_LABELS:
+            _draw_adjustments_toggle_row(
+                draw,
+                row_y,
+                row_height,
+                label_str,
+                value_str,
+                selected=is_selected,
+                font=font,
+                theme=theme,
+            )
+        else:
+            # Preset, Save current — picker style with chevron
+            draw_settings_row(
+                draw,
+                row_y,
+                label_str,
+                value_str,
+                row.hint,
+                selected=is_selected,
+                font=font,
+                marker_font=marker_font,
+                theme=theme,
+                row_height=row_height,
+            )
+
+        if offset < visible_count - 1:
+            separator_y = row_y + row_height
+            draw_hairline(draw, 16, separator_y, 210, theme)
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
+
+    if bottom_shown:
+        bottom_text = t(bottom_text, snapshot.language)
+        bottom_y = card_bottom + 2
+        max_w = 240 - 32
+        lines = _wrap_two_lines(draw, bottom_text, font, max_w)
+        for i, line in enumerate(lines):
+            _text(draw, 16, bottom_y + i * 12, line, font, bottom_color)
+
+
+def _draw_adjustments_slider_row(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    row_height: int,
+    label_str: str,
+    label_key: str,
+    value_str: str,
+    *,
+    selected: bool,
+    font: Font,
+    theme: Theme,
+) -> None:
+    """Render a slider row on the Adjustments page.
+
+    Layout:
+    - Label zone: x=18 .. 96 (left-aligned, small font).
+    - Slider zone: x=_ADJ_SLIDER_X .. _ADJ_SLIDER_X + _ADJ_SLIDER_W.
+    - Value label drawn ABOVE the thumb (centred on thumb_cx).
+
+    Selected row shows an ``accent_blue`` rounded-rect highlight behind
+    the label zone only (the slider fill communicates value; a full-row
+    highlight would swamp it).
+    """
+
+    min_val, max_val = _SLIDER_RANGE.get(label_key, (-100, 100))
+    symmetric = min_val < 0
+
+    # Parse the numeric value from value_str (e.g. "+50", "-30", "40")
+    try:
+        numeric_value = int(value_str.lstrip("+"))
+    except ValueError:
+        numeric_value = 0
+
+    row_cy = y + row_height // 2
+
+    if selected:
+        # Highlight label zone
+        draw.rounded_rectangle(
+            (14, y, 96, y + row_height - 1),
+            radius=8,
+            fill=theme.accent_blue,
+        )
+        label_fill = theme.label_inverse
+    else:
+        label_fill = theme.label_primary
+
+    # Label (left zone, vertically centred on row)
+    label_max = 74  # x=18 to x=92
+    label_fitted = _fit_text_to_width(draw, label_str, font, label_max)
+    _text(draw, 18, y + 3, label_fitted, font, label_fill)
+
+    # Slider — centred vertically on the row
+    track_height = 6
+    slider_y = row_cy - track_height // 2
+    thumb_cx = draw_slider(
+        draw,
+        _ADJ_SLIDER_X,
+        slider_y,
+        _ADJ_SLIDER_W,
+        numeric_value,
+        min_val,
+        max_val,
+        theme=theme,
+        track_height=track_height,
+        symmetric=symmetric,
+    )
+
+    # Value label above the thumb (centred on thumb_cx)
+    if symmetric:
+        val_label = format_int_with_sign(numeric_value)
+    else:
+        val_label = str(numeric_value)
+    val_w = _text_width(draw, val_label, font)
+    val_x = thumb_cx - val_w // 2
+    # Clamp so it doesn't overflow card edges
+    val_x = max(14, min(val_x, 226 - val_w))
+    val_y = slider_y - 10
+    _text(draw, val_x, val_y, val_label, font, theme.label_secondary)
+
+
+def _draw_adjustments_toggle_row(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    row_height: int,
+    label_str: str,
+    value_str: str,
+    *,
+    selected: bool,
+    font: Font,
+    theme: Theme,
+) -> None:
+    """Render a Datestamp / Watermark toggle row (no slider, no chevron).
+
+    Label on the left; value on the right in ``accent_green`` when "On",
+    ``label_secondary`` when "Off".
+    """
+
+    if selected:
+        draw.rounded_rectangle(
+            (14, y, 226, y + row_height - 1),
+            radius=10,
+            fill=theme.accent_blue,
+        )
+        label_fill: str = theme.label_inverse
+        value_fill: str = theme.label_inverse
+    else:
+        label_fill = theme.label_primary
+        if value_str.lower() in ("on", "yes", "true"):
+            value_fill = theme.accent_green
+        else:
+            value_fill = theme.label_secondary
+
+    label_max = 94
+    _text(draw, 22, y + 3, _fit_text_to_width(draw, label_str, font, label_max), font, label_fill)
+
+    val_w = _text_width(draw, value_str, font)
+    _text(draw, 218 - val_w, y + 3, value_str, font, value_fill)
 
 
 def _pairing(

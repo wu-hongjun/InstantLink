@@ -1603,7 +1603,15 @@ def _adjustments(
         row_y = card_top + 4 + offset * row_height
         is_selected = index == selected
         label_str = t(row.label, lang)
-        value_str = t(row.value, lang)
+        # Preset row uses a trailing " *" to mark "modified from preset".
+        # The composite string ("Black & white *") has no i18n entry, so a
+        # naive t() falls through to English. Split + translate + re-append
+        # so the prefix picks up the locale (Black & white → 黑白) but the
+        # universal "*" marker still survives.
+        if row.value.endswith(" *"):
+            value_str = t(row.value[:-2], lang) + " *"
+        else:
+            value_str = t(row.value, lang)
 
         if row.label in _SLIDER_ROW_LABELS:
             _draw_adjustments_slider_row(
@@ -1615,6 +1623,7 @@ def _adjustments(
                 value_str,
                 selected=is_selected,
                 font=font,
+                marker_font=marker_font,
                 theme=theme,
             )
         elif row.label in _TOGGLE_ROW_LABELS:
@@ -1673,6 +1682,7 @@ def _draw_adjustments_slider_row(
     *,
     selected: bool,
     font: Font,
+    marker_font: Font,
     theme: Theme,
 ) -> None:
     """Render a full-width slider row on the Adjustments page.
@@ -1741,8 +1751,10 @@ def _draw_adjustments_slider_row(
     val_x = _ADJ_VALUE_X + max(0, (22 - val_w))  # right-justify in 22 px column
     _text(draw, val_x, y + 3, val_label, font, theme.label_secondary)
 
-    # Chevron always visible — "KEY1 opens edit mode" affordance
-    _text(draw, _ADJ_CHEVRON_X, y + 3, "›", font, chevron_fill)
+    # Chevron always visible — "KEY1 opens edit mode" affordance.
+    # Must use marker_font (Latin-only): the CJK fonts loaded in zh-Hans
+    # mode have no glyph for "›" U+203A and would tofu (□).
+    _text(draw, _ADJ_CHEVRON_X, y + 3, "›", marker_font, chevron_fill)
 
 
 def _draw_adjustments_toggle_row(

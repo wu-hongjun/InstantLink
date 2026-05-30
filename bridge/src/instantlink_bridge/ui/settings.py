@@ -78,6 +78,9 @@ class SettingKey(StrEnum):
     SYSTEM_OS_VERSION = "system_os_version"
     SYSTEM_POWER_INFO = "system_power_info"
     SYSTEM_BATTERY_INFO = "system_battery_info"
+    # Deprecated since plan 037 phase 1 — kept as an unused enum value for one
+    # release so any in-flight TOML/state references don't crash. No row
+    # surfaces this key anywhere; remove in a follow-up release.
     SYSTEM_IDLE_INFO = "system_idle_info"
     SYSTEM_IDLE_POWEROFF = "system_idle_poweroff"
     FONT_SIZE = "font_size"
@@ -218,7 +221,6 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     # versions/about behind a final chevron.
     SettingsPage.SYSTEM: (
         SettingKey.SYSTEM_BATTERY_INFO,
-        SettingKey.SYSTEM_IDLE_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
         SettingKey.REFRESH_STATUS,
         SettingKey.SYSTEM_PERSONALISATION_HEADER,
@@ -286,9 +288,6 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.NETWORK_HOTSPOT_SSID_INFO,
         SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
         SettingKey.NETWORK_BLUETOOTH_INFO,
-        SettingKey.NETWORK_DIAGNOSTICS_HEADER,
-        SettingKey.PRINT_ADVANCED_HEADER,
-        SettingKey.SYSTEM_PERSONALISATION_HEADER,
         SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.SYSTEM_DEVICE_ID,
         SettingKey.SYSTEM_APP_VERSION,
@@ -297,7 +296,18 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.SYSTEM_OS_VERSION,
         SettingKey.SYSTEM_POWER_INFO,
         SettingKey.SYSTEM_BATTERY_INFO,
-        SettingKey.SYSTEM_IDLE_INFO,
+    }
+)
+
+# Section header rows are visual dividers (plan 037 phase 1, #3 + #4): not
+# selectable via UP/DOWN, no-op on KEY1/RIGHT. The controller's nav loop skips
+# over these keys; ``_activate_setting`` returns early for them as a defensive
+# backstop.
+SECTION_HEADER_KEYS: frozenset[SettingKey] = frozenset(
+    {
+        SettingKey.NETWORK_DIAGNOSTICS_HEADER,
+        SettingKey.PRINT_ADVANCED_HEADER,
+        SettingKey.SYSTEM_PERSONALISATION_HEADER,
     }
 )
 
@@ -344,7 +354,11 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
 )
 
 HANDLED_SETTING_KEYS: frozenset[SettingKey] = (
-    frozenset(PAGE_FOR_OPEN_KEY) | INFO_SETTING_KEYS | ACTION_SETTING_KEYS | ADJUSTABLE_SETTING_KEYS
+    frozenset(PAGE_FOR_OPEN_KEY)
+    | INFO_SETTING_KEYS
+    | ACTION_SETTING_KEYS
+    | ADJUSTABLE_SETTING_KEYS
+    | SECTION_HEADER_KEYS
 )
 
 # Stable built-in preset names for the picker.  User custom slots are
@@ -439,6 +453,10 @@ def setting_action_hint(key: SettingKey) -> str:
         return "Right/KEY1 run"
     if key in ADJUSTABLE_SETTING_KEYS:
         return "Right/KEY1 choose"
+    if key in SECTION_HEADER_KEYS:
+        # Section dividers are not selectable; the nav loop should skip
+        # them. Surface a neutral hint as a defensive fallback.
+        return "Section header"
     return "Not implemented"
 
 
@@ -501,7 +519,6 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_OS_VERSION: "Operating system release",
     SettingKey.SYSTEM_POWER_INFO: "Bridge battery/UPS hardware (legacy)",
     SettingKey.SYSTEM_BATTERY_INFO: "Battery charge if telemetry available",
-    SettingKey.SYSTEM_IDLE_INFO: "Dim and screen-off timing",
     SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
     SettingKey.FONT_SIZE: "Screen text size",
     SettingKey.LANGUAGE: "Screen language (中文 / English)",

@@ -272,6 +272,7 @@ _ZH_HANS: dict[str, str] = {
     # --- Picker / option labels ------------------------------------------
     # Apple's appearance picker on iOS: 浅色 / 深色 / 跟随系统.
     "Advanced": "高级",
+    "After 10 min": "10 分钟后",
     "Auto": "自动",
     "Client": "客户端",
     "Contain": "适应",

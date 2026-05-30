@@ -15,6 +15,8 @@ from instantlink_bridge.config import (
     BridgeConfig,
     FtpConfig,
     FtpReceiveMode,
+    PowerBackend,
+    PowerConfig,
     PrinterConfig,
     WorkflowConfig,
     load_config,
@@ -55,8 +57,10 @@ from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiMode, UiSnap
 from instantlink_bridge.ui.render import can_accept_images
 from instantlink_bridge.ui.settings import (
     HANDLED_SETTING_KEYS,
+    SECTION_HEADER_KEYS,
     SETTING_HELP_TEXT,
     SETTINGS_BY_PAGE,
+    SettingKey,
     SettingsPage,
     WifiMode,
 )
@@ -1931,10 +1935,12 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "System"
 
-    # System rows after plan 036 phase 5: 0 Battery  1 Idle  2 Idle poweroff
-    # 3 Refresh status  4 Personalisation (divider)  5 Appearance  6 Text size
-    # 7 Language  8 About. Eight DOWNs lands on About.
-    for _ in range(8):
+    # System rows after plan 037 phase 1 (X306 backend default — Battery row
+    # hidden, Idle row dropped, Personalisation divider non-selectable):
+    # 0 Idle poweroff  1 Refresh status  [skip 2 Personalisation header]
+    # 3 Appearance  4 Text size  5 Language  6 About. Five DOWNs lands on
+    # About (header is skipped, so the visited indices are 1,3,4,5,6).
+    for _ in range(5):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"
@@ -1990,7 +1996,12 @@ async def test_settings_system_page_can_toggle_idle_poweroff(tmp_path: Path) -> 
 
     assert ui.config.power.idle_poweroff_enabled
     assert load_config(config_path).power.idle_poweroff_enabled
-    assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].value == "On"
+    # Plan 037 phase 1, #2: the row value now reads "After 10 min" / "Off"
+    # rather than the generic On/Off picker label so it tells the user how
+    # long the idle window actually is.
+    assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].value == (
+        "After 10 min"
+    )
 
 
 @pytest.mark.asyncio
@@ -3159,10 +3170,18 @@ async def test_reset_credentials_requires_confirmation(
     await ui._handle_action(UiAction.SELECT)  # open Upload FTP page
 
     # Scroll to the last row (Reset credentials)
-    from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingsPage
+    from instantlink_bridge.ui.settings import (
+        SECTION_HEADER_KEYS,
+        SETTINGS_BY_PAGE,
+        SettingsPage,
+    )
 
     camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    for _ in range(len(camera_keys) - 1):
+    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
+    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
+    # press shorter per header that sits between the start and the end.
+    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
+    for _ in range(len(camera_keys) - 1 - header_count):
         await ui._handle_action(UiAction.DOWN)
 
     # First SELECT should show confirmation prompt, not execute
@@ -3208,10 +3227,18 @@ async def test_reset_credentials_second_select_executes(
     await ui._handle_action(UiAction.DOWN)  # Upload FTP
     await ui._handle_action(UiAction.SELECT)  # open page
 
-    from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingsPage
+    from instantlink_bridge.ui.settings import (
+        SECTION_HEADER_KEYS,
+        SETTINGS_BY_PAGE,
+        SettingsPage,
+    )
 
     camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    for _ in range(len(camera_keys) - 1):
+    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
+    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
+    # press shorter per header that sits between the start and the end.
+    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
+    for _ in range(len(camera_keys) - 1 - header_count):
         await ui._handle_action(UiAction.DOWN)
 
     # First SELECT: confirmation prompt
@@ -3260,10 +3287,18 @@ async def test_reset_credentials_other_key_cancels(
     await ui._handle_action(UiAction.DOWN)  # Upload FTP
     await ui._handle_action(UiAction.SELECT)  # open page
 
-    from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingsPage
+    from instantlink_bridge.ui.settings import (
+        SECTION_HEADER_KEYS,
+        SETTINGS_BY_PAGE,
+        SettingsPage,
+    )
 
     camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    for _ in range(len(camera_keys) - 1):
+    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
+    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
+    # press shorter per header that sits between the start and the end.
+    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
+    for _ in range(len(camera_keys) - 1 - header_count):
         await ui._handle_action(UiAction.DOWN)
 
     # First SELECT: arm confirmation
@@ -4213,3 +4248,172 @@ def test_save_preset_help_text_mentions_management(tmp_path: Path) -> None:
     text = setting_help_text(SettingKey.ADJUST_SAVE_CUSTOM)
     assert "K3" in text, f"Help text must mention K3, got: {text!r}"
     assert "hold" in text.lower(), f"Help text must mention hold, got: {text!r}"
+
+
+# -----------------------------------------------------------------------------
+# Plan 037 phase 1 — settings audit batch (#1 + #2 + #3 + #4)
+# -----------------------------------------------------------------------------
+
+
+def _make_settings_ui(config: BridgeConfig) -> tuple[BridgeUi, _FakeDisplay]:
+    """Build a minimal BridgeUi for settings-only tests."""
+
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        config,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    return ui, display
+
+
+def test_visible_keys_hides_battery_on_x306() -> None:
+    """Plan 037 #1: X306 backend has no host telemetry; hide the battery row."""
+
+    config = BridgeConfig(power=PowerConfig(backend=PowerBackend.X306))
+    ui, _ = _make_settings_ui(config)
+
+    visible = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+
+    assert SettingKey.SYSTEM_BATTERY_INFO not in visible
+
+
+def test_visible_keys_hides_battery_on_none_backend() -> None:
+    """Plan 037 #1: NONE backend has no telemetry either."""
+
+    config = BridgeConfig(power=PowerConfig(backend=PowerBackend.NONE))
+    ui, _ = _make_settings_ui(config)
+
+    visible = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+
+    assert SettingKey.SYSTEM_BATTERY_INFO not in visible
+
+
+def test_visible_keys_keeps_battery_on_pisugar() -> None:
+    """Plan 037 #1: PiSugar exposes telemetry; battery row stays."""
+
+    config = BridgeConfig(power=PowerConfig(backend=PowerBackend.PISUGAR))
+    ui, _ = _make_settings_ui(config)
+
+    visible = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+
+    assert SettingKey.SYSTEM_BATTERY_INFO in visible
+
+
+def test_idle_poweroff_row_value_off() -> None:
+    """Plan 037 #2: disabled idle poweroff renders as 'Off', not 'No'."""
+
+    config = BridgeConfig(power=PowerConfig(idle_poweroff_enabled=False))
+    ui, _ = _make_settings_ui(config)
+
+    row = ui._settings_row_for_key(SettingKey.SYSTEM_IDLE_POWEROFF, "")
+
+    assert row.label == "Idle poweroff"
+    assert row.value == "Off"
+
+
+def test_idle_poweroff_row_value_after_10_min() -> None:
+    """Plan 037 #2: enabled idle poweroff renders the timeout explicitly."""
+
+    config = BridgeConfig(power=PowerConfig(idle_poweroff_enabled=True))
+    ui, _ = _make_settings_ui(config)
+
+    row = ui._settings_row_for_key(SettingKey.SYSTEM_IDLE_POWEROFF, "")
+
+    assert row.label == "Idle poweroff"
+    assert row.value == "After 10 min"
+
+
+def test_system_page_no_longer_includes_idle_info_row() -> None:
+    """Plan 037 #2: SYSTEM_IDLE_INFO is dropped from the SYSTEM page."""
+
+    assert SettingKey.SYSTEM_IDLE_INFO not in SETTINGS_BY_PAGE[SettingsPage.SYSTEM]
+
+
+def test_section_header_keys_cover_all_three_dividers() -> None:
+    """Plan 037 #3 + #4: SECTION_HEADER_KEYS lists the three known dividers."""
+
+    assert SECTION_HEADER_KEYS == frozenset(
+        {
+            SettingKey.NETWORK_DIAGNOSTICS_HEADER,
+            SettingKey.PRINT_ADVANCED_HEADER,
+            SettingKey.SYSTEM_PERSONALISATION_HEADER,
+        }
+    )
+
+
+def test_section_header_keys_are_handled() -> None:
+    """Plan 037 #3 + #4: section headers must satisfy the 'handled' guard."""
+
+    assert SECTION_HEADER_KEYS <= HANDLED_SETTING_KEYS
+
+
+@pytest.mark.asyncio
+async def test_nav_skips_section_header_forward() -> None:
+    """Plan 037 #3 + #4: DOWN over a header skips to the next non-header row."""
+
+    ui, _display = _make_settings_ui(BridgeConfig())
+    ui._show_settings(page=SettingsPage.NETWORK)
+    # NETWORK rows: 5 = FTP_PASSWORD_INFO, 6 = NETWORK_DIAGNOSTICS_HEADER,
+    # 7 = NETWORK_BLUETOOTH_INFO. Position the cursor at 5 and press DOWN.
+    ui._settings_indices[SettingsPage.NETWORK] = 5
+    ui._snapshot = replace(ui._snapshot, selected_index=5)
+
+    await ui._handle_settings_action(UiAction.DOWN)
+
+    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    new_index = ui._snapshot.selected_index
+    assert keys[new_index] is SettingKey.NETWORK_BLUETOOTH_INFO
+    assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
+
+
+@pytest.mark.asyncio
+async def test_nav_skips_section_header_backward() -> None:
+    """Plan 037 #3 + #4: UP over a header lands on the row before it."""
+
+    ui, _ = _make_settings_ui(BridgeConfig())
+    ui._show_settings(page=SettingsPage.NETWORK)
+    # Start on the row after the divider (NETWORK_BLUETOOTH_INFO, index 7).
+    ui._settings_indices[SettingsPage.NETWORK] = 7
+    ui._snapshot = replace(ui._snapshot, selected_index=7)
+
+    await ui._handle_settings_action(UiAction.UP)
+
+    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    new_index = ui._snapshot.selected_index
+    assert keys[new_index] is SettingKey.FTP_PASSWORD_INFO
+    assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
+
+
+@pytest.mark.asyncio
+async def test_activate_section_header_is_noop() -> None:
+    """Plan 037 #3 + #4: KEY1/RIGHT on a header is a no-op (defensive backstop)."""
+
+    ui, _display = _make_settings_ui(BridgeConfig())
+    ui._show_settings(page=SettingsPage.NETWORK)
+    before = ui._snapshot
+
+    await ui._activate_setting(SettingKey.NETWORK_DIAGNOSTICS_HEADER)
+
+    # No state change: same snapshot identity (no replace) and no new
+    # rendered frame after the no-op.
+    assert ui._snapshot is before
+
+
+@pytest.mark.asyncio
+async def test_initial_selection_skips_persisted_header() -> None:
+    """Plan 037 #3 + #4: persisted header index advances to the next non-header."""
+
+    ui, _display = _make_settings_ui(BridgeConfig())
+    network_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
+    header_index = network_keys.index(SettingKey.NETWORK_DIAGNOSTICS_HEADER)
+    ui._settings_indices[SettingsPage.NETWORK] = header_index
+
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    landed_key = network_keys[ui._snapshot.selected_index]
+    assert landed_key not in SECTION_HEADER_KEYS
+    # Forward-only advance: should land on the row immediately after.
+    assert landed_key is SettingKey.NETWORK_BLUETOOTH_INFO

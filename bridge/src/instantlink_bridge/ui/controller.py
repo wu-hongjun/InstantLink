@@ -62,6 +62,7 @@ from instantlink_bridge.ui.settings import (
     INFO_SETTING_KEYS,
     PAGE_FOR_OPEN_KEY,
     PAGE_TITLES,
+    SECTION_HEADER_KEYS,
     SETTINGS_BY_PAGE,
     SETTINGS_PARENT_PAGE,
     USER_PRESET_SLOT_NAMES,
@@ -1101,9 +1102,19 @@ class BridgeUi:
         and surfacing them just clutters the menu for first-time users.
         PAIR_PRINTER stays in both states (it's state-aware: shows "Pair"
         when unpaired, "Re-pair" when paired).
+
+        The SYSTEM page additionally hides ``SYSTEM_BATTERY_INFO`` on
+        backends that expose no host-readable battery telemetry (X306 and
+        NONE) — the row would always read "Battery — LED only", which is
+        pure noise (plan 037 phase 1, #1).
         """
 
         keys = SETTINGS_BY_PAGE[page]
+        if page is SettingsPage.SYSTEM and self._config.power.backend in (
+            PowerBackend.X306,
+            PowerBackend.NONE,
+        ):
+            keys = tuple(k for k in keys if k is not SettingKey.SYSTEM_BATTERY_INFO)
         if page is not SettingsPage.PRINTER or self._snapshot.paired_printer is not None:
             return keys
         return tuple(
@@ -1124,6 +1135,12 @@ class BridgeUi:
             self._settings_page = page
         keys = self._visible_keys_for_page(self._settings_page)
         selected_index = min(self._settings_indices[self._settings_page], len(keys) - 1)
+        # If a persisted index landed on a header (e.g. after a page reshape
+        # from plan 037), advance forward to the next non-header row.
+        for _ in range(len(keys)):
+            if keys[selected_index] not in SECTION_HEADER_KEYS:
+                break
+            selected_index = (selected_index + 1) % len(keys)
         self._settings_indices[self._settings_page] = selected_index
         from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
 
@@ -1187,6 +1204,13 @@ class BridgeUi:
             direction = -1 if action is UiAction.UP else 1
             keys = self._visible_keys_for_page(self._settings_page)
             selected_index = (self._snapshot.selected_index + direction) % len(keys)
+            # Section headers are visual dividers, not selectable. Step past any
+            # header in the same direction; bail out after one full lap as a
+            # defensive guard for a hypothetical all-headers page.
+            for _ in range(len(keys)):
+                if keys[selected_index] not in SECTION_HEADER_KEYS:
+                    break
+                selected_index = (selected_index + direction) % len(keys)
             self._settings_indices[self._settings_page] = selected_index
             self._snapshot = replace(
                 self._snapshot,
@@ -1207,6 +1231,11 @@ class BridgeUi:
             key.value,
             self._snapshot.selected_index,
         )
+        if key in SECTION_HEADER_KEYS:
+            # Visual section divider — no action. Selection should normally
+            # skip over headers via the UP/DOWN nav guard; this is a
+            # defensive backstop.
+            return
         if key in PAGE_FOR_OPEN_KEY:
             self._clear_pending_confirms()
             self._show_settings(page=PAGE_FOR_OPEN_KEY[key])
@@ -2307,13 +2336,11 @@ class BridgeUi:
             return SettingsRow("Power", self._power_summary_value())
         if key is SettingKey.SYSTEM_BATTERY_INFO:
             return SettingsRow("Battery", self._battery_power_value())
-        if key is SettingKey.SYSTEM_IDLE_INFO:
-            return SettingsRow("Idle", self._idle_power_value())
         if key is SettingKey.SYSTEM_IDLE_POWEROFF:
-            return SettingsRow(
-                "Idle poweroff",
-                bool_label(self._config.power.idle_poweroff_enabled),
-            )
+            # Plan 037 phase 1, #2: dedicated explicit values that read like a
+            # toggle with a known timeout rather than the generic "On/Off".
+            value = "After 10 min" if self._config.power.idle_poweroff_enabled else "Off"
+            return SettingsRow("Idle poweroff", value)
         if key is SettingKey.REFRESH_STATUS:
             # Value is empty to match every other action row (Pair, Reconnect,
             # Forget). The chevron already signals "actionable" (plan 034 item 3).
@@ -2410,8 +2437,6 @@ class BridgeUi:
             return "Bridge battery/UPS hardware"
         if key is SettingKey.SYSTEM_BATTERY_INFO:
             return "Battery charge if telemetry available"
-        if key is SettingKey.SYSTEM_IDLE_INFO:
-            return "Dim and screen-off timing"
         if key is SettingKey.PAIR_PRINTER:
             # Help text mirrors the row label: paired → destructive re-pair
             # warning so the user knows KEY1 will wipe before scanning;
@@ -2599,8 +2624,6 @@ class BridgeUi:
             return f"Power: {self._power_summary_value()}"
         if key is SettingKey.SYSTEM_BATTERY_INFO:
             return f"Battery: {self._battery_power_value()}"
-        if key is SettingKey.SYSTEM_IDLE_INFO:
-            return f"Idle: {self._idle_power_value()}"
         if key is SettingKey.SYSTEM_IDLE_POWEROFF:
             return f"Idle poweroff: {bool_label(self._config.power.idle_poweroff_enabled)}"
         return _info_message_for_setting(key)
@@ -3583,12 +3606,6 @@ class BridgeUi:
             return "LED only"
         return self._bridge_power_alert
 
-    def _idle_power_value(self) -> str:
-        if not self._config.power.idle_poweroff_enabled:
-            return f"{self._idle_stage.value} no-off"
-        return f"{self._idle_stage.value} {self._config.power.idle_poweroff_after_s:g}s"
-
-
 def ftp_receive_mode_ready_for_health(
     health: ConnectionHealth,
     mode: FtpReceiveMode = FtpReceiveMode.AUTO,
@@ -3800,8 +3817,6 @@ def _info_message_for_setting(key: SettingKey) -> str:
         return "Bridge power hardware"
     if key is SettingKey.SYSTEM_BATTERY_INFO:
         return "Bridge battery telemetry"
-    if key is SettingKey.SYSTEM_IDLE_INFO:
-        return "Idle dim and poweroff"
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return "Allow 10 min idle shutdown"
     return "Info only"

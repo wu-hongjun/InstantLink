@@ -7,17 +7,22 @@ colour space; the model-size JPEG encode is the last step.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from PIL import Image, ImageDraw, ImageFont
 
 if TYPE_CHECKING:
-    from instantlink_bridge.config import AdjustmentsConfig  # pragma: no cover
+    from instantlink_bridge.config import (  # pragma: no cover
+        AdjustmentsConfig,
+        DatestampFormat,
+    )
 
 __all__ = [
     "AdjustmentProfile",
     "apply_adjustments",
+    "format_datestamp",
     "read_exif_datestamp_text",
     "render_adjustments_preview",
 ]
@@ -372,7 +377,47 @@ def _overlay_font(
     return ImageFont.load_default()
 
 
-def read_exif_datestamp_text(path: object, language: str) -> str:
+def format_datestamp(
+    when: datetime | date,
+    fmt: DatestampFormat,
+) -> str:
+    """Format a date per the configured datestamp preset.
+
+    Matches the layout / separator of each macOS ``DateStampPreset``.
+    Exotic fonts / colors don't transfer to the Pi; only the text layout
+    does. See plan 037 phase 4.
+    """
+    # Local import: instantlink_bridge.config imports imaging.pipeline which
+    # imports this module, so DatestampFormat is not safe to import at module
+    # load. Looking the enum up here keeps the dependency lazy.
+    from instantlink_bridge.config import DatestampFormat as _DatestampFormat
+
+    y2 = when.year % 100
+    yy = f"{y2:02d}"
+    m = when.month
+    d = when.day
+    if fmt is _DatestampFormat.QUARTZ_DATE:
+        return f"{yy}.{m:02d}.{d:02d}"
+    if fmt is _DatestampFormat.MODERN:
+        return f"{yy}.{m:02d}.{d:02d}"
+    if fmt is _DatestampFormat.LAB_PRINT:
+        return f"{yy}-{m:02d}-{d:02d}"
+    if fmt is _DatestampFormat.OLYMPUS:
+        return f"{yy} {m} {d}"
+    if fmt is _DatestampFormat.CONTAX:
+        # Mᴹ uses U+1D39 MODIFIER LETTER CAPITAL M to mimic the macOS preset;
+        # if the Pi's overlay font lacks the glyph it will fall back to a
+        # plain capital M via the existing per-glyph CJK/Latin ladder.
+        return f"'{yy} {m}ᴹ {d}"
+    msg = f"unknown datestamp format: {fmt}"
+    raise ValueError(msg)
+
+
+def read_exif_datestamp_text(
+    path: object,
+    language: str,
+    fmt: DatestampFormat | None = None,
+) -> str:
     """Read EXIF DateTimeOriginal from ``path`` and return a formatted date string.
 
     Returns an empty string when the tag is absent or the file cannot be read,
@@ -383,12 +428,13 @@ def read_exif_datestamp_text(path: object, language: str) -> str:
     The ``path`` argument is typed as ``object`` so callers can pass a
     ``pathlib.Path`` or ``str`` without importing ``Path`` here.
 
-    Locale mapping:
+    When ``fmt`` is provided, dispatches to :func:`format_datestamp` for the
+    layout / separator preset (plan 037 phase 4). When omitted, falls back to
+    the legacy locale formatter for backwards compatibility:
+
     * ``zh-Hans`` / ``zh*``: ``yyyy年M月d日``
     * everything else (default EN): ``MMM d, yyyy`` (e.g. ``"May 3, 2026"``)
     """
-    import datetime
-
     try:
         with Image.open(path) as img:  # type: ignore[arg-type]
             exif = img.getexif()
@@ -398,9 +444,11 @@ def read_exif_datestamp_text(path: object, language: str) -> str:
     if not raw or not isinstance(raw, str):
         return ""
     try:
-        dt = datetime.datetime.strptime(raw[:10], "%Y:%m:%d")
+        dt = datetime.strptime(raw[:10], "%Y:%m:%d")
     except ValueError:
         return ""
+    if fmt is not None:
+        return format_datestamp(dt, fmt)
     if language.lower().startswith("zh"):
         return f"{dt.year}年{dt.month}月{dt.day}日"
     # English default: "May 3, 2026" (%-d is POSIX-only; use lstrip on Windows)

@@ -385,6 +385,13 @@ _ZH_HANS: dict[str, str] = {
     "Watermark": "水印",
     "Stamp the photo's date in the bottom-right corner": "在照片右下角加盖拍摄日期",
     "Stamp a short label in the bottom-left corner": "在照片左下角加盖短标签",
+    # --- Datestamp format picker (plan 037 phase 4) ----------------------
+    # Preset names (Quartz Date / Olympus / Contax / Modern / Lab Print)
+    # stay in Latin like other macOS / brand identifiers.
+    "Datestamp format": "日期格式",
+    "Date layout — borrows macOS preset names": "日期布局 — 借用 macOS 预设名称",
+    # Watermark row dynamic value states.
+    "On · (no text)": "开 · （无文字）",
     # --- Preset picker labels and actions (plan 035 phase 5) ------------
     # "Instax" stays in Latin (brand name) per the i18n doctrine.
     "Preset": "预设",

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 import pytest
 from PIL import Image
 
+from instantlink_bridge.config import DatestampFormat
 from instantlink_bridge.imaging.postprocess import (
     AdjustmentProfile,
     apply_adjustments,
+    format_datestamp,
     render_adjustments_preview,
 )
 
@@ -289,7 +292,7 @@ def test_datestamp_no_op_when_text_empty() -> None:
 def test_watermark_renders_when_text_set() -> None:
     """watermark=True with non-empty watermark_text changes the bottom-left region."""
     img = _make_rgb(size=(200, 200))
-    profile = AdjustmentProfile(watermark=True, watermark_text="InstantLink")
+    profile = AdjustmentProfile(watermark=True, watermark_text="Sample")
     result = apply_adjustments(img.copy(), profile)
 
     # Bottom-left quadrant must differ from the plain colour fill.
@@ -510,3 +513,48 @@ def test_render_adjustments_preview_uses_lru_cache_for_source_load() -> None:
     assert cache_info.hits >= 1, (
         f"Expected at least 1 LRU cache hit for same-size calls, got {cache_info.hits}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Plan 037 phase 4: format_datestamp presets
+# ---------------------------------------------------------------------------
+
+
+def test_format_datestamp_quartz_date() -> None:
+    """Quartz Date renders YY.MM.DD with zero-padded month and day."""
+    assert format_datestamp(date(2026, 5, 30), DatestampFormat.QUARTZ_DATE) == "26.05.30"
+
+
+def test_format_datestamp_modern() -> None:
+    """Modern collapses to the same YY.MM.DD layout on Pi (no DSEG7 font)."""
+    assert format_datestamp(date(2026, 5, 30), DatestampFormat.MODERN) == "26.05.30"
+
+
+def test_format_datestamp_lab_print() -> None:
+    """Lab Print uses hyphen separators."""
+    assert format_datestamp(date(2026, 5, 30), DatestampFormat.LAB_PRINT) == "26-05-30"
+
+
+def test_format_datestamp_olympus() -> None:
+    """Olympus uses spaces and non-padded month/day."""
+    assert format_datestamp(date(2026, 5, 30), DatestampFormat.OLYMPUS) == "26 5 30"
+
+
+def test_format_datestamp_contax() -> None:
+    """Contax leads with an apostrophe and a superscript modifier-M."""
+    assert format_datestamp(date(2026, 5, 30), DatestampFormat.CONTAX) == "'26 5ᴹ 30"
+
+
+def test_format_datestamp_pads_year_below_2000() -> None:
+    """The two-digit year always pads to width 2 (year % 100)."""
+    assert format_datestamp(date(1999, 1, 1), DatestampFormat.QUARTZ_DATE) == "99.01.01"
+
+
+def test_format_datestamp_unknown_raises() -> None:
+    """An unrecognised value raises ValueError instead of silently producing junk."""
+
+    class _Fake:
+        value = "bogus"
+
+    with pytest.raises(ValueError, match="unknown datestamp format"):
+        format_datestamp(date(2026, 5, 30), _Fake())  # type: ignore[arg-type]

@@ -61,6 +61,7 @@ from instantlink_bridge.ui.pairing import (
 )
 from instantlink_bridge.ui.settings import (
     ADJUSTABLE_SETTING_KEYS,
+    DATESTAMP_FORMAT_OPTIONS,
     INFO_SETTING_KEYS,
     PAGE_FOR_OPEN_KEY,
     PAGE_TITLES,
@@ -623,7 +624,9 @@ class BridgeUi:
         adjustments = resolve_preset(self._config.adjustments, self._user_presets)
         if self._config.adjustments.datestamp:
             datestamp_text = read_exif_datestamp_text(
-                received.path, self._config.ui.language.value
+                received.path,
+                self._config.ui.language.value,
+                fmt=self._config.adjustments.datestamp_format,
             )
             adjustments = _replace(adjustments, datestamp_text=datestamp_text)
         prepared = await prepare_for_instax_async(
@@ -1514,7 +1517,14 @@ class BridgeUi:
             profile = AdjustmentProfile.from_config(self._config.adjustments)
             working_bool = bool(working_value)
             if key is SettingKey.ADJUST_DATESTAMP:
-                preview_text = date.today().isoformat()
+                # Plan 037 phase 4: format the placeholder via the configured
+                # preset so the preview matches what'll actually print.
+                from instantlink_bridge.imaging.postprocess import format_datestamp
+
+                preview_text = format_datestamp(
+                    date.today(),
+                    self._config.adjustments.datestamp_format,
+                )
                 profile = replace(
                     profile,
                     datestamp=working_bool,
@@ -2362,8 +2372,30 @@ class BridgeUi:
             return SettingsRow("Vignette", str(adj.vignette))
         if key is SettingKey.ADJUST_DATESTAMP:
             return SettingsRow("Datestamp", bool_label(self._config.adjustments.datestamp))
+        if key is SettingKey.ADJUST_DATESTAMP_FORMAT:
+            fmt_label = next(
+                (
+                    opt.label
+                    for opt in DATESTAMP_FORMAT_OPTIONS
+                    if opt.value == self._config.adjustments.datestamp_format
+                ),
+                "Quartz Date",
+            )
+            return SettingsRow("Datestamp format", fmt_label)
         if key is SettingKey.ADJUST_WATERMARK:
-            return SettingsRow("Watermark", bool_label(self._config.adjustments.watermark))
+            # Plan 037 phase 4: surface the configured watermark text in the
+            # value column so users see what'll actually print without
+            # entering edit mode. The default text is empty — toggling On
+            # with no text is a no-op overlay (no hardcoded brand).
+            if not self._config.adjustments.watermark:
+                return SettingsRow("Watermark", "Off")
+            text = self._config.adjustments.watermark_text
+            if not text:
+                return SettingsRow("Watermark", "On · (no text)")
+            # Truncate to keep the row from overflowing the 240 px width.
+            # Generous cap; render layer will further clip if needed.
+            short = text if len(text) <= 14 else text[:13] + "…"
+            return SettingsRow("Watermark", f'On · "{short}"')
         if key is SettingKey.PRINTER_SERIAL_INFO:
             # Strip the verbose "INSTAX-" prefix so the saved serial fits on
             # one row without clipping. When nothing is paired the row reads

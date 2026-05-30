@@ -624,7 +624,11 @@ async def send_print_to_printer(
     # If datestamp is enabled, read EXIF and format the date now so
     # apply_adjustments stays locale-agnostic.
     if config.adjustments.datestamp:
-        datestamp_text = read_exif_datestamp_text(received.path, config.ui.language.value)
+        datestamp_text = read_exif_datestamp_text(
+            received.path,
+            config.ui.language.value,
+            fmt=config.adjustments.datestamp_format,
+        )
         adjustments = _replace(adjustments, datestamp_text=datestamp_text)
     if instantlink_backend_enabled():
         await print_file_to_printer_instantlink(

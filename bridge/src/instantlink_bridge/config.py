@@ -67,6 +67,23 @@ class FontSize(StrEnum):
     LARGE = "large"
 
 
+class DatestampFormat(StrEnum):
+    """Datestamp format presets matching macOS naming.
+
+    Bridge ports the layout / separator identity of each preset; exotic
+    fonts / colors stay macOS-only. Quartz Date and Modern produce
+    visually identical strings on the Pi (both 'YY.MM.DD') but are kept
+    as separate values so the macOS app and bridge speak the same
+    vocabulary.
+    """
+
+    QUARTZ_DATE = "quartz_date"
+    OLYMPUS = "olympus"
+    CONTAX = "contax"
+    MODERN = "modern"
+    LAB_PRINT = "lab_print"
+
+
 class UiAppearance(StrEnum):
     """User-selectable LCD appearance (light / dark / auto).
 
@@ -404,11 +421,17 @@ class AdjustmentsConfig:
     datestamp: bool = False
     """Render EXIF DateTimeOriginal in the bottom-right corner when True."""
 
+    datestamp_format: DatestampFormat = DatestampFormat.QUARTZ_DATE
+    """Datestamp layout preset. Visual font / colour effects from the
+    macOS app don't port to the Pi; only the date string format does."""
+
     watermark: bool = False
     """Render watermark_text in the bottom-left corner when True."""
 
-    watermark_text: str = "InstantLink"
-    """Text to stamp as a watermark. Empty string disables rendering."""
+    watermark_text: str = ""
+    """Watermark text. When empty AND watermark=True, the overlay no-ops
+    (no hardcoded brand). User-customisable via config.toml or the macOS
+    management panel."""
 
     vignette: int = 0
     """Corner-darkening strength. Any integer in [0, 100]. 0 = off (identity)."""
@@ -561,6 +584,7 @@ def render_config(config: BridgeConfig) -> str:
             f"sharpness = {config.adjustments.sharpness}",
             f"hue = {config.adjustments.hue}",
             f"datestamp = {_toml_bool(config.adjustments.datestamp)}",
+            f"datestamp_format = {_toml_string(config.adjustments.datestamp_format.value)}",
             f"watermark = {_toml_bool(config.adjustments.watermark)}",
             f"watermark_text = {_toml_string(config.adjustments.watermark_text)}",
             f"vignette = {config.adjustments.vignette}",
@@ -726,8 +750,11 @@ def _load_adjustments_config(data: object) -> AdjustmentsConfig:
         sharpness=_adjustment_int(data.get("sharpness", 0), "[adjustments].sharpness"),
         hue=_adjustment_int(data.get("hue", 0), "[adjustments].hue"),
         datestamp=_parse_bool(data.get("datestamp", False), "[adjustments].datestamp"),
+        datestamp_format=parse_datestamp_format(
+            data.get("datestamp_format", DatestampFormat.QUARTZ_DATE.value),
+        ),
         watermark=_parse_bool(data.get("watermark", False), "[adjustments].watermark"),
-        watermark_text=str(data.get("watermark_text", "InstantLink")),
+        watermark_text=str(data.get("watermark_text", "")),
         vignette=_vignette_int(data.get("vignette", 0), "[adjustments].vignette"),
     )
 
@@ -846,6 +873,17 @@ def parse_power_backend(value: object) -> PowerBackend:
     except ValueError as exc:
         allowed = ", ".join(backend.value for backend in PowerBackend)
         raise ValueError(f"[power].backend must be one of: {allowed}") from exc
+
+
+def parse_datestamp_format(value: object) -> DatestampFormat:
+    """Parse a configured datestamp format preset."""
+
+    text = str(value).strip().lower()
+    try:
+        return DatestampFormat(text)
+    except ValueError as exc:
+        allowed = ", ".join(fmt.value for fmt in DatestampFormat)
+        raise ValueError(f"[adjustments].datestamp_format must be one of: {allowed}") from exc
 
 
 def _optional_str(value: object) -> str | None:

@@ -8,6 +8,7 @@ from enum import StrEnum
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.config import (
     BridgeConfig,
+    DatestampFormat,
     FontSize,
     FtpReceiveMode,
     UiAppearance,
@@ -39,6 +40,8 @@ class SettingKey(StrEnum):
     ADJUST_VIGNETTE = "adjust_vignette"
     # Adjustments sub-page overlay toggles (plan 035 phase 4).
     ADJUST_DATESTAMP = "adjust_datestamp"
+    # Datestamp layout preset picker (plan 037 phase 4).
+    ADJUST_DATESTAMP_FORMAT = "adjust_datestamp_format"
     ADJUST_WATERMARK = "adjust_watermark"
     # Adjustments sub-page preset picker + save action (plan 035 phase 5).
     ADJUST_PRESET = "adjust_preset"
@@ -174,6 +177,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.ADJUST_HUE,
         SettingKey.ADJUST_VIGNETTE,
         SettingKey.ADJUST_DATESTAMP,
+        SettingKey.ADJUST_DATESTAMP_FORMAT,
         SettingKey.ADJUST_WATERMARK,
         SettingKey.ADJUST_SAVE_CUSTOM,
     ),
@@ -348,6 +352,8 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         # Adjustments overlay toggles (plan 035 phase 4).
         SettingKey.ADJUST_DATESTAMP,
         SettingKey.ADJUST_WATERMARK,
+        # Datestamp format preset picker (plan 037 phase 4).
+        SettingKey.ADJUST_DATESTAMP_FORMAT,
         # Preset picker (plan 035 phase 5).
         SettingKey.ADJUST_PRESET,
     }
@@ -429,6 +435,18 @@ APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
 # continuously (0 gap); larger values insert an idle gap between scans to save power.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
 
+# Datestamp format presets (plan 037 phase 4). Labels mirror the macOS app's
+# DateStampPreset names so the two surfaces speak the same vocabulary. The Pi
+# ports only the layout / separator identity of each preset — exotic fonts,
+# colours and light-bleed effects stay macOS-only.
+DATESTAMP_FORMAT_OPTIONS: tuple[SettingOption, ...] = (
+    SettingOption("Quartz Date", DatestampFormat.QUARTZ_DATE),
+    SettingOption("Olympus", DatestampFormat.OLYMPUS),
+    SettingOption("Contax", DatestampFormat.CONTAX),
+    SettingOption("Modern", DatestampFormat.MODERN),
+    SettingOption("Lab Print", DatestampFormat.LAB_PRINT),
+)
+
 
 def preset_options(user_preset_names: tuple[str, ...] = ()) -> tuple[SettingOption, ...]:
     """Return picker options for the preset row.
@@ -481,6 +499,8 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.ADJUST_VIGNETTE: "Darken the corners to simulate Instax film",
     # Adjustments overlay toggles (plan 035 phase 4).
     SettingKey.ADJUST_DATESTAMP: "Stamp the photo's date in the bottom-right corner",
+    # Datestamp format picker (plan 037 phase 4).
+    SettingKey.ADJUST_DATESTAMP_FORMAT: "Date layout — borrows macOS preset names",
     SettingKey.ADJUST_WATERMARK: "Stamp a short label in the bottom-left corner",
     # Preset picker and save action (plan 035 phase 5; updated plan 036 phase 5).
     SettingKey.ADJUST_PRESET: "Choose a look, or tweak the sliders below",
@@ -585,6 +605,8 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return VIGNETTE_OPTIONS
     if key is SettingKey.ADJUST_DATESTAMP:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
+    if key is SettingKey.ADJUST_DATESTAMP_FORMAT:
+        return DATESTAMP_FORMAT_OPTIONS
     if key is SettingKey.ADJUST_WATERMARK:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.ADJUST_PRESET:
@@ -673,6 +695,8 @@ def config_with_setting_value(
         return replace(config, adjustments=replace(config.adjustments, vignette=value))
     if key is SettingKey.ADJUST_DATESTAMP and isinstance(value, bool):
         return replace(config, adjustments=replace(config.adjustments, datestamp=value))
+    if key is SettingKey.ADJUST_DATESTAMP_FORMAT and isinstance(value, DatestampFormat):
+        return replace(config, adjustments=replace(config.adjustments, datestamp_format=value))
     if key is SettingKey.ADJUST_WATERMARK and isinstance(value, bool):
         return replace(config, adjustments=replace(config.adjustments, watermark=value))
     if key is SettingKey.ADJUST_PRESET and isinstance(value, str):
@@ -769,6 +793,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.adjustments.vignette
     if key is SettingKey.ADJUST_DATESTAMP:
         return config.adjustments.datestamp
+    if key is SettingKey.ADJUST_DATESTAMP_FORMAT:
+        return config.adjustments.datestamp_format
     if key is SettingKey.ADJUST_WATERMARK:
         return config.adjustments.watermark
     if key is SettingKey.ADJUST_PRESET:

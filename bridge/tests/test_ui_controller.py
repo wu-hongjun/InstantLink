@@ -3347,7 +3347,7 @@ async def test_adjustments_slider_row_select_enters_edit_mode(tmp_path: Path) ->
 
     ui = _make_adj_ui(tmp_path, preset="Custom", saturation=0)
     # Adjustments page rows: 0=Preset 1=Saturation 2=Exposure 3=Sharpness 4=Hue
-    # 5=Vignette 6=Datestamp 7=Watermark 8=Save current.
+    # 5=Vignette 6=Datestamp 7=Datestamp format 8=Watermark 9=Save current.
     # Navigate to Saturation (row 1).
     await ui._handle_action(UiAction.DOWN)  # → index 1 (Saturation)
     await ui._handle_action(UiAction.SELECT)
@@ -3630,8 +3630,9 @@ async def _navigate_to_datestamp(ui: BridgeUi) -> None:
 
 
 async def _navigate_to_watermark(ui: BridgeUi) -> None:
-    """Walk the cursor down to the Watermark row (index 7)."""
-    for _ in range(7):
+    """Walk the cursor down to the Watermark row (index 8; plan 037 phase 4
+    inserted ADJUST_DATESTAMP_FORMAT between Datestamp and Watermark)."""
+    for _ in range(8):
         await ui._handle_action(UiAction.DOWN)
 
 
@@ -3830,8 +3831,8 @@ async def test_save_preset_requires_two_presses(tmp_path: Path) -> None:
     )
     ui._show_settings(page=SettingsPage.ADJUSTMENTS)
 
-    # Navigate to "Save current" row (last row, index 8).
-    for _ in range(8):
+    # Navigate to "Save current" row (last row, index 9).
+    for _ in range(9):
         await ui._handle_action(UiAction.DOWN)
 
     # First KEY1 → destructive toast, no file write.
@@ -3869,8 +3870,8 @@ async def test_save_preset_second_press_writes_file(tmp_path: Path) -> None:
     )
     ui._show_settings(page=SettingsPage.ADJUSTMENTS)
 
-    # Navigate to "Save current" (index 8).
-    for _ in range(8):
+    # Navigate to "Save current" (index 9; plan 037 phase 4 added Datestamp format).
+    for _ in range(9):
         await ui._handle_action(UiAction.DOWN)
 
     with unittest.mock.patch(
@@ -3903,7 +3904,8 @@ async def test_save_preset_cancel_between_presses(tmp_path: Path) -> None:
     )
     ui._show_settings(page=SettingsPage.ADJUSTMENTS)
 
-    for _ in range(8):
+    # Save current is at index 9 (plan 037 phase 4 inserted Datestamp format).
+    for _ in range(9):
         await ui._handle_action(UiAction.DOWN)
 
     with unittest.mock.patch(
@@ -4212,8 +4214,8 @@ async def test_save_overwrites_active_custom_slot(tmp_path: Path) -> None:
     ui._user_presets = load_user_presets(presets_path)
     ui._show_settings(page=SettingsPage.ADJUSTMENTS)
 
-    # Navigate to "Save current" row (index 8).
-    for _ in range(8):
+    # Navigate to "Save current" row (index 9; plan 037 phase 4 added Datestamp format).
+    for _ in range(9):
         await ui._handle_action(UiAction.DOWN)
 
     with unittest.mock.patch(
@@ -4360,8 +4362,9 @@ async def test_slots_full_toast_mentions_overwrite_path(tmp_path: Path) -> None:
     with mock.patch(
         "instantlink_bridge.imaging.presets.USER_PRESETS_PATH", presets_path
     ):
-        # Navigate to "Save current" row (index 8 on the Adjustments page).
-        for _ in range(8):
+        # Navigate to "Save current" row (index 9 on the Adjustments page;
+        # plan 037 phase 4 inserted Datestamp format between Datestamp/Watermark).
+        for _ in range(9):
             await ui._handle_action(UiAction.DOWN)
         await ui._handle_action(UiAction.SELECT)
 
@@ -4546,3 +4549,142 @@ async def test_initial_selection_skips_persisted_header() -> None:
     assert landed_key not in SECTION_HEADER_KEYS
     # Forward-only advance: should land on the row immediately after.
     assert landed_key is SettingKey.NETWORK_BLUETOOTH_INFO
+
+
+# -----------------------------------------------------------------------------
+# Plan 037 phase 4 — customizable watermark + datestamp format presets
+# -----------------------------------------------------------------------------
+
+
+def test_adjustments_page_includes_datestamp_format_row() -> None:
+    """The Datestamp format picker row is registered on the Adjustments page."""
+
+    assert (
+        SettingKey.ADJUST_DATESTAMP_FORMAT
+        in SETTINGS_BY_PAGE[SettingsPage.ADJUSTMENTS]
+    )
+
+
+def test_datestamp_format_picker_options() -> None:
+    """The picker exposes all 5 macOS-aligned preset values, in the expected order."""
+    from instantlink_bridge.config import DatestampFormat
+    from instantlink_bridge.ui.settings import setting_options
+
+    options = setting_options(SettingKey.ADJUST_DATESTAMP_FORMAT)
+
+    assert len(options) == 5
+    values = [opt.value for opt in options]
+    for expected in (
+        DatestampFormat.QUARTZ_DATE,
+        DatestampFormat.OLYMPUS,
+        DatestampFormat.CONTAX,
+        DatestampFormat.MODERN,
+        DatestampFormat.LAB_PRINT,
+    ):
+        assert expected in values, f"{expected} not in picker options"
+
+
+def test_datestamp_format_selected_option_index_reflects_config() -> None:
+    """The picker highlights the option whose value matches the configured format."""
+    from dataclasses import replace as _replace
+
+    from instantlink_bridge.config import AdjustmentsConfig, DatestampFormat
+    from instantlink_bridge.ui.settings import (
+        DATESTAMP_FORMAT_OPTIONS,
+        selected_option_index,
+    )
+
+    config = BridgeConfig(
+        adjustments=AdjustmentsConfig(datestamp_format=DatestampFormat.OLYMPUS)
+    )
+    index = selected_option_index(config, SettingKey.ADJUST_DATESTAMP_FORMAT)
+    assert DATESTAMP_FORMAT_OPTIONS[index].value is DatestampFormat.OLYMPUS
+
+    # And Contax → Contax round-trip.
+    config = _replace(
+        config,
+        adjustments=_replace(
+            config.adjustments, datestamp_format=DatestampFormat.CONTAX
+        ),
+    )
+    index = selected_option_index(config, SettingKey.ADJUST_DATESTAMP_FORMAT)
+    assert DATESTAMP_FORMAT_OPTIONS[index].value is DatestampFormat.CONTAX
+
+
+def test_watermark_row_shows_current_text_when_set() -> None:
+    """Plan 037 phase 4: enabled watermark with text shows 'On · "Text"' in the row."""
+    from instantlink_bridge.config import AdjustmentsConfig
+
+    config = BridgeConfig(
+        adjustments=AdjustmentsConfig(watermark=True, watermark_text="Hello")
+    )
+    ui, _ = _make_settings_ui(config)
+    row = ui._settings_row_for_key(SettingKey.ADJUST_WATERMARK, printer_name="none")
+    assert "Hello" in row.value
+    assert row.value.startswith("On")
+
+
+def test_watermark_row_shows_no_text_hint_when_empty() -> None:
+    """Enabled watermark with empty text shows the explicit '(no text)' hint."""
+    from instantlink_bridge.config import AdjustmentsConfig
+
+    config = BridgeConfig(
+        adjustments=AdjustmentsConfig(watermark=True, watermark_text="")
+    )
+    ui, _ = _make_settings_ui(config)
+    row = ui._settings_row_for_key(SettingKey.ADJUST_WATERMARK, printer_name="none")
+    assert "no text" in row.value
+    assert row.value.startswith("On")
+
+
+def test_watermark_row_off_when_disabled() -> None:
+    """A disabled watermark still reads 'Off' regardless of stored text."""
+    from instantlink_bridge.config import AdjustmentsConfig
+
+    config = BridgeConfig(
+        adjustments=AdjustmentsConfig(watermark=False, watermark_text="Hello")
+    )
+    ui, _ = _make_settings_ui(config)
+    row = ui._settings_row_for_key(SettingKey.ADJUST_WATERMARK, printer_name="none")
+    assert row.value == "Off"
+
+
+def test_watermark_row_truncates_long_text() -> None:
+    """Watermark text >14 chars gets ellipsised to fit the 240 px row."""
+    from instantlink_bridge.config import AdjustmentsConfig
+
+    long_text = "Hongjun and the Watermark"
+    config = BridgeConfig(
+        adjustments=AdjustmentsConfig(watermark=True, watermark_text=long_text)
+    )
+    ui, _ = _make_settings_ui(config)
+    row = ui._settings_row_for_key(SettingKey.ADJUST_WATERMARK, printer_name="none")
+    assert "…" in row.value
+    # The truncated body must not contain the tail of the source string.
+    assert "Watermark" not in row.value
+
+
+def test_setting_datestamp_format_writes_config() -> None:
+    """config_with_setting_value writes the picked DatestampFormat into adjustments."""
+    from instantlink_bridge.config import DatestampFormat
+    from instantlink_bridge.ui.settings import config_with_setting_value
+
+    config = BridgeConfig()
+    updated = config_with_setting_value(
+        config, SettingKey.ADJUST_DATESTAMP_FORMAT, DatestampFormat.OLYMPUS
+    )
+    assert updated.adjustments.datestamp_format is DatestampFormat.OLYMPUS
+
+
+def test_datestamp_format_row_value_shows_current_preset_name() -> None:
+    """The Datestamp format row value matches the picker label for the active enum."""
+    from instantlink_bridge.config import AdjustmentsConfig, DatestampFormat
+
+    config = BridgeConfig(
+        adjustments=AdjustmentsConfig(datestamp_format=DatestampFormat.CONTAX)
+    )
+    ui, _ = _make_settings_ui(config)
+    row = ui._settings_row_for_key(
+        SettingKey.ADJUST_DATESTAMP_FORMAT, printer_name="none"
+    )
+    assert row.value == "Contax"

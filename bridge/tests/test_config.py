@@ -4,7 +4,9 @@ from pathlib import Path
 
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.config import (
+    AdjustmentsConfig,
     BridgeConfig,
+    DatestampFormat,
     FtpConfig,
     FtpReceiveMode,
     PowerBackend,
@@ -392,3 +394,57 @@ def test_write_config_round_trips_runtime_settings(tmp_path: Path) -> None:
     assert round_tripped.workflow.allow_print_without_film
     assert round_tripped.power.backend is PowerBackend.X306
     assert round_tripped.power.idle_poweroff_after_s == 9000
+
+
+# ---------------------------------------------------------------------------
+# Plan 037 phase 4: customizable watermark + datestamp format presets
+# ---------------------------------------------------------------------------
+
+
+def test_watermark_text_default_is_empty() -> None:
+    """Plan 037 phase 4: dropped the hardcoded "InstantLink" default."""
+    assert AdjustmentsConfig().watermark_text == ""
+
+
+def test_datestamp_format_default_is_quartz_date() -> None:
+    """Default datestamp preset mirrors the macOS app's Quartz Date."""
+    assert AdjustmentsConfig().datestamp_format is DatestampFormat.QUARTZ_DATE
+
+
+def test_datestamp_format_round_trip_toml(tmp_path: Path) -> None:
+    """Each datestamp preset survives a write/load cycle as the same enum value."""
+
+    for fmt in DatestampFormat:
+        config_path = tmp_path / f"{fmt.value}.toml"
+        config = BridgeConfig(adjustments=AdjustmentsConfig(datestamp_format=fmt))
+        write_config(config, config_path)
+        round_tripped = load_config(config_path)
+        assert round_tripped.adjustments.datestamp_format is fmt, f"{fmt.value} did not round-trip"
+
+
+def test_datestamp_format_parse_unknown_raises(tmp_path: Path) -> None:
+    """An unrecognised datestamp_format string fails fast with a useful message."""
+
+    config_path = tmp_path / "bad.toml"
+    config_path.write_text(
+        '[adjustments]\ndatestamp_format = "polaroid"\n',
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[adjustments].datestamp_format" in str(exc)
+    else:
+        raise AssertionError("expected unknown datestamp_format to fail")
+
+
+def test_watermark_text_round_trips_custom_value(tmp_path: Path) -> None:
+    """Custom watermark text survives the TOML round-trip (no default override)."""
+
+    config_path = tmp_path / "config.toml"
+    config = BridgeConfig(adjustments=AdjustmentsConfig(watermark_text="Hello"))
+    write_config(config, config_path)
+    round_tripped = load_config(config_path)
+    assert round_tripped.adjustments.watermark_text == "Hello"
+    assert round_tripped.adjustments.datestamp_format is DatestampFormat.QUARTZ_DATE

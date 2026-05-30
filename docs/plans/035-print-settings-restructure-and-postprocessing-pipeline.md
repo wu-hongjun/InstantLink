@@ -208,6 +208,56 @@ bridge; custom presets are saved by the user from the current values.
 Commit: `feat(bridge/imaging): postprocessing presets with built-in
 Default/Vivid/Soft/B&W`.
 
+### Phase 6 — Vignette + "Instax Film" preset
+
+Real Instax film has darker corners — partly the small-format lens, partly
+the chemistry. Today the bridge's prints look optically *flat* compared to
+photos that came out of an actual Instax body. A radial corner-darkening
+overlay simulates that look, and a new built-in preset bundles it with the
+matching colour tweaks so users can opt in with one row.
+
+- New `AdjustmentProfile` field:
+  - `vignette: int = 0` — strength 0 (off) to 100 (heavy). Range is
+    one-sided (no "bright corners" mode) because the simulation only
+    makes sense as a darkening; "no vignette" is the identity.
+- Settings row: new `ADJUST_VIGNETTE` SettingKey with a 5-position
+  discrete picker `{0, 25, 50, 75, 100}` — not the symmetric ±100
+  shape the four colour rows use, since negative vignette has no
+  real-world equivalent.
+- Implementation in `apply_adjustments`:
+  - Runs AFTER sharpness, BEFORE the overlay stage (datestamp +
+    watermark are drawn on top of the vignette so corner stamps stay
+    legible).
+  - NumPy radial falloff: build a normalised radius map per-pixel
+    `r = sqrt((x/w - 0.5)^2 + (y/h - 0.5)^2)`, raise to a power that
+    determines how aggressive the rolloff is (`gamma ≈ 2.0` looks
+    closest to real Instax), then multiply RGB by `1 - r^gamma * (v/100)`.
+    Clamped at the original colour space so we don't crush blacks below
+    0.
+  - Lazy NumPy import (same pattern as Phase 3's hue rotation).
+  - Identity fast-path: `vignette == 0` skips the calculation entirely.
+- New built-in preset `Instax Film`:
+  - `saturation = -10` (slight desat for the vintage feel)
+  - `sharpness = -10` (Instax prints aren't tack-sharp)
+  - `vignette = 50` (the headline effect — visible but not heavy)
+  - `hue = 0`, `exposure = 0`, `datestamp = False`, `watermark = False`
+- Tests:
+  - `test_vignette_darkens_corners_more_than_centre`: small solid-
+    colour fixture, profile with `vignette=100`; assert corner pixels
+    are darker than the centre pixel by a measurable delta.
+  - `test_vignette_identity_at_zero`: byte-identical output for
+    `vignette=0`.
+  - `test_instax_film_preset_applies_vignette_and_desat`: preset
+    selection from settings picks up vignette + saturation deltas.
+
+Commit: `feat(bridge/imaging): radial vignette + Instax Film built-in
+preset`.
+
+Phase 6 sits AFTER Phase 5 because the preset system is the right
+surface for "Instax Film" to live on. Phase 5 ships with five built-in
+presets (Default / Vivid / Soft / B&W + the new Instax Film slot stubbed
+out); Phase 6 fills it in once the vignette implementation lands.
+
 ## Cross-cutting constraints
 
 - After each phase: `pytest -q --timeout=10 --timeout-method=thread`,

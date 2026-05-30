@@ -377,7 +377,7 @@ _MODE_STATUS_WORD: dict[UiMode, str] = {
     UiMode.IMAGE_RECEIVED: "Received",
     UiMode.AWAITING_CONFIRM: "Preview",
     UiMode.PRINTING: "Printing",
-    UiMode.PRINT_COMPLETE: "Done",
+    UiMode.PRINT_COMPLETE: "Ejecting",
     UiMode.ERROR: "Error",
     UiMode.SETTINGS: "Settings",
 }
@@ -1030,7 +1030,7 @@ def _image_received(
         theme.label_secondary,
     )
     _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
-    # No hint bar for IMAGE_RECEIVED (transitions automatically)
+    draw_hint_bar(draw, ("", t("Auto print", snapshot.language), ""), fonts["hint"], theme)
 
 
 def _awaiting_confirm(
@@ -1117,7 +1117,7 @@ def _print_complete(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    _center_lines(draw, [t("Sent", snapshot.language)], 75, fonts["large"], theme.label_primary)
+    _center_lines(draw, [t("Ejecting", snapshot.language)], 75, fonts["large"], theme.label_primary)
     if snapshot.last_image_name is not None:
         _text(
             draw,
@@ -1131,12 +1131,12 @@ def _print_complete(
         draw,
         18,
         148,
-        t("Film should feed now", snapshot.language),
+        t("Film ejecting", snapshot.language),
         fonts["small"],
         theme.label_secondary,
     )
     _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
-    # No hint bar for PRINT_COMPLETE (auto-returns home)
+    draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
 
 
 def _needs_pairing(
@@ -1412,8 +1412,8 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
         return (("", "Printing", ""),)
     if snapshot.mode is UiMode.PRINT_COMPLETE:
         if snapshot.paired_printer is not None:
-            return (("KEY1 Setting", "Done", "KEY3 Network"),)
-        return (("KEY1 Setting", "Done", "Hold KEY3"),)
+            return (("KEY1 Setting", "Ejecting", "KEY3 Network"),)
+        return (("KEY1 Setting", "Ejecting", "Hold KEY3"),)
     if snapshot.paired_printer is not None:
         return (("KEY1 Setting", "KEY2 Refresh", "KEY3 Network"),)
     return (("KEY1 Setting", "KEY2 Refresh", "Hold KEY3"),)
@@ -1567,7 +1567,7 @@ def _mode_chrome(mode: UiMode) -> tuple[str, str]:
     if mode is UiMode.PRINTING:
         return BLUE, "Printing"
     if mode is UiMode.PRINT_COMPLETE:
-        return GREEN, "Complete"
+        return GREEN, "Ejecting"
     if mode is UiMode.PAIRING:
         return YELLOW, "Finding"
     if mode in {UiMode.PAIR_FAILED, UiMode.ERROR}:

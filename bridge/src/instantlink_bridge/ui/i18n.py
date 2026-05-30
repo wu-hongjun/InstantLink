@@ -60,10 +60,9 @@ _ZH_HANS: dict[str, str] = {
     # Apple iOS uses 已连接 / 已断开连接 for Bluetooth devices; we keep the
     # short ``已断开`` form because the top bar is space-constrained.
     "Attention": "注意",
-    "Complete": "已完成",
     "Connected": "已连接",
     "Disconnected": "已断开",
-    "Done": "完成",
+    "Ejecting": "退出中",
     "Error": "错误",
     "Finding": "查找中",
     "No film": "无相纸",
@@ -169,7 +168,7 @@ _ZH_HANS: dict[str, str] = {
     "Do not power off": "请勿断电",
     "FTP and printer ready": "FTP 与打印机已就绪",
     "Failed": "失败",
-    "Film should feed now": "相纸即将送出",
+    "Film ejecting": "相纸正在退出",
     "Hold K3 to re-pair": "长按 K3 重新配对",
     "If stuck, close phone app": "若卡住请关闭手机 App",
     "Keep it awake near bridge": "请保持打印机唤醒并靠近桥接",
@@ -209,7 +208,6 @@ _ZH_HANS: dict[str, str] = {
     "Select printer again": "请重新选择打印机",
     "Selected printer not visible": "未发现所选打印机",
     "Sending to printer": "正在发送至打印机",
-    "Sent": "已发送",
     "Starting print": "正在开始打印",
     "Starting services": "正在启动服务",
     "Then press K1": "然后请按 K1",

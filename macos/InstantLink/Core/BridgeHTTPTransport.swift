@@ -167,6 +167,17 @@ final class BridgeHTTPTransport: BridgeTransport {
         return try envelope.requireConfig()
     }
 
+    func getAdjustmentsSchema(device: BridgeDevice) async throws -> BridgeConfigSchema {
+        let envelope = try await send(
+            try makeRequest(
+                method: "GET",
+                path: "/v1/config/schema/adjustments",
+                signedFor: device
+            )
+        )
+        return try envelope.requireSchema()
+    }
+
     func putConfig(device: BridgeDevice, diff: [String: Any]) async throws -> BridgeConfig {
         let body = try JSONSerialization.data(
             withJSONObject: ["config": diff],

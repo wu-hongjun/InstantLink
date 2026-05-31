@@ -47,6 +47,7 @@ from instantlink_bridge.manager.diagnostics import (
     format_sse_event,
     format_sse_heartbeat,
 )
+from instantlink_bridge.manager.schema import build_adjustments_schema
 from instantlink_bridge.manager.update_flow import (
     ManagerEnvironment,
     UpdateFlowError,
@@ -721,6 +722,18 @@ async def handle_support_bundle_create(request: web.Request) -> web.Response:
     )
 
 
+async def handle_config_schema_adjustments(request: web.Request) -> web.Response:
+    """Return the schema descriptor for the Adjustments section.
+
+    The Mac renders the Adjustments card generically from this schema. New
+    fields added to :class:`instantlink_bridge.config.AdjustmentsConfig`
+    auto-reflect here (the schema is generated from the dataclass + ui
+    constants), so the Mac surfaces them without a code change.
+    """
+
+    return json_success(request, {"schema": build_adjustments_schema()})
+
+
 async def handle_config_get(request: web.Request) -> web.Response:
     """Return the current bridge config in the management JSON shape.
 
@@ -842,6 +855,7 @@ async def read_json_object_compatible(request: web.Request) -> dict[str, Any]:
 ADMIN_OPERATION_HANDLERS: dict[str, AdminHandler] = {
     "config_get": handle_config_get,
     "config_put": handle_config_put,
+    "config_schema_adjustments": handle_config_schema_adjustments,
     "update_preflight": handle_update_preflight,
     "update_upload": handle_update_upload,
     "update_install": handle_update_install,

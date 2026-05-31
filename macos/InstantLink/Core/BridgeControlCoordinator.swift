@@ -662,6 +662,20 @@ final class BridgeControlCoordinator: ObservableObject {
         return try await transport.getConfig(device: device)
     }
 
+    /// Fetch the Adjustments schema descriptor (plan 039 phase 1) via
+    /// signed `GET /v1/config/schema/adjustments`. The Mac renders the
+    /// Adjustments card generically from this schema.
+    func fetchAdjustmentsSchema() async throws -> BridgeConfigSchema {
+        guard let device = currentDevice() else {
+            throw BridgeAPIError(
+                requestID: "local-no-device",
+                code: .deviceUnavailable,
+                payload: BridgeErrorPayload(message: "No Bridge is currently discovered.")
+            )
+        }
+        return try await transport.getAdjustmentsSchema(device: device)
+    }
+
     /// Apply a partial config diff via signed `PUT /v1/config`. Returns the
     /// bridge's fresh canonical state on success; throws
     /// ``BridgeConfigValidationError`` on 422 and ``BridgeAPIError`` on

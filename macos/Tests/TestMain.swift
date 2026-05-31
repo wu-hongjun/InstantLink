@@ -305,6 +305,27 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeSettingsDraftTests.testAdjustmentsRevertResetsSliders", {
                 try BridgeSettingsDraftTests().testAdjustmentsRevertResetsSliders()
             }),
+            ("BridgeSettingsDraftTests.testValidationReadsSliderRangeFromSchema", {
+                try BridgeSettingsDraftTests().testValidationReadsSliderRangeFromSchema()
+            }),
+            ("BridgeSettingsDraftTests.testValidationFallsBackToHardcodedRangeIfSchemaMissing", {
+                try BridgeSettingsDraftTests().testValidationFallsBackToHardcodedRangeIfSchemaMissing()
+            }),
+            ("BridgeSettingsDraftTests.testAdjustmentsValueAdapterRoundTripsAllKeys", {
+                try BridgeSettingsDraftTests().testAdjustmentsValueAdapterRoundTripsAllKeys()
+            }),
+            ("BridgeConfigSchemaTests.testDecodesSchemaWithAllFieldTypes", {
+                try BridgeConfigSchemaTests().testDecodesSchemaWithAllFieldTypes()
+            }),
+            ("BridgeConfigSchemaTests.testDecodesUnknownFieldTypeAsUnknownCase", {
+                try BridgeConfigSchemaTests().testDecodesUnknownFieldTypeAsUnknownCase()
+            }),
+            ("BridgeConfigSchemaTests.testPickerDecodesOptionsAndDependsOn", {
+                try BridgeConfigSchemaTests().testPickerDecodesOptionsAndDependsOn()
+            }),
+            ("BridgeConfigSchemaTests.testSliderDecodesRangeAndDisplay", {
+                try BridgeConfigSchemaTests().testSliderDecodesRangeAndDisplay()
+            }),
             ("BridgeSettingsApplyFlowTests.testApplyHappyPath", {
                 try await BridgeSettingsApplyFlowTests().testApplyHappyPath()
             }),
@@ -325,6 +346,9 @@ struct InstantLinkMacOSTestRunner {
             }),
             ("BridgeHTTPTransportTests.testGetConfigSignsAndDecodes", {
                 try await BridgeHTTPTransportTests().testGetConfigSignsAndDecodes()
+            }),
+            ("BridgeHTTPTransportTests.testGetAdjustmentsSchemaSignsAndDecodes", {
+                try await BridgeHTTPTransportTests().testGetAdjustmentsSchemaSignsAndDecodes()
             }),
             ("BridgeHTTPTransportTests.testPutConfigSignsAndSendsDiff", {
                 try await BridgeHTTPTransportTests().testPutConfigSignsAndSendsDiff()

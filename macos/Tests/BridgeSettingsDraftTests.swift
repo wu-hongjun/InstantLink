@@ -177,6 +177,86 @@ final class BridgeSettingsDraftTests {
         try expectEqual(draft.draft?.adjustments.vignette, 0)
     }
 
+    // MARK: - Plan 039 phase 1: schema-driven validation + key adapter
+
+    func testValidationReadsSliderRangeFromSchema() throws {
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+        let tightSchema = BridgeConfigSchema(
+            schemaVersion: 1,
+            section: "adjustments",
+            title: "Image adjustments",
+            fields: [
+                .slider(BridgeSliderField(
+                    key: "saturation",
+                    label: "Saturation",
+                    help: nil,
+                    range: BridgeSliderRange(min: -50, max: 50, step: 1),
+                    display: .signedPercent
+                )),
+            ]
+        )
+        draft.loadAdjustmentsSchema(tightSchema)
+        draft.draft?.adjustments.saturation = 80
+        try expectFalse(draft.validate())
+        try expectTrue(draft.fieldErrors[.adjustmentsSaturation] != nil)
+
+        draft.draft?.adjustments.saturation = 25
+        try expectTrue(draft.validate())
+    }
+
+    func testValidationFallsBackToHardcodedRangeIfSchemaMissing() throws {
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+        // No schema loaded → default -100..+100 used.
+        draft.draft?.adjustments.saturation = 150
+        try expectFalse(draft.validate())
+        try expectTrue(draft.fieldErrors[.adjustmentsSaturation] != nil)
+
+        draft.draft?.adjustments.saturation = 0
+        try expectTrue(draft.validate())
+    }
+
+    func testAdjustmentsValueAdapterRoundTripsAllKeys() throws {
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+
+        draft.setAdjustmentsValue("Vivid", forKey: "preset")
+        try expectEqual(draft.adjustmentsValue(forKey: "preset") as? String, "Vivid")
+
+        draft.setAdjustmentsValue(42, forKey: "saturation")
+        try expectEqual(draft.adjustmentsValue(forKey: "saturation") as? Int, 42)
+
+        draft.setAdjustmentsValue(-12, forKey: "exposure")
+        try expectEqual(draft.adjustmentsValue(forKey: "exposure") as? Int, -12)
+
+        draft.setAdjustmentsValue(7, forKey: "sharpness")
+        try expectEqual(draft.adjustmentsValue(forKey: "sharpness") as? Int, 7)
+
+        draft.setAdjustmentsValue(-99, forKey: "hue")
+        try expectEqual(draft.adjustmentsValue(forKey: "hue") as? Int, -99)
+
+        draft.setAdjustmentsValue(33, forKey: "vignette")
+        try expectEqual(draft.adjustmentsValue(forKey: "vignette") as? Int, 33)
+
+        draft.setAdjustmentsValue(true, forKey: "datestamp")
+        try expectEqual(draft.adjustmentsValue(forKey: "datestamp") as? Bool, true)
+
+        draft.setAdjustmentsValue("olympus", forKey: "datestamp_format")
+        try expectEqual(draft.adjustmentsValue(forKey: "datestamp_format") as? String, "olympus")
+
+        draft.setAdjustmentsValue(true, forKey: "watermark")
+        try expectEqual(draft.adjustmentsValue(forKey: "watermark") as? Bool, true)
+
+        draft.setAdjustmentsValue("hello", forKey: "watermark_text")
+        try expectEqual(draft.adjustmentsValue(forKey: "watermark_text") as? String, "hello")
+
+        // Unknown keys are silently dropped (forward-compat) — read returns nil
+        // and write doesn't crash.
+        draft.setAdjustmentsValue(123, forKey: "future_widget")
+        try expectNil(draft.adjustmentsValue(forKey: "future_widget"))
+    }
+
     private func unwrap<T>(_ value: T?) throws -> T {
         guard let value else {
             throw MacTestFailure(file: #filePath, line: #line, message: "Unexpected nil")

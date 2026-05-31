@@ -24,6 +24,7 @@ struct BridgeAPIEnvelope: Codable, Equatable {
     var upload: BridgeUploadResult?
     var config: BridgeConfig?
     var supportBundle: BridgeSupportBundleResult?
+    var schema: BridgeConfigSchema?
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
@@ -46,6 +47,7 @@ struct BridgeAPIEnvelope: Codable, Equatable {
         case upload
         case config
         case supportBundle = "support_bundle"
+        case schema
     }
 
     func requireOK() throws {
@@ -152,6 +154,14 @@ struct BridgeAPIEnvelope: Codable, Equatable {
             throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "config")
         }
         return config
+    }
+
+    func requireSchema() throws -> BridgeConfigSchema {
+        try requireOK()
+        guard let schema else {
+            throw BridgeAPIError.missingPayload(requestID: requestID, payloadName: "schema")
+        }
+        return schema
     }
 }
 

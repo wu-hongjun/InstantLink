@@ -35,10 +35,23 @@ final class BridgeSettingsDraft: ObservableObject {
     @Published var draft: BridgeConfig?
     @Published private(set) var fieldErrors: [BridgeConfigField: String] = [:]
     @Published private(set) var applyState: ApplyState = .idle
+    /// Adjustments schema fetched from the bridge (plan 039 phase 1).
+    /// ``nil`` until ``loadAdjustmentsSchema(_:)`` runs successfully; the
+    /// Schema renderer reads this to drive the Adjustments card. When the
+    /// fetch fails the section falls back to a hand-written card.
+    @Published var adjustmentsSchema: BridgeConfigSchema?
 
     init(loaded: BridgeConfig? = nil) {
         self.loaded = loaded
         self.draft = loaded
+    }
+
+    // MARK: - Schema loading
+
+    /// Replace the cached Adjustments schema. Pass ``nil`` to drop the cache
+    /// (e.g. when the bridge endpoint failed and the UI should fall back).
+    func loadAdjustmentsSchema(_ schema: BridgeConfigSchema?) {
+        adjustmentsSchema = schema
     }
 
     // MARK: - Lifecycle
@@ -118,19 +131,28 @@ final class BridgeSettingsDraft: ObservableObject {
         if !BridgeAdjustmentsConfig.allPresetNames.contains(draft.adjustments.preset) {
             errors[.adjustmentsPreset] = "Unknown preset."
         }
-        let signedAxes: [(BridgeConfigField, Int)] = [
-            (.adjustmentsSaturation, draft.adjustments.saturation),
-            (.adjustmentsExposure, draft.adjustments.exposure),
-            (.adjustmentsSharpness, draft.adjustments.sharpness),
-            (.adjustmentsHue, draft.adjustments.hue),
+        // Slider range validation reads from the loaded schema when
+        // available; falls back to the hardcoded defaults so validation
+        // still runs before the schema has been fetched. The bridge owns
+        // the source of truth — when it tightens a range, the Mac
+        // automatically respects it.
+        let signedAxes: [(BridgeConfigField, String, Int)] = [
+            (.adjustmentsSaturation, "saturation", draft.adjustments.saturation),
+            (.adjustmentsExposure, "exposure", draft.adjustments.exposure),
+            (.adjustmentsSharpness, "sharpness", draft.adjustments.sharpness),
+            (.adjustmentsHue, "hue", draft.adjustments.hue),
         ]
-        for (field, value) in signedAxes {
-            if value < -100 || value > 100 {
-                errors[field] = "Must be between -100 and +100"
+        for (field, key, value) in signedAxes {
+            let range = sliderRange(forKey: key, fallback: -100...100)
+            if value < range.lowerBound || value > range.upperBound {
+                errors[field] = "Must be between \(range.lowerBound) and \(range.upperBound)"
             }
         }
-        if draft.adjustments.vignette < 0 || draft.adjustments.vignette > 100 {
-            errors[.adjustmentsVignette] = "Must be between 0 and 100"
+        let vignetteRange = sliderRange(forKey: "vignette", fallback: 0...100)
+        if draft.adjustments.vignette < vignetteRange.lowerBound
+            || draft.adjustments.vignette > vignetteRange.upperBound
+        {
+            errors[.adjustmentsVignette] = "Must be between \(vignetteRange.lowerBound) and \(vignetteRange.upperBound)"
         }
         fieldErrors = errors
         return errors.isEmpty
@@ -268,6 +290,103 @@ final class BridgeSettingsDraft: ObservableObject {
     var isDirtyIncludingPassword: Bool {
         if let pending = pendingPassword, !pending.isEmpty { return true }
         return isDirty
+    }
+
+    // MARK: - Schema key adapter (plan 039 phase 1)
+
+    /// Read the current draft value for one Adjustments field by its
+    /// bridge-side snake_case key. Returns ``nil`` for unknown keys so the
+    /// schema renderer can show its "unsupported field" placeholder.
+    func adjustmentsValue(forKey key: String) -> Any? {
+        guard let draft else { return nil }
+        switch key {
+        case "preset": return draft.adjustments.preset
+        case "saturation": return draft.adjustments.saturation
+        case "exposure": return draft.adjustments.exposure
+        case "sharpness": return draft.adjustments.sharpness
+        case "hue": return draft.adjustments.hue
+        case "vignette": return draft.adjustments.vignette
+        case "datestamp": return draft.adjustments.datestamp
+        case "datestamp_format": return draft.adjustments.datestampFormat.rawValue
+        case "watermark": return draft.adjustments.watermark
+        case "watermark_text": return draft.adjustments.watermarkText
+        default: return nil
+        }
+    }
+
+    /// Write a draft value back through the bridge-side snake_case key.
+    /// Unknown keys are silently dropped — forward-compat with future
+    /// bridge-only fields the Mac is too old to understand.
+    func setAdjustmentsValue(_ value: Any, forKey key: String) {
+        guard var current = draft else { return }
+        switch key {
+        case "preset":
+            if let stringValue = value as? String {
+                current.adjustments.preset = stringValue
+            }
+        case "saturation":
+            if let intValue = coerceInt(value) {
+                current.adjustments.saturation = intValue
+            }
+        case "exposure":
+            if let intValue = coerceInt(value) {
+                current.adjustments.exposure = intValue
+            }
+        case "sharpness":
+            if let intValue = coerceInt(value) {
+                current.adjustments.sharpness = intValue
+            }
+        case "hue":
+            if let intValue = coerceInt(value) {
+                current.adjustments.hue = intValue
+            }
+        case "vignette":
+            if let intValue = coerceInt(value) {
+                current.adjustments.vignette = intValue
+            }
+        case "datestamp":
+            if let boolValue = value as? Bool {
+                current.adjustments.datestamp = boolValue
+            }
+        case "datestamp_format":
+            if let stringValue = value as? String,
+               let parsed = BridgeDatestampFormat(rawValue: stringValue) {
+                current.adjustments.datestampFormat = parsed
+            }
+        case "watermark":
+            if let boolValue = value as? Bool {
+                current.adjustments.watermark = boolValue
+            }
+        case "watermark_text":
+            if let stringValue = value as? String {
+                current.adjustments.watermarkText = stringValue
+            }
+        default:
+            return
+        }
+        draft = current
+    }
+
+    private func coerceInt(_ value: Any) -> Int? {
+        if let intValue = value as? Int { return intValue }
+        if let doubleValue = value as? Double { return Int(doubleValue.rounded()) }
+        return nil
+    }
+
+    /// Resolve the slider's integer range for a given key from the loaded
+    /// schema, falling back to the supplied default when the schema isn't
+    /// loaded or doesn't declare the field.
+    func sliderRange(forKey key: String, fallback: ClosedRange<Int>) -> ClosedRange<Int> {
+        guard let schema = adjustmentsSchema else { return fallback }
+        for field in schema.fields {
+            if case .slider(let slider) = field, slider.key == key {
+                let low = Int(slider.range.min.rounded())
+                let high = Int(slider.range.max.rounded())
+                guard low <= high else { return fallback }
+                return low...high
+            }
+        }
+        return fallback
     }
 
     // MARK: - Helpers

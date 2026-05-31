@@ -72,6 +72,16 @@ struct BridgeSettingsView: View {
         do {
             let config = try await coordinator.fetchConfig()
             draft.load(config)
+            // Plan 039: fetch the Adjustments schema in parallel with the
+            // initial config. Failure here is non-fatal — the schema-driven
+            // Adjustments card falls back to a "schema unavailable" state
+            // when the cache is nil.
+            do {
+                let schema = try await coordinator.fetchAdjustmentsSchema()
+                draft.loadAdjustmentsSchema(schema)
+            } catch {
+                draft.loadAdjustmentsSchema(nil)
+            }
             loadState = .loaded
         } catch let error as BridgeAPIError {
             loadState = .failed(message: error.payload.message)
@@ -317,82 +327,27 @@ struct BridgeSettingsView: View {
     }
 
     private var adjustmentsCard: some View {
-        BridgeSettingsSection(title: L("Image adjustments")) {
-            VStack(alignment: .leading, spacing: 10) {
-                pickerRow(
-                    label: L("Preset"),
-                    selection: binding(\.adjustments.preset, default: "Default"),
-                    options: BridgeAdjustmentsConfig.allPresetNames.map { ($0, presetLabel($0)) }
-                )
-                sliderRow(
-                    label: L("Saturation"),
-                    value: bindingInt(\.adjustments.saturation, default: 0),
-                    in: -100...100,
-                    style: .signed
-                )
-                sliderRow(
-                    label: L("Exposure"),
-                    value: bindingInt(\.adjustments.exposure, default: 0),
-                    in: -100...100,
-                    style: .signed
-                )
-                sliderRow(
-                    label: L("Sharpness"),
-                    value: bindingInt(\.adjustments.sharpness, default: 0),
-                    in: -100...100,
-                    style: .signed
-                )
-                sliderRow(
-                    label: L("Hue"),
-                    value: bindingInt(\.adjustments.hue, default: 0),
-                    in: -100...100,
-                    style: .signed
-                )
-                sliderRow(
-                    label: L("Vignette"),
-                    value: bindingInt(\.adjustments.vignette, default: 0),
-                    in: 0...100,
-                    style: .unsigned
-                )
-                Toggle(
-                    L("Datestamp"),
-                    isOn: Binding(
-                        get: { draft.draft?.adjustments.datestamp ?? false },
-                        set: { newValue in
-                            updateDraft { config in
-                                config.adjustments.datestamp = newValue
-                            }
-                        }
-                    )
-                )
-                pickerRow(
-                    label: L("Datestamp format"),
-                    selection: bindingEnum(\.adjustments.datestampFormat, default: .quartzDate),
-                    options: [
-                        (.quartzDate, L("Quartz Date")),
-                        (.olympus, L("Olympus")),
-                        (.contax, L("Contax")),
-                        (.modern, L("Modern")),
-                        (.labPrint, L("Lab Print")),
-                    ]
-                )
-                .disabled(!(draft.draft?.adjustments.datestamp ?? false))
-                Toggle(
-                    L("Watermark"),
-                    isOn: Binding(
-                        get: { draft.draft?.adjustments.watermark ?? false },
-                        set: { newValue in
-                            updateDraft { config in
-                                config.adjustments.watermark = newValue
-                            }
-                        }
-                    )
-                )
-                textFieldRow(
-                    label: L("Watermark text"),
-                    text: binding(\.adjustments.watermarkText, default: "")
-                )
-                .disabled(!(draft.draft?.adjustments.watermark ?? false))
+        BridgeSettingsSection(title: L(draft.adjustmentsSchema?.title ?? "Image adjustments")) {
+            // Plan 039 phase 1: the Adjustments card body is rendered
+            // generically from the bridge-owned schema. When the schema
+            // hasn't loaded yet we show a small ProgressView; when the
+            // fetch failed we show a retry button. The hand-written card
+            // chrome (BridgeSettingsSection wrapper + errorFooter binding)
+            // stays.
+            if let schema = draft.adjustmentsSchema {
+                BridgeSchemaSectionView(draft: draft, schema: schema)
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(L("Loading adjustments…"))
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button(L("Retry")) {
+                        Task { await reloadAdjustmentsSchema() }
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
         } footer: {
             errorFooter(for: [
@@ -410,6 +365,15 @@ struct BridgeSettingsView: View {
         }
     }
 
+    private func reloadAdjustmentsSchema() async {
+        do {
+            let schema = try await coordinator.fetchAdjustmentsSchema()
+            draft.loadAdjustmentsSchema(schema)
+        } catch {
+            draft.loadAdjustmentsSchema(nil)
+        }
+    }
+
     /// Render label for a preset name. Built-ins pass through; ``CustomN``
     /// slot names are localised as ``"Custom N"``.
     private func presetLabel(_ name: String) -> String {
@@ -417,48 +381,6 @@ struct BridgeSettingsView: View {
             return "\(L("Custom")) \(n)"
         }
         return L(name)
-    }
-
-    private enum SliderValueStyle {
-        case signed
-        case unsigned
-    }
-
-    private func sliderRow(
-        label: String,
-        value: Binding<Int>,
-        in range: ClosedRange<Int>,
-        style: SliderValueStyle
-    ) -> some View {
-        let doubleBinding = Binding<Double>(
-            get: { Double(value.wrappedValue) },
-            set: { value.wrappedValue = Int($0.rounded()) }
-        )
-        let badge: String
-        switch style {
-        case .signed:
-            if value.wrappedValue > 0 {
-                badge = "+\(value.wrappedValue)"
-            } else {
-                badge = "\(value.wrappedValue)"
-            }
-        case .unsigned:
-            badge = "\(value.wrappedValue)"
-        }
-        return HStack(spacing: 10) {
-            Text(label)
-                .font(.callout)
-                .frame(width: 160, alignment: .leading)
-            Slider(
-                value: doubleBinding,
-                in: Double(range.lowerBound)...Double(range.upperBound),
-                step: 1
-            )
-            Text(badge)
-                .font(.callout.monospacedDigit())
-                .foregroundColor(.secondary)
-                .frame(width: 44, alignment: .trailing)
-        }
     }
 
     @ViewBuilder

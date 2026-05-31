@@ -467,6 +467,78 @@ final class BridgeHTTPTransportTests {
         try expectTrue(state.isTerminal)
     }
 
+    func testGetAdjustmentsSchemaSignsAndDecodes() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let session = makeSession { request in
+            try expectEqual(request.url?.path, "/v1/config/schema/adjustments")
+            try expectEqual(request.httpMethod, "GET")
+            try expectTrue(
+                request.value(forHTTPHeaderField: BridgeManagementAuth.signatureHeader)?.isEmpty == false
+            )
+            return .json(200, Self.adjustmentsSchemaEnvelope)
+        }
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://192.168.7.1:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1000) },
+            nonce: { "nonce-0001" }
+        )
+
+        let schema = try await transport.getAdjustmentsSchema(device: makeDevice())
+        try expectEqual(schema.schemaVersion, 1)
+        try expectEqual(schema.section, "adjustments")
+        try expectEqual(schema.title, "Image adjustments")
+        try expectEqual(schema.fields.count, 3)
+        guard case .picker(let preset) = schema.fields[0] else {
+            throw MacTestFailure(file: #filePath, line: #line, message: "Expected picker at index 0")
+        }
+        try expectEqual(preset.key, "preset")
+        guard case .slider(let saturation) = schema.fields[1] else {
+            throw MacTestFailure(file: #filePath, line: #line, message: "Expected slider at index 1")
+        }
+        try expectEqual(saturation.display, .signedPercent)
+        guard case .toggle(let watermark) = schema.fields[2] else {
+            throw MacTestFailure(file: #filePath, line: #line, message: "Expected toggle at index 2")
+        }
+        try expectEqual(watermark.key, "watermark")
+    }
+
+    private static let adjustmentsSchemaEnvelope = """
+    {
+      "schema_version": 1,
+      "request_id": "req-schema",
+      "ok": true,
+      "schema": {
+        "schema_version": 1,
+        "section": "adjustments",
+        "title": "Image adjustments",
+        "fields": [
+          {
+            "key": "preset",
+            "type": "picker",
+            "label": "Preset",
+            "options": [
+              {"value": "Default", "label": "Default"}
+            ]
+          },
+          {
+            "key": "saturation",
+            "type": "slider",
+            "label": "Saturation",
+            "range": {"min": -100, "max": 100, "step": 1},
+            "display": "signed_percent"
+          },
+          {
+            "key": "watermark",
+            "type": "toggle",
+            "label": "Watermark"
+          }
+        ]
+      }
+    }
+    """
+
     private static let configEnvelope = """
     {
       "schema_version": 1,

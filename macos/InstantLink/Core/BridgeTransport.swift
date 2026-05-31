@@ -16,6 +16,10 @@ protocol BridgeTransport {
     func status(device: BridgeDevice) async throws -> BridgeStatus
     func getConfig(device: BridgeDevice) async throws -> BridgeConfig
     func putConfig(device: BridgeDevice, diff: [String: Any]) async throws -> BridgeConfig
+    /// Phase 1 (plan 039): fetch the bridge-owned schema for the
+    /// Adjustments settings section. The Mac renders the section's UI
+    /// generically from the returned schema.
+    func getAdjustmentsSchema(device: BridgeDevice) async throws -> BridgeConfigSchema
     func preflightUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdatePreflight
     func uploadUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUploadResult
     func startUpdate(device: BridgeDevice, package: BridgeUpdatePackage) async throws -> BridgeUpdateState
@@ -109,6 +113,7 @@ actor InMemoryBridgeTransport: BridgeTransport {
     private var configs: [String: BridgeConfig]
     private var configValidationErrors: [String: [String: String]]
     private(set) var putConfigCalls: Int
+    private var adjustmentsSchemas: [String: BridgeConfigSchema]
     // MARK: Phase D — backup / restore test scaffolding
     private(set) var createBackupCalls: Int
     private(set) var lastCreateBackupPassphrase: String?
@@ -150,6 +155,7 @@ actor InMemoryBridgeTransport: BridgeTransport {
         self.configs = [:]
         self.configValidationErrors = [:]
         self.putConfigCalls = 0
+        self.adjustmentsSchemas = [:]
         self.createBackupCalls = 0
         self.lastCreateBackupPassphrase = nil
         self.restoreBackupCalls = 0
@@ -400,6 +406,104 @@ actor InMemoryBridgeTransport: BridgeTransport {
         try requireAuthorized(device)
         return configs[device.deviceID] ?? .defaults
     }
+
+    func getAdjustmentsSchema(device: BridgeDevice) async throws -> BridgeConfigSchema {
+        try requireAuthorized(device)
+        if let scripted = adjustmentsSchemas[device.deviceID] {
+            return scripted
+        }
+        return InMemoryBridgeTransport.defaultAdjustmentsSchema
+    }
+
+    /// Plan 039 phase 1: tests can override the returned schema per device.
+    func setAdjustmentsSchema(_ schema: BridgeConfigSchema?, for deviceID: String) {
+        if let schema {
+            adjustmentsSchemas[deviceID] = schema
+        } else {
+            adjustmentsSchemas.removeValue(forKey: deviceID)
+        }
+    }
+
+    static let defaultAdjustmentsSchema = BridgeConfigSchema(
+        schemaVersion: 1,
+        section: "adjustments",
+        title: "Image adjustments",
+        fields: [
+            .picker(BridgePickerField(
+                key: "preset",
+                label: "Preset",
+                help: "Choose a preset or Custom slot",
+                options: BridgeAdjustmentsConfig.allPresetNames.map {
+                    BridgePickerOption(value: $0, label: $0)
+                },
+                dependsOn: nil
+            )),
+            .slider(BridgeSliderField(
+                key: "saturation",
+                label: "Saturation",
+                help: "Colour intensity. Negative dulls, positive boosts",
+                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                display: .signedPercent
+            )),
+            .slider(BridgeSliderField(
+                key: "exposure",
+                label: "Exposure",
+                help: "Brightness in EV stops. ±100 = ±1 EV",
+                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                display: .signedPercent
+            )),
+            .slider(BridgeSliderField(
+                key: "sharpness",
+                label: "Sharpness",
+                help: "Edge contrast. Negative softens, positive crisps",
+                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                display: .signedPercent
+            )),
+            .slider(BridgeSliderField(
+                key: "hue",
+                label: "Hue",
+                help: "Tint. Left toward orange, right toward blue",
+                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                display: .signedPercent
+            )),
+            .slider(BridgeSliderField(
+                key: "vignette",
+                label: "Vignette",
+                help: "Darken the corners to simulate Instax film",
+                range: BridgeSliderRange(min: 0, max: 100, step: 1),
+                display: .unsignedPercent
+            )),
+            .toggle(BridgeToggleField(
+                key: "datestamp",
+                label: "Datestamp",
+                help: "Stamp the photo's date in the bottom-right corner"
+            )),
+            .picker(BridgePickerField(
+                key: "datestamp_format",
+                label: "Datestamp format",
+                help: nil,
+                options: [
+                    BridgePickerOption(value: "quartz_date", label: "Quartz Date"),
+                    BridgePickerOption(value: "olympus", label: "Olympus"),
+                    BridgePickerOption(value: "contax", label: "Contax"),
+                    BridgePickerOption(value: "modern", label: "Modern"),
+                    BridgePickerOption(value: "lab_print", label: "Lab Print"),
+                ],
+                dependsOn: BridgeFieldDependency(field: "datestamp", value: .bool(true))
+            )),
+            .toggle(BridgeToggleField(
+                key: "watermark",
+                label: "Watermark",
+                help: "Render watermark_text in the bottom-left corner"
+            )),
+            .text(BridgeTextField(
+                key: "watermark_text",
+                label: "Watermark text",
+                help: nil,
+                dependsOn: BridgeFieldDependency(field: "watermark", value: .bool(true))
+            )),
+        ]
+    )
 
     func putConfig(device: BridgeDevice, diff: [String: Any]) async throws -> BridgeConfig {
         try requireAuthorized(device)

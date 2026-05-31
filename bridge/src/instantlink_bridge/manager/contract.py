@@ -74,6 +74,13 @@ ADMIN_ROUTES: tuple[ManagementRoute, ...] = (
     ),
     ManagementRoute(
         "GET",
+        "/v1/config/schema/adjustments",
+        True,
+        "config_schema_adjustments",
+        "Schema descriptor for the Adjustments section.",
+    ),
+    ManagementRoute(
+        "GET",
         "/v1/network/status",
         True,
         "network_status",

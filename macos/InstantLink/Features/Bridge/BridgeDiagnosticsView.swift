@@ -16,7 +16,13 @@ struct BridgeDiagnosticsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if isUnpaired {
-                    pairingRequiredCard
+                    if isRecoveryOwningMessage {
+                        // Recovery banner already explains why management
+                        // routes are unreachable; suppress the pairing card.
+                        EmptyView()
+                    } else {
+                        pairingRequiredCard
+                    }
                 } else {
                     logsCard
                     supportBundleCard
@@ -39,6 +45,18 @@ struct BridgeDiagnosticsView: View {
     private var isUnpaired: Bool {
         if case .paired = coordinator.snapshot.pairing { return false }
         return true
+    }
+
+    /// True when the recovery banner is showing a state where management
+    /// routes are unreachable. In that case the pairing card would
+    /// contradict the banner, so the tab body should defer to the banner.
+    private var isRecoveryOwningMessage: Bool {
+        switch diagnosticsCoordinator.snapshot.recovery {
+        case .managementUnavailable, .restartInFlight, .unrecoverable:
+            return true
+        case .ok, .checking, .recovered:
+            return false
+        }
     }
 
     private var pairingRequiredCard: some View {
@@ -215,7 +233,7 @@ struct BridgeDiagnosticsView: View {
     private var supportBundleCard: some View {
         BridgeCard(title: L("Support bundle")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(L("Create a redacted support bundle you can share with support. Passwords and signing keys are stripped."))
+                Text(L("Stage a redacted support bundle on the Bridge. The actual archive lives on the Bridge filesystem at the path shown below — the saved file is a pointer."))
                     .font(.callout)
                     .foregroundColor(.secondary)
                 supportBundleContent
@@ -276,7 +294,7 @@ struct BridgeDiagnosticsView: View {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundColor(.green)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L("Support bundle ready."))
+                    Text(L("Bundle staged on Bridge"))
                         .font(.callout.weight(.semibold))
                     Text(bundle.archivePath)
                         .font(.caption)

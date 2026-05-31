@@ -56,10 +56,14 @@ enum BridgePairingFailureReason: Equatable {
 
     var localizedMessage: String {
         switch self {
-        case .windowClosed: return L("bridge_pairing_error_window_closed")
-        case .codeRejected: return L("bridge_pairing_error_code_rejected")
-        case .bridgeUnreachable: return L("bridge_pairing_error_unreachable")
-        case .timeout: return L("bridge_pairing_error_timeout")
+        case .windowClosed:
+            return L("The pairing window on the Bridge has closed. Press KEY3 on the Bridge LCD to re-open it.")
+        case .codeRejected:
+            return L("The Bridge rejected the 6-digit code. Double-check the code on the LCD and try again.")
+        case .bridgeUnreachable:
+            return L("Could not reach the Bridge. Check the USB or Wi-Fi connection and try again.")
+        case .timeout:
+            return L("The pairing window timed out before the code was submitted.")
         case .other(let message): return message
         }
     }

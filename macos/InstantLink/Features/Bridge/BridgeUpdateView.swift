@@ -8,6 +8,7 @@ import SwiftUI
 struct BridgeUpdateView: View {
     @ObservedObject var coordinator: BridgeControlCoordinator
     @ObservedObject var updateCoordinator: BridgeUpdateCoordinator
+    @ObservedObject var diagnosticsCoordinator: BridgeDiagnosticsCoordinator
 
     @State private var showRollbackConfirmation: Bool = false
 
@@ -15,7 +16,14 @@ struct BridgeUpdateView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if isUnpaired {
-                    pairingRequiredCard
+                    if isRecoveryOwningMessage {
+                        // The recovery banner already explains why management
+                        // routes are unreachable; don't stack a contradictory
+                        // "Pair this Mac" card on top.
+                        EmptyView()
+                    } else {
+                        pairingRequiredCard
+                    }
                 } else {
                     statusCard
                     if let preflight = updateCoordinator.snapshot.preflight {
@@ -46,6 +54,19 @@ struct BridgeUpdateView: View {
     private var isUnpaired: Bool {
         if case .paired = coordinator.snapshot.pairing { return false }
         return true
+    }
+
+    /// True when the recovery banner is showing a state where management
+    /// routes are unreachable. In that case the pairing card would
+    /// contradict the banner ("pair this Mac…" but pairing routes don't
+    /// work right now), so the tab body should defer to the banner.
+    private var isRecoveryOwningMessage: Bool {
+        switch diagnosticsCoordinator.snapshot.recovery {
+        case .managementUnavailable, .restartInFlight, .unrecoverable:
+            return true
+        case .ok, .checking, .recovered:
+            return false
+        }
     }
 
     private var pairingRequiredCard: some View {

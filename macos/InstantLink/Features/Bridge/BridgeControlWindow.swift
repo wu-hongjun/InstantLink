@@ -123,12 +123,14 @@ struct BridgeControlWindow: View {
         case .updates:
             BridgeUpdateView(
                 coordinator: coordinator,
-                updateCoordinator: coordinator.updateCoordinator
+                updateCoordinator: coordinator.updateCoordinator,
+                diagnosticsCoordinator: coordinator.diagnosticsCoordinator
             )
         case .backup:
             BridgeBackupView(
                 coordinator: coordinator,
-                backupCoordinator: coordinator.backupCoordinator
+                backupCoordinator: coordinator.backupCoordinator,
+                diagnosticsCoordinator: coordinator.diagnosticsCoordinator
             )
         case .diagnostics:
             BridgeDiagnosticsView(

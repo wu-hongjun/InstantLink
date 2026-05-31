@@ -170,6 +170,9 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeClientFileStoreTests.testSigningKeyRoundTripsAsBase64URL", {
                 try BridgeClientFileStoreTests().testSigningKeyRoundTripsAsBase64URL()
             }),
+            ("BridgeClientFileStoreTests.testReadSelfHealsOnCorruptedJSON", {
+                try BridgeClientFileStoreTests().testReadSelfHealsOnCorruptedJSON()
+            }),
             ("BridgeClientFileStoreTests.testPersistsAcrossInstanceReloads", {
                 try BridgeClientFileStoreTests().testPersistsAcrossInstanceReloads()
             }),

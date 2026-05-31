@@ -44,15 +44,12 @@ struct BridgeRecoveryView: View {
             icon: "exclamationmark.triangle.fill",
             tint: .orange,
             title: L("Bridge management service unavailable."),
-            body: L("Uploads may still work. Restart the Bridge service or reconnect with USB debug."),
+            body: L("Automatic restart will be available in a future Bridge release. For now, restart by power-cycling the Bridge or pressing KEY3-hold on the LCD."),
             buttons: HStack(spacing: 8) {
-                Button(L("Restart management service")) {
-                    Task { await runRestart() }
-                }
-                .buttonStyle(.borderedProminent)
                 Button(L("Show LCD instructions")) {
                     showLCDInstructions = true
                 }
+                .buttonStyle(.borderedProminent)
             }
         )
         .sheet(isPresented: $showLCDInstructions) {
@@ -177,18 +174,4 @@ struct BridgeRecoveryView: View {
         .padding(.vertical, 6)
     }
 
-    // MARK: - Helpers
-
-    private func currentDevice() -> BridgeDevice? {
-        switch coordinator.snapshot.discovery {
-        case .found(let device, _): return device
-        case .lost(let device, _): return device
-        case .searching: return nil
-        }
-    }
-
-    private func runRestart() async {
-        guard let device = currentDevice() else { return }
-        await diagnosticsCoordinator.attemptRecovery(device: device)
-    }
 }

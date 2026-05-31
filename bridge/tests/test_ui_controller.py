@@ -2167,11 +2167,20 @@ def test_about_page_refresh_cadence_constant_is_present_and_reasonable() -> None
     The task fires every ABOUT_PAGE_REFRESH_S seconds. If this is dropped to
     0 the loop becomes a CPU pegging busy-loop; if pushed too high the user
     no longer perceives the rows as live. 2–4 seconds is the right band.
+
+    Additional guard (plan 038 polish): the refresh interval must be at
+    least as long as ``SYSTEM_STATS_CACHE_S`` — otherwise a fraction of
+    every refresh hits the cached snapshot and renders no change, making
+    the page appear frozen on alternate ticks.
     """
 
-    from instantlink_bridge.ui.controller import ABOUT_PAGE_REFRESH_S
+    from instantlink_bridge.ui.controller import (
+        ABOUT_PAGE_REFRESH_S,
+        SYSTEM_STATS_CACHE_S,
+    )
 
     assert 2.0 <= ABOUT_PAGE_REFRESH_S <= 4.0
+    assert ABOUT_PAGE_REFRESH_S >= SYSTEM_STATS_CACHE_S
 
 
 @pytest.mark.asyncio

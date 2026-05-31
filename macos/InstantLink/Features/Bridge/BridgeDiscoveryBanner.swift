@@ -70,7 +70,7 @@ struct BridgeDiscoveryBanner: View {
                 onOpen()
             }
             .font(.caption)
-            .buttonStyle(.borderless)
+            .buttonStyle(.bordered)
             .controlSize(.small)
         }
         .padding(.horizontal, 10)

@@ -134,10 +134,11 @@ MIN_OFFLINE_SEARCH_GAP_S = 2.0
 SYSTEM_STATS_CACHE_S = 3.0
 # Cadence for the live-refresh loop that rebuilds the About page rows so the
 # user sees CPU/RAM/Storage/Temp tick in real time without having to scroll
-# (the settings_rows tuple is otherwise only rebuilt on navigation). Slightly
-# faster than SYSTEM_STATS_CACHE_S so the cached snapshot picks up a fresh
-# read between rebuilds rather than being served stale.
-ABOUT_PAGE_REFRESH_S = 2.5
+# (the settings_rows tuple is otherwise only rebuilt on navigation). Held at
+# or above SYSTEM_STATS_CACHE_S so each refresh sees a fresh /proc read
+# rather than the cached snapshot — otherwise alternating ticks would render
+# identical rows and the page would look frozen.
+ABOUT_PAGE_REFRESH_S = 3.0
 # Auto-rebond recovery: when a printer is power-cycled it clears its BLE pairing while the Pi
 # keeps the stale bond key. The connection comes up (late GATT stage) but the first encrypted
 # write fails. We detect that signature and automatically remove the BlueZ bond so the
@@ -441,6 +442,16 @@ class BridgeUi:
             LOGGER.exception("ui.input_start_failed")
         self._reload_user_presets()
         await self._refresh_network_status()
+        # Warm the CPU sampler off the event loop so the first user-facing
+        # About-page render already has a real baseline (the very first
+        # `/proc/stat` read needs a 100 ms gap to a second read before it
+        # can produce a percentage). Running this once at start moves the
+        # blocking sleep off the asyncio main thread; subsequent calls
+        # hit the warm sampler and never block.
+        try:
+            await asyncio.to_thread(self._cpu_sampler.sample)
+        except Exception:
+            LOGGER.warning("ui.cpu_sampler_prewarm_failed", exc_info=True)
         self._action_task = asyncio.create_task(self._run_actions())
         self._render_tick_task = asyncio.create_task(self._run_render_tick())
         self._network_task = asyncio.create_task(self._run_network_status())
@@ -3744,19 +3755,29 @@ class BridgeUi:
         user is actually looking at the About page so other pages don't
         pay any cost. Cancelled by ``stop()`` via the standard task
         cancellation chain.
+
+        Robustness (plan 038 polish): the inner body is wrapped in a
+        broad ``except Exception`` so a transient reader failure (e.g.
+        ``/proc/stat`` momentarily missing inside a chroot, or an
+        unexpected disk error) does not kill the task and freeze the
+        About page forever. CancelledError still propagates because we
+        only swallow ``Exception``.
         """
 
         while True:
             await asyncio.sleep(ABOUT_PAGE_REFRESH_S)
-            if (
-                self._snapshot.mode is UiMode.SETTINGS
-                and self._settings_page is SettingsPage.ABOUT
-            ):
-                self._snapshot = replace(
-                    self._snapshot,
-                    settings_rows=self._settings_rows(),
-                )
-                self._render()
+            try:
+                if (
+                    self._snapshot.mode is UiMode.SETTINGS
+                    and self._settings_page is SettingsPage.ABOUT
+                ):
+                    self._snapshot = replace(
+                        self._snapshot,
+                        settings_rows=self._settings_rows(),
+                    )
+                    self._render()
+            except Exception:
+                LOGGER.warning("ui.about_page_refresh_failed", exc_info=True)
 
     async def _refresh_network_status(self) -> None:
         async with self._network_refresh_lock:

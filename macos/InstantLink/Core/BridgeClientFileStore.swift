@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os.log
 
 // Plan 038 polish (2026-05-30): we moved off macOS Keychain because
 // every ad-hoc-signed rebuild of InstantLink.app triggers a "allow
@@ -183,7 +184,47 @@ final class BridgeClientFileStore: BridgeClientKeyStore {
         do {
             return try decoder.decode([String: BridgeClientRecord].self, from: data)
         } catch {
-            throw BridgeClientFileStoreError.decodeFailed
+            // Self-heal on corrupted JSON: a malformed bridge_clients.json
+            // would otherwise lock the user out of every pairing flow
+            // (each save/load funnels through this read). Move the broken
+            // file aside with a UTC timestamp suffix and start fresh from
+            // an empty map; subsequent writes succeed and the USB
+            // auto-trust path silently re-registers on next /v1/hello.
+            renameCorruptFileLocked(error: error)
+            return [:]
+        }
+    }
+
+    /// Rename a corrupted records file to `bridge_clients.json.broken-<UTC>`
+    /// so the user can recover it from disk if they want. Best-effort; we
+    /// log loudly via `os_log` and never throw — if the rename fails the
+    /// next write will overwrite the broken file anyway, which is still
+    /// recoverable behavior.
+    private func renameCorruptFileLocked(error: Error) {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let stamp = formatter.string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let brokenPath = path.deletingLastPathComponent()
+            .appendingPathComponent("\(path.lastPathComponent).broken-\(stamp)")
+        do {
+            try FileManager.default.moveItem(at: path, to: brokenPath)
+            os_log(
+                "BridgeClientFileStore: corrupted JSON at %{public}@ — renamed to %{public}@ (reason: %{public}@). Starting fresh; pair the Bridge again.",
+                log: .default,
+                type: .error,
+                path.path,
+                brokenPath.path,
+                error.localizedDescription
+            )
+        } catch {
+            os_log(
+                "BridgeClientFileStore: corrupted JSON at %{public}@ — rename failed (reason: %{public}@). Next write will overwrite.",
+                log: .default,
+                type: .error,
+                path.path,
+                error.localizedDescription
+            )
         }
     }
 

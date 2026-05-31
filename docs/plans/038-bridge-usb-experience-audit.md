@@ -165,9 +165,15 @@ Keychain).
   pairing wizard.
 - `macos/InstantLink/Features/Bridge/BridgeDiscoveryBanner.swift` —
   the in-Print-view passive banner.
-- `macos/InstantLink/Features/Bridge/BridgeKeychain.swift` —
-  thin wrapper around `Security.framework` for the per-Bridge
-  signing identity. Keyed by `device_id`.
+- `macos/InstantLink/Core/BridgeClientFileStore.swift` —
+  per-Bridge client identity store backed by a 0600 JSON file
+  under `~/Library/Application Support/InstantLink/`
+  (`bridge_clients.json`). Replaces the original Keychain plan
+  because every ad-hoc-signed rebuild of `InstantLink.app`
+  triggered a Keychain "allow access?" prompt — terrible UX. The
+  Ed25519 signing identity now lives in this file alongside the
+  display metadata; the threat model matches `~/.ssh/id_ed25519`
+  (file perms own the secret). See plan 038 polish notes below.
 
 **Implementation outline:**
 
@@ -454,3 +460,71 @@ recovery-state transitions.
   is its own design.
 - Whether status-bar menu vs full window vs both — Phase A
   proposes both; we may collapse to one based on testing.
+
+## Status as of v0.1.25 (plan 038 polish pass)
+
+Phases A–E shipped in iterations through v0.1.24. The v0.1.25
+polish pass landed honesty + robustness fixes from the parallel
+designer and critic audits. The following Phase D/E surfaces ship
+as honest "coming soon" affordances rather than functional flows,
+because the corresponding bridge endpoints are not yet
+implemented. A follow-up plan (TBD) will ship the routes and
+re-activate the Mac UI; the views are forward-compatible and
+will light up automatically when the connected Bridge advertises
+support.
+
+Known stubs (deliberate, deferred to a follow-up plan):
+
+- `POST /v1/management/restart` not implemented on bridge. The
+  Mac recovery banner ("Bridge management service unavailable.")
+  shows an honest "coming soon" message that points users at
+  power-cycling or KEY3-hold instead of offering a button that
+  always 404s.
+- Backup byte transport (`/v1/backup/download`, `/v1/backup/upload`)
+  not implemented on bridge. The Mac Backup tab keeps the
+  "Back up Bridge" and "Restore from file" cards visible but with
+  the buttons `.disabled(true)` and a help-text tooltip; the
+  passphrase sheet is removed entirely so users can't be misled
+  into entering an encryption key for a tar that ships in plain.
+- Support-bundle byte transport not implemented on bridge. The
+  Mac "Support bundle" card stages the bundle on the Bridge
+  filesystem and saves a small sidecar JSON pointing at the
+  server-side archive path. Copy was rewritten to be explicit
+  that the saved file is a pointer, not the archive itself.
+- Backup encryption (Fernet/passphrase) not implemented on
+  bridge. The passphrase UI is dropped; when byte transport
+  ships and encryption follows, the passphrase sheet can be
+  reintroduced honestly.
+
+This is a deliberate decision: shipping the byte-transport
+routes and the encryption layer needs its own design (chunking,
+resume, signature scope, key derivation), and is not gated by
+the polish pass. Until then the UI states the truth.
+
+### Polish-pass robustness fixes (v0.1.25)
+
+- `BridgeClientFileStore` self-heals on corrupted
+  `bridge_clients.json`: the broken file is renamed to
+  `bridge_clients.json.broken-<UTC-timestamp>` and an empty map
+  is returned so subsequent saves succeed; logged loudly via
+  `os_log`. Previously a single decode failure would lock the
+  user out of every pairing flow until they manually deleted
+  the file.
+- Bridge `_run_about_page_refresh` task wraps its body in
+  `try/except Exception` (matching `_run_network_status`) so a
+  transient reader failure does not kill the task and freeze
+  the About page; `CancelledError` still propagates.
+- Bridge CPU sampler is warmed off the event loop via
+  `asyncio.to_thread(self._cpu_sampler.sample)` during
+  `UiController.start()` so the very first user-facing About
+  visit already has a real percentage (no `—` placeholder, no
+  100 ms blocking sleep on the main thread).
+- `ABOUT_PAGE_REFRESH_S` raised from 2.5 s to 3.0 s and a test
+  guard added: `ABOUT_PAGE_REFRESH_S >= SYSTEM_STATS_CACHE_S`.
+  Otherwise alternating refreshes would hit the cache and the
+  page would appear frozen on every other tick.
+- Recovery banner + per-tab pairing card no longer stack. When
+  the recovery banner owns the message (`.managementUnavailable`,
+  `.restartInFlight`, `.unrecoverable`) the Updates / Backup /
+  Diagnostics tabs render `EmptyView()` instead of contradictory
+  "Pair this Mac…" copy.

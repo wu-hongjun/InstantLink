@@ -168,6 +168,41 @@ final class BridgeClientFileStoreTests {
         try expectTrue(key.publicKey.isValidSignature(signature, for: payload))
     }
 
+    func testReadSelfHealsOnCorruptedJSON() throws {
+        let path = makeTmpPath()
+        defer { cleanup(path) }
+        let store = BridgeClientFileStore(path: path)
+
+        // Save a known-good record so the parent directory exists.
+        let identity = makeIdentity(deviceID: "IB-GOOD")
+        let key = Curve25519.Signing.PrivateKey()
+        try store.saveIdentity(identity, privateKey: key)
+
+        // Corrupt the file on disk with garbage bytes.
+        try Data("garbage-not-json".utf8).write(to: path, options: [.atomic])
+
+        // Listing must now silently return [] (self-heal) instead of throwing.
+        let reopened = BridgeClientFileStore(path: path)
+        let identities = try reopened.listIdentities()
+        try expectEqual(identities.count, 0)
+
+        // The broken file must have been moved aside with a `.broken-` suffix.
+        let parent = path.deletingLastPathComponent()
+        let entries = try FileManager.default
+            .contentsOfDirectory(atPath: parent.path)
+        let brokenEntries = entries.filter {
+            $0.hasPrefix("\(path.lastPathComponent).broken-")
+        }
+        try expectTrue(!brokenEntries.isEmpty)
+
+        // Subsequent saves must succeed against the fresh map.
+        let next = makeIdentity(deviceID: "IB-NEW")
+        try reopened.saveIdentity(next, privateKey: .init())
+        let loaded = try reopened.loadIdentity(deviceID: next.deviceID)
+        try expectTrue(loaded != nil)
+        try expectEqual(loaded!.0, next)
+    }
+
     func testPersistsAcrossInstanceReloads() throws {
         let path = makeTmpPath()
         defer { cleanup(path) }

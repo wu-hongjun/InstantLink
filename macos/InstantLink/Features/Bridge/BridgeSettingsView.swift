@@ -512,9 +512,6 @@ struct BridgeSettingsView: View {
                 Text("\(value.wrappedValue) \(suffix)")
                     .font(.callout)
             }
-            .labelsHidden()
-            Text("\(value.wrappedValue) \(suffix)")
-                .font(.callout)
             Spacer()
         }
     }
@@ -556,6 +553,29 @@ struct BridgeSettingsView: View {
         }
     }
 
+    private func appearanceLabel(_ value: BridgeUIAppearance) -> String {
+        switch value {
+        case .light: return L("Light")
+        case .dark: return L("Dark")
+        case .auto: return L("Auto")
+        }
+    }
+
+    private func fontSizeLabel(_ value: BridgeFontSize) -> String {
+        switch value {
+        case .small: return L("Small")
+        case .medium: return L("Medium")
+        case .large: return L("Large")
+        }
+    }
+
+    private func languageLabel(_ value: BridgeUILanguage) -> String {
+        switch value {
+        case .english: return L("English")
+        case .chineseSimplified: return L("Chinese (Simplified)")
+        }
+    }
+
     // MARK: - Diff preview rows
 
     private struct DiffRow {
@@ -593,8 +613,8 @@ struct BridgeSettingsView: View {
         if loaded.ftp.mode != draft.ftp.mode {
             rows.append(.init(
                 field: L("FTP receive mode"),
-                before: loaded.ftp.mode.rawValue,
-                after: draft.ftp.mode.rawValue
+                before: modeLabel(loaded.ftp.mode),
+                after: modeLabel(draft.ftp.mode)
             ))
         }
         if loaded.ftp.username != draft.ftp.username {
@@ -634,22 +654,22 @@ struct BridgeSettingsView: View {
         if loaded.ui.appearance != draft.ui.appearance {
             rows.append(.init(
                 field: L("LCD appearance"),
-                before: loaded.ui.appearance.rawValue,
-                after: draft.ui.appearance.rawValue
+                before: appearanceLabel(loaded.ui.appearance),
+                after: appearanceLabel(draft.ui.appearance)
             ))
         }
         if loaded.ui.fontSize != draft.ui.fontSize {
             rows.append(.init(
                 field: L("LCD font size"),
-                before: loaded.ui.fontSize.rawValue,
-                after: draft.ui.fontSize.rawValue
+                before: fontSizeLabel(loaded.ui.fontSize),
+                after: fontSizeLabel(draft.ui.fontSize)
             ))
         }
         if loaded.ui.language != draft.ui.language {
             rows.append(.init(
                 field: L("LCD language"),
-                before: loaded.ui.language.rawValue,
-                after: draft.ui.language.rawValue
+                before: languageLabel(loaded.ui.language),
+                after: languageLabel(draft.ui.language)
             ))
         }
         if loaded.adjustments.watermarkText != draft.adjustments.watermarkText {

@@ -1992,6 +1992,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#status-as-of-v0125-plan-038-polish-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status as of v0.1.25 (plan 038 polish pass)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Status as of v0.1.25 (plan 038 polish pass)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#polish-pass-robustness-fixes-v0125" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Polish-pass robustness fixes (v0.1.25)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2251,9 +2279,15 @@ Keychain).</p>
   pairing wizard.</li>
 <li><code>macos/InstantLink/Features/Bridge/BridgeDiscoveryBanner.swift</code> —
   the in-Print-view passive banner.</li>
-<li><code>macos/InstantLink/Features/Bridge/BridgeKeychain.swift</code> —
-  thin wrapper around <code>Security.framework</code> for the per-Bridge
-  signing identity. Keyed by <code>device_id</code>.</li>
+<li><code>macos/InstantLink/Core/BridgeClientFileStore.swift</code> —
+  per-Bridge client identity store backed by a 0600 JSON file
+  under <code>~/Library/Application Support/InstantLink/</code>
+  (<code>bridge_clients.json</code>). Replaces the original Keychain plan
+  because every ad-hoc-signed rebuild of <code>InstantLink.app</code>
+  triggered a Keychain "allow access?" prompt — terrible UX. The
+  Ed25519 signing identity now lives in this file alongside the
+  display metadata; the threat model matches <code>~/.ssh/id_ed25519</code>
+  (file perms own the secret). See plan 038 polish notes below.</li>
 </ul>
 <p><strong>Implementation outline:</strong></p>
 <ul>
@@ -2525,6 +2559,71 @@ recovery-state transitions.</p>
   is its own design.</li>
 <li>Whether status-bar menu vs full window vs both — Phase A
   proposes both; we may collapse to one based on testing.</li>
+</ul>
+<h2 id="status-as-of-v0125-plan-038-polish-pass">Status as of v0.1.25 (plan 038 polish pass)<a class="headerlink" href="#status-as-of-v0125-plan-038-polish-pass" title="Permanent link">&para;</a></h2>
+<p>Phases A–E shipped in iterations through v0.1.24. The v0.1.25
+polish pass landed honesty + robustness fixes from the parallel
+designer and critic audits. The following Phase D/E surfaces ship
+as honest "coming soon" affordances rather than functional flows,
+because the corresponding bridge endpoints are not yet
+implemented. A follow-up plan (TBD) will ship the routes and
+re-activate the Mac UI; the views are forward-compatible and
+will light up automatically when the connected Bridge advertises
+support.</p>
+<p>Known stubs (deliberate, deferred to a follow-up plan):</p>
+<ul>
+<li><code>POST /v1/management/restart</code> not implemented on bridge. The
+  Mac recovery banner ("Bridge management service unavailable.")
+  shows an honest "coming soon" message that points users at
+  power-cycling or KEY3-hold instead of offering a button that
+  always 404s.</li>
+<li>Backup byte transport (<code>/v1/backup/download</code>, <code>/v1/backup/upload</code>)
+  not implemented on bridge. The Mac Backup tab keeps the
+  "Back up Bridge" and "Restore from file" cards visible but with
+  the buttons <code>.disabled(true)</code> and a help-text tooltip; the
+  passphrase sheet is removed entirely so users can't be misled
+  into entering an encryption key for a tar that ships in plain.</li>
+<li>Support-bundle byte transport not implemented on bridge. The
+  Mac "Support bundle" card stages the bundle on the Bridge
+  filesystem and saves a small sidecar JSON pointing at the
+  server-side archive path. Copy was rewritten to be explicit
+  that the saved file is a pointer, not the archive itself.</li>
+<li>Backup encryption (Fernet/passphrase) not implemented on
+  bridge. The passphrase UI is dropped; when byte transport
+  ships and encryption follows, the passphrase sheet can be
+  reintroduced honestly.</li>
+</ul>
+<p>This is a deliberate decision: shipping the byte-transport
+routes and the encryption layer needs its own design (chunking,
+resume, signature scope, key derivation), and is not gated by
+the polish pass. Until then the UI states the truth.</p>
+<h3 id="polish-pass-robustness-fixes-v0125">Polish-pass robustness fixes (v0.1.25)<a class="headerlink" href="#polish-pass-robustness-fixes-v0125" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>BridgeClientFileStore</code> self-heals on corrupted
+  <code>bridge_clients.json</code>: the broken file is renamed to
+  <code>bridge_clients.json.broken-&lt;UTC-timestamp&gt;</code> and an empty map
+  is returned so subsequent saves succeed; logged loudly via
+  <code>os_log</code>. Previously a single decode failure would lock the
+  user out of every pairing flow until they manually deleted
+  the file.</li>
+<li>Bridge <code>_run_about_page_refresh</code> task wraps its body in
+  <code>try/except Exception</code> (matching <code>_run_network_status</code>) so a
+  transient reader failure does not kill the task and freeze
+  the About page; <code>CancelledError</code> still propagates.</li>
+<li>Bridge CPU sampler is warmed off the event loop via
+  <code>asyncio.to_thread(self._cpu_sampler.sample)</code> during
+  <code>UiController.start()</code> so the very first user-facing About
+  visit already has a real percentage (no <code>—</code> placeholder, no
+  100 ms blocking sleep on the main thread).</li>
+<li><code>ABOUT_PAGE_REFRESH_S</code> raised from 2.5 s to 3.0 s and a test
+  guard added: <code>ABOUT_PAGE_REFRESH_S &gt;= SYSTEM_STATS_CACHE_S</code>.
+  Otherwise alternating refreshes would hit the cache and the
+  page would appear frozen on every other tick.</li>
+<li>Recovery banner + per-tab pairing card no longer stack. When
+  the recovery banner owns the message (<code>.managementUnavailable</code>,
+  <code>.restartInFlight</code>, <code>.unrecoverable</code>) the Updates / Backup /
+  Diagnostics tabs render <code>EmptyView()</code> instead of contradictory
+  "Pair this Mac…" copy.</li>
 </ul>
 
 

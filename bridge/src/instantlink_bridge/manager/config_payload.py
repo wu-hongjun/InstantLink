@@ -91,8 +91,16 @@ ALLOWED_FIELDS: dict[str, frozenset[str]] = {
     ),
     "adjustments": frozenset(
         {
-            "watermark_text",
+            "preset",
+            "saturation",
+            "exposure",
+            "sharpness",
+            "hue",
+            "vignette",
+            "datestamp",
             "datestamp_format",
+            "watermark",
+            "watermark_text",
         }
     ),
 }
@@ -256,8 +264,16 @@ def _serialize_ui(ui: UiConfig) -> dict[str, Any]:
 
 def _serialize_adjustments(adj: AdjustmentsConfig) -> dict[str, Any]:
     return {
-        "watermark_text": adj.watermark_text,
+        "preset": adj.preset,
+        "saturation": adj.saturation,
+        "exposure": adj.exposure,
+        "sharpness": adj.sharpness,
+        "hue": adj.hue,
+        "vignette": adj.vignette,
+        "datestamp": adj.datestamp,
         "datestamp_format": adj.datestamp_format.value,
+        "watermark": adj.watermark,
+        "watermark_text": adj.watermark_text,
     }
 
 
@@ -458,8 +474,76 @@ def _apply_adjustments(
     body: dict[str, Any],
     field_errors: dict[str, str],
 ) -> AdjustmentsConfig:
-    watermark_text = current.watermark_text
+    preset = current.preset
+    saturation = current.saturation
+    exposure = current.exposure
+    sharpness = current.sharpness
+    hue = current.hue
+    vignette = current.vignette
+    datestamp = current.datestamp
     datestamp_format: DatestampFormat = current.datestamp_format
+    watermark = current.watermark
+    watermark_text = current.watermark_text
+
+    if "preset" in body:
+        raw = body["preset"]
+        if isinstance(raw, str):
+            preset = raw
+        else:
+            field_errors["adjustments.preset"] = "Preset must be a string."
+
+    for axis_name, signed in (
+        ("saturation", True),
+        ("exposure", True),
+        ("sharpness", True),
+        ("hue", True),
+        ("vignette", False),
+    ):
+        if axis_name not in body:
+            continue
+        raw = body[axis_name]
+        if isinstance(raw, bool) or not isinstance(raw, int):
+            field_errors[f"adjustments.{axis_name}"] = (
+                f"{axis_name.capitalize()} must be an integer."
+            )
+            continue
+        low, high = (-100, 100) if signed else (0, 100)
+        if not low <= raw <= high:
+            field_errors[f"adjustments.{axis_name}"] = (
+                f"{axis_name.capitalize()} must be in [{low}, {high}]."
+            )
+            continue
+        if axis_name == "saturation":
+            saturation = raw
+        elif axis_name == "exposure":
+            exposure = raw
+        elif axis_name == "sharpness":
+            sharpness = raw
+        elif axis_name == "hue":
+            hue = raw
+        elif axis_name == "vignette":
+            vignette = raw
+
+    if "datestamp" in body:
+        raw = body["datestamp"]
+        if isinstance(raw, bool):
+            datestamp = raw
+        else:
+            field_errors["adjustments.datestamp"] = "Datestamp must be a boolean."
+
+    if "datestamp_format" in body:
+        try:
+            datestamp_format = parse_datestamp_format(body["datestamp_format"])
+        except ValueError as exc:
+            field_errors["adjustments.datestamp_format"] = str(exc)
+
+    if "watermark" in body:
+        raw = body["watermark"]
+        if isinstance(raw, bool):
+            watermark = raw
+        else:
+            field_errors["adjustments.watermark"] = "Watermark must be a boolean."
+
     if "watermark_text" in body:
         raw = body["watermark_text"]
         if raw is None:
@@ -468,16 +552,33 @@ def _apply_adjustments(
             watermark_text = raw
         else:
             field_errors["adjustments.watermark_text"] = "Watermark text must be a string."
-    if "datestamp_format" in body:
-        try:
-            datestamp_format = parse_datestamp_format(body["datestamp_format"])
-        except ValueError as exc:
-            field_errors["adjustments.datestamp_format"] = str(exc)
-    return replace(
-        current,
-        watermark_text=watermark_text,
-        datestamp_format=datestamp_format,
-    )
+
+    # If any field-level error was raised above, AdjustmentsConfig.__post_init__
+    # would re-raise on the same field; bail out and let the API layer surface
+    # field_errors instead of swallowing them as a single message.
+    if field_errors:
+        return current
+    try:
+        return replace(
+            current,
+            preset=preset,
+            saturation=saturation,
+            exposure=exposure,
+            sharpness=sharpness,
+            hue=hue,
+            vignette=vignette,
+            datestamp=datestamp,
+            datestamp_format=datestamp_format,
+            watermark=watermark,
+            watermark_text=watermark_text,
+        )
+    except ValueError as exc:
+        # The dataclass's __post_init__ caught a residual invariant (e.g.
+        # an unknown preset name); surface it as a top-level adjustments
+        # error so the Mac can render the field-level state without
+        # crashing.
+        field_errors["adjustments"] = str(exc)
+        return current
 
 
 def _coerce_positive_float(

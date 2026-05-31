@@ -119,8 +119,11 @@ _ZH_HANS: dict[str, str] = {
     "JPEG quality": "JPEG 质量",
     "Keepalive": "保持连接",
     "Language": "语言",
+    "Memory": "内存",
     "No-film test": "无相纸测试",
     "OS": "操作系统",
+    "SoC temp": "SoC 温度",
+    "Storage": "存储",
     "Power": "电源",
     "Printer type": "打印机型号",
     "Python": "Python",
@@ -513,6 +516,10 @@ _ZH_HANS: dict[str, str] = {
     "Bluetooth stack used for pairing": "用于配对的蓝牙协议栈",
     "Generate new Wi-Fi & FTP credentials": "生成新的 Wi-Fi 与 FTP 凭据",
     "Python: language running bridge code": "Python：运行桥接代码的语言",
+    "CPU usage right now": "当前 CPU 使用率",
+    "Memory used and total": "已用与总内存",
+    "Disk used and total": "已用与总磁盘",
+    "SoC temperature (shared with GPU on Pi Zero)": "SoC 温度（Pi Zero 上与 GPU 共用）",
     # --- Dynamic Settings help (composed at runtime) ---------------------
     # ``_settings_row_help`` in controller.py builds short, contextual help
     # strings that embed live config values (current quality, keepalive

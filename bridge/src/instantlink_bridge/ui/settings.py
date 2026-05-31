@@ -76,6 +76,10 @@ class SettingKey(StrEnum):
     OPEN_ABOUT = "open_about"
     SYSTEM_DEVICE_ID = "system_device_id"
     SYSTEM_APP_VERSION = "system_app_version"
+    SYSTEM_CPU = "system_cpu"
+    SYSTEM_RAM = "system_ram"
+    SYSTEM_STORAGE = "system_storage"
+    SYSTEM_TEMPERATURE = "system_temperature"
     SYSTEM_PYTHON_VERSION = "system_python_version"
     SYSTEM_BLUEZ_VERSION = "system_bluez_version"
     SYSTEM_OS_VERSION = "system_os_version"
@@ -229,9 +233,16 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.LANGUAGE,
         SettingKey.OPEN_ABOUT,
     ),
+    # Live system stats (CPU/RAM/Storage/SoC temp) are sandwiched between the
+    # identity rows and the static version block so the user sees "what is this
+    # Pi doing right now" before scrolling on to compile-time metadata.
     SettingsPage.ABOUT: (
         SettingKey.SYSTEM_DEVICE_ID,
         SettingKey.SYSTEM_APP_VERSION,
+        SettingKey.SYSTEM_CPU,
+        SettingKey.SYSTEM_RAM,
+        SettingKey.SYSTEM_STORAGE,
+        SettingKey.SYSTEM_TEMPERATURE,
         SettingKey.SYSTEM_PYTHON_VERSION,
         SettingKey.SYSTEM_BLUEZ_VERSION,
         SettingKey.SYSTEM_OS_VERSION,
@@ -291,6 +302,10 @@ INFO_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.PRINTER_SERIAL_INFO,
         SettingKey.SYSTEM_DEVICE_ID,
         SettingKey.SYSTEM_APP_VERSION,
+        SettingKey.SYSTEM_CPU,
+        SettingKey.SYSTEM_RAM,
+        SettingKey.SYSTEM_STORAGE,
+        SettingKey.SYSTEM_TEMPERATURE,
         SettingKey.SYSTEM_PYTHON_VERSION,
         SettingKey.SYSTEM_BLUEZ_VERSION,
         SettingKey.SYSTEM_OS_VERSION,
@@ -530,6 +545,10 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SEARCH_INTERVAL: "Scans when printer offline",
     SettingKey.SYSTEM_DEVICE_ID: "Unique ID; used by the desktop app",
     SettingKey.SYSTEM_APP_VERSION: "Bridge software version",
+    SettingKey.SYSTEM_CPU: "CPU usage right now",
+    SettingKey.SYSTEM_RAM: "Memory used and total",
+    SettingKey.SYSTEM_STORAGE: "Disk used and total",
+    SettingKey.SYSTEM_TEMPERATURE: "SoC temperature (shared with GPU on Pi Zero)",
     SettingKey.SYSTEM_PYTHON_VERSION: "Python: language running bridge code",
     SettingKey.SYSTEM_BLUEZ_VERSION: "Bluetooth stack used for pairing",
     SettingKey.SYSTEM_OS_VERSION: "Operating system release",

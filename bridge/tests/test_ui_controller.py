@@ -1965,17 +1965,22 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     assert display.snapshots[-1].settings_title == "About"
 
     rows = display.snapshots[-1].settings_rows
-    assert [row.label for row in rows[:5]] == [
+    # CPU/RAM/Storage/SoC live stats sit between identity and version blocks.
+    assert [row.label for row in rows[:9]] == [
         "Device ID",
         "App version",
+        "CPU",
+        "Memory",
+        "Storage",
+        "SoC temp",
         "Python",
         "BlueZ",
         "OS",
     ]
     assert rows[0].value == "IB-1234ABCD"
     assert rows[1].value == "0.1.0"
-    assert rows[2].value == "3.11.9"
-    assert rows[3].value == "5.82"
+    assert rows[6].value == "3.11.9"
+    assert rows[7].value == "5.82"
 
     await ui._handle_action(UiAction.HELP)
     assert display.snapshots[-1].settings_message == "Unique ID; used by the desktop app"
@@ -1983,6 +1988,106 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     # BACK from About goes to its parent (System), not all the way to MAIN.
     await ui._handle_action(UiAction.BACK)
     assert display.snapshots[-1].settings_title == "System"
+
+
+@pytest.mark.asyncio
+async def test_about_page_includes_system_stats_rows() -> None:
+    """The About page lists CPU, Memory, Storage, and SoC temp rows."""
+
+    from instantlink_bridge.ui.settings import SETTINGS_BY_PAGE, SettingKey, SettingsPage
+
+    keys = SETTINGS_BY_PAGE[SettingsPage.ABOUT]
+    assert SettingKey.SYSTEM_CPU in keys
+    assert SettingKey.SYSTEM_RAM in keys
+    assert SettingKey.SYSTEM_STORAGE in keys
+    assert SettingKey.SYSTEM_TEMPERATURE in keys
+
+
+@pytest.mark.asyncio
+async def test_system_stats_row_renders_cpu_percent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub ``read_system_stats`` so the About page picks up known values."""
+
+    from instantlink_bridge.system_stats import SystemStatsSnapshot
+    from instantlink_bridge.ui import controller as controller_mod
+
+    snapshot = SystemStatsSnapshot(
+        cpu_percent=23.4,
+        ram_used_mb=297,
+        ram_total_mb=463,
+        storage_used_gb=6.3,
+        storage_total_gb=57.0,
+        soc_temperature_c=52.616,
+    )
+    monkeypatch.setattr(controller_mod, "read_system_stats", lambda _sampler: snapshot)
+
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=SystemInfo(
+            device_id="IB-1234ABCD",
+            app_version="0.1.0",
+            python_version="3.11.9",
+            bluez_version="5.82",
+            os_version="Debian GNU/Linux 13 (trixie)",
+        ),
+    )
+
+    row = ui._settings_row_for_key(SettingKey.SYSTEM_CPU, "")
+    assert row.label == "CPU"
+    assert row.value == "23%"
+
+    row = ui._settings_row_for_key(SettingKey.SYSTEM_RAM, "")
+    assert row.value == "297 / 463 MB"
+
+    row = ui._settings_row_for_key(SettingKey.SYSTEM_STORAGE, "")
+    assert row.value == "6.3 / 57 GB"
+
+    row = ui._settings_row_for_key(SettingKey.SYSTEM_TEMPERATURE, "")
+    assert row.value == "53°C"
+
+
+@pytest.mark.asyncio
+async def test_system_stats_snapshot_is_cached_for_three_seconds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two reads inside the 3s window share one snapshot object."""
+
+    from instantlink_bridge.system_stats import SystemStatsSnapshot
+    from instantlink_bridge.ui import controller as controller_mod
+
+    call_count = 0
+
+    def _fake_read(_sampler: object) -> SystemStatsSnapshot:
+        nonlocal call_count
+        call_count += 1
+        return SystemStatsSnapshot(
+            cpu_percent=10.0,
+            ram_used_mb=100,
+            ram_total_mb=200,
+            storage_used_gb=1.0,
+            storage_total_gb=10.0,
+            soc_temperature_c=42.0,
+        )
+
+    monkeypatch.setattr(controller_mod, "read_system_stats", _fake_read)
+
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    first = ui._system_stats_snapshot()
+    second = ui._system_stats_snapshot()
+    # Same call, same cache window → same object reference, only one read.
+    assert first is second
+    assert call_count == 1
 
 
 @pytest.mark.asyncio

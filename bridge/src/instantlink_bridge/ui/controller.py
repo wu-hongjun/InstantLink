@@ -49,6 +49,15 @@ from instantlink_bridge.power.monitor import BatteryAlert, IdleStage, PowerEvent
 from instantlink_bridge.power.pisugar import BatteryState
 from instantlink_bridge.printing import PrintProgress
 from instantlink_bridge.system_info import SystemInfo, default_hotspot_ssid, read_system_info
+from instantlink_bridge.system_stats import (
+    CPUSampler,
+    SystemStatsSnapshot,
+    format_cpu_percent,
+    format_memory,
+    format_storage,
+    format_temperature,
+    read_system_stats,
+)
 from instantlink_bridge.ui.display import Display, create_display
 from instantlink_bridge.ui.input import GpioUiInput, NullInput, create_input
 from instantlink_bridge.ui.models import PairedPrinter, SettingsRow, UiAction, UiMode, UiSnapshot
@@ -118,6 +127,11 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # event loop room to service LCD render, FTP, and BLE callbacks without
 # noticeably delaying reconnect when the printer wakes up.
 MIN_OFFLINE_SEARCH_GAP_S = 2.0
+# How long a SystemStatsSnapshot is reused before re-reading /proc and /sys.
+# The About page can re-render at the LCD's ~30 Hz tick when help text toasts or
+# the cursor moves; without a cache that would hammer the filesystem readers
+# for no perceptible UX gain. 3s is short enough that CPU% feels live.
+SYSTEM_STATS_CACHE_S = 3.0
 # Auto-rebond recovery: when a printer is power-cycled it clears its BLE pairing while the Pi
 # keeps the stale bond key. The connection comes up (late GATT stage) but the first encrypted
 # write fails. We detect that signature and automatically remove the BlueZ bond so the
@@ -294,6 +308,12 @@ class BridgeUi:
         self._power_activity_callback = power_activity_callback
         self._ftp_config_applied_callback = ftp_config_applied_callback
         self._system_info = system_info
+        # Live About-page stats: dedicated sampler (stateful — needs two reads
+        # to compute CPU%) plus a small (3s) cache so repeat renders within
+        # one user interaction don't keep re-reading /proc.
+        self._cpu_sampler = CPUSampler()
+        self._cached_system_stats: SystemStatsSnapshot | None = None
+        self._cached_system_stats_at: float = 0.0
         self._ready_event = ready_event
         self._bridge_battery_percent: int | None = None
         self._bridge_power_model: str | None = power_backend_label(config.power.backend)
@@ -2502,6 +2522,21 @@ class BridgeUi:
             return SettingsRow("Device ID", self._system_info_snapshot().device_id)
         if key is SettingKey.SYSTEM_APP_VERSION:
             return SettingsRow("App version", self._system_info_snapshot().app_version)
+        if key is SettingKey.SYSTEM_CPU:
+            stats = self._system_stats_snapshot()
+            return SettingsRow("CPU", format_cpu_percent(stats.cpu_percent))
+        if key is SettingKey.SYSTEM_RAM:
+            stats = self._system_stats_snapshot()
+            return SettingsRow("Memory", format_memory(stats.ram_used_mb, stats.ram_total_mb))
+        if key is SettingKey.SYSTEM_STORAGE:
+            stats = self._system_stats_snapshot()
+            return SettingsRow(
+                "Storage",
+                format_storage(stats.storage_used_gb, stats.storage_total_gb),
+            )
+        if key is SettingKey.SYSTEM_TEMPERATURE:
+            stats = self._system_stats_snapshot()
+            return SettingsRow("SoC temp", format_temperature(stats.soc_temperature_c))
         if key is SettingKey.SYSTEM_PYTHON_VERSION:
             return SettingsRow("Python", self._system_info_snapshot().python_version)
         if key is SettingKey.SYSTEM_BLUEZ_VERSION:
@@ -2638,6 +2673,23 @@ class BridgeUi:
         if self._system_info is None:
             self._system_info = read_system_info()
         return self._system_info
+
+    def _system_stats_snapshot(self) -> SystemStatsSnapshot:
+        """Return the cached system stats snapshot, refreshing every 3s.
+
+        Same object reference is returned across the cache window so the
+        About page renders consistent values for CPU/RAM/Storage/SoC
+        across a single user-visible refresh.
+        """
+
+        now = self._monotonic()
+        if (
+            self._cached_system_stats is None
+            or self._cached_system_stats_at + SYSTEM_STATS_CACHE_S < now
+        ):
+            self._cached_system_stats = read_system_stats(self._cpu_sampler)
+            self._cached_system_stats_at = now
+        return self._cached_system_stats
 
     def _network_summary_value(self) -> str:
         parts: list[str] = []
@@ -2790,6 +2842,18 @@ class BridgeUi:
             return f"Device: {self._system_info_snapshot().device_id}"
         if key is SettingKey.SYSTEM_APP_VERSION:
             return f"App: {self._system_info_snapshot().app_version}"
+        if key is SettingKey.SYSTEM_CPU:
+            stats = self._system_stats_snapshot()
+            return f"CPU: {format_cpu_percent(stats.cpu_percent)}"
+        if key is SettingKey.SYSTEM_RAM:
+            stats = self._system_stats_snapshot()
+            return f"Memory: {format_memory(stats.ram_used_mb, stats.ram_total_mb)}"
+        if key is SettingKey.SYSTEM_STORAGE:
+            stats = self._system_stats_snapshot()
+            return f"Storage: {format_storage(stats.storage_used_gb, stats.storage_total_gb)}"
+        if key is SettingKey.SYSTEM_TEMPERATURE:
+            stats = self._system_stats_snapshot()
+            return f"SoC: {format_temperature(stats.soc_temperature_c)}"
         if key is SettingKey.SYSTEM_PYTHON_VERSION:
             return f"Python: {self._system_info_snapshot().python_version}"
         if key is SettingKey.SYSTEM_BLUEZ_VERSION:

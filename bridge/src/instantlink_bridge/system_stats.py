@@ -14,6 +14,7 @@ SoC thermal zone — rolling our own keeps the bridge dependency-free.
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -160,14 +161,38 @@ def read_soc_temperature_c(*, path: str = _DEFAULT_THERMAL_PATH) -> float | None
         return None
 
 
-def read_system_stats(cpu_sampler: CPUSampler) -> SystemStatsSnapshot:
+_DEFAULT_INITIAL_SAMPLE_GAP_S = 0.1
+
+
+def read_system_stats(
+    cpu_sampler: CPUSampler,
+    *,
+    initial_sample_gap_s: float = _DEFAULT_INITIAL_SAMPLE_GAP_S,
+    sleep: object = time.sleep,
+) -> SystemStatsSnapshot:
     """Bundle the four live readings into a single snapshot.
 
     Every reader degrades to ``None`` on IO failure; callers render those
     as ``"—"`` via the ``format_*`` helpers below.
+
+    First-call warm-up: ``CPUSampler.sample`` needs two reads of
+    ``/proc/stat`` to compute a delta; the very first call against a fresh
+    sampler has no baseline and returns ``None``. To avoid showing ``"—"``
+    on the user's first visit to the About page, we take a baseline read,
+    sleep ``initial_sample_gap_s`` (default 100 ms), and re-sample. The
+    delta over that short window is a reasonable instantaneous reading
+    and the brief block is only paid on the first call per sampler — the
+    controller's 3-second snapshot cache covers the rest.
+
+    ``sleep`` is injected so tests can avoid the real-time delay.
     """
 
     cpu_percent = cpu_sampler.sample()
+    if cpu_percent is None and initial_sample_gap_s > 0.0:
+        # Baseline established by the previous sample(); pause briefly so
+        # /proc/stat advances, then resample to get a real percent.
+        sleep(initial_sample_gap_s)  # type: ignore[operator]
+        cpu_percent = cpu_sampler.sample()
     memory = read_memory()
     storage = read_storage()
     return SystemStatsSnapshot(

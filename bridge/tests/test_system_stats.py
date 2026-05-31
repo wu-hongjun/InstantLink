@@ -129,9 +129,55 @@ def test_format_temperature_handles_none() -> None:
 def test_read_system_stats_bundles_readings_with_none_fallbacks() -> None:
     """The top-level reader should never raise even on a sandboxed host."""
 
-    snapshot = read_system_stats(CPUSampler())
+    # Disable the warm-up double-sample so this test stays fast / deterministic;
+    # the warm-up behavior is covered by its own focused test below.
+    snapshot = read_system_stats(CPUSampler(), initial_sample_gap_s=0.0)
     # Storage at "/" is always readable.
     assert snapshot.storage_total_gb is not None
     assert snapshot.storage_used_gb is not None
-    # CPU% is None on the first sample (warm-up).
+    # CPU% is None on the first sample when the warm-up is disabled.
     assert snapshot.cpu_percent is None
+
+
+def test_read_system_stats_warmup_takes_a_double_sample_so_first_call_returns_percent() -> None:
+    """First-time visitors to the About page should never see ``"—"`` for CPU.
+
+    The user reported seeing the em-dash because the cached snapshot was
+    populated by the very first ``sample()`` call (which returns ``None`` —
+    no baseline yet) and never refreshed unless they navigated. The fix:
+    when the sampler returns ``None``, ``read_system_stats`` briefly
+    sleeps and resamples so the first call always yields a real percent.
+    """
+
+    sleeps: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    snapshot = read_system_stats(
+        CPUSampler(),
+        initial_sample_gap_s=0.05,
+        sleep=fake_sleep,
+    )
+    assert sleeps == [0.05]
+    # On a real host this is never None; in CI the sandbox still has /proc/stat
+    # because the bridge runs on Linux runners. Soft-assert if the CI path
+    # lacks /proc/stat entirely (would be the macOS dev box) by allowing None.
+    if snapshot.cpu_percent is not None:
+        assert 0.0 <= snapshot.cpu_percent <= 100.0
+
+
+def test_read_system_stats_warmup_can_be_disabled_for_test_speed() -> None:
+    """initial_sample_gap_s=0 skips the warm-up; sleep should never be called."""
+
+    sleeps: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    read_system_stats(
+        CPUSampler(),
+        initial_sample_gap_s=0.0,
+        sleep=fake_sleep,
+    )
+    assert sleeps == []

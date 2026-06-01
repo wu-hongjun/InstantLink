@@ -433,6 +433,110 @@ def _draw_slider_thumb(
     )
 
 
+def draw_vertical_slider(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    h: int,
+    value: int,
+    min_value: int,
+    max_value: int,
+    *,
+    theme: Theme,
+    track_width: int = 6,
+    thumb_width: int = 14,
+    thumb_height: int = 10,
+    symmetric: bool = True,
+) -> int:
+    """Vertical analog of :func:`draw_slider`.
+
+    The track runs from ``y`` (top — max value) downward to ``y + h``
+    (bottom — min value), so UP on the joystick visibly moves the
+    thumb up and increases the value. Returns the pixel y-coordinate
+    of the thumb centre so callers can anchor a value badge to it.
+
+    Used by the focused adjustment editor: joystick UP/DOWN nudges
+    the value, so orienting the slider along the same axis as the
+    gesture is the gesture's natural visual proxy.
+    """
+
+    if min_value == max_value:
+        thumb_cy = y + h // 2
+        _draw_vertical_slider_thumb(
+            draw, x, thumb_cy, track_width, thumb_width, thumb_height, theme
+        )
+        return thumb_cy
+
+    track_radius = track_width // 2
+    draw.rounded_rectangle(
+        (x, y, x + track_width, y + h),
+        radius=track_radius,
+        fill=theme.surface_elevated,
+    )
+
+    # Map value → thumb-y. Higher value sits higher on the track:
+    # raw_cy_offset is a fraction of ``h`` measured *down* from y.
+    raw_cy = y + int(h * (max_value - value) / (max_value - min_value))
+    thumb_cy = max(y + thumb_height // 2, min(y + h - thumb_height // 2, raw_cy))
+
+    if symmetric:
+        zero_y = y + int(h * (max_value - 0) / (max_value - min_value))
+        # Centre-zero tick, drawn first so a non-zero fill paints over
+        # on the active side; at value == 0 the tick is the only mark.
+        draw.line(
+            (x - 1, zero_y, x + track_width + 1, zero_y),
+            fill=theme.separator,
+            width=1,
+        )
+        if value > 0:
+            draw.rectangle(
+                (x, thumb_cy, x + track_width, zero_y),
+                fill=theme.accent_blue,
+            )
+        elif value < 0:
+            draw.rectangle(
+                (x, zero_y, x + track_width, thumb_cy),
+                fill=theme.accent_blue,
+            )
+    else:
+        # Asymmetric: fill from bottom (min) up to the thumb.
+        if thumb_cy < y + h:
+            draw.rectangle(
+                (x, thumb_cy, x + track_width, y + h),
+                fill=theme.accent_blue,
+            )
+
+    _draw_vertical_slider_thumb(
+        draw, x, thumb_cy, track_width, thumb_width, thumb_height, theme
+    )
+
+    return thumb_cy
+
+
+def _draw_vertical_slider_thumb(
+    draw: ImageDraw.ImageDraw,
+    track_x: int,
+    thumb_cy: int,
+    track_width: int,
+    thumb_width: int,
+    thumb_height: int,
+    theme: Theme,
+) -> None:
+    """Draw the vertical slider thumb centred horizontally on the track."""
+    track_cx = track_x + track_width // 2
+    tx0 = track_cx - thumb_width // 2
+    ty0 = thumb_cy - thumb_height // 2
+    tx1 = tx0 + thumb_width
+    ty1 = ty0 + thumb_height
+    draw.rounded_rectangle(
+        (tx0, ty0, tx1, ty1),
+        radius=4,
+        fill=theme.slider_thumb_fill,
+        outline=theme.separator,
+        width=1,
+    )
+
+
 # ---------------------------------------------------------------------------
 # New building-block helpers
 # ---------------------------------------------------------------------------
@@ -1981,10 +2085,28 @@ def _adjustment_edit(
     card_x0, card_y0, card_x1, card_y1 = 12, 38, 228, 188
     draw_card(draw, card_x0, card_y0, card_x1 - card_x0, card_y1 - card_y0, theme)
 
-    # --- Live preview tile --------------------------------------------------
-    _ADJ_EDIT_W = 192
-    _ADJ_EDIT_H = 108
-    tile_x, tile_y = 16, 42
+    edit_key = snapshot.adjustment_edit_key or ""
+    current_value = snapshot.adjustment_edit_value
+    is_toggle = edit_key in _OVERLAY_TOGGLE_EDIT_KEYS
+
+    # Slider axes use a two-column layout: shrunk preview on the left,
+    # vertical slider on the right (joystick UP/DOWN moves the thumb
+    # along the same axis as the gesture). Toggle axes keep the
+    # original full-width preview because the Off/On pills sit below
+    # the preview rather than beside it.
+    if is_toggle:
+        _ADJ_EDIT_W = 192
+        _ADJ_EDIT_H = 108
+        tile_x, tile_y = 16, 42
+    else:
+        # 138 px wide leaves ~58 px of right-column real estate for
+        # the value badge + range labels + slider track; 108 px tall
+        # matches the toggle layout so the row of On/Off pills (when
+        # the edit is for a toggle) still has room without shifting.
+        _ADJ_EDIT_W = 138
+        _ADJ_EDIT_H = 130
+        tile_x, tile_y = 16, 42
+
     profile = snapshot.adjustments_profile or AdjustmentProfile()
     try:
         preview_img = render_adjustments_preview(profile, size=(_ADJ_EDIT_W, _ADJ_EDIT_H))
@@ -2017,19 +2139,17 @@ def _adjustment_edit(
 
     # --- Value badge --------------------------------------------------------
     # The axis name now lives in the top status bar (see ``status_bar_word``)
-    # so the body card is freed up for the preview + slider + value. Only
-    # the numeric value is rendered here for slider axes; toggles surface
-    # their On/Off state via the pills drawn below.
-    edit_key = snapshot.adjustment_edit_key or ""
-    current_value = snapshot.adjustment_edit_value
-    is_toggle = edit_key in _OVERLAY_TOGGLE_EDIT_KEYS
-
+    # so the body card is freed up for the preview + slider + value. Slider
+    # axes show the value badge at the top of the right column, directly
+    # above the vertical slider track; toggles surface their On/Off state
+    # via the pills drawn below.
     if not is_toggle:
-        value_y = 155
         symmetric = edit_key != "adjust_vignette"
         val_str = format_int_with_sign(current_value) if symmetric else str(current_value)
         val_w = _text_width(draw, val_str, font_body)
-        val_x = (240 - val_w) // 2
+        # Right column starts at x=160 (left edge of slider region).
+        val_x = 160 + (60 - val_w) // 2
+        value_y = 42
         _text(draw, val_x, value_y, val_str, font_body, theme.accent_blue)
 
     if is_toggle:
@@ -2068,40 +2188,61 @@ def _adjustment_edit(
 
         help_strip = t("KEY1 commit · KEY2 cancel", lang)
     else:
-        # --- Slider track ---------------------------------------------------
-        # slider_y moved from 168 → 164 (item 6, plan 036 audit follow-up):
-        # range labels render at slider_y+track_h+4=176, help strip at
-        # card_y1+3=191, giving 15 px clearance instead of 11 — prevents CJK
-        # range-label / hint overlap when zh-Hans line heights are taller.
+        # --- Vertical slider track (right column) ---------------------------
+        # The joystick edits with UP/DOWN, so orient the slider along
+        # the same axis: max value at the top, min at the bottom.
+        # Right column spans x=160..220; the track sits centred in that
+        # column with range labels above/below.
         symmetric = edit_key != "adjust_vignette"
-        slider_x = 22
-        slider_y = 164
-        slider_w = 196
-        slider_track_h = 8
+        col_x0 = 160
+        col_w = 60
+        track_x = col_x0 + (col_w - 6) // 2  # track_width=6, centred
+        # Range labels claim ~12 px at top + bottom of the right column;
+        # the badge already sits at y=42, so the track starts under it.
+        # Track height 108 px aligns with the preview's bottom edge so
+        # both columns finish at y=172 inside the card.
+        top_label_y = 64
+        track_y = 76
+        track_h = 96
+        bottom_label_y = track_y + track_h + 2
         lo, hi = (-100, 100) if symmetric else (0, 100)
-        draw_slider(
+        # Top range label
+        top_label = "+100" if symmetric else "100"
+        top_w = _text_width(draw, top_label, font_small)
+        _text(
             draw,
-            slider_x,
-            slider_y,
-            slider_w,
+            col_x0 + (col_w - top_w) // 2,
+            top_label_y,
+            top_label,
+            font_small,
+            theme.label_secondary,
+        )
+        # Slider track
+        draw_vertical_slider(
+            draw,
+            track_x,
+            track_y,
+            track_h,
             current_value,
             lo,
             hi,
             theme=theme,
-            track_height=slider_track_h,
-            thumb_width=10,
-            thumb_height=14,
+            track_width=6,
+            thumb_width=14,
+            thumb_height=10,
             symmetric=symmetric,
         )
-
-        # --- Range labels ---------------------------------------------------
-        range_y = slider_y + slider_track_h + 4
-        left_label = "−100" if symmetric else "0"
-        right_label = "+100" if symmetric else "100"
-        _text(draw, slider_x, range_y, left_label, font_small, theme.label_secondary)
-        right_w = _text_width(draw, right_label, font_small)
-        right_x = slider_x + slider_w - right_w
-        _text(draw, right_x, range_y, right_label, font_small, theme.label_secondary)
+        # Bottom range label
+        bottom_label = "−100" if symmetric else "0"
+        bot_w = _text_width(draw, bottom_label, font_small)
+        _text(
+            draw,
+            col_x0 + (col_w - bot_w) // 2,
+            bottom_label_y,
+            bottom_label,
+            font_small,
+            theme.label_secondary,
+        )
 
         help_strip = t("Up/Dn ±10 · K1 OK · K2/Left Cancel", lang)
 

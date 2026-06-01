@@ -11,6 +11,9 @@ struct BridgeSettingsView: View {
     @ObservedObject var coordinator: BridgeControlCoordinator
     @StateObject private var draft = BridgeSettingsDraft()
     @State private var loadState: LoadState = .idle
+    /// Per-axis slider editor target. Non-nil while the focused
+    /// adjustment sheet is up; ``.sheet(item:)`` drives presentation.
+    @State private var editingSlider: BridgeAdjustmentSliderEditTarget?
 
     private enum LoadState: Equatable {
         case idle
@@ -57,6 +60,17 @@ struct BridgeSettingsView: View {
         // while the Settings tab is already showing).
         .onChange(of: coordinator.snapshot.pairing) {
             Task { await loadIfNeeded(force: true) }
+        }
+        // Focused per-axis adjustment editor. The schema renderer's
+        // slider rows are tappable rows that publish the tapped field
+        // through ``editingSlider``; the sheet owns the slider gesture
+        // and renders a larger preview alongside it.
+        .sheet(item: $editingSlider) { target in
+            BridgeAdjustmentSliderSheet(
+                draft: draft,
+                field: target.field,
+                onClose: { editingSlider = nil }
+            )
         }
     }
 
@@ -339,7 +353,13 @@ struct BridgeSettingsView: View {
             BridgeAdjustmentsPreviewView(draft: draft)
                 .padding(.bottom, 6)
             if let schema = draft.adjustmentsSchema {
-                BridgeSchemaSectionView(draft: draft, schema: schema)
+                BridgeSchemaSectionView(
+                    draft: draft,
+                    schema: schema,
+                    onSliderTap: { field in
+                        editingSlider = BridgeAdjustmentSliderEditTarget(field: field)
+                    }
+                )
             } else {
                 HStack(spacing: 10) {
                     ProgressView().controlSize(.small)

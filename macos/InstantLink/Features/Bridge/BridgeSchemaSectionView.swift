@@ -15,6 +15,12 @@ import SwiftUI
 struct BridgeSchemaSectionView: View {
     @ObservedObject var draft: BridgeSettingsDraft
     let schema: BridgeConfigSchema
+    /// Invoked when the user taps a slider row. The parent presents
+    /// a focused per-axis editor sheet (label + larger preview +
+    /// single slider + Cancel/Done). Defaults to a no-op so callers
+    /// that don't need the sheet pattern (e.g. older tests) don't
+    /// have to wire it.
+    var onSliderTap: (BridgeSliderField) -> Void = { _ in }
 
     /// Width of the labels column. All four control types
     /// (picker / slider / toggle / text) anchor their control to the same
@@ -129,36 +135,33 @@ struct BridgeSchemaSectionView: View {
 
     // MARK: - Slider
 
+    /// Render slider fields as a tappable value row instead of an
+    /// inline slider. Tapping invokes ``onSliderTap`` which the parent
+    /// uses to open a per-axis editor sheet; the actual slider lives
+    /// there so the gesture has a focused surface instead of competing
+    /// with eight other rows in the card.
     private func sliderRow(_ field: BridgeSliderField) -> some View {
-        let intBinding = Binding<Int>(
-            get: {
-                if let current = draft.adjustmentsValue(forKey: field.key) as? Int {
-                    return current
-                }
-                return Int(field.range.min)
-            },
-            set: { newValue in
-                draft.setAdjustmentsValue(newValue, forKey: field.key)
+        let value = (draft.adjustmentsValue(forKey: field.key) as? Int)
+            ?? Int(field.range.min)
+        return Button {
+            onSliderTap(field)
+        } label: {
+            labeledRow(label: field.label, help: field.help) {
+                Text(formatSliderBadge(value: value, display: field.display))
+                    .font(.callout.monospacedDigit())
+                    .foregroundColor(.secondary)
+                    .frame(width: 56, alignment: .trailing)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                Spacer(minLength: 0)
             }
-        )
-        let doubleBinding = Binding<Double>(
-            get: { Double(intBinding.wrappedValue) },
-            set: { intBinding.wrappedValue = Int($0.rounded()) }
-        )
-        return labeledRow(label: field.label, help: field.help) {
-            Slider(
-                value: doubleBinding,
-                in: field.range.min...field.range.max,
-                step: field.range.step
-            )
-            .controlSize(.small)
-            Text(formatSliderBadge(value: intBinding.wrappedValue, display: field.display))
-                .font(.callout.monospacedDigit())
-                .foregroundColor(.secondary)
-                // Widened from 44 → 56 pt to fit the percent suffix
-                // ("+100 %" = 6 chars) at .callout monospaced-digit.
-                .frame(width: 56, alignment: .trailing)
         }
+        .buttonStyle(.plain)
+        // Carry an accessibility label so VoiceOver users hear "edit
+        // saturation" rather than the generic "button" label SwiftUI
+        // would emit for a button wrapping arbitrary content.
+        .accessibilityLabel(Text(L("Edit \(field.label)")))
     }
 
     private func formatSliderBadge(value: Int, display: BridgeSliderDisplay) -> String {

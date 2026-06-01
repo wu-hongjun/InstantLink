@@ -22,6 +22,17 @@ import SwiftUI
 struct BridgeAdjustmentsPreviewView: View {
     @ObservedObject var draft: BridgeSettingsDraft
 
+    /// Output size for the preview surface. Callers can pick a smaller
+    /// "thumbnail" footprint for the main Adjustments card and a larger
+    /// one for the per-axis editor sheet. Defaults to the card size.
+    var renderSize: CGSize = BridgeAdjustmentsPreviewView.defaultRenderSize
+
+    /// Whether to render the "Live preview" caption above the image.
+    /// Tracks how the surface is presented: the main card wants it on
+    /// for context, the per-axis sheet has its own header and turns it
+    /// off to avoid duplication.
+    var showsCaption: Bool = true
+
     /// Cached CIImage of the bundled reference photo. Loaded once per
     /// view lifetime; nil when the bundle resource is missing (release
     /// builds without the asset, sandbox issues, …).
@@ -38,20 +49,22 @@ struct BridgeAdjustmentsPreviewView: View {
     /// invocations on a single view.
     private static let ciContext = CIContext()
 
-    /// Output size for the preview surface. The base image is 480 × 480;
-    /// we letterbox into a 4:3 frame so the preview reads as a photo
-    /// rather than the bridge's square print canvas.
-    private static let renderSize = CGSize(width: 360, height: 240)
+    /// Default footprint for the main Adjustments card. The base image
+    /// is 480 × 480; we letterbox into a 3:2 frame so the preview reads
+    /// as a photo rather than the bridge's square print canvas.
+    static let defaultRenderSize = CGSize(width: 360, height: 240)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "photo")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(L("Live preview"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            if showsCaption {
+                HStack(spacing: 6) {
+                    Image(systemName: "photo")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(L("Live preview"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             previewSurface
         }
@@ -88,7 +101,7 @@ struct BridgeAdjustmentsPreviewView: View {
                     .controlSize(.small)
             }
         }
-        .frame(width: Self.renderSize.width, height: Self.renderSize.height)
+        .frame(width: renderSize.width, height: renderSize.height)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 

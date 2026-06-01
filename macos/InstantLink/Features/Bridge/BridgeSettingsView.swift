@@ -334,6 +334,10 @@ struct BridgeSettingsView: View {
             // fetch failed we show a retry button. The hand-written card
             // chrome (BridgeSettingsSection wrapper + errorFooter binding)
             // stays.
+            // Live preview sits above the controls so the slider feedback
+            // is visible without scrolling.
+            BridgeAdjustmentsPreviewView(draft: draft)
+                .padding(.bottom, 6)
             if let schema = draft.adjustmentsSchema {
                 BridgeSchemaSectionView(draft: draft, schema: schema)
             } else {

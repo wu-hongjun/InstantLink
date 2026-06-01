@@ -41,6 +41,7 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeSettingsSection.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeSettingsView.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeSchemaSectionView.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeAdjustmentsPreviewView.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeUpdatePreflightView.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeUpdateProgressView.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeUpdateView.swift"

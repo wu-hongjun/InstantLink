@@ -83,7 +83,7 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Saturation",
             "help": saturation_help,
-            "range": {"min": -100, "max": 100, "step": 1},
+            "range": {"min": -100, "max": 100, "step": 10},
             "display": "signed_percent",
         },
         {
@@ -91,7 +91,7 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Exposure",
             "help": exposure_help,
-            "range": {"min": -100, "max": 100, "step": 1},
+            "range": {"min": -100, "max": 100, "step": 10},
             "display": "signed_percent",
         },
         {
@@ -99,7 +99,7 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Sharpness",
             "help": sharpness_help,
-            "range": {"min": -100, "max": 100, "step": 1},
+            "range": {"min": -100, "max": 100, "step": 10},
             "display": "signed_percent",
         },
         {
@@ -107,7 +107,7 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Hue",
             "help": hue_help,
-            "range": {"min": -100, "max": 100, "step": 1},
+            "range": {"min": -100, "max": 100, "step": 10},
             "display": "signed_percent",
         },
         {
@@ -115,7 +115,7 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Vignette",
             "help": vignette_help,
-            "range": {"min": 0, "max": 100, "step": 1},
+            "range": {"min": 0, "max": 100, "step": 10},
             "display": "unsigned_percent",
         },
         {

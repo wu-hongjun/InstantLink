@@ -179,10 +179,10 @@ def test_adjustments_schema_slider_ranges_match_dataclass_constraints() -> None:
     for key in ("saturation", "exposure", "sharpness", "hue"):
         field = fields[key]
         assert field["type"] == "slider"
-        assert field["range"] == {"min": -100, "max": 100, "step": 1}
+        assert field["range"] == {"min": -100, "max": 100, "step": 10}
         assert field["display"] == "signed_percent"
     vignette = fields["vignette"]
-    assert vignette["range"] == {"min": 0, "max": 100, "step": 1}
+    assert vignette["range"] == {"min": 0, "max": 100, "step": 10}
     assert vignette["display"] == "unsigned_percent"
 
 

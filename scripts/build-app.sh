@@ -92,6 +92,15 @@ for LPROJ in "$REPO_ROOT/macos/Resources"/*.lproj; do
   fi
 done
 
+# Copy the Adjustments preview reference photo. Shared with the bridge
+# (bridge/.../imaging/_example_photo.jpg) so the Mac's live preview is
+# anchored to the same procedural sky/foliage/skin/shadow swatches the
+# bridge image-processing tests use.
+ADJUSTMENTS_PREVIEW_SRC="$REPO_ROOT/macos/Resources/AdjustmentsPreview.jpg"
+if [[ -f "$ADJUSTMENTS_PREVIEW_SRC" ]]; then
+  cp "$ADJUSTMENTS_PREVIEW_SRC" "$RESOURCES_DIR/AdjustmentsPreview.jpg"
+fi
+
 # Copy bundled fonts
 FONTS_SRC="$REPO_ROOT/macos/Resources/Fonts"
 if [[ -d "$FONTS_SRC" ]]; then

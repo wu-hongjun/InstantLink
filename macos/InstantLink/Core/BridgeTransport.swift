@@ -442,35 +442,35 @@ actor InMemoryBridgeTransport: BridgeTransport {
                 key: "saturation",
                 label: "Saturation",
                 help: "Colour intensity. Negative dulls, positive boosts",
-                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                range: BridgeSliderRange(min: -100, max: 100, step: 10),
                 display: .signedPercent
             )),
             .slider(BridgeSliderField(
                 key: "exposure",
                 label: "Exposure",
                 help: "Brightness in EV stops. ±100 = ±1 EV",
-                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                range: BridgeSliderRange(min: -100, max: 100, step: 10),
                 display: .signedPercent
             )),
             .slider(BridgeSliderField(
                 key: "sharpness",
                 label: "Sharpness",
                 help: "Edge contrast. Negative softens, positive crisps",
-                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                range: BridgeSliderRange(min: -100, max: 100, step: 10),
                 display: .signedPercent
             )),
             .slider(BridgeSliderField(
                 key: "hue",
                 label: "Hue",
                 help: "Tint. Left toward orange, right toward blue",
-                range: BridgeSliderRange(min: -100, max: 100, step: 1),
+                range: BridgeSliderRange(min: -100, max: 100, step: 10),
                 display: .signedPercent
             )),
             .slider(BridgeSliderField(
                 key: "vignette",
                 label: "Vignette",
                 help: "Darken the corners to simulate Instax film",
-                range: BridgeSliderRange(min: 0, max: 100, step: 1),
+                range: BridgeSliderRange(min: 0, max: 100, step: 10),
                 display: .unsignedPercent
             )),
             .toggle(BridgeToggleField(

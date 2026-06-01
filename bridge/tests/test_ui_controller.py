@@ -3604,52 +3604,62 @@ async def test_adjustments_slider_row_select_enters_edit_mode(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
-async def test_adjustment_edit_up_nudges_plus_5(tmp_path: Path) -> None:
-    """UP in ADJUSTMENT_EDIT increments working value by 5 (up = more)."""
+async def test_adjustment_edit_up_nudges_plus_10(tmp_path: Path) -> None:
+    """UP in ADJUSTMENT_EDIT increments working value by 10 (up = more).
+
+    Step widened from ±5 to ±10 so the LCD ladder matches the Mac
+    slider's ``step=10`` schema quantization on both signed and
+    unsigned axes.
+    """
     ui = _make_adj_ui(tmp_path, saturation=0)
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)  # enter edit
 
     await ui._handle_action(UiAction.UP)
 
-    assert ui._snapshot.adjustment_edit_value == 5
-    assert ui._adjustment_edit_value == 5
+    assert ui._snapshot.adjustment_edit_value == 10
+    assert ui._adjustment_edit_value == 10
 
 
 @pytest.mark.asyncio
-async def test_adjustment_edit_down_nudges_minus_5(tmp_path: Path) -> None:
-    """DOWN in ADJUSTMENT_EDIT decrements working value by 5 (down = less)."""
+async def test_adjustment_edit_down_nudges_minus_10(tmp_path: Path) -> None:
+    """DOWN in ADJUSTMENT_EDIT decrements working value by 10 (down = less)."""
     ui = _make_adj_ui(tmp_path, saturation=0)
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)
 
     await ui._handle_action(UiAction.DOWN)
 
-    assert ui._snapshot.adjustment_edit_value == -5
+    assert ui._snapshot.adjustment_edit_value == -10
 
 
 @pytest.mark.asyncio
-async def test_adjustment_edit_left_nudges_minus_25(tmp_path: Path) -> None:
-    """LEFT in ADJUSTMENT_EDIT decrements working value by 25."""
+async def test_adjustment_edit_left_nudges_minus_20(tmp_path: Path) -> None:
+    """LEFT in ADJUSTMENT_EDIT decrements working value by 20 (coarse).
+
+    Coarse step narrowed from ±25 to ±20 so the reachable ladder stays
+    on multiples of 10 (matching the Mac slider's schema step) while
+    still being 2× the fine UP/DOWN step.
+    """
     ui = _make_adj_ui(tmp_path, saturation=0)
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)
 
     await ui._handle_action(UiAction.LEFT)
 
-    assert ui._snapshot.adjustment_edit_value == -25
+    assert ui._snapshot.adjustment_edit_value == -20
 
 
 @pytest.mark.asyncio
-async def test_adjustment_edit_right_nudges_plus_25(tmp_path: Path) -> None:
-    """RIGHT in ADJUSTMENT_EDIT increments working value by 25."""
+async def test_adjustment_edit_right_nudges_plus_20(tmp_path: Path) -> None:
+    """RIGHT in ADJUSTMENT_EDIT increments working value by 20 (coarse)."""
     ui = _make_adj_ui(tmp_path, saturation=0)
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)
 
     await ui._handle_action(UiAction.RIGHT)
 
-    assert ui._snapshot.adjustment_edit_value == 25
+    assert ui._snapshot.adjustment_edit_value == 20
 
 
 @pytest.mark.asyncio
@@ -3670,7 +3680,7 @@ async def test_adjustment_edit_value_clamped_to_range(tmp_path: Path) -> None:
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)
 
-    # Already at max; RIGHT (+25) should stay at 100.
+    # Already at max; RIGHT (+20) should stay at 100.
     await ui._handle_action(UiAction.RIGHT)
 
     assert ui._snapshot.adjustment_edit_value == 100
@@ -3678,7 +3688,7 @@ async def test_adjustment_edit_value_clamped_to_range(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_adjustment_edit_vignette_clamped_at_zero(tmp_path: Path) -> None:
-    """DOWN (-5) on vignette at 0 stays at 0 (range is [0, 100], not symmetric)."""
+    """DOWN (-10) on vignette at 0 stays at 0 (range is [0, 100], not symmetric)."""
     from instantlink_bridge.ui.settings import SettingsPage
 
     config_path = tmp_path / "config.toml"
@@ -3722,12 +3732,12 @@ async def test_adjustment_edit_select_commits_to_config(tmp_path: Path) -> None:
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)  # enter edit
 
-    await ui._handle_action(UiAction.RIGHT)  # +25
-    await ui._handle_action(UiAction.RIGHT)  # +25 → 50
+    await ui._handle_action(UiAction.RIGHT)  # +20
+    await ui._handle_action(UiAction.RIGHT)  # +20 → 40
     await ui._handle_action(UiAction.SELECT)  # commit
 
-    assert ui._config.adjustments.saturation == 50
-    assert load_config(config_path).adjustments.saturation == 50
+    assert ui._config.adjustments.saturation == 40
+    assert load_config(config_path).adjustments.saturation == 40
     assert ui._snapshot.mode is UiMode.SETTINGS
     assert ui._snapshot.settings_message == "Saved"
 
@@ -3750,7 +3760,7 @@ async def test_adjustment_edit_back_reverts_without_commit(tmp_path: Path) -> No
     await ui._handle_action(UiAction.DOWN)  # Saturation row
     await ui._handle_action(UiAction.SELECT)  # enter edit
 
-    await ui._handle_action(UiAction.RIGHT)  # +25 (working value = 25, not committed)
+    await ui._handle_action(UiAction.RIGHT)  # +20 (working value = 20, not committed)
     await ui._handle_action(UiAction.BACK)  # cancel
 
     assert ui._config.adjustments.saturation == 0
@@ -3786,8 +3796,8 @@ async def test_adjustment_edit_help_preserves_working_value(tmp_path: Path) -> N
     await ui._handle_action(UiAction.DOWN)  # navigate to Saturation
     await ui._handle_action(UiAction.SELECT)  # enter edit mode
 
-    await ui._handle_action(UiAction.RIGHT)  # +25 → working value 25
-    assert ui._adjustment_edit_value == 25
+    await ui._handle_action(UiAction.RIGHT)  # +20 → working value 20
+    assert ui._adjustment_edit_value == 20
     assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
 
     await ui._handle_action(UiAction.HELP)
@@ -3796,13 +3806,13 @@ async def test_adjustment_edit_help_preserves_working_value(tmp_path: Path) -> N
     # text appears in the bottom strip via settings_message, but mode +
     # value survive.
     assert ui._snapshot.mode is UiMode.ADJUSTMENT_EDIT
-    assert ui._adjustment_edit_value == 25
+    assert ui._adjustment_edit_value == 20
     assert ui._snapshot.settings_message is not None
 
     # A subsequent SELECT commits the working value, not the original 0.
     await ui._handle_action(UiAction.SELECT)
-    assert ui._config.adjustments.saturation == 25
-    assert load_config(config_path).adjustments.saturation == 25
+    assert ui._config.adjustments.saturation == 20
+    assert load_config(config_path).adjustments.saturation == 20
 
 
 @pytest.mark.asyncio

@@ -1777,14 +1777,19 @@ class BridgeUi:
                 self._render()
                 return
             return
+        # Joystick deltas were ±5 (fine) and ±25 (coarse). Reduced to
+        # ±10 / ±20 so the reachable ladder is {…, -20, -10, 0, 10, 20,
+        # …} on every axis — matching the Mac slider's ``step=10``
+        # quantization and giving smoother low-end tuning than the
+        # previous coarse jump.
         if action is UiAction.UP:
-            self._update_adjustment_edit_value(5)
+            self._update_adjustment_edit_value(10)
         elif action is UiAction.DOWN:
-            self._update_adjustment_edit_value(-5)
+            self._update_adjustment_edit_value(-10)
         elif action is UiAction.LEFT:
-            self._update_adjustment_edit_value(-25)
+            self._update_adjustment_edit_value(-20)
         elif action is UiAction.RIGHT:
-            self._update_adjustment_edit_value(25)
+            self._update_adjustment_edit_value(20)
         elif action in {UiAction.SELECT}:
             await self._commit_adjustment_edit()
         elif action in {UiAction.BACK}:

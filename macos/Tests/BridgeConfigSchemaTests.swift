@@ -22,7 +22,7 @@ final class BridgeConfigSchemaTests {
           "type": "slider",
           "label": "Saturation",
           "help": "Colour intensity",
-          "range": {"min": -100, "max": 100, "step": 1},
+          "range": {"min": -100, "max": 100, "step": 10},
           "display": "signed_percent"
         },
         {
@@ -88,7 +88,7 @@ final class BridgeConfigSchemaTests {
         }
         try expectEqual(saturation.range.min, -100)
         try expectEqual(saturation.range.max, 100)
-        try expectEqual(saturation.range.step, 1)
+        try expectEqual(saturation.range.step, 10)
         try expectEqual(saturation.display, .signedPercent)
 
         guard case .toggle(let datestamp) = schema.fields[2] else {
@@ -147,7 +147,7 @@ final class BridgeConfigSchemaTests {
         try expectEqual(saturation.key, "saturation")
         try expectEqual(saturation.range.min, -100)
         try expectEqual(saturation.range.max, 100)
-        try expectEqual(saturation.range.step, 1)
+        try expectEqual(saturation.range.step, 10)
         try expectEqual(saturation.display, .signedPercent)
         try expectEqual(saturation.help, "Colour intensity")
     }

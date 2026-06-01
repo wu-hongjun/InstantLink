@@ -165,15 +165,26 @@ struct BridgeSchemaSectionView: View {
     }
 
     private func formatSliderBadge(value: Int, display: BridgeSliderDisplay) -> String {
+        // Each display token formats the same raw integer with its
+        // photographic unit so the value reads as something the user
+        // recognises ("+0.25 EV" / "+20 %" / "+30°"). Mirrored on the
+        // bridge in ``ui.controller._format_adjustment_value`` and on
+        // the LCD in ``ui.render._format_adjustment_value`` — keep
+        // the three in sync if a new unit ever lands.
         switch display {
         case .signedPercent:
-            // Polish #2: percent badges advertise the unit. Stepper
-            // rows in sibling cards (e.g. JPEG quality) already do this;
-            // matching the convention here keeps the card legible.
             if value > 0 { return "+\(value) %" }
             return "\(value) %"
         case .unsignedPercent:
             return "\(value) %"
+        case .signedEV:
+            // ``raw / 100`` → EV stops (bridge math: 2 ** (raw/100)).
+            let ev = Double(value) / 100.0
+            let sign = ev > 0 ? "+" : (ev < 0 ? "−" : "")
+            return String(format: "%@%.2f EV", sign, abs(ev))
+        case .signedDegrees:
+            let sign = value > 0 ? "+" : (value < 0 ? "−" : "")
+            return "\(sign)\(abs(value))°"
         case .integer:
             return "\(value)"
         }

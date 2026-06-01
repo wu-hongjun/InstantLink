@@ -441,35 +441,35 @@ actor InMemoryBridgeTransport: BridgeTransport {
             .slider(BridgeSliderField(
                 key: "saturation",
                 label: "Saturation",
-                help: "Colour intensity. Negative dulls, positive boosts",
+                help: "Colour intensity vs original. 0 % = unchanged, +100 % = 2× more saturated, −100 % = grayscale.",
                 range: BridgeSliderRange(min: -100, max: 100, step: 10),
                 display: .signedPercent
             )),
             .slider(BridgeSliderField(
                 key: "exposure",
                 label: "Exposure",
-                help: "Brightness in EV stops. ±100 = ±1 EV",
-                range: BridgeSliderRange(min: -100, max: 100, step: 10),
-                display: .signedPercent
+                help: "Brightness in stops. 0.00 EV = unchanged, +1.00 EV = 2× brighter, −1.00 EV = half brightness. Tunes in 1/4-stop steps.",
+                range: BridgeSliderRange(min: -100, max: 100, step: 25),
+                display: .signedEV
             )),
             .slider(BridgeSliderField(
                 key: "sharpness",
                 label: "Sharpness",
-                help: "Edge contrast. Negative softens, positive crisps",
+                help: "Edge crispness vs original. 0 % = unchanged, +100 % = 2× sharpened, −100 % = fully softened.",
                 range: BridgeSliderRange(min: -100, max: 100, step: 10),
                 display: .signedPercent
             )),
             .slider(BridgeSliderField(
                 key: "hue",
                 label: "Hue",
-                help: "Tint. Left toward orange, right toward blue",
+                help: "Colour rotation around the HSV wheel. 0° = unchanged. Negative shifts toward red, positive toward green. Range ±100°.",
                 range: BridgeSliderRange(min: -100, max: 100, step: 10),
-                display: .signedPercent
+                display: .signedDegrees
             )),
             .slider(BridgeSliderField(
                 key: "vignette",
                 label: "Vignette",
-                help: "Darken the corners to simulate Instax film",
+                help: "Corner darkening to mimic Instax film. 0 % = off, 100 % = strong corners-dark fade.",
                 range: BridgeSliderRange(min: 0, max: 100, step: 10),
                 display: .unsignedPercent
             )),

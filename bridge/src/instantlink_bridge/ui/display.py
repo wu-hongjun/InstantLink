@@ -105,17 +105,28 @@ class FramebufferDisplay:
         self._sysfs_root = sysfs_root
         self._size = _framebuffer_size(path, sysfs_root=sysfs_root)
         self._framebuffer_name = _framebuffer_name(path, sysfs_root=sysfs_root)
-        self._backlight = _framebuffer_backlight(
-            path,
-            framebuffer_name=self._framebuffer_name,
-            sysfs_root=sysfs_root,
+        self._backlight: _FramebufferBacklight | _GpioBacklight | None = (
+            _framebuffer_backlight(
+                path,
+                framebuffer_name=self._framebuffer_name,
+                sysfs_root=sysfs_root,
+            )
         )
         if self._framebuffer_name == ST7789_FRAMEBUFFER_NAME and self._backlight is None:
+            # The kernel ST7789v driver doesn't always expose a sysfs
+            # backlight node — depends on the device-tree overlay and
+            # the kernel build. Fall back to driving the Waveshare LCD
+            # HAT's hardware backlight pin (BCM 24) over GPIO so screen
+            # off actually goes dark, instead of just writing a black
+            # frame while the panel stays lit. Without this fallback
+            # the screen-off idle stage drew zero power benefit and
+            # users saw a faint black-screen glow defeating the purpose.
             LOGGER.warning(
-                "ui.framebuffer_backlight_unavailable path=%s name=%s",
+                "ui.framebuffer_backlight_unavailable path=%s name=%s falling_back=gpio_24",
                 path,
                 self._framebuffer_name,
             )
+            self._backlight = _GpioBacklight.try_open()
 
     def render(self, snapshot: UiSnapshot) -> None:
         image = render_snapshot(snapshot)
@@ -223,6 +234,62 @@ class _FramebufferBacklight:
                 value,
                 exc_info=True,
             )
+
+
+class _GpioBacklight:
+    """Waveshare LCD HAT backlight on BCM GPIO 24.
+
+    Fallback path for :class:`FramebufferDisplay` when the kernel
+    ST7789v driver doesn't expose a sysfs backlight class. The HAT
+    wires the LED's enable line straight to BCM 24, so toggling the
+    pin LOW physically kills the panel illumination — what the user
+    actually wants when they enable "Screen off after N minutes".
+
+    Construction is via ``try_open`` so an import or pin-bind error
+    on a non-Pi dev box returns ``None`` instead of crashing the
+    framebuffer-display path; the caller falls back to the no-op
+    behaviour the original code already had.
+    """
+
+    BL_GPIO_PIN = 24
+
+    def __init__(self, device: object) -> None:
+        # Stored as ``object`` so the gpiozero import stays lazy and
+        # mypy doesn't need a gpiozero stub on the dev box.
+        self._device = device
+
+    @classmethod
+    def try_open(cls) -> _GpioBacklight | None:
+        try:
+            from gpiozero import OutputDevice
+        except Exception:
+            LOGGER.debug("ui.gpio_backlight_unavailable_import", exc_info=True)
+            return None
+        try:
+            device = OutputDevice(cls.BL_GPIO_PIN, active_high=True, initial_value=True)
+        except Exception:
+            LOGGER.warning(
+                "ui.gpio_backlight_open_failed pin=%s", cls.BL_GPIO_PIN, exc_info=True
+            )
+            return None
+        return cls(device)
+
+    def turn_on(self) -> None:
+        # Cast for mypy: ``object`` doesn't expose ``on``; we know it's
+        # an ``OutputDevice`` because that's all ``try_open`` instantiates.
+        on = getattr(self._device, "on", None)
+        if callable(on):
+            on()
+
+    def turn_off(self) -> None:
+        off = getattr(self._device, "off", None)
+        if callable(off):
+            off()
+
+    def close(self) -> None:
+        close = getattr(self._device, "close", None)
+        if callable(close):
+            close()
 
 
 def create_display(surface: UiSurface | None = None) -> Display:

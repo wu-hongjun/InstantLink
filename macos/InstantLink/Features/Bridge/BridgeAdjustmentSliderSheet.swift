@@ -130,6 +130,13 @@ struct BridgeAdjustmentSliderSheet: View {
             return "\(value) %"
         case .unsignedPercent:
             return "\(value) %"
+        case .signedEV:
+            let ev = Double(value) / 100.0
+            let sign = ev > 0 ? "+" : (ev < 0 ? "−" : "")
+            return String(format: "%@%.2f EV", sign, abs(ev))
+        case .signedDegrees:
+            let sign = value > 0 ? "+" : (value < 0 ? "−" : "")
+            return "\(sign)\(abs(value))°"
         case .integer:
             return "\(value)"
         }

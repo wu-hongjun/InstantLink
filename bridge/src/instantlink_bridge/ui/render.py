@@ -13,7 +13,6 @@ from PIL import Image, ImageDraw, ImageFont
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.ui.i18n import t
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
-from instantlink_bridge.ui.settings import format_int_with_sign
 from instantlink_bridge.ui.status_indicator import StatusState, derive_status
 from instantlink_bridge.ui.theme import Theme, theme_for
 
@@ -431,6 +430,32 @@ def _draw_slider_thumb(
         outline=theme.separator,
         width=1,
     )
+
+
+def _format_adjustment_value(edit_key: str, value: int) -> str:
+    """Format an adjustment value for the LCD chip with its unit.
+
+    Mirrors the Mac ``BridgeSliderDisplay`` formatter so the LCD chip
+    and the Mac slider badge read identically: exposure as EV stops
+    (``value / 100`` with two decimals), hue in degrees, the
+    multiplicative axes (saturation, sharpness, vignette) in percent.
+    Signed axes carry an explicit ``+`` for positive readings; the
+    unsigned vignette uses a bare percent.
+    """
+
+    if edit_key == "adjust_exposure":
+        ev = value / 100.0
+        sign = "+" if ev > 0 else ("−" if ev < 0 else "")
+        return f"{sign}{abs(ev):.2f} EV"
+    if edit_key == "adjust_hue":
+        sign = "+" if value > 0 else ("−" if value < 0 else "")
+        return f"{sign}{abs(value)}°"
+    if edit_key == "adjust_vignette":
+        return f"{value} %"
+    # Symmetric percent axes: saturation, sharpness, and any future
+    # ``signed_percent`` axis the bridge adds.
+    sign = "+" if value > 0 else ("−" if value < 0 else "")
+    return f"{sign}{abs(value)} %"
 
 
 def draw_vertical_slider(
@@ -2281,11 +2306,10 @@ def _adjustment_edit(
             font_small,
             theme.label_secondary,
         )
-        # Slider track with value-on-chip thumb. ``format_int_with_sign``
-        # gives "+20" / "-30"; vignette is unsigned so use the plain int.
-        val_chip = (
-            format_int_with_sign(current_value) if symmetric else str(current_value)
-        )
+        # Slider track with value-on-chip thumb. Format per axis so the
+        # chip carries a photographically meaningful unit suffix
+        # ("+20 %", "+0.50 EV", "+30°") rather than a raw integer.
+        val_chip = _format_adjustment_value(edit_key, current_value)
         draw_vertical_slider(
             draw,
             track_x,

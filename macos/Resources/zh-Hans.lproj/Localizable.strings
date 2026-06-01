@@ -286,11 +286,11 @@
 "Watermark" = "水印";
 "Watermark text" = "水印文本";
 "Choose a preset or Custom slot" = "选择预设或自定义槽位";
-"Colour intensity. Negative dulls, positive boosts" = "色彩强度。负值降低，正值提升";
-"Brightness in EV stops. ±100 = ±1 EV" = "亮度（EV 档位）。±100 = ±1 EV";
-"Edge contrast. Negative softens, positive crisps" = "边缘对比度。负值柔化，正值锐化";
-"Tint. Left toward orange, right toward blue" = "色相偏移。左偏橙，右偏蓝";
-"Darken the corners to simulate Instax film" = "压暗四角以模拟 Instax 胶片";
+"Colour intensity vs original. 0 % = unchanged, +100 % = 2× more saturated, −100 % = grayscale." = "色彩强度。0 % = 不变，+100 % = 双倍饱和度，−100 % = 灰阶。";
+"Brightness in stops. 0.00 EV = unchanged, +1.00 EV = 2× brighter, −1.00 EV = half brightness. Tunes in 1/4-stop steps." = "亮度档位。0.00 EV = 不变，+1.00 EV = 双倍亮度，−1.00 EV = 半亮度。以 1/4 档为步长。";
+"Edge crispness vs original. 0 % = unchanged, +100 % = 2× sharpened, −100 % = fully softened." = "边缘锐度。0 % = 不变，+100 % = 双倍锐化，−100 % = 完全柔化。";
+"Colour rotation around the HSV wheel. 0° = unchanged. Negative shifts toward red, positive toward green. Range ±100°." = "在 HSV 色环上旋转色相。0° = 不变，负值偏红，正值偏绿。范围 ±100°。";
+"Corner darkening to mimic Instax film. 0 % = off, 100 % = strong corners-dark fade." = "四角压暗以模拟 Instax 胶片。0 % = 关闭，100 % = 四角强烈渐暗。";
 "Stamp the photo's date in the bottom-right corner" = "在右下角加印照片日期";
 "Date layout — borrows macOS preset names" = "日期布局 — 借用 macOS 预设名";
 "Render the watermark text in the bottom-left corner" = "在左下角渲染水印文本";

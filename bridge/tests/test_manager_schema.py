@@ -171,16 +171,37 @@ def test_adjustments_schema_declares_depends_on_for_watermark_text() -> None:
     assert watermark_text["depends_on"] == {"field": "watermark", "value": True}
 
 
-def test_adjustments_schema_slider_ranges_match_dataclass_constraints() -> None:
-    """Signed sliders range -100..+100; vignette range 0..100."""
+def test_adjustments_schema_slider_ranges_and_displays() -> None:
+    """Per-axis steps + display tokens match the photographic units.
+
+    Steps were unified at 10 in an earlier pass and then specialised
+    per axis so the slider snaps on natural increments — quarter
+    stops for exposure (step=25 = 0.25 EV), 10 % / 10° for the
+    others. Display tokens drive the LCD chip + Mac badge
+    formatting, so a wrong token would render the value with the
+    wrong unit suffix.
+    """
 
     schema = build_adjustments_schema()
     fields = _fields_by_key(schema)
-    for key in ("saturation", "exposure", "sharpness", "hue"):
-        field = fields[key]
-        assert field["type"] == "slider"
-        assert field["range"] == {"min": -100, "max": 100, "step": 10}
-        assert field["display"] == "signed_percent"
+
+    saturation = fields["saturation"]
+    assert saturation["type"] == "slider"
+    assert saturation["range"] == {"min": -100, "max": 100, "step": 10}
+    assert saturation["display"] == "signed_percent"
+
+    sharpness = fields["sharpness"]
+    assert sharpness["range"] == {"min": -100, "max": 100, "step": 10}
+    assert sharpness["display"] == "signed_percent"
+
+    exposure = fields["exposure"]
+    assert exposure["range"] == {"min": -100, "max": 100, "step": 25}
+    assert exposure["display"] == "signed_ev"
+
+    hue = fields["hue"]
+    assert hue["range"] == {"min": -100, "max": 100, "step": 10}
+    assert hue["display"] == "signed_degrees"
+
     vignette = fields["vignette"]
     assert vignette["range"] == {"min": 0, "max": 100, "step": 10}
     assert vignette["display"] == "unsigned_percent"

@@ -142,10 +142,31 @@ struct BridgeSliderRange: Codable, Equatable, Sendable {
     let step: Double
 }
 
+/// How a slider's raw integer value should be rendered to the user.
+///
+/// The bridge keeps every adjustment axis as an int in ``[min, max]``
+/// internally and tags each field with a ``display`` token so the
+/// LCD chip + Mac badge format the same value identically (e.g. the
+/// raw int ``25`` displays as ``"+25 %"`` for saturation but
+/// ``"+0.25 EV"`` for exposure). Adding a token here means the bridge
+/// can grow new units without the Mac falling back to a raw integer.
+///
+/// Forward-compatibility: unknown raw values decode to ``.integer``
+/// so an older Mac talking to a newer bridge still renders the value
+/// (just without the unit suffix) rather than failing the entire
+/// schema decode.
 enum BridgeSliderDisplay: String, Codable, Sendable {
     case signedPercent = "signed_percent"
     case unsignedPercent = "unsigned_percent"
+    case signedEV = "signed_ev"
+    case signedDegrees = "signed_degrees"
     case integer
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = BridgeSliderDisplay(rawValue: raw) ?? .integer
+    }
 }
 
 struct BridgeToggleField: Codable, Equatable, Sendable {

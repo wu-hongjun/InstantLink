@@ -86,7 +86,6 @@ from instantlink_bridge.ui.settings import (
     bool_label,
     config_with_setting_value,
     fit_label,
-    format_int_with_sign,
     ftp_receive_mode_label,
     language_label,
     model_label,
@@ -281,6 +280,49 @@ def _adjustment_axis_label(key: SettingKey) -> str:
     """
 
     return _ADJUSTMENT_AXIS_LABEL.get(key, key.value)
+
+
+# Joystick step size per axis. Matches the schema's ``range.step`` so
+# the LCD's joystick ladder lines up with the Mac slider's snap points.
+# Exposure jumps in quarter-stops (25 = 0.25 EV); the others tune in
+# 10 % / 10° increments.
+_ADJUSTMENT_AXIS_STEP: dict[SettingKey, int] = {
+    SettingKey.ADJUST_SATURATION: 10,
+    SettingKey.ADJUST_EXPOSURE: 25,
+    SettingKey.ADJUST_SHARPNESS: 10,
+    SettingKey.ADJUST_HUE: 10,
+    SettingKey.ADJUST_VIGNETTE: 10,
+}
+
+
+def _adjustment_axis_step(key: SettingKey) -> int:
+    """Return the LCD joystick increment for ``key`` (defaults to 10)."""
+
+    return _ADJUSTMENT_AXIS_STEP.get(key, 10)
+
+
+def _format_adjustment_value(key: SettingKey, value: int) -> str:
+    """Format ``value`` with the axis's photographic unit.
+
+    Centralises the chip formatting used by both the Adjustments list
+    page (each row's value cell) and the focused edit-mode chip; the
+    Mac side has its own copy in ``BridgeSchemaSectionView`` so the
+    LCD and the desktop slider both render the same numeric format
+    for any given internal value.
+    """
+
+    if key is SettingKey.ADJUST_EXPOSURE:
+        ev = value / 100.0
+        sign = "+" if ev > 0 else ("−" if ev < 0 else "")
+        return f"{sign}{abs(ev):.2f} EV"
+    if key is SettingKey.ADJUST_HUE:
+        sign = "+" if value > 0 else ("−" if value < 0 else "")
+        return f"{sign}{abs(value)}°"
+    if key is SettingKey.ADJUST_VIGNETTE:
+        return f"{value} %"
+    # Symmetric percent axes: saturation, sharpness.
+    sign = "+" if value > 0 else ("−" if value < 0 else "")
+    return f"{sign}{abs(value)} %"
 
 
 class BridgeUi:
@@ -1857,18 +1899,19 @@ class BridgeUi:
                 )
                 return
             return
-        # UP/DOWN nudge the working value by the schema's step (±10),
-        # matching the Mac slider's quantization. LEFT/RIGHT no longer
-        # adjust the value: every other LCD mode treats LEFT as "back"
-        # and RIGHT as "select/commit" (see _settings_page_action /
-        # _toggle_list_action), so binding them to coarse-step here
-        # collided with the user's muscle memory and let an accidental
-        # joystick swipe shove a value 20 points in either direction
-        # while attempting to back out of edit mode.
+        # UP/DOWN nudge the working value by the axis's schema step —
+        # ±10 for most axes, ±25 (1/4 EV) for exposure. LEFT/RIGHT no
+        # longer adjust the value: every other LCD mode treats LEFT as
+        # "back" and RIGHT as "select/commit" (see
+        # _settings_page_action / _toggle_list_action), so binding them
+        # to coarse-step here collided with the user's muscle memory
+        # and let an accidental joystick swipe shove a value in either
+        # direction while attempting to back out of edit mode.
+        step = _adjustment_axis_step(key)
         if action is UiAction.UP:
-            self._update_adjustment_edit_value(10)
+            self._update_adjustment_edit_value(step)
         elif action is UiAction.DOWN:
-            self._update_adjustment_edit_value(-10)
+            self._update_adjustment_edit_value(-step)
         elif action in {UiAction.SELECT, UiAction.RIGHT}:
             await self._commit_adjustment_edit()
         elif action in {UiAction.BACK, UiAction.LEFT}:
@@ -2625,18 +2668,20 @@ class BridgeUi:
         if key is SettingKey.ADJUST_SAVE_CUSTOM:
             return SettingsRow("Save current", "")
         # Colour-axis rows are always editable (plan 036 phase 5: Custom gate removed).
-        # All rows show the current per-axis config value directly.
+        # All rows show the current per-axis config value with its
+        # photographic unit ("+20 %" / "+0.50 EV" / "+30°") so the
+        # value reads at the same precision as the editor chip.
         adj = self._config.adjustments
         if key is SettingKey.ADJUST_SATURATION:
-            return SettingsRow("Saturation", format_int_with_sign(adj.saturation))
+            return SettingsRow("Saturation", _format_adjustment_value(key, adj.saturation))
         if key is SettingKey.ADJUST_EXPOSURE:
-            return SettingsRow("Exposure", format_int_with_sign(adj.exposure))
+            return SettingsRow("Exposure", _format_adjustment_value(key, adj.exposure))
         if key is SettingKey.ADJUST_SHARPNESS:
-            return SettingsRow("Sharpness", format_int_with_sign(adj.sharpness))
+            return SettingsRow("Sharpness", _format_adjustment_value(key, adj.sharpness))
         if key is SettingKey.ADJUST_HUE:
-            return SettingsRow("Hue", format_int_with_sign(adj.hue))
+            return SettingsRow("Hue", _format_adjustment_value(key, adj.hue))
         if key is SettingKey.ADJUST_VIGNETTE:
-            return SettingsRow("Vignette", str(adj.vignette))
+            return SettingsRow("Vignette", _format_adjustment_value(key, adj.vignette))
         if key is SettingKey.ADJUST_DATESTAMP:
             return SettingsRow("Datestamp", bool_label(self._config.adjustments.datestamp))
         if key is SettingKey.ADJUST_DATESTAMP_FORMAT:

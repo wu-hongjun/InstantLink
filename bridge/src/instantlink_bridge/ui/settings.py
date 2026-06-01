@@ -501,13 +501,30 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_AUTO_PRINT: "Auto-print delay and connection knobs",
     # Adjustments placeholder help (phase 1 only — no longer surfaced in any page).
     SettingKey.ADJUSTMENTS_COMING_SOON: "Saturation, exposure, sharpness coming in v2",
-    # Adjustments sub-page rows (plan 035 phase 3).
-    SettingKey.ADJUST_SATURATION: "Colour intensity. Negative dulls, positive boosts",
-    SettingKey.ADJUST_EXPOSURE: "Brightness in EV stops. ±100 = ±1 EV",
-    SettingKey.ADJUST_SHARPNESS: "Edge contrast. Negative softens, positive crisps",
-    SettingKey.ADJUST_HUE: "Tint. Left toward orange, right toward blue",
+    # Adjustments sub-page rows (plan 035 phase 3). Help strings explain
+    # the unit and the identity reading so values like "+20 %" or
+    # "+0.50 EV" have a concrete photographic meaning.
+    SettingKey.ADJUST_SATURATION: (
+        "Colour intensity vs original. 0 % = unchanged, +100 % = 2× more saturated, "
+        "−100 % = grayscale."
+    ),
+    SettingKey.ADJUST_EXPOSURE: (
+        "Brightness in stops. 0.00 EV = unchanged, +1.00 EV = 2× brighter, "
+        "−1.00 EV = half brightness. Tunes in 1/4-stop steps."
+    ),
+    SettingKey.ADJUST_SHARPNESS: (
+        "Edge crispness vs original. 0 % = unchanged, +100 % = 2× sharpened, "
+        "−100 % = fully softened."
+    ),
+    SettingKey.ADJUST_HUE: (
+        "Colour rotation around the HSV wheel. 0° = unchanged. Negative shifts "
+        "toward red, positive toward green. Range ±100°."
+    ),
     # Vignette picker (plan 035 phase 6).
-    SettingKey.ADJUST_VIGNETTE: "Darken the corners to simulate Instax film",
+    SettingKey.ADJUST_VIGNETTE: (
+        "Corner darkening to mimic Instax film. 0 % = off, 100 % = strong "
+        "corners-dark fade."
+    ),
     # Adjustments overlay toggles (plan 035 phase 4).
     SettingKey.ADJUST_DATESTAMP: "Stamp the photo's date in the bottom-right corner",
     # Datestamp format picker (plan 037 phase 4).

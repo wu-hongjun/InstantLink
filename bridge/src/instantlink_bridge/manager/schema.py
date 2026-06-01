@@ -78,6 +78,12 @@ def build_adjustments_schema() -> JsonObject:
             "help": "Choose a preset or Custom slot",
             "options": _preset_options(),
         },
+        # All five colour axes are stored as int in [min, max] internally;
+        # the ``display`` token tells the LCD chip and the Mac slider
+        # badge how to format the raw value. Steps were chosen to land
+        # on natural photographic increments rather than a single
+        # unified ladder — quarter stops for exposure, ten-percent
+        # ticks for the multiplicative axes.
         {
             "key": "saturation",
             "type": "slider",
@@ -91,8 +97,11 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Exposure",
             "help": exposure_help,
-            "range": {"min": -100, "max": 100, "step": 10},
-            "display": "signed_percent",
+            # ±100 spans ±1 EV (the bridge applies ``2 ** (value/100)``);
+            # step=25 lands on quarter-stop increments, the photography
+            # convention for exposure compensation.
+            "range": {"min": -100, "max": 100, "step": 25},
+            "display": "signed_ev",
         },
         {
             "key": "sharpness",
@@ -107,8 +116,10 @@ def build_adjustments_schema() -> JsonObject:
             "type": "slider",
             "label": "Hue",
             "help": hue_help,
+            # Raw value is already in degrees of HSV rotation
+            # (see ``_apply_hue``); display the suffix accordingly.
             "range": {"min": -100, "max": 100, "step": 10},
-            "display": "signed_percent",
+            "display": "signed_degrees",
         },
         {
             "key": "vignette",

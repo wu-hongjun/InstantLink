@@ -4995,14 +4995,30 @@ def test_camera_link_label_replaces_wifi_mode() -> None:
     assert row.label == "Camera link"
 
 
-def test_hue_help_text_no_trailing_period() -> None:
-    """Plan 037 polish #14: Hue help string no longer ends with a period
-    so it matches sibling Saturation/Exposure/Sharpness help strings."""
+def test_adjustment_help_strings_explain_unit_and_identity() -> None:
+    """Every colour-axis help string names the unit + identity reading
+    so a value like "+20 %" or "+0.50 EV" has concrete meaning.
+
+    Replaces the earlier trailing-period sanity check (plan 037 polish
+    #14) — that rule applied to the older one-clause strings; the
+    rewritten strings are multi-clause and end with periods to match
+    standard prose punctuation."""
     from instantlink_bridge.ui.settings import SettingKey, setting_help_text
 
-    help_text = setting_help_text(SettingKey.ADJUST_HUE)
-    assert help_text == "Tint. Left toward orange, right toward blue"
-    assert not help_text.endswith(".")
+    saturation = setting_help_text(SettingKey.ADJUST_SATURATION)
+    assert "%" in saturation and "grayscale" in saturation.lower()
+
+    exposure = setting_help_text(SettingKey.ADJUST_EXPOSURE)
+    assert "EV" in exposure and "1/4-stop" in exposure
+
+    sharpness = setting_help_text(SettingKey.ADJUST_SHARPNESS)
+    assert "%" in sharpness and "softened" in sharpness.lower()
+
+    hue = setting_help_text(SettingKey.ADJUST_HUE)
+    assert "°" in hue and "HSV" in hue
+
+    vignette = setting_help_text(SettingKey.ADJUST_VIGNETTE)
+    assert "%" in vignette and "0 %" in vignette
 
 
 def test_preset_modified_marker_is_edited_text_not_asterisk(tmp_path: Path) -> None:

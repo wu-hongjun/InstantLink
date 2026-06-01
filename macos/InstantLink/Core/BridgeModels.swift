@@ -25,6 +25,11 @@ struct BridgeAPIEnvelope: Codable, Equatable {
     var config: BridgeConfig?
     var supportBundle: BridgeSupportBundleResult?
     var schema: BridgeConfigSchema?
+    // Plan 040: ``GET /v1/time`` carries a top-level ``epoch`` field with
+    // the bridge's current wall-clock seconds. Decoded straight into the
+    // shared envelope so ``BridgeHTTPTransport.refreshServerEpoch`` does
+    // not have to introduce a sibling envelope type for one integer.
+    var epoch: Int?
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
@@ -48,6 +53,7 @@ struct BridgeAPIEnvelope: Codable, Equatable {
         case config
         case supportBundle = "support_bundle"
         case schema
+        case epoch
     }
 
     func requireOK() throws {
@@ -903,6 +909,12 @@ struct BridgeErrorCode: RawRepresentable, Codable, Equatable, Hashable, Expressi
     static let deviceUnavailable = BridgeErrorCode("device_unavailable")
     static let missingPayload = BridgeErrorCode("missing_payload")
     static let unknown = BridgeErrorCode("unknown")
+    // Plan 040: the bridge has no RTC and no internet egress in default
+    // headless mode, so its clock can sit hours, days, or years off real
+    // wall time. The Mac watches for these two codes on every signed
+    // request and re-anchors against ``/v1/time`` before retrying once.
+    static let timestampFuture = BridgeErrorCode("timestamp_future")
+    static let timestampStale = BridgeErrorCode("stale")
 }
 
 struct BridgeErrorPayload: Codable, Equatable {

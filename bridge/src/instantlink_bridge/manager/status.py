@@ -85,6 +85,20 @@ def collect_pairing_status_payload(
     }
 
 
+def collect_time_payload(now_seconds: int) -> JsonObject:
+    """Return the bridge's current wall-clock epoch for signed-request alignment.
+
+    The Pi Zero 2 W has no RTC and depends on systemd-timesyncd reaching an
+    NTP peer over its only egress (USB NAT or the hotspot's upstream Wi-Fi).
+    When NTP has not converged, the bridge clock can sit minutes behind real
+    wall time, breaking ``X-Bridge-Timestamp`` skew checks for any client
+    using its own wall clock. Mac clients fetch this endpoint when their
+    cached offset is invalidated and use it to anchor subsequent signatures.
+    """
+
+    return {"epoch": int(now_seconds)}
+
+
 def pairing_status_payload(pairing: PairingStatusSnapshot) -> JsonObject:
     """Return a JSON payload for a pairing status snapshot."""
 

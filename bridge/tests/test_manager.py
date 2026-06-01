@@ -246,8 +246,106 @@ def test_manager_cli_api_routes_describes_auth_boundaries(
     assert routes[("GET", "/v1/hello")]["auth_required"] is False
     assert routes[("GET", "/v1/pairing/status")]["auth_required"] is False
     assert routes[("POST", "/v1/pairing/complete")]["auth_required"] is False
+    assert routes[("GET", "/v1/time")]["auth_required"] is False
     assert routes[("GET", "/v1/status")]["auth_required"] is True
     assert routes[("POST", "/v1/update/install")]["auth_required"] is True
+
+
+@pytest.mark.asyncio
+async def test_manager_http_time_returns_injected_epoch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`/v1/time` is unsigned and echoes the injected ``now_seconds`` factory.
+
+    The bridge runs on a Pi Zero 2 W with no RTC, no internet egress in the
+    default hotspot mode, and a cold boot every session — its clock can sit
+    *years* behind real wall time. Mac clients fetch this route to anchor
+    signed-request timestamps to the bridge's actual clock instead of the
+    host's wall clock.
+    """
+
+    monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
+    samples = iter([1_700_000_000, 1_700_000_005])
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-time",
+        now_seconds=lambda: next(samples),
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        first = await client.get("/v1/time")
+        first_data = cast(dict[str, Any], await first.json())
+        assert first.status == 200
+        assert_success_envelope(first_data, request_id="req-time")
+        assert first_data["epoch"] == 1_700_000_000
+
+        second = await client.get("/v1/time")
+        second_data = cast(dict[str, Any], await second.json())
+        assert second.status == 200
+        assert second_data["epoch"] == 1_700_000_005
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_time_succeeds_without_signing_headers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``/v1/time`` must not require a signed request.
+
+    Signed requests are exactly what this route exists to unblock, so the
+    handler must accept the call regardless of clock skew, missing client
+    identity, or absent management auth headers.
+    """
+
+    monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-time",
+        now_seconds=lambda: 42,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.get("/v1/time")
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200
+        assert data["epoch"] == 42
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_time_tolerates_arbitrarily_large_clock_skew(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The route serializes the epoch even when the bridge clock is years off.
+
+    Without an RTC the Pi can boot with a ``fake-hwclock`` stamp from a
+    different decade; the route must serialize whatever ``now_seconds``
+    returns without imposing range checks the Mac would have to second-guess.
+    """
+
+    monkeypatch.setattr(manager_status, "read_system_info", fake_system_info)
+    ancient_epoch = 1_500_000_000  # July 2017, ~9 years off real wall time
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-time",
+        now_seconds=lambda: ancient_epoch,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.get("/v1/time")
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200
+        assert data["epoch"] == ancient_epoch
+    finally:
+        await client.close()
 
 
 @pytest.mark.asyncio

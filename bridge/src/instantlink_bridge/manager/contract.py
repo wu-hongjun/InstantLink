@@ -59,6 +59,13 @@ DISCOVERY_ROUTES: tuple[ManagementRoute, ...] = (
         operation_id="pairing_usb_auto_trust",
         summary="USB-physical auto-trust: register a new client over the USB-tether interface.",
     ),
+    ManagementRoute(
+        method="GET",
+        path="/v1/time",
+        auth_required=False,
+        operation_id="time",
+        summary="Return the bridge's current wall-clock epoch so signed requests can align.",
+    ),
 )
 
 ADMIN_ROUTES: tuple[ManagementRoute, ...] = (

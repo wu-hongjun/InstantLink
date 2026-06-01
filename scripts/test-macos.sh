@@ -23,6 +23,7 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Core/BridgeConfigSchema.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeAuth.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeClientFileStore.swift"
+  "$REPO_ROOT/macos/InstantLink/Core/BridgeServerClock.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeTransport.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeHTTPTransport.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeControlCoordinator.swift"

@@ -98,6 +98,24 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeHTTPTransportTests.testRollbackUpdatePostsReasonAndDecodesState", {
                 try await BridgeHTTPTransportTests().testRollbackUpdatePostsReasonAndDecodesState()
             }),
+            ("BridgeHTTPTransportTests.testSignedRequestRetriesAfterTimestampFutureWithServerEpoch", {
+                try await BridgeHTTPTransportTests().testSignedRequestRetriesAfterTimestampFutureWithServerEpoch()
+            }),
+            ("BridgeHTTPTransportTests.testSignedRequestRetriesAfterStaleTimestampError", {
+                try await BridgeHTTPTransportTests().testSignedRequestRetriesAfterStaleTimestampError()
+            }),
+            ("BridgeHTTPTransportTests.testSignedRequestDoesNotRetryOnNonClockSkewError", {
+                try await BridgeHTTPTransportTests().testSignedRequestDoesNotRetryOnNonClockSkewError()
+            }),
+            ("BridgeHTTPTransportTests.testSignedRequestReusesCachedServerEpochOnSubsequentCalls", {
+                try await BridgeHTTPTransportTests().testSignedRequestReusesCachedServerEpochOnSubsequentCalls()
+            }),
+            ("BridgeHTTPTransportTests.testSignedRequestSurfacesClockSkewErrorAfterRetryAlsoFails", {
+                try await BridgeHTTPTransportTests().testSignedRequestSurfacesClockSkewErrorAfterRetryAlsoFails()
+            }),
+            ("BridgeHTTPTransportTests.testBridgeServerClockCacheRecordsAndInvalidatesPerDevice", {
+                try await BridgeHTTPTransportTests().testBridgeServerClockCacheRecordsAndInvalidatesPerDevice()
+            }),
             ("BridgeTransportTests.testInMemoryTransportThrowsAuthRequiredForManagedEndpoints", {
                 try await BridgeTransportTests().testInMemoryTransportThrowsAuthRequiredForManagedEndpoints()
             }),

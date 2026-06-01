@@ -504,6 +504,259 @@ final class BridgeHTTPTransportTests {
         try expectEqual(watermark.key, "watermark")
     }
 
+    // MARK: - Plan 040 — server-anchored timestamps
+
+    func testSignedRequestRetriesAfterTimestampFutureWithServerEpoch() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let recorder = BridgeHTTPRequestRecorder()
+        let session = makeSession { request in
+            recorder.record(request)
+            switch (request.url?.path, recorder.count(forPath: "/v1/status")) {
+            case ("/v1/status", 1):
+                return .json(401, Self.errorEnvelope(code: "timestamp_future"))
+            case ("/v1/time", _):
+                return .json(200, Self.timeEnvelope(epoch: 1_500_000_000))
+            case ("/v1/status", 2):
+                return .json(200, Self.statusEnvelope)
+            default:
+                return .json(500, Self.errorEnvelope(code: "unexpected"))
+            }
+        }
+        // Host clock advances past the would-be skew window between the
+        // two attempts to make sure the retry actually consults the
+        // ``BridgeServerClockCache`` and not the local clock.
+        var monotonicTicks = [100.0, 100.5, 101.0, 101.5]
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://bridge.local:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1_780_000_000) },
+            nonce: { "nonce-retry" },
+            monotonicNow: { monotonicTicks.removeFirst() }
+        )
+
+        let status = try await transport.status(device: makeDevice())
+        try expectEqual(status.deviceID, "IB-1234ABCD")
+
+        let statusCalls = recorder.requests.filter { $0.url?.path == "/v1/status" }
+        try expectEqual(statusCalls.count, 2)
+        let timeCalls = recorder.requests.filter { $0.url?.path == "/v1/time" }
+        try expectEqual(timeCalls.count, 1)
+        // First /v1/status used host clock (~1_780_000_000).
+        try expectEqual(
+            statusCalls[0].value(forHTTPHeaderField: BridgeManagementAuth.timestampHeader),
+            "1780000000"
+        )
+        // /v1/time was reached without management auth headers.
+        try expectNil(
+            timeCalls[0].value(forHTTPHeaderField: BridgeManagementAuth.clientIDHeader)
+        )
+        // Retry signed against the bridge epoch (1_500_000_000) the server returned.
+        try expectEqual(
+            statusCalls[1].value(forHTTPHeaderField: BridgeManagementAuth.timestampHeader),
+            "1500000000"
+        )
+    }
+
+    func testSignedRequestRetriesAfterStaleTimestampError() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let recorder = BridgeHTTPRequestRecorder()
+        let session = makeSession { request in
+            recorder.record(request)
+            switch (request.url?.path, recorder.count(forPath: "/v1/status")) {
+            case ("/v1/status", 1):
+                return .json(401, Self.errorEnvelope(code: "stale"))
+            case ("/v1/time", _):
+                return .json(200, Self.timeEnvelope(epoch: 2_000_000_000))
+            case ("/v1/status", 2):
+                return .json(200, Self.statusEnvelope)
+            default:
+                return .json(500, Self.errorEnvelope(code: "unexpected"))
+            }
+        }
+        var monotonicTicks = [10.0, 10.1, 10.2, 10.3]
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://bridge.local:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 100) },
+            nonce: { "nonce-stale" },
+            monotonicNow: { monotonicTicks.removeFirst() }
+        )
+
+        _ = try await transport.status(device: makeDevice())
+        let statusCalls = recorder.requests.filter { $0.url?.path == "/v1/status" }
+        try expectEqual(statusCalls.count, 2)
+        try expectEqual(
+            statusCalls[1].value(forHTTPHeaderField: BridgeManagementAuth.timestampHeader),
+            "2000000000"
+        )
+    }
+
+    func testSignedRequestDoesNotRetryOnNonClockSkewError() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let recorder = BridgeHTTPRequestRecorder()
+        let session = makeSession { request in
+            recorder.record(request)
+            if request.url?.path == "/v1/status" {
+                return .json(401, Self.errorEnvelope(code: "invalid_signature"))
+            }
+            return .json(500, Self.errorEnvelope(code: "unexpected"))
+        }
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://bridge.local:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1000) },
+            nonce: { "nonce-no-retry" }
+        )
+
+        do {
+            _ = try await transport.status(device: makeDevice())
+            throw MacTestFailure(
+                file: #filePath,
+                line: #line,
+                message: "Expected invalid_signature to surface"
+            )
+        } catch let apiError as BridgeAPIError {
+            try expectEqual(apiError.code, .invalidSignature)
+        }
+        try expectEqual(recorder.requests.filter { $0.url?.path == "/v1/status" }.count, 1)
+        try expectEqual(recorder.requests.filter { $0.url?.path == "/v1/time" }.count, 0)
+    }
+
+    func testSignedRequestReusesCachedServerEpochOnSubsequentCalls() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let recorder = BridgeHTTPRequestRecorder()
+        let session = makeSession { request in
+            recorder.record(request)
+            switch (request.url?.path, recorder.count(forPath: "/v1/status")) {
+            case ("/v1/status", 1):
+                return .json(401, Self.errorEnvelope(code: "timestamp_future"))
+            case ("/v1/time", _):
+                return .json(200, Self.timeEnvelope(epoch: 1_600_000_000))
+            case ("/v1/status", _):
+                return .json(200, Self.statusEnvelope)
+            case ("/v1/config", _):
+                return .json(200, Self.configEnvelope)
+            default:
+                return .json(500, Self.errorEnvelope(code: "unexpected"))
+            }
+        }
+        var monotonicTicks = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://bridge.local:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1_780_000_000) },
+            nonce: { "nonce-cache" },
+            monotonicNow: { monotonicTicks.removeFirst() }
+        )
+
+        // First signed call triggers refresh.
+        _ = try await transport.status(device: makeDevice())
+        // Second, unrelated signed call should use the cached server
+        // epoch instead of either refetching ``/v1/time`` or falling
+        // back to the host clock.
+        _ = try await transport.getConfig(device: makeDevice())
+
+        let timeCalls = recorder.requests.filter { $0.url?.path == "/v1/time" }
+        try expectEqual(timeCalls.count, 1)
+        let configCall = try requireFirstRequest(recorder, forPath: "/v1/config")
+        let configTimestamp = configCall.value(forHTTPHeaderField: BridgeManagementAuth.timestampHeader)
+        // Monotonic ticks consumed: 0 (first signing — cache miss, host
+        // clock used), 1 (refreshServerEpoch anchors at server epoch
+        // 1_600_000_000), 2 (getConfig signing — cache hit, "now" is
+        // 1_600_000_000 + (2 − 1) = 1_600_000_001).
+        try expectEqual(configTimestamp, "1600000001")
+    }
+
+    func testSignedRequestSurfacesClockSkewErrorAfterRetryAlsoFails() async throws {
+        let keyStore = FakeBridgeClientKeyStore(identity: try makeIdentity())
+        let recorder = BridgeHTTPRequestRecorder()
+        let session = makeSession { request in
+            recorder.record(request)
+            if request.url?.path == "/v1/time" {
+                return .json(200, Self.timeEnvelope(epoch: 1_700_000_000))
+            }
+            if request.url?.path == "/v1/status" {
+                return .json(401, Self.errorEnvelope(code: "timestamp_future"))
+            }
+            return .json(500, Self.errorEnvelope(code: "unexpected"))
+        }
+        let transport = BridgeHTTPTransport(
+            baseURL: URL(string: "http://bridge.local:8742")!,
+            session: session,
+            keyStore: keyStore,
+            now: { Date(timeIntervalSince1970: 1_780_000_000) },
+            nonce: { "nonce-loop" }
+        )
+
+        do {
+            _ = try await transport.status(device: makeDevice())
+            throw MacTestFailure(
+                file: #filePath,
+                line: #line,
+                message: "Expected timestamp_future to surface after retry"
+            )
+        } catch let apiError as BridgeAPIError {
+            try expectEqual(apiError.code, .timestampFuture)
+        }
+        // Exactly two signed attempts and exactly one anchor fetch — no
+        // unbounded looping even though every signed call keeps failing.
+        try expectEqual(recorder.requests.filter { $0.url?.path == "/v1/status" }.count, 2)
+        try expectEqual(recorder.requests.filter { $0.url?.path == "/v1/time" }.count, 1)
+    }
+
+    func testBridgeServerClockCacheRecordsAndInvalidatesPerDevice() async throws {
+        let cache = BridgeServerClockCache()
+        // ``expectNil`` / ``expectEqual`` accept ``@autoclosure``s which
+        // cannot host ``await`` calls, so each actor-isolated read is
+        // hoisted into a local before assertion.
+        let beforeAnyRecord = await cache.serverEpoch(forDeviceID: "IB-1", monotonicNow: 0)
+        try expectNil(beforeAnyRecord)
+
+        await cache.record(deviceID: "IB-1", serverEpoch: 1_000_000, monotonicNow: 100)
+        await cache.record(deviceID: "IB-2", serverEpoch: 999_999_999, monotonicNow: 200)
+
+        let firstBridgeAfterFiveSeconds = await cache.serverEpoch(
+            forDeviceID: "IB-1",
+            monotonicNow: 105
+        )
+        try expectEqual(firstBridgeAfterFiveSeconds, 1_000_005)
+
+        let secondBridgeAfterTenSeconds = await cache.serverEpoch(
+            forDeviceID: "IB-2",
+            monotonicNow: 210
+        )
+        try expectEqual(secondBridgeAfterTenSeconds, 999_999_999 + 10)
+
+        await cache.invalidate(deviceID: "IB-1")
+        let firstBridgeAfterInvalidate = await cache.serverEpoch(
+            forDeviceID: "IB-1",
+            monotonicNow: 999
+        )
+        try expectNil(firstBridgeAfterInvalidate)
+
+        // IB-2's sample survives invalidation of IB-1.
+        let secondBridgeAfterFiftySeconds = await cache.serverEpoch(
+            forDeviceID: "IB-2",
+            monotonicNow: 250
+        )
+        try expectEqual(secondBridgeAfterFiftySeconds, 999_999_999 + 50)
+    }
+
+    private static func timeEnvelope(epoch: Int) -> String {
+        """
+        {
+          "schema_version": 1,
+          "request_id": "req-time",
+          "ok": true,
+          "epoch": \(epoch)
+        }
+        """
+    }
+
     private static let adjustmentsSchemaEnvelope = """
     {
       "schema_version": 1,
@@ -902,6 +1155,45 @@ private func makeSession(
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [BridgeHTTPURLProtocol.self]
     return URLSession(configuration: configuration)
+}
+
+/// Recorder used by the plan 040 clock-skew tests to inspect the exact
+/// sequence + headers of requests the transport issued.
+///
+/// Captures every request the stub session sees so each test can assert
+/// which path was hit, how many times, and in what order — the retry
+/// logic is meaningful only relative to that sequence.
+private final class BridgeHTTPRequestRecorder: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "BridgeHTTPRequestRecorder")
+    private var captured: [URLRequest] = []
+
+    func record(_ request: URLRequest) {
+        queue.sync { captured.append(request) }
+    }
+
+    var requests: [URLRequest] {
+        queue.sync { captured }
+    }
+
+    func count(forPath path: String) -> Int {
+        queue.sync { captured.filter { $0.url?.path == path }.count }
+    }
+}
+
+private func requireFirstRequest(
+    _ recorder: BridgeHTTPRequestRecorder,
+    forPath path: String,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) throws -> URLRequest {
+    guard let request = recorder.requests.first(where: { $0.url?.path == path }) else {
+        throw MacTestFailure(
+            file: "\(file)",
+            line: line,
+            message: "Expected at least one request for \(path)"
+        )
+    }
+    return request
 }
 
 private func requestBody(from request: URLRequest) -> Data {

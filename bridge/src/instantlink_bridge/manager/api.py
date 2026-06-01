@@ -19,9 +19,11 @@ from instantlink_bridge.manager.auth import (
     AuthorizedClient,
     ClientStore,
     ManagementAuthError,
+    NowSeconds,
     PairingWindowError,
     PairingWindowStore,
     SignedRequestVerifier,
+    current_unix_seconds,
     utc_timestamp,
 )
 from instantlink_bridge.manager.config_payload import (
@@ -82,6 +84,7 @@ SUPPORT_BUNDLE_DIR_KEY = web.AppKey(
 SUPPORT_BUNDLE_SOURCES_KEY = web.AppKey(
     "instantlink_bridge.manager.support_bundle_sources", object
 )
+NOW_SECONDS_KEY = web.AppKey("instantlink_bridge.manager.now_seconds", object)
 DEFAULT_SUPPORT_BUNDLE_DIR = Path("/var/lib/InstantLinkBridge/support-bundles")
 
 
@@ -126,6 +129,7 @@ def create_app(
     log_stream_source: LogStreamSource | None = None,
     support_bundle_dir: Path | None = None,
     support_bundle_sources: tuple[SupportBundleSource, ...] | None = None,
+    now_seconds: NowSeconds | None = None,
 ) -> web.Application:
     """Create the Phase 1 Bridge management API application."""
 
@@ -150,10 +154,12 @@ def create_app(
         if support_bundle_sources is not None
         else default_support_bundle_sources(Path("/"))
     )
+    app[NOW_SECONDS_KEY] = now_seconds or current_unix_seconds
     app.router.add_get("/v1/hello", handle_hello)
     app.router.add_get("/v1/pairing/status", handle_pairing_status)
     app.router.add_post("/v1/pairing/complete", handle_pairing_complete)
     app.router.add_post("/v1/pairing/usb_auto_trust", handle_pairing_usb_auto_trust)
+    app.router.add_get("/v1/time", handle_time)
     for route in ADMIN_ROUTES:
         app.router.add_route(route.method, route.path, auth_required_handler(route))
     return app
@@ -223,6 +229,22 @@ async def handle_pairing_status(request: web.Request) -> web.Response:
     return json_success(
         request,
         manager_status.collect_pairing_status_payload(pairing_store_for(request)),
+    )
+
+
+async def handle_time(request: web.Request) -> web.Response:
+    """Return the bridge's current wall-clock epoch (unauthenticated).
+
+    Mac clients call this when a signed request is rejected with
+    ``timestamp_future`` / ``stale``: the result anchors a local offset so
+    subsequent signatures track the bridge clock instead of the host clock.
+    Trust posture matches ``/v1/hello`` — the response leaks nothing more
+    than the bridge's own ``time.time()``.
+    """
+
+    return json_success(
+        request,
+        manager_status.collect_time_payload(now_seconds_for(request)()),
     )
 
 
@@ -1021,6 +1043,18 @@ def environment_for(request: web.Request) -> ManagerEnvironment:
     """Return the app's update-orchestration environment."""
 
     return request.app[ENVIRONMENT_KEY]
+
+
+def now_seconds_for(request: web.Request) -> NowSeconds:
+    """Return the app's clock factory for ``/v1/time``.
+
+    Stored as ``object`` because :class:`web.AppKey` does not retain a
+    callable's generic parameters; the production default is
+    :func:`current_unix_seconds` and tests inject a monotonically advancing
+    fake to assert clock alignment.
+    """
+
+    return cast(NowSeconds, request.app[NOW_SECONDS_KEY])
 
 
 def request_id_for(request: web.Request) -> str:

@@ -447,6 +447,8 @@ def draw_vertical_slider(
     thumb_width: int = 14,
     thumb_height: int = 10,
     symmetric: bool = True,
+    value_label: str | None = None,
+    label_font: Font | None = None,
 ) -> int:
     """Vertical analog of :func:`draw_slider`.
 
@@ -455,15 +457,32 @@ def draw_vertical_slider(
     thumb up and increases the value. Returns the pixel y-coordinate
     of the thumb centre so callers can anchor a value badge to it.
 
+    When ``value_label`` and ``label_font`` are supplied the thumb
+    grows into a pill-shaped chip with the value rendered inside it,
+    matching iOS-style "value-on-knob" sliders. The chip widens to
+    fit the label plus a small horizontal pad; the active-value tint
+    (``accent_blue``) is used for any non-zero reading, and the
+    surface fill is used at zero so the centre tick stays visible.
+
     Used by the focused adjustment editor: joystick UP/DOWN nudges
     the value, so orienting the slider along the same axis as the
     gesture is the gesture's natural visual proxy.
     """
 
+    has_chip = value_label is not None and label_font is not None
     if min_value == max_value:
         thumb_cy = y + h // 2
         _draw_vertical_slider_thumb(
-            draw, x, thumb_cy, track_width, thumb_width, thumb_height, theme
+            draw,
+            x,
+            thumb_cy,
+            track_width,
+            thumb_width,
+            thumb_height,
+            theme,
+            value_label=value_label if has_chip else None,
+            label_font=label_font if has_chip else None,
+            value=value,
         )
         return thumb_cy
 
@@ -477,7 +496,11 @@ def draw_vertical_slider(
     # Map value → thumb-y. Higher value sits higher on the track:
     # raw_cy_offset is a fraction of ``h`` measured *down* from y.
     raw_cy = y + int(h * (max_value - value) / (max_value - min_value))
-    thumb_cy = max(y + thumb_height // 2, min(y + h - thumb_height // 2, raw_cy))
+    # When a chip thumb is in use the actual rendered height grows;
+    # clamp against the wider thumb so the chip never overhangs the
+    # track ends.
+    effective_thumb_h = thumb_height
+    thumb_cy = max(y + effective_thumb_h // 2, min(y + h - effective_thumb_h // 2, raw_cy))
 
     if symmetric:
         zero_y = y + int(h * (max_value - 0) / (max_value - min_value))
@@ -507,7 +530,16 @@ def draw_vertical_slider(
             )
 
     _draw_vertical_slider_thumb(
-        draw, x, thumb_cy, track_width, thumb_width, thumb_height, theme
+        draw,
+        x,
+        thumb_cy,
+        track_width,
+        thumb_width,
+        thumb_height,
+        theme,
+        value_label=value_label if has_chip else None,
+        label_font=label_font if has_chip else None,
+        value=value,
     )
 
     return thumb_cy
@@ -521,9 +553,50 @@ def _draw_vertical_slider_thumb(
     thumb_width: int,
     thumb_height: int,
     theme: Theme,
+    *,
+    value_label: str | None = None,
+    label_font: Font | None = None,
+    value: int = 0,
 ) -> None:
-    """Draw the vertical slider thumb centred horizontally on the track."""
+    """Draw the vertical slider thumb centred horizontally on the track.
+
+    When ``value_label`` is supplied the thumb becomes a pill chip
+    sized to the label rather than the default 14 × 10 dot; the
+    helper keeps both shapes here so callers don't have to manage two
+    drawing paths.
+    """
+
     track_cx = track_x + track_width // 2
+    if value_label is not None and label_font is not None:
+        # Pill chip with the current value inside. Background tracks
+        # the active state: ``accent_blue`` when the value is non-zero
+        # so the chip reads as part of the filled portion of the
+        # track, and ``surface_elevated`` at zero so the centre tick
+        # stays visible underneath.
+        pad_x = 8
+        pad_y = 3
+        text_w = _text_width(draw, value_label, label_font)
+        text_h = _font_height(draw, "Hg", label_font)
+        chip_w = max(thumb_width, text_w + pad_x * 2)
+        chip_h = max(thumb_height, text_h + pad_y * 2)
+        tx0 = track_cx - chip_w // 2
+        ty0 = thumb_cy - chip_h // 2
+        tx1 = tx0 + chip_w
+        ty1 = ty0 + chip_h
+        fill = theme.accent_blue if value != 0 else theme.surface_elevated
+        text_color = theme.label_inverse if value != 0 else theme.label_primary
+        draw.rounded_rectangle(
+            (tx0, ty0, tx1, ty1),
+            radius=chip_h // 2,
+            fill=fill,
+            outline=theme.separator,
+            width=1,
+        )
+        text_x = tx0 + (chip_w - text_w) // 2
+        text_y = ty0 + (chip_h - text_h) // 2
+        _text(draw, text_x, text_y, value_label, label_font, text_color)
+        return
+
     tx0 = track_cx - thumb_width // 2
     ty0 = thumb_cy - thumb_height // 2
     tx1 = tx0 + thumb_width
@@ -2137,20 +2210,10 @@ def _adjustment_edit(
         width=1,
     )
 
-    # --- Value badge --------------------------------------------------------
-    # The axis name now lives in the top status bar (see ``status_bar_word``)
-    # so the body card is freed up for the preview + slider + value. Slider
-    # axes show the value badge at the top of the right column, directly
-    # above the vertical slider track; toggles surface their On/Off state
-    # via the pills drawn below.
-    if not is_toggle:
-        symmetric = edit_key != "adjust_vignette"
-        val_str = format_int_with_sign(current_value) if symmetric else str(current_value)
-        val_w = _text_width(draw, val_str, font_body)
-        # Right column starts at x=160 (left edge of slider region).
-        val_x = 160 + (60 - val_w) // 2
-        value_y = 42
-        _text(draw, val_x, value_y, val_str, font_body, theme.accent_blue)
+    # The axis name now lives in the top status bar (see
+    # ``status_bar_word``) and the current value rides the slider thumb
+    # as a chip (see the ``else`` branch below). The card body is free
+    # for the preview + the slider — no standalone value badge.
 
     if is_toggle:
         # --- Off / On pills -------------------------------------------------
@@ -2189,21 +2252,19 @@ def _adjustment_edit(
         help_strip = t("KEY1 commit · KEY2 cancel", lang)
     else:
         # --- Vertical slider track (right column) ---------------------------
-        # The joystick edits with UP/DOWN, so orient the slider along
-        # the same axis: max value at the top, min at the bottom.
-        # Right column spans x=160..220; the track sits centred in that
-        # column with range labels above/below.
+        # The joystick edits with UP/DOWN, so the track runs along the
+        # same axis: max value at the top, min at the bottom. The thumb
+        # is a pill chip carrying the current value (no separate badge).
         symmetric = edit_key != "adjust_vignette"
         col_x0 = 160
         col_w = 60
         track_x = col_x0 + (col_w - 6) // 2  # track_width=6, centred
-        # Range labels claim ~12 px at top + bottom of the right column;
-        # the badge already sits at y=42, so the track starts under it.
-        # Track height 108 px aligns with the preview's bottom edge so
-        # both columns finish at y=172 inside the card.
-        top_label_y = 64
-        track_y = 76
-        track_h = 96
+        # No separate value badge now that the chip rides the thumb;
+        # the track can use the full body-card height between the
+        # range labels.
+        top_label_y = 44
+        track_y = 58
+        track_h = 116
         bottom_label_y = track_y + track_h + 2
         lo, hi = (-100, 100) if symmetric else (0, 100)
         # Top range label
@@ -2217,7 +2278,11 @@ def _adjustment_edit(
             font_small,
             theme.label_secondary,
         )
-        # Slider track
+        # Slider track with value-on-chip thumb. ``format_int_with_sign``
+        # gives "+20" / "-30"; vignette is unsigned so use the plain int.
+        val_chip = (
+            format_int_with_sign(current_value) if symmetric else str(current_value)
+        )
         draw_vertical_slider(
             draw,
             track_x,
@@ -2228,9 +2293,11 @@ def _adjustment_edit(
             hi,
             theme=theme,
             track_width=6,
-            thumb_width=14,
-            thumb_height=10,
+            thumb_width=32,
+            thumb_height=18,
             symmetric=symmetric,
+            value_label=val_chip,
+            label_font=font_small,
         )
         # Bottom range label
         bottom_label = "−100" if symmetric else "0"

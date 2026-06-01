@@ -2318,18 +2318,32 @@ def _confirmation_dialog(
         width=1,
     )
 
+    # Vertically center each label INSIDE its button cell. Centring math:
+    #   * `_font_height("Hg")` measures the font's full ascent-to-descender
+    #     box. That used to feed the y-offset, which left "Cancel" / "Forget"
+    #     (no descender) sitting visibly below the centre — PIL's default
+    #     anchor pins (x, y) at the top of the bbox, so a tall reference
+    #     glyph pushed shorter glyphs down.
+    #   * Now we measure the actual label with ``textbbox`` and offset by
+    #     ``-bbox[1]`` so the bbox top lands at the centred y. The result is
+    #     true vertical centring for any label, with or without descender.
     button_font = fonts["body"]
+    button_center_y = button_top + _CONFIRM_BUTTON_H // 2
+
     cancel_text = t("Cancel", lang)
-    cancel_w = _text_width(draw, cancel_text, button_font)
+    cancel_bbox = draw.textbbox((0, 0), cancel_text, font=button_font)
+    cancel_w = int(cancel_bbox[2] - cancel_bbox[0])
+    cancel_h = int(cancel_bbox[3] - cancel_bbox[1])
     cancel_x = _CONFIRM_CARD_X + (_CONFIRM_CARD_W // 2 - cancel_w) // 2
-    button_label_h = _font_height(draw, cancel_text or "Hg", button_font)
-    cancel_y = button_top + (_CONFIRM_BUTTON_H - button_label_h) // 2
+    cancel_y = button_center_y - cancel_h // 2 - int(cancel_bbox[1])
     _text(draw, cancel_x, cancel_y, cancel_text, button_font, theme.label_primary)
 
     confirm_text = t(confirm_label, lang)
-    confirm_w = _text_width(draw, confirm_text, button_font)
+    confirm_bbox = draw.textbbox((0, 0), confirm_text, font=button_font)
+    confirm_w = int(confirm_bbox[2] - confirm_bbox[0])
+    confirm_h = int(confirm_bbox[3] - confirm_bbox[1])
     confirm_x = button_divider_x + (_CONFIRM_CARD_W // 2 - confirm_w) // 2
-    confirm_y = cancel_y
+    confirm_y = button_center_y - confirm_h // 2 - int(confirm_bbox[1])
     _text(draw, confirm_x, confirm_y, confirm_text, button_font, confirm_accent)
 
     # Hint bar reuses the standard mode-hint dispatch; CONFIRMATION_DIALOG

@@ -154,11 +154,7 @@ struct CropFrameView: View {
                 f.origin.y = max(0, min(1 - f.height, origin.minY + dy))
                 state.crop.frame = f
             }
-            .onEnded { _ in
-                isDragging = false
-                lastDragEndedAt = Date()
-                dragOrigin = nil
-            }
+            .onEnded { _ in endDrag() }
     }
 
     private func handleDrag(handle: Handle, canvasRect: CGRect) -> some Gesture {
@@ -172,42 +168,115 @@ struct CropFrameView: View {
                 let dy = value.translation.height / canvasRect.height
                 state.crop.frame = resize(from: origin, handle: handle, dx: dx, dy: dy)
             }
-            .onEnded { _ in
-                isDragging = false
-                lastDragEndedAt = Date()
-                dragOrigin = nil
-            }
+            .onEnded { _ in endDrag() }
     }
 
+    /// Common end-of-drag handler. Records the drag-end timestamp so the grid
+    /// stays visible for a brief fade-out window, then schedules a clearing
+    /// pass so SwiftUI re-evaluates `shouldShowGrid` after the window elapses.
+    private func endDrag() {
+        isDragging = false
+        dragOrigin = nil
+        let endedAt = Date()
+        lastDragEndedAt = endedAt
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.41) {
+            // Only clear if no new drag has started in the meantime.
+            if lastDragEndedAt == endedAt {
+                lastDragEndedAt = nil
+            }
+        }
+    }
+
+    /// Move the active handle (and the perpendicular axes for corners),
+    /// clamp to the unit square with a minimum size, then enforce the
+    /// active aspect-ratio lock if one is selected.
     private func resize(from original: CGRect, handle: Handle, dx: CGFloat, dy: CGFloat) -> CGRect {
         var minX = original.minX
         var minY = original.minY
         var maxX = original.maxX
         var maxY = original.maxY
         switch handle {
-        case .topLeft:
-            minX += dx; minY += dy
-        case .topRight:
-            maxX += dx; minY += dy
-        case .bottomLeft:
-            minX += dx; maxY += dy
-        case .bottomRight:
-            maxX += dx; maxY += dy
-        case .top:
-            minY += dy
-        case .bottom:
-            maxY += dy
-        case .left:
-            minX += dx
-        case .right:
-            maxX += dx
+        case .topLeft:     minX += dx; minY += dy
+        case .topRight:    maxX += dx; minY += dy
+        case .bottomLeft:  minX += dx; maxY += dy
+        case .bottomRight: maxX += dx; maxY += dy
+        case .top:         minY += dy
+        case .bottom:      maxY += dy
+        case .left:        minX += dx
+        case .right:       maxX += dx
         }
         let minSize: CGFloat = 0.05
         minX = max(0, min(maxX - minSize, minX))
         minY = max(0, min(maxY - minSize, minY))
         maxX = min(1, max(minX + minSize, maxX))
         maxY = min(1, max(minY + minSize, maxY))
-        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        let raw = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+
+        guard let lock = state.crop.effectiveRatio,
+              lock.width > 0, lock.height > 0 else {
+            return raw
+        }
+        return applyAspectLock(rect: raw, handle: handle, ratio: lock.width / lock.height)
+    }
+
+    /// Constrain `rect` to the given width-to-height `ratio`, anchored so the
+    /// side opposite the dragged handle stays in place. Shrinks (preserving
+    /// ratio) if clamping would push the rect outside the unit square.
+    private func applyAspectLock(rect: CGRect, handle: Handle, ratio: CGFloat) -> CGRect {
+        let widthDriven: Bool
+        switch handle {
+        case .top, .bottom:
+            // User moved a horizontal edge → height changed → derive width.
+            widthDriven = false
+        case .left, .right:
+            // User moved a vertical edge → width changed → derive height.
+            widthDriven = true
+        case .topLeft, .topRight, .bottomLeft, .bottomRight:
+            // Corner: pick the axis that needs less correction (the rect's
+            // current ratio decides which axis is "too long").
+            widthDriven = (rect.width / rect.height) > ratio
+        }
+
+        var w = rect.width
+        var h = rect.height
+        if widthDriven {
+            h = w / ratio
+        } else {
+            w = h * ratio
+        }
+
+        var minX = rect.minX
+        var minY = rect.minY
+        switch handle {
+        case .topLeft:     minX = rect.maxX - w; minY = rect.maxY - h
+        case .topRight:    minY = rect.maxY - h
+        case .bottomLeft:  minX = rect.maxX - w
+        case .bottomRight: break
+        case .top:         minX = rect.midX - w / 2; minY = rect.maxY - h
+        case .bottom:      minX = rect.midX - w / 2
+        case .left:        minX = rect.maxX - w; minY = rect.midY - h / 2
+        case .right:       minY = rect.midY - h / 2
+        }
+
+        var result = CGRect(x: minX, y: minY, width: w, height: h)
+        // Clamp to the unit square while preserving the aspect ratio: when an
+        // edge falls outside, shrink along the dominant axis and re-derive the
+        // other from `ratio`.
+        if result.minX < 0 {
+            result.origin.x = 0
+        }
+        if result.minY < 0 {
+            result.origin.y = 0
+        }
+        if result.maxX > 1 {
+            result.size.width = 1 - result.minX
+            result.size.height = result.size.width / ratio
+        }
+        if result.maxY > 1 {
+            result.size.height = 1 - result.minY
+            result.size.width = result.size.height * ratio
+        }
+        return result
     }
 
     enum Handle: CaseIterable {

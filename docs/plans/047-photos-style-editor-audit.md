@@ -62,7 +62,7 @@ Panel layout (top → bottom in the right sidebar): three sliders (**Straighten*
   - 16:9, 10:8, 7:5, 4:3, 5:3, 3:2
   - **Custom…** (two-field W × H numeric entry; accepts decimals)
   - Adjacent **Vertical / Horizontal orientation toggle** flips any ratio (10:8 ↔ 8:10, 16:9 ↔ 9:16, etc.) — so 9:16 portrait is reached via the toggle, not a named chip.
-  - **Print-aware presets** matched to the user's paired Instax model (Mini = 2:3, Square = 1:1, Wide = 3:2) — InstantLink addition; see Open Q6.
+  - **Print-aware presets** matched to the user's paired Instax model (Mini = 4:3 landscape, Square = 1:1, Wide = 3:2 — hardware per CLAUDE.md: Mini 600×800, Square 800×800, Wide 1260×840) — InstantLink addition; see Open Q6.
 - **Straighten slider**: −45° → +45°, horizontal slider (Ventura+ replaced the old vertical wheel). Snaps to 0 with soft detent. Double-click thumb resets. **Direct drag-on-image** outside the crop rect also rotates (cursor changes to rotation glyph). No two-point spirit-level tool.
 - **Vertical slider**: vertical keystone correction (top-tilts-toward / away). Photos exposes no numeric range — model internally as −1.0…+1.0 and map to a trapezoid offset. Double-click resets.
 - **Horizontal slider**: horizontal keystone (left/right tilt). Same UI shape and range.
@@ -165,7 +165,7 @@ User decisions taken 2026-06-12. Implementation in `048` proceeds with these as 
 5. **Defaults For New Photos** → **demote to Settings sub-screen**; remove from per-image editor flow. — *default*
 6. **Selective Color** → **6 user-defined wells + Range slider** (Photos parity). Each well is seeded by eyedropper or color picker; sliders are Hue / Saturation / Luminance / Range. — *user choice*
 7. **Definition** → **single slider + Auto** (Photos parity); internal radius fixed at ~2 % of the image's short edge. Disclosure for a Radius control is a v2 follow-up. — *user choice*
-8. **Print-aware aspect ratios** → **add Mini (2:3) / Square (1:1) / Wide (3:2) presets** when a Printer profile is selected. — *default*
+8. **Print-aware aspect ratios** → **add Mini (4:3 landscape) / Square (1:1) / Wide (3:2) presets** when a Printer profile is selected. — *default*
 9. **B&W ↔ Filters interop** → **Filters tab can override Adjust B&W stack** while a B&W LUT filter is active; switching tabs is the user signal. — *default*
 
 ---

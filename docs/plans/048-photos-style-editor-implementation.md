@@ -13,7 +13,7 @@ Locked decisions (full text in `047 §6`):
 | 5 | Defaults For New Photos | Demote to Settings sub-screen |
 | 6 | Selective Color | 6 user-defined wells + Range slider |
 | 7 | Definition | Single slider + Auto |
-| 8 | Print-aware aspects | Add Mini (2:3) / Square (1:1) / Wide (3:2) |
+| 8 | Print-aware aspects | Add Mini (4:3 landscape) / Square (1:1) / Wide (3:2) |
 | 9 | B&W ↔ Filters interop | Filters tab can override Adjust B&W stack |
 
 Pipeline order, color-space rules, and slider mappings are in `047 §3` and `docs/research/047-implementation-coreimage-mapping.md` §1. Re-read those when implementing — this file references them by anchor rather than restating ranges.
@@ -321,7 +321,7 @@ enum CropPipeline {
 
 `CropFrameView` overlays the MTKView canvas; on drag updates `state.crop.frame` clamped to the inscribed rectangle (formula in `docs/research/047-photos-crop-straighten-perspective.md` §"Math + Core Image mapping"). 3×3 grid renders only during drag (timer fades on release).
 
-`AspectRatioPicker` is the Photos pop-up: Original / Freeform / Square / 16:9 / 10:8 / 7:5 / 4:3 / 5:3 / 3:2 / Custom… plus a separator and printer-aware rows shown only when `ViewModel.activePrinter != nil` (Mini = 2:3, Square = 1:1, Wide = 3:2). Adjacent V/H orientation toggle swaps any ratio.
+`AspectRatioPicker` is the Photos pop-up: Original / Freeform / Square / 16:9 / 10:8 / 7:5 / 4:3 / 5:3 / 3:2 / Custom… plus a separator and printer-aware rows shown only when `ViewModel.activePrinter != nil` (Mini = 4:3 landscape, Square = 1:1, Wide = 3:2 — hardware per CLAUDE.md: Mini 600×800, Square 800×800, Wide 1260×840). Adjacent V/H orientation toggle swaps any ratio.
 
 **Acceptance**:
 - Aspect chips constrain the frame; V/H toggle flips ratios.

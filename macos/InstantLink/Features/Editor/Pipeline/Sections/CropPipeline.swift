@@ -53,8 +53,16 @@ enum CropPipeline {
         // Start centered at origin.
         var t = CGAffineTransform(translationX: -cx, y: -cy)
 
-        // Flip — order doesn't matter relative to rotate because both pivot on
-        // the center; doing flip first keeps the rotate-90 direction CCW.
+        // Spec order (research §"Order of operations"): rotate-90 first, then
+        // flip, then straighten. Swapping flip/rotate-90 changes which axis
+        // gets mirrored when both are active (e.g. Flip-H after Rotate-90 CCW
+        // yields a different result than the reverse), so this order matters.
+        let quarters = ((state.rotate90Quarter % 4) + 4) % 4
+        if quarters != 0 {
+            let angle = CGFloat(quarters) * (.pi / 2)
+            t = t.concatenating(CGAffineTransform(rotationAngle: angle))
+        }
+
         if state.flipHorizontal {
             t = t.concatenating(CGAffineTransform(scaleX: -1, y: 1))
         }
@@ -62,14 +70,6 @@ enum CropPipeline {
             t = t.concatenating(CGAffineTransform(scaleX: 1, y: -1))
         }
 
-        // Lossless 90° rotation, n quarter-turns CCW.
-        let quarters = ((state.rotate90Quarter % 4) + 4) % 4
-        if quarters != 0 {
-            let angle = CGFloat(quarters) * (.pi / 2)
-            t = t.concatenating(CGAffineTransform(rotationAngle: angle))
-        }
-
-        // Straighten rotation in radians.
         if state.straightenDegrees != 0 {
             let radians = CGFloat(state.straightenDegrees) * (.pi / 180)
             t = t.concatenating(CGAffineTransform(rotationAngle: radians))

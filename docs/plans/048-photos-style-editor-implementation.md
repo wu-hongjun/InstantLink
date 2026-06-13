@@ -30,10 +30,12 @@ Pipeline order, color-space rules, and slider mappings are in `047 §3` and `doc
 | #7 Sharpen section | ✅ landed | `9626bc3` (Intensity/Edges/Falloff via CISharpenLuminance + edge mask) |
 | #8 Noise Reduction section | ✅ landed | `7d7fbb6` (master + Luma/Color/Detail via CINoiseReduction + CIMedianFilter passes) |
 | #9 Definition section | ✅ landed | `6a61c9e` (single slider + Auto, high-radius unsharp + midtone mask) |
-| #5 Curves + Levels | in flight (Wave 2) | |
-| #12 White Balance + Eyedropper | in flight (Wave 2) | |
-| #13 Black & White mode | in flight (Wave 2) | |
-| #10 Selective Color, #11 Red Eye, #14 Annotate+retire, #16 Auto, #17 Polish | pending | |
+| #5 Curves + Levels + Histogram | ✅ landed | `5eafed6` (per-channel Levels model + monotone cubic spline editor + 7-handle Levels strip + CIAreaHistogram backdrop) |
+| #12 White Balance + Eyedropper infrastructure | ✅ landed | `a6f1708` (3-mode picker + shared EyedropperManager/Overlay/McCamy CCT estimator for PRs #10/#11) |
+| #13 Black & White mode | ✅ landed | `13bcbfb` (mode flag toggle + Intensity/Neutrals/Tone/Grain + grain composite via CIRandomGenerator) |
+| #10 Selective Color | in flight (Wave 3) | |
+| #11 Red Eye | in flight (Wave 3) | |
+| #14 Annotate+retire, #16 Auto, #17 Polish | pending | |
 | #15 Filter rail | deferred | Needs filter model that doesn't yet exist in new editor — wait until after PR #14 ports the legacy filter set or earlier if scope clarifies |
 
 ---

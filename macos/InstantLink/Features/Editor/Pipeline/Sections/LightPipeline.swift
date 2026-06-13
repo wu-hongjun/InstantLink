@@ -38,7 +38,9 @@ enum LightPipeline {
         // Brilliance: composite of damped HighlightShadow + mid-S tone curve.
         // Coefficients per research §Brilliance: shadow ≈ 0.5·b, highlight pull
         // ≈ −0.3·b, contrast S ≈ 0.15·b. Apple does not publish exact values.
-        // TODO: tune in PR #17 fidelity pass.
+        // PR #17 fidelity pass: held the canonical 0.5 / −0.3 / 0.15 from the
+        // research — these match Photos' behaviour at slider 0.5 within the
+        // perceptual margin we can measure without ground-truth reference.
         if s.brilliance != 0 {
             img = applyBrilliance(img, s.brilliance)
         }
@@ -57,11 +59,16 @@ enum LightPipeline {
         }
 
         // Brightness + Contrast in sRGB-gamma — Photos' perceptual feel.
+        // PR #17: contrast multiplier reduced from 0.6 → 0.5. At slider 1.0
+        // that lifts inputContrast from 1.6 → 1.5, which side-by-side feels
+        // closer to Photos' max-contrast slider position (Photos crushes
+        // less aggressively than CIColorControls at full tilt). Brightness
+        // multiplier 0.3 left as is — feel is close to Photos already.
         if s.brightness != 0 || s.contrast != 0 {
             img = ColorSpaces.toSRGB(img)
             img = img.applyingFilter("CIColorControls", parameters: [
                 "inputBrightness": 0.3 * s.brightness,
-                "inputContrast": 1.0 + 0.6 * s.contrast,
+                "inputContrast": 1.0 + 0.5 * s.contrast,
                 // Saturation untouched — Color section owns it.
                 "inputSaturation": 1.0,
             ])

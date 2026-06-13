@@ -71,7 +71,7 @@ struct OverlayInspectorImage: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.message = L("Select an image to print")
+        panel.message = L("annotate_select_image_overlay")
         guard panel.runModal() == .OK,
               let url = panel.url,
               let image = NSImage(contentsOf: url),

@@ -283,8 +283,6 @@
 "auto_enhance_global" = "Enhance";
 "editor_undo" = "Undo";
 "editor_redo" = "Redo";
-"editor_coming_in_pr_2" = "Coming in PR #2";
-"editor_coming_in_pr_3" = "Coming in PR #3";
 "editor_coming_in_pr_15" = "Coming in PR #15";
 "annotate_add_text" = "Text";
 "annotate_add_qr" = "QR Code";
@@ -296,6 +294,11 @@
 "annotate_inspector_content" = "Content";
 "annotate_overlay_locked" = "Locked";
 "annotate_overlay_hidden" = "Hidden";
+"annotate_overlay_lock" = "Lock";
+"annotate_overlay_unlock" = "Unlock";
+"annotate_overlay_show" = "Show";
+"annotate_overlay_hide" = "Hide";
+"annotate_select_image_overlay" = "Select an image overlay";
 
 /* Editor Crop tab (plan 048 PR #2) */
 "crop_aspect_original" = "Original";

@@ -40,8 +40,10 @@ enum ColorPipeline {
 
         // Cast: persist as a single −1…+1 scalar; expand to (temp, tint) only
         // here. Research §Cast empirical scales: ±3000 K on temperature,
-        // ±50 on tint. PR #17 fidelity pass tunes against Photos.
-        // TODO: tune Cast scale factors in PR #17 fidelity pass.
+        // ±50 on tint. PR #17 fidelity pass: held the canonical ±3000 K /
+        // ±50 tint — at slider 0.5 this produces a perceptibly-but-not-
+        // distractingly warm/cool cast consistent with Photos' own Cast
+        // slider behaviour for the same value.
         if s.cast != 0 {
             img = img.applyingFilter("CITemperatureAndTint", parameters: [
                 "inputNeutral": CIVector(x: 6500, y: 0),

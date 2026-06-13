@@ -6,6 +6,11 @@ import SwiftUI
 /// `NSViewRepresentable` wrapping an `MTKView` that draws a CIImage via
 /// `CIRenderDestination`. Runs `isPaused = true` + `enableSetNeedsDisplay = true`
 /// so the GPU only wakes when the editor's rendered preview changes.
+///
+/// Plan 047 §Q4 (film-frame in canvas): the Photos-style editor canvas is
+/// pixel-accurate and intentionally does NOT render an Instax film border —
+/// the simulated frame stays in the main-window queue preview, not here.
+/// Confirmed moot for the new editor in PR #17 of plan 048.
 struct EditorPreview: NSViewRepresentable {
     @ObservedObject var state: EditorViewState
 

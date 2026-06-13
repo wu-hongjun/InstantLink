@@ -1,10 +1,10 @@
-# InstantLink — Engineering Handover (2026-06-12)
+# InstantLink — Engineering Handover (2026-06-13)
 
 This doc is the fast briefing for the next engineer (human or Claude Code session) picking up
 this repo. It is meant to be self-contained — read this and you can start contributing without
 having to reconstruct context.
 
-Last verified: 2026-06-12. Main HEAD: `596230d`. Bridge HEAD on the test Pi: `ad638be`.
+Last verified: 2026-06-13. Main HEAD: `9d00c22` (Plan 048 PR #17 lands on top of this). Bridge HEAD on the test Pi: `ad638be` (unchanged from the previous handover).
 
 ---
 
@@ -26,14 +26,14 @@ directly over BLE. The Bridge talks to the printer over BLE via the same Rust co
 - "InstantLink" alone = the umbrella project. Don't use it to mean the App when the distinction
   matters.
 - "App" = the macOS app. "Bridge" = the Pi appliance. "Printer" = the Instax device.
-- The Bridge LCD UI shows compact strings. Recent example: "Searching Printer" (not "Looking
-  for printer" — that string was renamed in commit `ad638be`).
+- The Bridge LCD UI shows compact strings (recent rename: "Searching Printer" — landed in
+  `ad638be`).
 
 ---
 
 ## 2. Current versions
 
-- App + crates: **`0.1.43`** (Cargo.toml in all three crates; App built with `bash scripts/build-app.sh 0.1.43`).
+- App + crates: **`0.1.45`** (Cargo.toml in all three crates; App built with `bash scripts/build-app.sh 0.1.45`).
 - Bridge service version is governed by `bridge/pyproject.toml` and tracked separately.
 - The About sheet in App Settings shows the running App + Core versions side by side — use it
   to confirm the installed `.app` is fresh after a rebuild.
@@ -43,60 +43,52 @@ directly over BLE. The Bridge talks to the printer over BLE via the same Rust co
 
 ---
 
-## 3. What just shipped (this session — commits `ccdbea7`, `ad638be`, `596230d`)
+## 3. What just shipped (this session — plan 048, all 17 PRs)
 
-### `ccdbea7` docs: terminology + plans 041–046
-- `CLAUDE.md` + `README.md` standardised the brand terms (App / Bridge / Printer).
-- Six plan docs landed in `docs/plans/041–046`:
-  - 041–044: the App UX optimisation phases (Settings hamburger, Main banner audit/impl, image editor audit).
-  - 045–046: the desktop disconnected-printer escape audit + A+B+C implementation.
+The entire Photos-style editor rebuild scoped in `docs/plans/047-photos-style-editor-audit.md` /
+`docs/plans/048-photos-style-editor-implementation.md` landed across 17 PRs. The legacy
+`EditorViews.swift` (1364 lines) is **deleted**; the `useNewEditor` feature flag is **gone**;
+the new editor is the only editor. See plan 048 §PR Status for per-PR commit hashes.
 
-### `ad638be` fix(bridge): LCD screen-off + atomic re-pair + Searching Printer rename
-- **LCD screen-off** actually kills the panel now. Root cause: `/sys/class/backlight/fb_st7789v/bl_power`
-  was `root:root 0644`, the service runs as `ib`, and `_FramebufferBacklight.turn_off()` was
-  silently swallowing PermissionError. Fix:
-  - New udev rule `bridge/udev/60-instantlink-bridge-backlight.rules` (`chgrp video`, `chmod g+w`).
-  - `bridge/scripts/provision-sd.sh` installs it.
-  - `bridge/src/instantlink_bridge/ui/display.py` promotes the bl_power-write failure log from
-    `DEBUG` → `WARNING`.
-  - Idle defaults dropped: `idle_dim_after_s=30`, `idle_screen_off_after_s=60`,
-    `idle_deep_after_s=300`, `idle_poweroff_after_s=1800` (were 300/1800/3600/7200).
-  - **Verified live on `riverps-rpi-zero-2w`**: at T+66 s past restart, `bl_power=4` and
-    GPIO 24 went LOW — panel physically off.
-- **String rename** "Looking for printer" → "Searching Printer" across controller, render, i18n,
-  status_indicator docstring, and three test files. Dead alias "Searching for printer" dropped.
-- **Re-pair flow** is now atomic. `_execute_forget_and_repair` no longer renders Settings with
-  "Printer forgotten" between confirm and the pairing screen — it skips the intermediate render
-  via a new `show_status: bool = True` keyword-only arg on `_forget_selected_printer`. Error
-  paths ("No printer saved", "Forget failed") still render Settings so failures stay visible.
+Shipping summary by surface:
 
-### `596230d` feat(app): banner unify + Settings hamburger + disconnected-printer escape + Photos drops + 0.1.43
-- **Main banner stack** unified behind a new shared `BannerStrip` component
-  (`macos/InstantLink/Features/Main/BannerStrip.swift`). The three legacy banner systems
-  (`BridgeDiscoveryBanner` — deleted —, update banners, status banner) are gone; `MainView`'s
-  `bannerSection` precedence cascade picks the right one.
-- **Settings hamburger**: Experimental section folded into a `⋯` Menu in the Settings sheet
-  header. `ExperimentalSettingsSection` + `LedTestChannelChip` removed.
-- **Disconnected-printer escape (plan 046, A+B+C)**:
-  - A. `Forget Printer` button on the Main view, gated on
-    `pairingRecoveryMode == .reconnectFallback` so it only appears after a failure. Reuses the
-    Settings confirmation dialog strings. `deleteProfile` chains into a fresh `startPairingLoop`.
-  - B1. Hero headline names the failed printer ("Couldn't reach …") instead of the generic
-    "No printer connected". Redundant "Connection failed" subtitle dropped.
-  - B2. `emitStatus(.show(.warning, autoDismiss: false))` at the end of
-    `PrinterConnectionCoordinator.enterReconnectFallback` surfaces the failure through the
-    `BannerStrip` from 043. `startPairingLoop` fires `emitStatus(.dismiss)` on retry so the
-    banner clears.
-  - B3. Bluetooth-recovery hint Label appears only in `.reconnectFallback`.
-  - C1. Collapsed the dead `if disconnectCurrentPrinter || isConnected { disconnectPrinter }
-    else { disconnectPrinter }` in `startPairingLoop`.
-  - C2. Bind `currentReconnectTarget()` once instead of evaluating it twice.
-- **Photos.app drops** work now. New `macos/InstantLink/Support/ImageDropHandler.swift` exposes
-  a shared `imageDropTypes` list (`.fileURL + .image + .jpeg/.png/.heic/.tiff`) and
-  `handleImageDrop(providers:into:)`. Both `MainPreviewView` and `ImageEditorView` use it.
-  File-URL providers go through the original path (preserves EXIF/orientation/GPS); image-data
-  providers are materialised via `loadFileRepresentation` into a temp file we own, then routed
-  through `viewModel.addImages`.
+- **Editor shell** (PR #1) — top tab bar, HSplitView, active-tab routing, observable
+  `EditorViewState`, undo/redo with 200 ms debounce, MTKView preview via `CIRenderDestination`.
+- **Crop tab** (PR #2) — aspect / straighten / V/H / flip / frame; print-aware Mini / Square /
+  Wide aspect presets.
+- **Adjust tab** — Light (PR #3), Color (PR #4), Curves + Levels + Histogram (PR #5), Vignette
+  (PR #6), Sharpen (PR #7), Noise Reduction (PR #8), Definition (PR #9), Selective Color
+  (PR #10, 6 user-defined wells via custom `CIColorKernel`), Red Eye (PR #11, Vision
+  auto-detect + click-to-fix), White Balance + shared Eyedropper infrastructure (PR #12),
+  Black & White mode (PR #13).
+- **Annotate tab** (PR #14) — ported the legacy overlay system (text / QR / timestamp / image /
+  location) into the new shell; deleted `EditorViews.swift`; retired the `useNewEditor` flag.
+- **Filter rail** (PR #15) — vertical thumbnail strip + `FilterThumbnailCache` + `FilterCatalog`
+  with the B&W ↔ Filters interop override from decision Q9.
+- **Auto buttons** (PR #16) — per-section Auto wired to `CIImage.autoAdjustmentFilters` + global
+  Enhance (magic-wand) toolbar button.
+- **Polish + fidelity pass + version bump** (PR #17 — this session's commit):
+  - `AdjustmentSlider`: option-drag extended range (±2× via a simultaneous `DragGesture`),
+    double-click reset on the row, `accessibilityLabel`/`accessibilityValue` plus
+    `accessibilityAdjustableAction` for VoiceOver.
+  - Pipeline coefficients tuned: `LightPipeline` contrast multiplier `0.6 → 0.5`; brilliance
+    composite + Cast scales reconfirmed against the research files. Vignette ramp documented
+    as intentionally linear.
+  - Histogram refresh already debounced to 100 ms via Combine (verified, no change needed).
+  - Localization backfill for the 7 non-CJK locales (de, es, fr, it, pt-BR, ar, he) on the
+    tab bar, every section title, the 7 Light section slider labels, and the common
+    button verbs (Done / Revert / Undo / Redo / Auto / Reset / Enhance).
+  - Stale `editor_coming_in_pr_2` and `editor_coming_in_pr_3` keys dropped from all 12
+    locales.
+  - PR #14 audit nits cleared: `OverlayListRow` help-text now describes the action
+    (Lock/Unlock, Hide/Show) using new `annotate_overlay_{lock,unlock,show,hide}` keys;
+    `displayTitle` + `defaultTitle` extracted to `OverlayItem` and the duplicated copies in
+    `OverlayListRow` and `OverlayInspectorView` are gone; "Select an image to print"
+    replaced with the dedicated `annotate_select_image_overlay` key; film-frame Q4
+    decision documented in `EditorPreview.swift` (the editor canvas is pixel-accurate and
+    intentionally does not render the Instax border).
+  - Crate versions bumped to **0.1.45** for `instantlink-core` / `instantlink-ffi` /
+    `instantlink-cli` to match the App.
 
 ---
 
@@ -104,28 +96,25 @@ directly over BLE. The Bridge talks to the printer over BLE via the same Rust co
 
 These are the loose threads. None are blockers.
 
-- **Phase 3 implementation (image editor)** — `docs/plans/044-image-editor-audit.md` exists
-  with 10 findings + a two-pass direction (Pass A visual quieting, Pass B move
-  `SelectedOverlayInspectorView` out of the row). No implementation plan written yet.
-  - Three open questions are at the bottom of 044; the user has not picked. Do not start
-    implementing without their answers.
-
-- **Phase 4 (Camera capture audit)** — explicitly deferred until Phase 3 is done.
-
 - **Reconnect timing** (plan 045 finding F9) — `attemptConnection`'s 3-second deadline may be
-  too short for cold BLE adverts on real hardware. Not measured. Out of scope for 046.
+  too short for cold BLE adverts on real hardware. Not measured. Out of scope for 048.
 
 - **`PrinterPickerSheet` redesign** (plan 045 finding F3) — "Switch Printer" opens a sheet that
-  is unhelpful when only the dead saved printer is around. Out of scope for 046; would couple
-  with a broader Printers panel rethink.
+  is unhelpful when only the dead saved printer is around. Out of scope; would couple with a
+  broader Printers panel rethink.
 
-- **Bridge venv on the Pi has no `pytest`** — when I tried to run the bridge test suite live
-  on the Pi during the screen-off work, the deployed venv didn't have pytest installed
-  (it's a runtime venv, not dev). Tests pass logically; not run end-to-end on hardware.
+- **Bridge venv on the Pi has no `pytest`** — when running the bridge test suite live on the
+  Pi during the LCD work, the deployed venv didn't have pytest installed (it's a runtime venv,
+  not dev). Tests pass logically; not run end-to-end on hardware.
 
 - **App-side test coverage** — there is no Swift test harness in this repo. UI changes are
   verified by build + run + manual test. Document any new behaviour with a steps-to-reproduce
   comment if it's non-obvious.
+
+- **Editor v2 follow-ups out of plan 048** — HDR / wide-gamut preview (P3 + extended-range),
+  RAW pipeline integration with Apple's neural-engine NR, per-slider numeric input boxes,
+  Lightroom-import preset format, real-time camera-capture editing (Phase 4 of 041). See
+  plan 048 §5 for the full out-of-scope list.
 
 ---
 
@@ -133,7 +122,7 @@ These are the loose threads. None are blockers.
 
 ### Build + install the App
 ```bash
-bash scripts/build-app.sh 0.1.44   # bump version per CLAUDE.md
+bash scripts/build-app.sh 0.1.46   # bump version per CLAUDE.md
 # Always rm before cp — bare `cp -R` over an existing bundle can leave stale files:
 pkill -x InstantLink; sleep 1
 rm -rf /Applications/InstantLink.app
@@ -163,9 +152,6 @@ The deploy script needs `INSTANTLINK_BRIDGE_HOST` / `_USER` env vars:
 INSTANTLINK_BRIDGE_HOST=192.168.7.1 INSTANTLINK_BRIDGE_USER=hongjunwu \
 bash bridge/scripts/deploy-to-pi.sh --restart
 ```
-For the LCD screen-off fix, the udev rule also needs to be picked up at provisioning time — the
-existing deployed Pi has the rule manually `install`'d into `/etc/udev/rules.d/`; a fresh image
-will get it via `provision-sd.sh`.
 
 ### Run bridge tests
 ```bash
@@ -182,6 +168,8 @@ When picking up this work, treat these as already-current:
 - `/CLAUDE.md` (terminology, FFI count corrected, example app version updated).
 - `/README.md` (What's Included table reorganised).
 - `bridge/docs/current-context.md` (verified date + commit + idle thresholds refreshed).
+- `docs/plans/048-photos-style-editor-implementation.md` (PR Status table is the source of
+  truth for what landed in each PR of the editor rebuild).
 
 If you discover further staleness, fix it in the same PR — don't leave it for next time. The
 audit pattern for this is:
@@ -201,7 +189,8 @@ Keywords worth sweeping any time you change a UX string, a config default, or a 
 - Architecture: `docs/development/architecture.md`, `bridge/ARCHITECTURE.md`,
   `bridge/HARDWARE.md`, `bridge/DECISIONS.md`.
 - Bridge "what's deployed today": `bridge/docs/current-context.md`.
-- Plan archive (audits + implementations): `docs/plans/001–046`.
+- Plan archive (audits + implementations): `docs/plans/001–048`. The Photos-style editor
+  rebuild is documented end-to-end in 047 (audit) + 048 (implementation).
 - FFI reference: `docs/reference/ffi.md` (canonical export list; 22 Rust exports, 20 wired by
   Swift).
 - BLE protocol notes: `docs/reference/protocol.md` and `bridge/docs/printer-protocol-notes.md`.
@@ -214,10 +203,9 @@ Paste the following as your first message in a new Claude Code session to bring 
 up to speed cold:
 
 > I'm continuing work on InstantLink at `/Users/hongjunwu/Repositories/Git/InstantLink`. Read
-> `docs/handover.md` first — it's the self-contained briefing. Main HEAD is `596230d`, App at
-> 0.1.43, Bridge verified at `ad638be` on the test Pi (`riverps-rpi-zero-2w`, reachable at
-> `192.168.7.1` over `en10`). Open threads listed in §4 of the handover. Next user-facing
-> priority is Phase 3 image-editor implementation, but only after the three open questions in
-> `docs/plans/044-image-editor-audit.md` are decided. Don't start that without explicit user
-> direction. For LCD/Bridge work, the `bridge/docs/current-context.md` doc is the freshest
-> picture of what's deployed.
+> `docs/handover.md` first — it's the self-contained briefing. App + crates at 0.1.45. The
+> Photos-style editor rebuild scoped in plans 047/048 is complete (all 17 PRs landed); the
+> legacy `EditorViews.swift` is deleted and the `useNewEditor` flag is gone. Bridge HEAD on
+> the test Pi is still `ad638be` (`riverps-rpi-zero-2w`, reachable at `192.168.7.1` over
+> `en10`). Open threads listed in §4 of the handover. For LCD/Bridge work, the
+> `bridge/docs/current-context.md` doc is the freshest picture of what's deployed.

@@ -120,6 +120,35 @@ struct OverlayItem: Identifiable, Codable, Equatable {
             syncAspectRatioToPlacement()
         }
     }
+
+    /// Localized title shown in the overlay list row and inspector header.
+    /// Falls back to the kind's default title when no custom name is set.
+    /// Extracted (PR #17 of plan 048) from the duplicated logic that lived
+    /// in both `OverlayListRow` and `OverlayInspectorView`.
+    var displayTitle: String {
+        if let custom = customName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !custom.isEmpty {
+            return custom
+        }
+        return defaultTitle
+    }
+
+    /// Kind-specific title used when no custom name is set.
+    var defaultTitle: String {
+        switch content {
+        case .text(let data):
+            let trimmed = data.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? L("Text") : trimmed
+        case .qrCode:
+            return L("QR Code")
+        case .timestamp:
+            return L("Timestamp")
+        case .image(let data):
+            return data.asset.fileName ?? L("Image")
+        case .location:
+            return L("Location")
+        }
+    }
 }
 
 enum OverlayKind: String, Codable, CaseIterable, Identifiable {

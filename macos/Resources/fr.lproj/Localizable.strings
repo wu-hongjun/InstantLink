@@ -275,17 +275,15 @@
 "bluetooth_hint_after_failed_reconnect" = "If pairing keeps failing, check System Settings → Bluetooth";
 
 /* Editor Shell (plan 048 PR #1) */
-"editor_tab_adjust" = "Adjust";
-"editor_tab_filters" = "Filters";
-"editor_tab_crop" = "Crop";
-"editor_tab_annotate" = "Annotate";
-"editor_done" = "Done";
-"editor_revert" = "Revert";
+"editor_tab_adjust" = "Ajuster";
+"editor_tab_filters" = "Filtres";
+"editor_tab_crop" = "Recadrer";
+"editor_tab_annotate" = "Annoter";
+"editor_done" = "Terminé";
+"editor_revert" = "Annuler";
 "auto_enhance_global" = "Améliorer";
-"editor_undo" = "Undo";
-"editor_redo" = "Redo";
-"editor_coming_in_pr_2" = "Coming in PR #2";
-"editor_coming_in_pr_3" = "Coming in PR #3";
+"editor_undo" = "Annuler";
+"editor_redo" = "Rétablir";
 "editor_coming_in_pr_15" = "Coming in PR #15";
 "annotate_add_text" = "Text";
 "annotate_add_qr" = "QR Code";
@@ -295,8 +293,8 @@
 "annotate_inspector_position" = "Position";
 "annotate_inspector_appearance" = "Appearance";
 "annotate_inspector_content" = "Content";
-"annotate_overlay_locked" = "Locked";
-"annotate_overlay_hidden" = "Hidden";
+"annotate_overlay_locked" = "Verrouillé";
+"annotate_overlay_hidden" = "Masqué";
 
 /* Editor Crop tab (plan 048 PR #2) */
 "crop_aspect_original" = "Original";
@@ -317,26 +315,26 @@
 "crop_orientation_portrait" = "Portrait";
 /* Editor — Adjust section primitives (plan 048 PR #3) */
 "adjust_auto" = "Auto";
-"adjust_reset" = "Reset";
+"adjust_reset" = "Réinitialiser";
 
 /* Editor — Light section (plan 048 PR #3) */
-"light_section" = "Light";
-"light_brilliance" = "Brilliance";
-"light_exposure" = "Exposure";
-"light_highlights" = "Highlights";
-"light_shadows" = "Shadows";
-"light_brightness" = "Brightness";
-"light_contrast" = "Contrast";
-"light_black_point" = "Black Point";
+"light_section" = "Lumière";
+"light_brilliance" = "Éclat";
+"light_exposure" = "Exposition";
+"light_highlights" = "Hautes lumières";
+"light_shadows" = "Ombres";
+"light_brightness" = "Luminosité";
+"light_contrast" = "Contraste";
+"light_black_point" = "Point noir";
 
 /* Editor — Color section (plan 048 PR #4) */
-"color_section" = "Color";
+"color_section" = "Couleur";
 "color_saturation" = "Saturation";
 "color_vibrance" = "Vibrance";
 "color_cast" = "Cast";
 "color_disabled_bw" = "Color is disabled while B&W mode is on";
 /* Editor — Black & White section (plan 048 PR #13) */
-"bw_section" = "Black & White";
+"bw_section" = "Noir et Blanc";
 "bw_enable" = "Black & White";
 "bw_intensity" = "Intensity";
 "bw_neutrals" = "Neutrals";
@@ -347,22 +345,22 @@
 "vignette_strength" = "Strength";
 "vignette_radius" = "Radius";
 "vignette_softness" = "Softness";
-"sharpen_section" = "Sharpen";
+"sharpen_section" = "Accentuation";
 "sharpen_intensity" = "Intensity";
 "sharpen_edges" = "Edges";
 "sharpen_falloff" = "Falloff";
 /* Editor — Noise Reduction section (plan 048 PR #8) */
-"nr_section" = "Noise Reduction";
+"nr_section" = "Réduction du bruit";
 "nr_master" = "Reduce Noise";
 "nr_luminance" = "Luminance";
 "nr_color" = "Color";
 "nr_detail" = "Detail";
 /* Editor — Definition section (plan 048 PR #9) */
-"definition_section" = "Definition";
-"definition_amount" = "Definition";
+"definition_section" = "Définition";
+"definition_amount" = "Définition";
 
 /* Editor — Curves section (plan 048 PR #5) */
-"curves_section" = "Curves";
+"curves_section" = "Courbes";
 "curves_channel_rgb" = "RGB";
 "curves_channel_red" = "Red";
 "curves_channel_green" = "Green";
@@ -372,7 +370,7 @@
 "curves_dropper_white" = "White point";
 
 /* Editor — Levels section (plan 048 PR #5) */
-"levels_section" = "Levels";
+"levels_section" = "Niveaux";
 "levels_channel_luminance" = "Luminance";
 "levels_channel_rgb" = "RGB";
 "levels_channel_red" = "Red";
@@ -380,7 +378,7 @@
 "levels_channel_blue" = "Blue";
 "levels_auto" = "Auto";
 /* Editor — White Balance section (plan 048 PR #12) */
-"wb_section" = "White Balance";
+"wb_section" = "Balance des blancs";
 "wb_mode_neutral_gray" = "Neutral Gray";
 "wb_mode_skin_tone" = "Skin Tone";
 "wb_mode_temp_tint" = "Temperature & Tint";
@@ -389,7 +387,7 @@
 "wb_eyedropper" = "Sample";
 
 /* Editor — Selective Color section (plan 048 PR #10) */
-"sel_section" = "Selective Color";
+"sel_section" = "Couleur sélective";
 "sel_hue" = "Hue";
 "sel_saturation" = "Saturation";
 "sel_luminance" = "Luminance";
@@ -398,7 +396,7 @@
 "sel_pick_color" = "Pick color";
 "sel_clear" = "Clear";
 /* Editor — Red Eye section (plan 048 PR #11) */
-"redeye_section" = "Red Eye";
+"redeye_section" = "Yeux rouges";
 "redeye_size" = "Size";
 "redeye_auto_detect" = "Auto Detect";
 "redeye_pick_eyes" = "Click eyes to fix";
@@ -415,3 +413,8 @@
 "filter_instant" = "Instant";
 "filter_process" = "Process";
 "filter_transfer" = "Transfer";
+"annotate_overlay_lock" = "Verrouiller";
+"annotate_overlay_unlock" = "Déverrouiller";
+"annotate_overlay_show" = "Afficher";
+"annotate_overlay_hide" = "Masquer";
+"annotate_select_image_overlay" = "Choisir une image en superposition";

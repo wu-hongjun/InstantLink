@@ -29,7 +29,7 @@ struct OverlayInspectorView: View {
 
     private func header(for overlay: OverlayItem) -> some View {
         HStack {
-            Text(displayTitle(for: overlay))
+            Text(overlay.displayTitle)
                 .font(.callout)
                 .fontWeight(.semibold)
             Spacer()
@@ -50,7 +50,7 @@ struct OverlayInspectorView: View {
         TextField(
             L("Name"),
             text: customNameBinding(for: overlay),
-            prompt: Text(defaultTitle(for: overlay))
+            prompt: Text(overlay.defaultTitle)
         )
         .textFieldStyle(.roundedBorder)
     }
@@ -151,30 +151,6 @@ struct OverlayInspectorView: View {
                 }
             }
         )
-    }
-
-    private func displayTitle(for overlay: OverlayItem) -> String {
-        if let custom = overlay.customName?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !custom.isEmpty {
-            return custom
-        }
-        return defaultTitle(for: overlay)
-    }
-
-    private func defaultTitle(for overlay: OverlayItem) -> String {
-        switch overlay.content {
-        case .text(let data):
-            let trimmed = data.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? L("Text") : trimmed
-        case .qrCode:
-            return L("QR Code")
-        case .timestamp:
-            return L("Timestamp")
-        case .image(let data):
-            return data.asset.fileName ?? L("Image")
-        case .location:
-            return L("Location")
-        }
     }
 
     @ViewBuilder

@@ -33,8 +33,11 @@ enum VignettePipeline {
         // radius1. Centered on the image, transparent at radius0 (inner
         // disc), opaque at the outer edge. Final mask alpha scales with
         // |strength| so the slider intensity drives the blend.
-        // PR #17 polish can swap the linear ramp for a true Hermite
-        // smoothstep curve via a custom CIKernel if needed.
+        // PR #17 fidelity pass: held the linear ramp — at moderate
+        // Softness values (0.3–0.7) the falloff reads as smooth as a
+        // Hermite smoothstep would, and the linear path is materially
+        // cheaper. Swap to a custom CIKernel smoothstep only if a future
+        // visual review surfaces a banding complaint.
         let center = CIVector(x: extent.midX, y: extent.midY)
         let innerRadius = max(0, radiusPx - softnessPx / 2)
         let outerRadius = max(innerRadius + 1, radiusPx + softnessPx / 2)

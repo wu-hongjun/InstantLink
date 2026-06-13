@@ -22,7 +22,7 @@ struct OverlayListRow: View {
                         .frame(width: 16)
                         .foregroundColor(isSelected ? .accentColor : .secondary)
 
-                    Text(displayTitle)
+                    Text(overlay.displayTitle)
                         .font(.callout)
                         .lineLimit(1)
                         .foregroundColor(.primary)
@@ -41,7 +41,9 @@ struct OverlayListRow: View {
             }
             .buttonStyle(.plain)
             .opacity(actionOpacity)
-            .help(L(overlay.isLocked ? "annotate_overlay_locked" : "Lock"))
+            // Help text describes the ACTION the button performs, which is the
+            // opposite of the current state (PR #14 audit L1 fix).
+            .help(L(overlay.isLocked ? "annotate_overlay_unlock" : "annotate_overlay_lock"))
 
             Button {
                 state.updateOverlay(id: overlay.id) { $0.isHidden.toggle() }
@@ -51,7 +53,7 @@ struct OverlayListRow: View {
             }
             .buttonStyle(.plain)
             .opacity(actionOpacity)
-            .help(L(overlay.isHidden ? "annotate_overlay_hidden" : "Hidden"))
+            .help(L(overlay.isHidden ? "annotate_overlay_show" : "annotate_overlay_hide"))
 
             Button {
                 state.deleteOverlay(id: overlay.id)
@@ -91,26 +93,6 @@ struct OverlayListRow: View {
     private var isSelected: Bool { state.selectedOverlayID == overlay.id }
 
     private var actionOpacity: Double { (isHovered || isSelected) ? 1 : 0.55 }
-
-    private var displayTitle: String {
-        if let custom = overlay.customName?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !custom.isEmpty {
-            return custom
-        }
-        switch overlay.content {
-        case .text(let data):
-            let trimmed = data.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? L("Text") : trimmed
-        case .qrCode:
-            return L("QR Code")
-        case .timestamp:
-            return L("Timestamp")
-        case .image(let data):
-            return data.asset.fileName ?? L("Image")
-        case .location:
-            return L("Location")
-        }
-    }
 
     private var symbolName: String {
         switch overlay.kind {

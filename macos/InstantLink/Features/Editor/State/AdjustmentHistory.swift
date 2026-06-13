@@ -1,9 +1,16 @@
 import Foundation
 
 /// Snapshot pushed onto the editor's undo / redo stack.
+///
+/// Codable shape includes `filterID` and `overlays` placeholders so persisted
+/// snapshots written by PR #1 stay compatible once PR #14 ports overlays and
+/// PR #15 wires the filter rail. Both default-empty; absent keys decode to
+/// neutral via the synthesized Codable.
 struct EditorSnapshot: Equatable, Codable {
     var adjustments: AdjustmentState = .neutral
     var crop: CropState = .neutral
+    var filterID: String? = nil
+    var overlays: [OverlayItem] = []
 
     static let neutral = EditorSnapshot()
 }

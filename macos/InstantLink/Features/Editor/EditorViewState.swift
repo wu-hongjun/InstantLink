@@ -24,6 +24,9 @@ final class EditorViewState: ObservableObject {
 
     private var renderTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
+    /// Reentry guard for `apply()`. Note: the 16 ms debounce can fire after this
+    /// flag is reset; undo/redo correctness depends on `AdjustmentHistory.commit`'s
+    /// dedup check, not on this guard's timing alone.
     private var isRestoring = false
 
     init() {

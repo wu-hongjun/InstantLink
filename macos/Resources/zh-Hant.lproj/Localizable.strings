@@ -287,4 +287,4 @@
 "editor_coming_in_pr_14" = "將在 PR #14 中加入";
 "editor_coming_in_pr_15" = "將在 PR #15 中加入";
 "settings_use_new_editor" = "使用新版編輯器（實驗性）";
-"Experimental" = "實驗性功能";
+"settings_experimental" = "實驗性功能";

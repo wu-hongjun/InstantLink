@@ -227,7 +227,7 @@ struct ExperimentalSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L("Experimental"))
+            Text(L("settings_experimental"))
                 .font(.headline)
             Toggle(isOn: Binding(
                 get: { viewModel.editorSettings.useNewEditor },

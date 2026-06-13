@@ -287,4 +287,4 @@
 "editor_coming_in_pr_14" = "PR #14 で実装予定";
 "editor_coming_in_pr_15" = "PR #15 で実装予定";
 "settings_use_new_editor" = "新しいエディタを使用（実験的）";
-"Experimental" = "実験的機能";
+"settings_experimental" = "実験的機能";

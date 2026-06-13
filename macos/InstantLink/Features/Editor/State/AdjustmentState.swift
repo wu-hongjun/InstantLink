@@ -57,6 +57,8 @@ struct AdjustmentState: Equatable, Codable {
     }
 
     // MARK: Levels
+    // TODO(PR #5): expand to per-channel (Luminance / RGB / R / G / B) and add
+    // shadows + highlights handles (Photos exposes 5 bottom + 2 top handles).
     struct Levels: Equatable, Codable {
         var blackIn: Double = 0
         var whiteIn: Double = 1

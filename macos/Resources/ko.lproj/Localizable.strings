@@ -287,4 +287,4 @@
 "editor_coming_in_pr_14" = "PR #14에서 추가 예정";
 "editor_coming_in_pr_15" = "PR #15에서 추가 예정";
 "settings_use_new_editor" = "새 편집기 사용(실험적)";
-"Experimental" = "실험적 기능";
+"settings_experimental" = "실험적 기능";

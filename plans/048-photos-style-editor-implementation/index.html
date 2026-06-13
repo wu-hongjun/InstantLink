@@ -1827,6 +1827,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#pr-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0-new-file-layout" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2259,6 +2270,58 @@
 </tbody>
 </table>
 <p>Pipeline order, color-space rules, and slider mappings are in <code>047 §3</code> and <code>docs/research/047-implementation-coreimage-mapping.md</code> §1. Re-read those when implementing — this file references them by anchor rather than restating ranges.</p>
+<h3 id="pr-status">PR Status<a class="headerlink" href="#pr-status" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>PR</th>
+<th>State</th>
+<th>Commits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>#1 Editor shell rebuild</td>
+<td>✅ landed</td>
+<td><code>7880148</code> (foundation) + <code>14507cc</code> (review fix-ups)</td>
+</tr>
+<tr>
+<td>#2 Crop tab</td>
+<td>in flight</td>
+<td></td>
+</tr>
+<tr>
+<td>#3 Light section + slider primitives</td>
+<td>in flight</td>
+<td></td>
+</tr>
+<tr>
+<td>#7 Sharpen</td>
+<td>in flight</td>
+<td></td>
+</tr>
+<tr>
+<td>#8 Noise Reduction</td>
+<td>in flight</td>
+<td></td>
+</tr>
+<tr>
+<td>#9 Definition</td>
+<td>in flight</td>
+<td></td>
+</tr>
+<tr>
+<td>#4 Color, #5 Curves+Levels, #6 Vignette, #10–#14, #16, #17</td>
+<td>pending</td>
+<td></td>
+</tr>
+<tr>
+<td>#15 Filter rail</td>
+<td>deferred</td>
+<td>Needs filter model that doesn't yet exist in new editor — wait until after PR #14 ports the legacy filter set or earlier if scope clarifies</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="0-new-file-layout">0. New file layout<a class="headerlink" href="#0-new-file-layout" title="Permanent link">&para;</a></h2>
 <p>The existing editor (<code>macos/InstantLink/Features/Editor/EditorViews.swift</code>, 1364 lines) is retired piecewise. PR #1 introduces the new shell <strong>alongside</strong> the legacy view behind a settings flag; PRs #2–#14 add tabs and sections; PR #14 ports overlays and deletes <code>EditorViews.swift</code>.</p>

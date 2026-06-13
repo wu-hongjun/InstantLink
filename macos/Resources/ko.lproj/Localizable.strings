@@ -363,3 +363,11 @@
 "levels_channel_green" = "초록";
 "levels_channel_blue" = "파랑";
 "levels_auto" = "자동";
+/* Editor — White Balance section (plan 048 PR #12) */
+"wb_section" = "화이트 밸런스";
+"wb_mode_neutral_gray" = "중성 회색";
+"wb_mode_skin_tone" = "피부톤";
+"wb_mode_temp_tint" = "색온도 및 틴트";
+"wb_temperature" = "색온도";
+"wb_tint" = "틴트";
+"wb_eyedropper" = "샘플";

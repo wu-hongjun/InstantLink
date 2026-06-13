@@ -363,3 +363,11 @@
 "levels_channel_green" = "グリーン";
 "levels_channel_blue" = "ブルー";
 "levels_auto" = "自動";
+/* Editor — White Balance section (plan 048 PR #12) */
+"wb_section" = "ホワイトバランス";
+"wb_mode_neutral_gray" = "ニュートラルグレー";
+"wb_mode_skin_tone" = "肌色";
+"wb_mode_temp_tint" = "色温と色合い";
+"wb_temperature" = "色温";
+"wb_tint" = "色合い";
+"wb_eyedropper" = "サンプル";

@@ -363,3 +363,11 @@
 "levels_channel_green" = "Green";
 "levels_channel_blue" = "Blue";
 "levels_auto" = "Auto";
+/* Editor — White Balance section (plan 048 PR #12) */
+"wb_section" = "White Balance";
+"wb_mode_neutral_gray" = "Neutral Gray";
+"wb_mode_skin_tone" = "Skin Tone";
+"wb_mode_temp_tint" = "Temperature & Tint";
+"wb_temperature" = "Temperature";
+"wb_tint" = "Tint";
+"wb_eyedropper" = "Sample";

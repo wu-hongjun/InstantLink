@@ -17,7 +17,7 @@ struct AdjustSidebar: View {
                 SharpenSection(state: state)
                 // PR #10: SelectiveColorSection
                 // PR #11: RedEyeSection
-                // PR #12: WhiteBalanceSection
+                WhiteBalanceSection(state: state)
                 // PR #13: BlackAndWhiteSection
                 // Vignette runs last in the pipeline composition; mirror
                 // that ordering in the sidebar so it sits at the bottom

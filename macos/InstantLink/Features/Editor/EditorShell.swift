@@ -23,6 +23,9 @@ struct EditorShell: View {
                     if state.activeTab == .crop {
                         CropFrameView(state: state)
                     }
+                    if state.eyedropperManager.active != nil {
+                        EyedropperOverlay(state: state)
+                    }
                 }
                 .frame(minWidth: 620)
                 Group {

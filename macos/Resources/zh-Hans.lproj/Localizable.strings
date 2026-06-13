@@ -388,3 +388,11 @@
 "levels_channel_green" = "绿";
 "levels_channel_blue" = "蓝";
 "levels_auto" = "自动";
+/* Editor — White Balance section (plan 048 PR #12) */
+"wb_section" = "白平衡";
+"wb_mode_neutral_gray" = "中性灰";
+"wb_mode_skin_tone" = "肤色";
+"wb_mode_temp_tint" = "色温与色调";
+"wb_temperature" = "色温";
+"wb_tint" = "色调";
+"wb_eyedropper" = "取样";

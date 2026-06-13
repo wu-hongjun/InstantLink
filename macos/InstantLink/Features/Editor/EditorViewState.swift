@@ -19,6 +19,12 @@ final class EditorViewState: ObservableObject {
     let history = AdjustmentHistory()
     let pipeline = AdjustmentPipeline()
 
+    /// Shared coordinator for the editor's eyedropper UX (PR #12 of plan 048).
+    /// White Balance, Curves point pickers (PR #5), Selective Color wells
+    /// (PR #10), and Red Eye manual mode (PR #11) all activate the same
+    /// `EyedropperOverlay` via this manager.
+    let eyedropperManager = EyedropperManager()
+
     /// Long-side cap (in pixels) for the cached preview image.
     static let previewLongSide: CGFloat = 2048
 

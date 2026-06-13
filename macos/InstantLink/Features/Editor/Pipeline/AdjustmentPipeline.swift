@@ -25,7 +25,9 @@ struct AdjustmentPipeline {
 
     // MARK: - Section stubs (each PR replaces one with its real implementation)
 
-    private func applyWhiteBalance(_ image: CIImage, _ state: AdjustmentState.WhiteBalance) -> CIImage { image }
+    private func applyWhiteBalance(_ image: CIImage, _ state: AdjustmentState.WhiteBalance) -> CIImage {
+        WhiteBalancePipeline.apply(image, state)
+    }
     private func applyLight(_ image: CIImage, _ state: AdjustmentState.Light) -> CIImage {
         LightPipeline.apply(image, state)
     }

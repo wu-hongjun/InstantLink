@@ -56,16 +56,93 @@ struct AdjustmentState: Equatable, Codable {
         var sectionEnabled: Bool = true
     }
 
-    // MARK: Levels
-    // TODO(PR #5): expand to per-channel (Luminance / RGB / R / G / B) and add
-    // shadows + highlights handles (Photos exposes 5 bottom + 2 top handles).
+    // MARK: Levels (per-channel — plan 048 PR #5)
     struct Levels: Equatable, Codable {
-        var blackIn: Double = 0
-        var whiteIn: Double = 1
-        var gamma: Double = 1
-        var blackOut: Double = 0
-        var whiteOut: Double = 1
+        /// Channel selector — Levels uniquely exposes Luminance vs Curves.
+        enum Channel: String, Codable, CaseIterable {
+            case luminance
+            case rgb
+            case red
+            case green
+            case blue
+        }
+
+        /// Per-channel handle positions. 5 bottom handles (Black / Shadows /
+        /// Mid / Highlights / White) + 2 top handles (output Black / White).
+        struct ChannelLevels: Equatable, Codable {
+            var blackIn: Double = 0
+            var shadows: Double = 0.25
+            var gamma: Double = 1
+            var highlights: Double = 0.75
+            var whiteIn: Double = 1
+            var blackOut: Double = 0
+            var whiteOut: Double = 1
+
+            static let neutral = ChannelLevels()
+
+            var isNeutral: Bool {
+                blackIn == 0 && shadows == 0.25 && gamma == 1 && highlights == 0.75
+                    && whiteIn == 1 && blackOut == 0 && whiteOut == 1
+            }
+        }
+
+        var activeChannel: Channel = .luminance
+        var channels: [Channel: ChannelLevels] = Dictionary(
+            uniqueKeysWithValues: Channel.allCases.map { ($0, ChannelLevels()) }
+        )
         var sectionEnabled: Bool = true
+
+        var isNeutral: Bool {
+            channels.values.allSatisfy { $0.isNeutral }
+        }
+
+        // MARK: Codable backward compatibility
+        //
+        // PR #1 persisted snapshots may carry the old single-triplet shape:
+        //   blackIn / whiteIn / gamma / blackOut / whiteOut + sectionEnabled.
+        // The synthesized decoder would throw on missing `activeChannel` /
+        // `channels` keys, so we hand-roll one that recognises either shape
+        // and writes the legacy values into `Channel.luminance` defaults.
+        private enum CodingKeys: String, CodingKey {
+            case activeChannel, channels, sectionEnabled
+            // Legacy keys (PR #1 shape):
+            case blackIn, whiteIn, gamma, blackOut, whiteOut
+        }
+
+        init() {}
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.sectionEnabled = try c.decodeIfPresent(Bool.self, forKey: .sectionEnabled) ?? true
+
+            if let storedChannels = try c.decodeIfPresent([Channel: ChannelLevels].self, forKey: .channels) {
+                // New per-channel shape.
+                self.activeChannel = try c.decodeIfPresent(Channel.self, forKey: .activeChannel) ?? .luminance
+                var merged = Dictionary(uniqueKeysWithValues: Channel.allCases.map { ($0, ChannelLevels()) })
+                for (k, v) in storedChannels { merged[k] = v }
+                self.channels = merged
+            } else {
+                // Legacy single-triplet shape — fold into Luminance, leave the
+                // other channels at default.
+                var lum = ChannelLevels()
+                if let v = try c.decodeIfPresent(Double.self, forKey: .blackIn) { lum.blackIn = v }
+                if let v = try c.decodeIfPresent(Double.self, forKey: .whiteIn) { lum.whiteIn = v }
+                if let v = try c.decodeIfPresent(Double.self, forKey: .gamma) { lum.gamma = v }
+                if let v = try c.decodeIfPresent(Double.self, forKey: .blackOut) { lum.blackOut = v }
+                if let v = try c.decodeIfPresent(Double.self, forKey: .whiteOut) { lum.whiteOut = v }
+                self.activeChannel = .luminance
+                var merged = Dictionary(uniqueKeysWithValues: Channel.allCases.map { ($0, ChannelLevels()) })
+                merged[.luminance] = lum
+                self.channels = merged
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(activeChannel, forKey: .activeChannel)
+            try c.encode(channels, forKey: .channels)
+            try c.encode(sectionEnabled, forKey: .sectionEnabled)
+        }
     }
 
     // MARK: Definition (single slider per locked decision Q7)

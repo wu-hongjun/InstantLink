@@ -17,6 +17,9 @@ struct LightSection: View {
 
             if isExpanded {
                 VStack(spacing: 6) {
+                    // PR #5: shared histogram backdrop above the Light sliders.
+                    HistogramView(state: state, height: 56, cornerRadius: 4)
+                        .padding(.bottom, 4)
                     AdjustmentSlider(
                         value: $state.adjustments.light.brilliance,
                         range: -1...1,

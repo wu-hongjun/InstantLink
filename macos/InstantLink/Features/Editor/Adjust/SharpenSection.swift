@@ -73,11 +73,4 @@ struct SharpenSection: View {
     }
 }
 
-/// Helper so the SwiftUI view sites can spell `LocalizedStringKey` for
-/// `AdjustmentSlider.label` / `AdjustmentSectionHeader.title`. Duplicates
-/// the private helper in `LightSection.swift`; PR #4 hoists both into a
-/// shared `LocalizedKey.swift`.
-@inline(__always)
-private func L_key(_ key: String) -> LocalizedStringKey {
-    LocalizedStringKey(key)
-}
+// `L_key(_:)` is provided by `LocalizedKey.swift` (hoisted in PR #4).

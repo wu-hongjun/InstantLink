@@ -29,7 +29,9 @@ struct AdjustmentPipeline {
     private func applyLight(_ image: CIImage, _ state: AdjustmentState.Light) -> CIImage {
         LightPipeline.apply(image, state)
     }
-    private func applyCurvesLevels(_ image: CIImage, _ curves: AdjustmentState.Curves, _ levels: AdjustmentState.Levels) -> CIImage { image }
+    private func applyCurvesLevels(_ image: CIImage, _ curves: AdjustmentState.Curves, _ levels: AdjustmentState.Levels) -> CIImage {
+        CurvesLevelsPipeline.apply(image, curves: curves, levels: levels)
+    }
     private func applyColor(_ image: CIImage, _ state: AdjustmentState.Color, bwOn: Bool) -> CIImage {
         ColorPipeline.apply(image, state, bwOn: bwOn)
     }

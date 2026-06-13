@@ -10,7 +10,8 @@ struct AdjustSidebar: View {
             VStack(alignment: .leading, spacing: 16) {
                 LightSection(state: state)
                 ColorSection(state: state)
-                // PR #5: CurvesSection / LevelsSection / HistogramView
+                CurvesSection(state: state)
+                LevelsSection(state: state)
                 DefinitionSection(state: state)
                 NoiseReductionSection(state: state)
                 SharpenSection(state: state)

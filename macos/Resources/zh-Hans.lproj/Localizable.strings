@@ -369,3 +369,22 @@
 /* Editor — Definition section (plan 048 PR #9) */
 "definition_section" = "清晰度";
 "definition_amount" = "清晰度";
+
+/* Editor — Curves section (plan 048 PR #5) */
+"curves_section" = "曲线";
+"curves_channel_rgb" = "RGB";
+"curves_channel_red" = "红";
+"curves_channel_green" = "绿";
+"curves_channel_blue" = "蓝";
+"curves_dropper_black" = "黑场";
+"curves_dropper_mid" = "中间调";
+"curves_dropper_white" = "白场";
+
+/* Editor — Levels section (plan 048 PR #5) */
+"levels_section" = "色阶";
+"levels_channel_luminance" = "亮度";
+"levels_channel_rgb" = "RGB";
+"levels_channel_red" = "红";
+"levels_channel_green" = "绿";
+"levels_channel_blue" = "蓝";
+"levels_auto" = "自动";

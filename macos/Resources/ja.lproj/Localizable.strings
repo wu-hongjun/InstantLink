@@ -344,3 +344,22 @@
 /* Editor — Definition section (plan 048 PR #9) */
 "definition_section" = "精細度";
 "definition_amount" = "精細度";
+
+/* Editor — Curves section (plan 048 PR #5) */
+"curves_section" = "カーブ";
+"curves_channel_rgb" = "RGB";
+"curves_channel_red" = "レッド";
+"curves_channel_green" = "グリーン";
+"curves_channel_blue" = "ブルー";
+"curves_dropper_black" = "ブラックポイント";
+"curves_dropper_mid" = "中間調";
+"curves_dropper_white" = "ホワイトポイント";
+
+/* Editor — Levels section (plan 048 PR #5) */
+"levels_section" = "レベル";
+"levels_channel_luminance" = "輝度";
+"levels_channel_rgb" = "RGB";
+"levels_channel_red" = "レッド";
+"levels_channel_green" = "グリーン";
+"levels_channel_blue" = "ブルー";
+"levels_auto" = "自動";

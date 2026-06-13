@@ -344,3 +344,22 @@
 /* Editor — Definition section (plan 048 PR #9) */
 "definition_section" = "선명도";
 "definition_amount" = "선명도";
+
+/* Editor — Curves section (plan 048 PR #5) */
+"curves_section" = "곡선";
+"curves_channel_rgb" = "RGB";
+"curves_channel_red" = "빨강";
+"curves_channel_green" = "초록";
+"curves_channel_blue" = "파랑";
+"curves_dropper_black" = "검은점";
+"curves_dropper_mid" = "중간 톤";
+"curves_dropper_white" = "흰점";
+
+/* Editor — Levels section (plan 048 PR #5) */
+"levels_section" = "레벨";
+"levels_channel_luminance" = "광도";
+"levels_channel_rgb" = "RGB";
+"levels_channel_red" = "빨강";
+"levels_channel_green" = "초록";
+"levels_channel_blue" = "파랑";
+"levels_auto" = "자동";

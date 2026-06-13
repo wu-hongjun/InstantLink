@@ -345,3 +345,22 @@
 /* Editor — Definition section (plan 048 PR #9) */
 "definition_section" = "Definition";
 "definition_amount" = "Definition";
+
+/* Editor — Curves section (plan 048 PR #5) */
+"curves_section" = "Curves";
+"curves_channel_rgb" = "RGB";
+"curves_channel_red" = "Red";
+"curves_channel_green" = "Green";
+"curves_channel_blue" = "Blue";
+"curves_dropper_black" = "Black point";
+"curves_dropper_mid" = "Midtone";
+"curves_dropper_white" = "White point";
+
+/* Editor — Levels section (plan 048 PR #5) */
+"levels_section" = "Levels";
+"levels_channel_luminance" = "Luminance";
+"levels_channel_rgb" = "RGB";
+"levels_channel_red" = "Red";
+"levels_channel_green" = "Green";
+"levels_channel_blue" = "Blue";
+"levels_auto" = "Auto";

@@ -53,11 +53,4 @@ struct DefinitionSection: View {
     }
 }
 
-/// Helper so the SwiftUI view sites can spell `LocalizedStringKey` for
-/// `AdjustmentSlider.label` / `AdjustmentSectionHeader.title` without
-/// having to import the runtime `NSLocalizedString` lookup. Mirrors the
-/// existing `L(_:)` global but returns the SwiftUI key type.
-@inline(__always)
-private func L_key(_ key: String) -> LocalizedStringKey {
-    LocalizedStringKey(key)
-}
+// `L_key(_:)` is provided by `LocalizedKey.swift` (hoisted in PR #4).

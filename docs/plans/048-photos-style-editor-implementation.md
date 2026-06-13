@@ -18,6 +18,19 @@ Locked decisions (full text in `047 §6`):
 
 Pipeline order, color-space rules, and slider mappings are in `047 §3` and `docs/research/047-implementation-coreimage-mapping.md` §1. Re-read those when implementing — this file references them by anchor rather than restating ranges.
 
+### PR Status
+
+| PR | State | Commits |
+|---|---|---|
+| #1 Editor shell rebuild | ✅ landed | `7880148` (foundation) + `14507cc` (review fix-ups) |
+| #2 Crop tab | in flight | |
+| #3 Light section + slider primitives | in flight | |
+| #7 Sharpen | in flight | |
+| #8 Noise Reduction | in flight | |
+| #9 Definition | in flight | |
+| #4 Color, #5 Curves+Levels, #6 Vignette, #10–#14, #16, #17 | pending | |
+| #15 Filter rail | deferred | Needs filter model that doesn't yet exist in new editor — wait until after PR #14 ports the legacy filter set or earlier if scope clarifies |
+
 ---
 
 ## 0. New file layout

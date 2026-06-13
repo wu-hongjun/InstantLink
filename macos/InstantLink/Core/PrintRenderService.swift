@@ -784,11 +784,15 @@ enum PrintRenderService {
 
     // MARK: - Photos-style pipeline integration (plan 048 PR #14)
 
-    /// Returns true if every Adjust + Crop field in the snapshot is at
+    /// Returns true if every pipeline-affecting field in the snapshot is at
     /// neutral, so the pipeline can be skipped (avoids a needless CIImage
     /// round-trip when the user opened the editor but didn't change anything).
+    /// `overlays` are intentionally excluded — they composite downstream in
+    /// the CGContext path, not through `AdjustmentPipeline`.
     private static func isNeutralEditorSnapshot(_ snapshot: EditorSnapshot) -> Bool {
-        snapshot.adjustments == .neutral && snapshot.crop == .neutral
+        snapshot.adjustments == .neutral
+            && snapshot.crop == .neutral
+            && snapshot.filterID == nil
     }
 
     /// Runs the snapshot's Adjust + Crop chain through `AdjustmentPipeline`

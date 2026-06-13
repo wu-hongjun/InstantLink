@@ -326,3 +326,8 @@
 "color_vibrance" = "생동감";
 "color_cast" = "색조";
 "color_disabled_bw" = "흑백 모드일 때는 색상 조정을 사용할 수 없습니다";
+/* Editor — Vignette section (plan 048 PR #6) */
+"vignette_section" = "비네트";
+"vignette_strength" = "강도";
+"vignette_radius" = "반경";
+"vignette_softness" = "부드러움";

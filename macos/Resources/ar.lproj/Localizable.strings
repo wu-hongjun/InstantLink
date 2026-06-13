@@ -326,3 +326,8 @@
 "color_vibrance" = "Vibrance";
 "color_cast" = "Cast";
 "color_disabled_bw" = "Color is disabled while B&W mode is on";
+/* Editor — Vignette section (plan 048 PR #6) */
+"vignette_section" = "Vignette";
+"vignette_strength" = "Strength";
+"vignette_radius" = "Radius";
+"vignette_softness" = "Softness";

@@ -326,3 +326,8 @@
 "color_vibrance" = "自然な彩度";
 "color_cast" = "色かぶり";
 "color_disabled_bw" = "白黒モード中はカラー調整は無効です";
+/* Editor — Vignette section (plan 048 PR #6) */
+"vignette_section" = "ビネット";
+"vignette_strength" = "適用量";
+"vignette_radius" = "半径";
+"vignette_softness" = "柔らかさ";

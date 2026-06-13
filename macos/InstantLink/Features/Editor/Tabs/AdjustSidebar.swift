@@ -11,7 +11,6 @@ struct AdjustSidebar: View {
                 LightSection(state: state)
                 ColorSection(state: state)
                 // PR #5: CurvesSection / LevelsSection / HistogramView
-                // PR #6: VignetteSection
                 // PR #7: SharpenSection
                 // PR #8: NoiseReductionSection
                 // PR #9: DefinitionSection
@@ -19,6 +18,10 @@ struct AdjustSidebar: View {
                 // PR #11: RedEyeSection
                 // PR #12: WhiteBalanceSection
                 // PR #13: BlackAndWhiteSection
+                // Vignette runs last in the pipeline composition; mirror
+                // that ordering in the sidebar so it sits at the bottom
+                // of the Adjust list (PR #6 of plan 048).
+                VignetteSection(state: state)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)

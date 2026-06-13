@@ -319,3 +319,10 @@
 "light_brightness" = "Brightness";
 "light_contrast" = "Contrast";
 "light_black_point" = "Black Point";
+
+/* Editor — Color section (plan 048 PR #4) */
+"color_section" = "Color";
+"color_saturation" = "Saturation";
+"color_vibrance" = "Vibrance";
+"color_cast" = "Cast";
+"color_disabled_bw" = "Color is disabled while B&W mode is on";

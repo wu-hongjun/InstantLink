@@ -9,7 +9,7 @@ struct AdjustmentPipeline {
         img = applyWhiteBalance(img, state.adjustments.whiteBalance)
         img = applyLight(img, state.adjustments.light)
         img = applyCurvesLevels(img, state.adjustments.curves, state.adjustments.levels)
-        img = applyColor(img, state.adjustments.color)
+        img = applyColor(img, state.adjustments.color, bwOn: state.adjustments.bw.on)
         img = applySelectiveColor(img, state.adjustments.selective)
         if state.adjustments.bw.on {
             img = applyBlackAndWhite(img, state.adjustments.bw)
@@ -30,7 +30,9 @@ struct AdjustmentPipeline {
         LightPipeline.apply(image, state)
     }
     private func applyCurvesLevels(_ image: CIImage, _ curves: AdjustmentState.Curves, _ levels: AdjustmentState.Levels) -> CIImage { image }
-    private func applyColor(_ image: CIImage, _ state: AdjustmentState.Color) -> CIImage { image }
+    private func applyColor(_ image: CIImage, _ state: AdjustmentState.Color, bwOn: Bool) -> CIImage {
+        ColorPipeline.apply(image, state, bwOn: bwOn)
+    }
     private func applySelectiveColor(_ image: CIImage, _ state: AdjustmentState.SelectiveColor) -> CIImage { image }
     private func applyBlackAndWhite(_ image: CIImage, _ state: AdjustmentState.BlackAndWhite) -> CIImage { image }
     private func applyDefinition(_ image: CIImage, _ state: AdjustmentState.Definition) -> CIImage { image }

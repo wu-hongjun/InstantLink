@@ -319,3 +319,10 @@
 "light_brightness" = "明るさ";
 "light_contrast" = "コントラスト";
 "light_black_point" = "ブラックポイント";
+
+/* Editor — Color section (plan 048 PR #4) */
+"color_section" = "カラー";
+"color_saturation" = "彩度";
+"color_vibrance" = "自然な彩度";
+"color_cast" = "色かぶり";
+"color_disabled_bw" = "白黒モード中はカラー調整は無効です";

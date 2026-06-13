@@ -9,7 +9,7 @@ struct AdjustSidebar: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 LightSection(state: state)
-                // PR #4: ColorSection(state: state)
+                ColorSection(state: state)
                 // PR #5: CurvesSection / LevelsSection / HistogramView
                 // PR #6: VignetteSection
                 // PR #7: SharpenSection

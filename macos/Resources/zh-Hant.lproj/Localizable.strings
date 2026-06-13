@@ -319,3 +319,10 @@
 "light_brightness" = "亮度";
 "light_contrast" = "對比度";
 "light_black_point" = "黑點";
+
+/* Editor — Color section (plan 048 PR #4) */
+"color_section" = "色彩";
+"color_saturation" = "飽和度";
+"color_vibrance" = "自然飽和度";
+"color_cast" = "色偏";
+"color_disabled_bw" = "黑白模式開啟時,色彩調整不可用";

@@ -319,3 +319,10 @@
 "light_brightness" = "밝기";
 "light_contrast" = "대비";
 "light_black_point" = "검은 점";
+
+/* Editor — Color section (plan 048 PR #4) */
+"color_section" = "색상";
+"color_saturation" = "채도";
+"color_vibrance" = "생동감";
+"color_cast" = "색조";
+"color_disabled_bw" = "흑백 모드일 때는 색상 조정을 사용할 수 없습니다";

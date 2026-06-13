@@ -186,7 +186,7 @@ _PREVIEW_PLACEHOLDER_WATERMARK = "Sample"
 SILENT_LINK_RECOVERY_COOLDOWN_S = 30.0
 # Interchangeable generic "searching" placeholders that the live retry tick may overwrite. Specific
 # diagnostics (e.g. "No printer signal", "Restart printer") are not listed here so they survive.
-_GENERIC_SEARCHING_MESSAGES = frozenset({"Looking for printer", "Searching for printer"})
+_GENERIC_SEARCHING_MESSAGES = frozenset({"Searching Printer"})
 # Periodic render cadence. A lightweight tick re-renders the latest snapshot so the LCD never
 # shows a stale frame while a coroutine is busy. The `snapshot == last_rendered` short-circuit in
 # `_render` keeps this cheap and prevents render-spam.
@@ -621,7 +621,7 @@ class BridgeUi:
                 mode=UiMode.PRINTER_SEARCHING,
                 paired_printer=printer,
                 printer_model=printer.model or self._known_printer_model(),
-                printer_status_message="Looking for printer",
+                printer_status_message="Searching Printer",
             )
             LOGGER.info("ui.status mode=printer_searching paired_printer=%s", printer.name)
         self._render()
@@ -2351,14 +2351,20 @@ class BridgeUi:
         the printer-picker without a separate trip back into Settings.
         """
 
-        await self._forget_selected_printer()
+        # show_status=False: skip the intermediate "Printer forgotten" render
+        # so we don't flash Settings between forget and the pairing screen.
+        # Failure paths inside _forget_selected_printer still render Settings
+        # with the error so the user sees the cause and doesn't end up on a
+        # pairing screen we never opened.
+        if not await self._forget_selected_printer(show_status=False):
+            return
         self._pair_return_page = self._settings_page
         await self._start_pairing()
 
-    async def _forget_selected_printer(self) -> None:
+    async def _forget_selected_printer(self, *, show_status: bool = True) -> bool:
         if self._snapshot.paired_printer is None:
             self._show_settings("No printer saved")
-            return
+            return False
         await self._cancel_status_refresh()
         await self._close_cached_printer_session()
         try:
@@ -2366,7 +2372,7 @@ class BridgeUi:
         except Exception:
             LOGGER.exception("ui.printer_forget_failed")
             self._show_settings("Forget failed")
-            return
+            return False
         LOGGER.info("ui.printer_forgot")
         self._snapshot = replace(
             self._snapshot,
@@ -2377,7 +2383,9 @@ class BridgeUi:
             printer_model=self._config.printer.model,
             printer_status_message=None,
         )
-        self._show_settings("Printer forgotten")
+        if show_status:
+            self._show_settings("Printer forgotten")
+        return True
 
     async def _confirm_or_reset_credentials(self) -> None:
         """Open the Reset-credentials confirmation dialog (plan 040)."""
@@ -3180,7 +3188,7 @@ class BridgeUi:
             self._snapshot,
             paired_printer=printer,
             printer_model=printer.model or self._known_printer_model(),
-            printer_status_message="Looking for printer",
+            printer_status_message="Searching Printer",
         )
         await self._schedule_printer_status_refresh()
         self._show_settings("Status refreshed", page=page)
@@ -3199,7 +3207,7 @@ class BridgeUi:
             film_remaining=None,
             printer_battery=None,
             printer_is_charging=None,
-            printer_status_message="Looking for printer",
+            printer_status_message="Searching Printer",
         )
         await self._schedule_printer_status_refresh()
         self._show_settings("BLE link reset", page=page)
@@ -3279,7 +3287,7 @@ class BridgeUi:
                 mode=UiMode.PRINTER_SEARCHING,
                 paired_printer=printer,
                 printer_model=self._config.printer.model,
-                printer_status_message="Looking for printer",
+                printer_status_message="Searching Printer",
             )
             await self._schedule_printer_status_refresh()
             if first_pairing:
@@ -3401,7 +3409,7 @@ class BridgeUi:
                 # Use the same placeholder as the initial PRINTER_SEARCHING transition so the
                 # body line stays stable across retries. Flipping copy mid-poll reads as a state
                 # change to the user when nothing has actually changed.
-                self._show_printer_searching_if_retrying(printer, "Looking for printer")
+                self._show_printer_searching_if_retrying(printer, "Searching Printer")
                 attempt_start = self._monotonic()
                 was_online = self._printer_was_online
                 online = await self._refresh_printer_status_in_background(printer, generation)

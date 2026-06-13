@@ -104,7 +104,7 @@ def test_render_validation_screen_is_square_lcd_size() -> None:
             mode=UiMode.VALIDATION,
             ftp_host="192.168.7.1",
             paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
-            printer_status_message="Looking for printer",
+            printer_status_message="Searching Printer",
         )
     )
 
@@ -154,7 +154,7 @@ def test_render_printer_searching_screen_is_square_lcd_size() -> None:
             wifi_host="192.168.5.149",
             paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
             printer_model=PrinterModel.MINI,
-            printer_status_message="Looking for printer",
+            printer_status_message="Searching Printer",
         )
     )
 

@@ -179,6 +179,7 @@ install_executable scripts/usb-gadget-mode.sh /usr/local/sbin/instantlink-bridge
 install_sudoers_file config/sudoers-instantlink-bridge-wifi /etc/sudoers.d/instantlink-bridge-wifi
 install_sudoers_file config/sudoers-instantlink-bridge-power /etc/sudoers.d/instantlink-bridge-power
 install_file udev/99-instantlink-bridge-usb0.rules /etc/udev/rules.d/99-instantlink-bridge-usb0.rules
+install_file udev/60-instantlink-bridge-backlight.rules /etc/udev/rules.d/60-instantlink-bridge-backlight.rules
 install_file systemd/instantlink-bridge.service /etc/systemd/system/instantlink-bridge.service
 install_file systemd/instantlink-bridge-boot-splash.service \
   /etc/systemd/system/instantlink-bridge-boot-splash.service

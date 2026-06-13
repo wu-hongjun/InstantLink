@@ -141,10 +141,10 @@ def test_printer_searching_with_no_signal_collapses_to_not_ready_solid() -> None
 
 
 def test_printer_searching_while_probing_stays_breathing() -> None:
-    """An active probe ("Looking for printer", "Printer seen; connecting")
+    """An active probe ("Searching Printer", "Printer seen; connecting")
     keeps the breathing-yellow indicator because work is in progress."""
 
-    for message in ("Looking for printer", "Printer seen; connecting"):
+    for message in ("Searching Printer", "Printer seen; connecting"):
         state = derive_status(
             _ready_snapshot(
                 mode=UiMode.PRINTER_SEARCHING,

@@ -228,7 +228,14 @@ class _FramebufferBacklight:
         try:
             self.bl_power_path.write_text(f"{value}\n", encoding="ascii")
         except OSError:
-            LOGGER.debug(
+            # WARNING, not DEBUG: this path is what physically gates the
+            # ST7789v backlight when max_brightness=0, and a silent
+            # PermissionError here was why screen_off left the panel lit.
+            # If the bl_power write keeps failing in journalctl, the udev
+            # rule that chmods bl_power g+w for the video group (see
+            # bridge/udev/60-instantlink-bridge-backlight.rules) is the
+            # likely culprit — check that it shipped and udev reloaded.
+            LOGGER.warning(
                 "ui.framebuffer_backlight_power_unavailable bl_power_path=%s value=%s",
                 self.bl_power_path,
                 value,

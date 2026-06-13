@@ -48,10 +48,10 @@ backend = "x306"
 battery_poll_interval_s = 30
 battery_warning_threshold_percent = 20
 battery_safe_shutdown_threshold_percent = 10
-idle_dim_after_s = 300
-idle_screen_off_after_s = 1800
-idle_deep_after_s = 3600
-idle_poweroff_after_s = 7200
+idle_dim_after_s = 30
+idle_screen_off_after_s = 60
+idle_deep_after_s = 300
+idle_poweroff_after_s = 1800
 # X306 exposes no host battery percentage, and unexpected poweroff looks like a crash during use.
 # Keep automatic poweroff off unless explicitly enabled from Settings > System.
 idle_poweroff_enabled = false

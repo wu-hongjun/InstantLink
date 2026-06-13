@@ -1054,7 +1054,7 @@ async def test_searching_text_keeps_updating_across_repeated_misses() -> None:
     messages: list[str | None] = []
     for _ in range(OFFLINE_MESSAGE_AFTER_MISSES):
         assert not await ui._refresh_printer_status_in_background(printer)
-        ui._show_printer_searching_if_retrying(printer, "Looking for printer")
+        ui._show_printer_searching_if_retrying(printer, "Searching Printer")
         messages.append(ui._snapshot.printer_status_message)
 
     # Each attempt stays in PRINTER_SEARCHING and surfaces live copy (connecting -> restart),
@@ -1297,7 +1297,7 @@ def test_printer_search_retry_keeps_specific_diagnostic_message() -> None:
         printer_status_message="No printer signal",
     )
 
-    ui._show_printer_searching_if_retrying(printer, "Looking for printer")
+    ui._show_printer_searching_if_retrying(printer, "Searching Printer")
 
     assert display.snapshots == []
     assert ui._snapshot.printer_status_message == "No printer signal"
@@ -3342,7 +3342,7 @@ async def test_apply_printer_searching_clears_freshness() -> None:
         printer_status_fresh=True,
     )
 
-    ui._apply_printer_searching(printer, "Looking for printer")
+    ui._apply_printer_searching(printer, "Searching Printer")
 
     assert ui._snapshot.mode is UiMode.PRINTER_SEARCHING
     assert not ui._snapshot.printer_status_fresh

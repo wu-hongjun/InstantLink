@@ -3420,7 +3420,7 @@ def printer_top_status_text(snapshot: UiSnapshot) -> str:
         return "No printer"
     if snapshot.mode is UiMode.PRINTER_SEARCHING:
         message = snapshot.printer_status_message
-        if message is not None and message != "Looking for printer":
+        if message is not None and message != "Searching Printer":
             return _ellipsize(message, 24)
         return "Printer searching"
     if snapshot.mode is UiMode.PRINTER_OFFLINE:

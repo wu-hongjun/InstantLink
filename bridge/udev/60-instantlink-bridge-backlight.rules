@@ -1,0 +1,11 @@
+# InstantLink Bridge — make backlight bl_power writable by the `video` group.
+#
+# The kernel ST7789v fbtft driver registers /sys/class/backlight/fb_st7789v/
+# with max_brightness=0, so _FramebufferBacklight falls back to writing
+# bl_power=4 (FB_BLANK_POWERDOWN) to turn the panel off — and the fbtft
+# kernel path honours bl_power=4 by driving the led_pin (GPIO 24) LOW,
+# physically killing the LED. The upstream 60-backlight.rules already
+# chmods brightness g+w for the video group; bl_power is not covered, so
+# the bridge service (which runs as `ib`, in `video`) silently fails the
+# write and the panel stays lit during screen_off.
+SUBSYSTEM=="backlight", ACTION=="add", RUN+="/bin/chgrp video $sys$devpath/bl_power", RUN+="/bin/chmod g+w $sys$devpath/bl_power"

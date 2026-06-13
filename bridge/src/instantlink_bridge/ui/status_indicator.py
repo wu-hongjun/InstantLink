@@ -6,7 +6,7 @@ same six-state vocabulary so users learn one signal language across SKUs:
     Green  solid     Ready to print
     Green  breathing Printing (image received → print complete)
     Yellow solid     Not ready (printer not connected)
-    Yellow breathing Searching for printer
+    Yellow breathing Searching Printer
     Red    solid     Error
     Red    breathing Non-fatal warning (e.g. no film)
 

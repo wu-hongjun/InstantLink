@@ -389,3 +389,9 @@
 "sel_eyedropper" = "Sample color";
 "sel_pick_color" = "Pick color";
 "sel_clear" = "Clear";
+/* Editor — Red Eye section (plan 048 PR #11) */
+"redeye_section" = "Red Eye";
+"redeye_size" = "Size";
+"redeye_auto_detect" = "Auto Detect";
+"redeye_pick_eyes" = "Click eyes to fix";
+"redeye_clear" = "Clear";

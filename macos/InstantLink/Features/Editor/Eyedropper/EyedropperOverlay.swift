@@ -62,6 +62,13 @@ struct EyedropperOverlay: View {
         let imageX = localX / scale + extent.origin.x
         let imageY = (renderedHeight - localY) / scale + extent.origin.y
 
+        // Position-only modes (Red Eye manual, PR #11) short-circuit the
+        // 3×3 color sampling pass and dispatch the image-space click point.
+        if state.eyedropperManager.isPositionOnlyMode {
+            state.eyedropperManager.consumePoint(CGPoint(x: imageX, y: imageY))
+            return
+        }
+
         let sample = sample3x3(in: image, x: imageX, y: imageY)
         state.eyedropperManager.consume(sample)
     }

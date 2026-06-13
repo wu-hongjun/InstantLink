@@ -147,6 +147,7 @@ swiftc \
   -framework CoreImage \
   -framework Metal \
   -framework MetalKit \
+  -framework Vision \
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
   -parse-as-library
 

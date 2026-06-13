@@ -388,3 +388,9 @@
 "sel_eyedropper" = "色をサンプル";
 "sel_pick_color" = "色を選択";
 "sel_clear" = "クリア";
+/* Editor — Red Eye section (plan 048 PR #11) */
+"redeye_section" = "赤目";
+"redeye_size" = "サイズ";
+"redeye_auto_detect" = "自動検出";
+"redeye_pick_eyes" = "目をクリックして修正";
+"redeye_clear" = "クリア";

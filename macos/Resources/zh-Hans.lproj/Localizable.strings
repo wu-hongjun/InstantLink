@@ -413,3 +413,9 @@
 "sel_eyedropper" = "采样颜色";
 "sel_pick_color" = "选择颜色";
 "sel_clear" = "清除";
+/* Editor — Red Eye section (plan 048 PR #11) */
+"redeye_section" = "红眼";
+"redeye_size" = "大小";
+"redeye_auto_detect" = "自动检测";
+"redeye_pick_eyes" = "点击眼睛以修复";
+"redeye_clear" = "清除";

@@ -16,7 +16,7 @@ struct AdjustSidebar: View {
                 DefinitionSection(state: state)
                 NoiseReductionSection(state: state)
                 SharpenSection(state: state)
-                // PR #11: RedEyeSection
+                RedEyeSection(state: state)
                 WhiteBalanceSection(state: state)
                 BlackAndWhiteSection(state: state)
                 // Vignette runs last in the pipeline composition; mirror

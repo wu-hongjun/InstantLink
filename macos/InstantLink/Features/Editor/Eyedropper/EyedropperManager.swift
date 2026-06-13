@@ -1,4 +1,5 @@
 import Combine
+import CoreGraphics
 import Foundation
 import simd
 
@@ -30,12 +31,30 @@ final class EyedropperManager: ObservableObject {
     @Published var active: ActiveMode?
 
     private var onSample: ((SampledRGB) -> Void)?
+    private var onPoint: ((CGPoint) -> Void)?
 
     /// Begin a sampling session. The supplied closure runs on the main actor
     /// once `consume(_:)` fires.
     func start(_ mode: ActiveMode, onSample: @escaping (SampledRGB) -> Void) {
         self.active = mode
         self.onSample = onSample
+        self.onPoint = nil
+    }
+
+    /// Begin a position-only session (Red Eye manual mode, PR #11 of plan
+    /// 048). The overlay forwards the next click's image-space CGPoint
+    /// through `onPoint` instead of running the 3×3 color sample pass.
+    func startPoint(_ mode: ActiveMode, onPoint: @escaping (CGPoint) -> Void) {
+        self.active = mode
+        self.onPoint = onPoint
+        self.onSample = nil
+    }
+
+    /// `true` when the active mode delivers a position-only click (Red Eye)
+    /// rather than a 3×3 color sample. Lets the overlay short-circuit the
+    /// sampling pass and dispatch via `consumePoint(_:)`.
+    var isPositionOnlyMode: Bool {
+        onPoint != nil
     }
 
     /// Hand a sampled RGBA value to the active section. Clears `active` so
@@ -50,6 +69,17 @@ final class EyedropperManager: ObservableObject {
         onSample?(sample)
         active = nil
         onSample = nil
+        onPoint = nil
+    }
+
+    /// Hand an image-space click position to the active section. Used by
+    /// position-only modes (Red Eye manual). Clears `active` so subsequent
+    /// canvas clicks pass through to the normal preview gesture stack.
+    func consumePoint(_ point: CGPoint) {
+        onPoint?(point)
+        active = nil
+        onSample = nil
+        onPoint = nil
     }
 
     /// Abort the active session without delivering a sample (e.g. Escape key
@@ -57,5 +87,6 @@ final class EyedropperManager: ObservableObject {
     func cancel() {
         active = nil
         onSample = nil
+        onPoint = nil
     }
 }

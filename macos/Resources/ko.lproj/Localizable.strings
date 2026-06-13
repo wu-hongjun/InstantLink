@@ -388,3 +388,9 @@
 "sel_eyedropper" = "색상 샘플";
 "sel_pick_color" = "색상 선택";
 "sel_clear" = "지우기";
+/* Editor — Red Eye section (plan 048 PR #11) */
+"redeye_section" = "적목";
+"redeye_size" = "크기";
+"redeye_auto_detect" = "자동 감지";
+"redeye_pick_eyes" = "눈을 클릭하여 보정";
+"redeye_clear" = "지우기";

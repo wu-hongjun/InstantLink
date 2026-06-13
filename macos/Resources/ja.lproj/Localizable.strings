@@ -331,3 +331,7 @@
 "vignette_strength" = "適用量";
 "vignette_radius" = "半径";
 "vignette_softness" = "柔らかさ";
+"sharpen_section" = "シャープ";
+"sharpen_intensity" = "強さ";
+"sharpen_edges" = "エッジ";
+"sharpen_falloff" = "減衰";

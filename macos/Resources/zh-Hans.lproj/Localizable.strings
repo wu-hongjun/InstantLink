@@ -356,3 +356,7 @@
 "vignette_strength" = "强度";
 "vignette_radius" = "半径";
 "vignette_softness" = "柔和度";
+"sharpen_section" = "锐化";
+"sharpen_intensity" = "强度";
+"sharpen_edges" = "边缘";
+"sharpen_falloff" = "衰减";

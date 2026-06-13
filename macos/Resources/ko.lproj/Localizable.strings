@@ -331,3 +331,7 @@
 "vignette_strength" = "강도";
 "vignette_radius" = "반경";
 "vignette_softness" = "부드러움";
+"sharpen_section" = "선명도";
+"sharpen_intensity" = "강도";
+"sharpen_edges" = "윤곽";
+"sharpen_falloff" = "감쇠";

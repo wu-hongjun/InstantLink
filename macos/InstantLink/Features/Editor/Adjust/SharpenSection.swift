@@ -1,0 +1,83 @@
+import SwiftUI
+
+/// Photos-style "Sharpen" panel: 3 sliders + section header with Auto / Reset.
+///
+/// Defaults match Photos (per MacMost community reporting):
+///   intensity 0.00, edges 0.22, falloff 0.69.
+/// Reset returns to those defaults, NOT all-zero — Photos preserves the
+/// edges/falloff baseline so that raising intensity has its tuned response
+/// out of the gate.
+struct SharpenSection: View {
+    @ObservedObject var state: EditorViewState
+    @State private var isExpanded: Bool = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            AdjustmentSectionHeader(
+                isExpanded: $isExpanded,
+                title: L_key("sharpen_section"),
+                onAuto: { applyAuto() },
+                onReset: { reset() },
+                isNeutral: isNeutral
+            )
+
+            if isExpanded {
+                VStack(spacing: 6) {
+                    AdjustmentSlider(
+                        value: $state.adjustments.sharpen.intensity,
+                        range: 0...1,
+                        neutral: 0,
+                        label: L_key("sharpen_intensity"),
+                        asymmetric: true
+                    )
+                    AdjustmentSlider(
+                        value: $state.adjustments.sharpen.edges,
+                        range: 0...1,
+                        neutral: 0.22,
+                        label: L_key("sharpen_edges"),
+                        asymmetric: true
+                    )
+                    AdjustmentSlider(
+                        value: $state.adjustments.sharpen.falloff,
+                        range: 0...1,
+                        neutral: 0.69,
+                        label: L_key("sharpen_falloff"),
+                        asymmetric: true
+                    )
+                }
+                .padding(.leading, 18)
+            }
+        }
+    }
+
+    private var isNeutral: Bool {
+        let s = state.adjustments.sharpen
+        return s.intensity == 0
+            && abs(s.edges - 0.22) < 1e-6
+            && abs(s.falloff - 0.69) < 1e-6
+    }
+
+    private func reset() {
+        state.adjustments.sharpen = AdjustmentState.Sharpen()
+    }
+
+    /// Auto preset: placeholder until PR #16 wires the Apple analyzer.
+    /// Toggles a moderate sharpen on/off.
+    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    private func applyAuto() {
+        if isNeutral {
+            state.adjustments.sharpen.intensity = 0.3
+        } else {
+            reset()
+        }
+    }
+}
+
+/// Helper so the SwiftUI view sites can spell `LocalizedStringKey` for
+/// `AdjustmentSlider.label` / `AdjustmentSectionHeader.title`. Duplicates
+/// the private helper in `LightSection.swift`; PR #4 hoists both into a
+/// shared `LocalizedKey.swift`.
+@inline(__always)
+private func L_key(_ key: String) -> LocalizedStringKey {
+    LocalizedStringKey(key)
+}

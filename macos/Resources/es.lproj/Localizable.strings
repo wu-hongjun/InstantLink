@@ -331,3 +331,7 @@
 "vignette_strength" = "Strength";
 "vignette_radius" = "Radius";
 "vignette_softness" = "Softness";
+"sharpen_section" = "Sharpen";
+"sharpen_intensity" = "Intensity";
+"sharpen_edges" = "Edges";
+"sharpen_falloff" = "Falloff";

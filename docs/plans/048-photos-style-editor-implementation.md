@@ -35,9 +35,10 @@ Pipeline order, color-space rules, and slider mappings are in `047 §3` and `doc
 | #13 Black & White mode | ✅ landed | `13bcbfb` (mode flag toggle + Intensity/Neutrals/Tone/Grain + grain composite via CIRandomGenerator) |
 | #10 Selective Color | ✅ landed | `f30aef4` (6 user-defined wells + custom CIColorKernel with raised-cosine hue weighting) |
 | #11 Red Eye | ✅ landed | `481da05` (Size slider + Vision auto-detect + click-to-fix via EyedropperManager extension) |
-| #14 Annotate tab + retire legacy editor | in flight (Wave 4) | |
-| #15 Filter rail | unblocked by PR #14 | |
-| #16 Auto buttons, #17 Polish | pending | |
+| #14 Annotate tab + retire legacy editor | ✅ landed | `4d8acbc` (feat) + `cb2c990` (filterID neutral check fix-up) |
+| #15 Filter rail | in flight (Wave 5) | |
+| #16 Auto buttons | in flight (Wave 5) | |
+| #17 Polish + crate version bumps | pending (Wave 6 final) | |
 | #15 Filter rail | deferred | Needs filter model that doesn't yet exist in new editor — wait until after PR #14 ports the legacy filter set or earlier if scope clarifies |
 
 ---

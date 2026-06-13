@@ -25,12 +25,15 @@ Pipeline order, color-space rules, and slider mappings are in `047 §3` and `doc
 | #1 Editor shell rebuild | ✅ landed | `7880148` (foundation) + `14507cc` (review fix-ups) |
 | #2 Crop tab | ✅ landed | `3de6be4` (feat) + `8ebb512` (Mini ratio) + `cb72b61` (aspect lock + affine order + grid timer) |
 | #3 Light section + AdjustmentSlider primitives | ✅ landed | `d9e2516` (single commit, audit verdict APPROVED-with-nits; M-level nits deferred to PR #17 fidelity pass) |
-| #4 Color section | in flight (Wave 1b) | |
-| #6 Vignette section | in flight (Wave 1b) | |
-| #7 Sharpen section | in flight (Wave 1b) | |
-| #8 Noise Reduction section | in flight (Wave 1b) | |
-| #9 Definition section | in flight (Wave 1b) | |
-| #5 Curves + Levels, #10–#14, #16, #17 | pending | |
+| #4 Color section | ✅ landed | `47a58ae` (Saturation, Vibrance, Cast + B&W override + L_key hoist to LocalizedKey.swift) |
+| #6 Vignette section | ✅ landed | `d873484` (bipolar Strength + Radius + Softness via CIRadialGradient mask) |
+| #7 Sharpen section | ✅ landed | `9626bc3` (Intensity/Edges/Falloff via CISharpenLuminance + edge mask) |
+| #8 Noise Reduction section | ✅ landed | `7d7fbb6` (master + Luma/Color/Detail via CINoiseReduction + CIMedianFilter passes) |
+| #9 Definition section | ✅ landed | `6a61c9e` (single slider + Auto, high-radius unsharp + midtone mask) |
+| #5 Curves + Levels | in flight (Wave 2) | |
+| #12 White Balance + Eyedropper | in flight (Wave 2) | |
+| #13 Black & White mode | in flight (Wave 2) | |
+| #10 Selective Color, #11 Red Eye, #14 Annotate+retire, #16 Auto, #17 Polish | pending | |
 | #15 Filter rail | deferred | Needs filter model that doesn't yet exist in new editor — wait until after PR #14 ports the legacy filter set or earlier if scope clarifies |
 
 ---

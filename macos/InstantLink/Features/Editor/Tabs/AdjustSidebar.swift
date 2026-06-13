@@ -11,8 +11,8 @@ struct AdjustSidebar: View {
                 LightSection(state: state)
                 ColorSection(state: state)
                 // PR #5: CurvesSection / LevelsSection / HistogramView
+                NoiseReductionSection(state: state)
                 SharpenSection(state: state)
-                // PR #8: NoiseReductionSection
                 // PR #9: DefinitionSection
                 // PR #10: SelectiveColorSection
                 // PR #11: RedEyeSection

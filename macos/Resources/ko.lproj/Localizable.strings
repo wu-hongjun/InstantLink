@@ -335,3 +335,9 @@
 "sharpen_intensity" = "강도";
 "sharpen_edges" = "윤곽";
 "sharpen_falloff" = "감쇠";
+/* Editor — Noise Reduction section (plan 048 PR #8) */
+"nr_section" = "노이즈 감소";
+"nr_master" = "노이즈 감소";
+"nr_luminance" = "광도";
+"nr_color" = "색상";
+"nr_detail" = "세부 사항";

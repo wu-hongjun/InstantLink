@@ -335,3 +335,9 @@
 "sharpen_intensity" = "Intensity";
 "sharpen_edges" = "Edges";
 "sharpen_falloff" = "Falloff";
+/* Editor — Noise Reduction section (plan 048 PR #8) */
+"nr_section" = "Noise Reduction";
+"nr_master" = "Reduce Noise";
+"nr_luminance" = "Luminance";
+"nr_color" = "Color";
+"nr_detail" = "Detail";

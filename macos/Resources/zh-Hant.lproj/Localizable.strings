@@ -335,3 +335,9 @@
 "sharpen_intensity" = "強度";
 "sharpen_edges" = "邊緣";
 "sharpen_falloff" = "衰減";
+/* Editor — Noise Reduction section (plan 048 PR #8) */
+"nr_section" = "降噪";
+"nr_master" = "減少雜色";
+"nr_luminance" = "亮度";
+"nr_color" = "顏色";
+"nr_detail" = "細節";

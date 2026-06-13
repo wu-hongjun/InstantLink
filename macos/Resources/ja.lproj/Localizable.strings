@@ -335,3 +335,9 @@
 "sharpen_intensity" = "強さ";
 "sharpen_edges" = "エッジ";
 "sharpen_falloff" = "減衰";
+/* Editor — Noise Reduction section (plan 048 PR #8) */
+"nr_section" = "ノイズリダクション";
+"nr_master" = "ノイズを軽減";
+"nr_luminance" = "輝度";
+"nr_color" = "カラー";
+"nr_detail" = "ディテール";

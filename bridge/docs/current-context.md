@@ -1,6 +1,6 @@
 # InstantLink Bridge Current Context
 
-Last verified: 2026-05-25 on `riverps-rpi-zero-2w`.
+Last verified: 2026-06-12 on `riverps-rpi-zero-2w` (bridge state at commit `ad638be`, App layer at `596230d`).
 
 This file is the fast handoff for anyone opening the bridge code after the InstantLink port. The
 source of truth is the InstantLink repository under `bridge/`; the old standalone InstantBridge
@@ -28,9 +28,10 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- Hardware-verified runtime baseline: `8860be68dbb688093722acafa0ac128ba060d889`
-- Parent InstantBridge `main` should point at submodule commit `8860be68dbb688093722acafa0ac128ba060d889`
-  or newer.
+- Hardware-verified runtime baseline: bridge changes at commit `ad638be` (Main `596230d`).
+  - On-device verification 2026-06-12: LCD screen-off now drives GPIO 24 LOW after the configured
+    idle threshold (was previously a silent no-op because `bl_power` was `root:root 0644` — see
+    `bridge/udev/60-instantlink-bridge-backlight.rules` and the commit message).
 - Service: `instantlink-bridge.service`
 - Install root: `/opt/InstantLinkBridge`
 - Config root: `/etc/InstantLinkBridge`
@@ -122,8 +123,10 @@ Expected healthy state:
   - After the failed connect attempts, the printer stopped advertising in both InstantLink and
     BlueZ scans. The LCD should show the no-printer/pairing flow until the printer is power-cycled
     and paired again from the bridge.
-  - Runtime idle display timers were lengthened on the test Pi and in source defaults:
-    dim after 300 s, screen off after 1800 s, deep idle after 3600 s, poweroff after 7200 s.
+  - Runtime idle display timers were dropped in source defaults (commit `ad638be`):
+    dim after 30 s, screen off after 60 s, deep idle after 300 s, poweroff after 1800 s. The
+    earlier 30-min screen-off default was effectively "never" on battery; the new defaults
+    materialise the GPIO-24-LOW kill into observable power saving within the first minute of idle.
 - Physical printing is still the remaining hardware validation step after successful re-pairing.
 
 ## Local Development Checks

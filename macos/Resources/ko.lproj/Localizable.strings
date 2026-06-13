@@ -378,3 +378,13 @@
 "wb_temperature" = "색온도";
 "wb_tint" = "틴트";
 "wb_eyedropper" = "샘플";
+
+/* Editor — Selective Color section (plan 048 PR #10) */
+"sel_section" = "선택 색상";
+"sel_hue" = "색조";
+"sel_saturation" = "채도";
+"sel_luminance" = "광도";
+"sel_range" = "범위";
+"sel_eyedropper" = "색상 샘플";
+"sel_pick_color" = "색상 선택";
+"sel_clear" = "지우기";

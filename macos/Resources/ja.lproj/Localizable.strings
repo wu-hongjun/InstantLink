@@ -378,3 +378,13 @@
 "wb_temperature" = "色温";
 "wb_tint" = "色合い";
 "wb_eyedropper" = "サンプル";
+
+/* Editor — Selective Color section (plan 048 PR #10) */
+"sel_section" = "選択カラー";
+"sel_hue" = "色相";
+"sel_saturation" = "彩度";
+"sel_luminance" = "輝度";
+"sel_range" = "範囲";
+"sel_eyedropper" = "色をサンプル";
+"sel_pick_color" = "色を選択";
+"sel_clear" = "クリア";

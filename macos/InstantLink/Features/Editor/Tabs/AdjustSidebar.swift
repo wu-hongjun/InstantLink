@@ -10,12 +10,12 @@ struct AdjustSidebar: View {
             VStack(alignment: .leading, spacing: 16) {
                 LightSection(state: state)
                 ColorSection(state: state)
+                SelectiveColorSection(state: state)
                 CurvesSection(state: state)
                 LevelsSection(state: state)
                 DefinitionSection(state: state)
                 NoiseReductionSection(state: state)
                 SharpenSection(state: state)
-                // PR #10: SelectiveColorSection
                 // PR #11: RedEyeSection
                 WhiteBalanceSection(state: state)
                 BlackAndWhiteSection(state: state)

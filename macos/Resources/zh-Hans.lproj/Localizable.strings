@@ -403,3 +403,13 @@
 "wb_temperature" = "色温";
 "wb_tint" = "色调";
 "wb_eyedropper" = "取样";
+
+/* Editor — Selective Color section (plan 048 PR #10) */
+"sel_section" = "选择性颜色";
+"sel_hue" = "色相";
+"sel_saturation" = "饱和度";
+"sel_luminance" = "亮度";
+"sel_range" = "范围";
+"sel_eyedropper" = "采样颜色";
+"sel_pick_color" = "选择颜色";
+"sel_clear" = "清除";

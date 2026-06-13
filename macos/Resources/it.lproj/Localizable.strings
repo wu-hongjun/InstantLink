@@ -379,3 +379,13 @@
 "wb_temperature" = "Temperature";
 "wb_tint" = "Tint";
 "wb_eyedropper" = "Sample";
+
+/* Editor — Selective Color section (plan 048 PR #10) */
+"sel_section" = "Selective Color";
+"sel_hue" = "Hue";
+"sel_saturation" = "Saturation";
+"sel_luminance" = "Luminance";
+"sel_range" = "Range";
+"sel_eyedropper" = "Sample color";
+"sel_pick_color" = "Pick color";
+"sel_clear" = "Clear";

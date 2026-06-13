@@ -378,3 +378,13 @@
 "wb_temperature" = "色溫";
 "wb_tint" = "色調";
 "wb_eyedropper" = "取樣";
+
+/* Editor — Selective Color section (plan 048 PR #10) */
+"sel_section" = "選擇性顏色";
+"sel_hue" = "色相";
+"sel_saturation" = "飽和度";
+"sel_luminance" = "亮度";
+"sel_range" = "範圍";
+"sel_eyedropper" = "採樣顏色";
+"sel_pick_color" = "選擇顏色";
+"sel_clear" = "清除";

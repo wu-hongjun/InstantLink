@@ -14,6 +14,10 @@ final class EditorViewState: ObservableObject {
     @Published var crop: CropState = .neutral
     @Published var overlays: [OverlayItem] = []
     @Published var selectedOverlayID: UUID?
+    /// Selected filter ID from `FilterCatalog`, or `nil` for "no filter".
+    /// When a B&W filter is selected, the Adjust B&W stack is suppressed in
+    /// the pipeline (locked decision Q9, plan 048 PR #15).
+    @Published var filterID: String?
     @Published var sourceImage: CIImage?
     @Published var previewImage: CIImage?
     @Published var renderedPreview: CIImage?
@@ -40,11 +44,12 @@ final class EditorViewState: ObservableObject {
     init() {
         // Re-render whenever a user-visible field changes. 16 ms matches one
         // 60 Hz frame so dragging coalesces cleanly. Overlay edits also push
-        // through so the live preview updates with the Annotate tab.
-        Publishers.CombineLatest3($adjustments, $crop, $overlays)
+        // through so the live preview updates with the Annotate tab. Filter
+        // changes (PR #15) also live-update the canvas.
+        Publishers.CombineLatest4($adjustments, $crop, $overlays, $filterID)
             .dropFirst()
             .debounce(for: .milliseconds(16), scheduler: DispatchQueue.main)
-            .sink { [weak self] _, _, _ in
+            .sink { [weak self] _, _, _, _ in
                 guard let self else { return }
                 self.scheduleRender()
                 if !self.isRestoring {
@@ -82,7 +87,7 @@ final class EditorViewState: ObservableObject {
         EditorSnapshot(
             adjustments: adjustments,
             crop: crop,
-            filterID: nil,
+            filterID: filterID,
             overlays: overlays
         )
     }
@@ -93,6 +98,7 @@ final class EditorViewState: ObservableObject {
         adjustments = snap.adjustments
         crop = snap.crop
         overlays = snap.overlays
+        filterID = snap.filterID
         if let id = selectedOverlayID,
            !snap.overlays.contains(where: { $0.id == id }) {
             selectedOverlayID = snap.overlays.last?.id
@@ -123,6 +129,7 @@ final class EditorViewState: ObservableObject {
         adjustments = snap.adjustments
         crop = snap.crop
         overlays = snap.overlays
+        filterID = snap.filterID
         selectedOverlayID = snap.overlays.last?.id
         isRestoring = false
         history.reset(to: snapshot())

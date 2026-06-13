@@ -426,3 +426,15 @@
 "redeye_auto_detect" = "自动检测";
 "redeye_pick_eyes" = "点击眼睛以修复";
 "redeye_clear" = "清除";
+
+/* Editor — Filters tab (plan 048 PR #15) */
+"filters_section" = "滤镜";
+"filters_none" = "无";
+"filter_mono" = "单色";
+"filter_noir" = "黑白电影";
+"filter_silvertone" = "银调";
+"filter_fade" = "褪色";
+"filter_chrome" = "铬黄";
+"filter_instant" = "即时";
+"filter_process" = "处理";
+"filter_transfer" = "转印";

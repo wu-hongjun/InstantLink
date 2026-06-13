@@ -401,3 +401,15 @@
 "redeye_auto_detect" = "자동 감지";
 "redeye_pick_eyes" = "눈을 클릭하여 보정";
 "redeye_clear" = "지우기";
+
+/* Editor — Filters tab (plan 048 PR #15) */
+"filters_section" = "필터";
+"filters_none" = "없음";
+"filter_mono" = "모노";
+"filter_noir" = "느와르";
+"filter_silvertone" = "실버톤";
+"filter_fade" = "페이드";
+"filter_chrome" = "크롬";
+"filter_instant" = "인스턴트";
+"filter_process" = "프로세스";
+"filter_transfer" = "트랜스퍼";

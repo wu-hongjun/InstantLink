@@ -402,3 +402,15 @@
 "redeye_auto_detect" = "Auto Detect";
 "redeye_pick_eyes" = "Click eyes to fix";
 "redeye_clear" = "Clear";
+
+/* Editor — Filters tab (plan 048 PR #15) */
+"filters_section" = "Filters";
+"filters_none" = "None";
+"filter_mono" = "Mono";
+"filter_noir" = "Noir";
+"filter_silvertone" = "Silvertone";
+"filter_fade" = "Fade";
+"filter_chrome" = "Chrome";
+"filter_instant" = "Instant";
+"filter_process" = "Process";
+"filter_transfer" = "Transfer";

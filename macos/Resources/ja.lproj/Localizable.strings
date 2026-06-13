@@ -401,3 +401,15 @@
 "redeye_auto_detect" = "自動検出";
 "redeye_pick_eyes" = "目をクリックして修正";
 "redeye_clear" = "クリア";
+
+/* Editor — Filters tab (plan 048 PR #15) */
+"filters_section" = "フィルタ";
+"filters_none" = "なし";
+"filter_mono" = "モノ";
+"filter_noir" = "ノアール";
+"filter_silvertone" = "シルバートーン";
+"filter_fade" = "フェード";
+"filter_chrome" = "クローム";
+"filter_instant" = "インスタント";
+"filter_process" = "プロセス";
+"filter_transfer" = "トランスファー";

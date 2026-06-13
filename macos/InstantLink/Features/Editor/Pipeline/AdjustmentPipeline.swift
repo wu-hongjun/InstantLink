@@ -6,12 +6,18 @@ struct AdjustmentPipeline {
 
     func compose(_ source: CIImage, state: EditorSnapshot) -> CIImage {
         var img = source
+        // Locked decision Q9 (plan 048 PR #15): when the selected filter is
+        // a B&W LUT (mono / noir / silvertone) it overrides the Adjust B&W
+        // stack — we skip the desaturate + tone curve + grain chain so the
+        // filter has authority and the two passes don't compound.
+        let filterIsBW = FilterCatalog.isBlackAndWhite(id: state.filterID)
+
         img = applyWhiteBalance(img, state.adjustments.whiteBalance)
         img = applyLight(img, state.adjustments.light)
         img = applyCurvesLevels(img, state.adjustments.curves, state.adjustments.levels)
         img = applyColor(img, state.adjustments.color, bwOn: state.adjustments.bw.on)
         img = applySelectiveColor(img, state.adjustments.selective)
-        if state.adjustments.bw.on {
+        if state.adjustments.bw.on && !filterIsBW {
             img = applyBlackAndWhite(img, state.adjustments.bw)
         }
         img = applyDefinition(img, state.adjustments.definition)
@@ -20,6 +26,7 @@ struct AdjustmentPipeline {
         img = applyRedEye(img, state.adjustments.redEye)
         img = applyCrop(img, state.crop)
         img = applyVignette(img, state.adjustments.vignette)
+        img = FilterCatalog.apply(img, id: state.filterID)
         return img
     }
 

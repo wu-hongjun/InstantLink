@@ -326,6 +326,13 @@
 "color_vibrance" = "自然飽和度";
 "color_cast" = "色偏";
 "color_disabled_bw" = "黑白模式開啟時,色彩調整不可用";
+/* Editor — Black & White section (plan 048 PR #13) */
+"bw_section" = "黑白";
+"bw_enable" = "黑白";
+"bw_intensity" = "強度";
+"bw_neutrals" = "中性色";
+"bw_tone" = "色調";
+"bw_grain" = "顆粒";
 /* Editor — Vignette section (plan 048 PR #6) */
 "vignette_section" = "暈影";
 "vignette_strength" = "強度";

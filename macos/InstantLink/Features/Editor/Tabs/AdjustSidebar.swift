@@ -18,7 +18,7 @@ struct AdjustSidebar: View {
                 // PR #10: SelectiveColorSection
                 // PR #11: RedEyeSection
                 WhiteBalanceSection(state: state)
-                // PR #13: BlackAndWhiteSection
+                BlackAndWhiteSection(state: state)
                 // Vignette runs last in the pipeline composition; mirror
                 // that ordering in the sidebar so it sits at the bottom
                 // of the Adjust list (PR #6 of plan 048).

@@ -38,7 +38,9 @@ struct AdjustmentPipeline {
         ColorPipeline.apply(image, state, bwOn: bwOn)
     }
     private func applySelectiveColor(_ image: CIImage, _ state: AdjustmentState.SelectiveColor) -> CIImage { image }
-    private func applyBlackAndWhite(_ image: CIImage, _ state: AdjustmentState.BlackAndWhite) -> CIImage { image }
+    private func applyBlackAndWhite(_ image: CIImage, _ state: AdjustmentState.BlackAndWhite) -> CIImage {
+        BlackAndWhitePipeline.apply(image, state)
+    }
     private func applyDefinition(_ image: CIImage, _ state: AdjustmentState.Definition) -> CIImage {
         DefinitionPipeline.apply(image, state)
     }

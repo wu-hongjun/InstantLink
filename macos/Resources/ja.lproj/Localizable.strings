@@ -326,6 +326,13 @@
 "color_vibrance" = "自然な彩度";
 "color_cast" = "色かぶり";
 "color_disabled_bw" = "白黒モード中はカラー調整は無効です";
+/* Editor — Black & White section (plan 048 PR #13) */
+"bw_section" = "白黒";
+"bw_enable" = "白黒";
+"bw_intensity" = "強さ";
+"bw_neutrals" = "ニュートラル";
+"bw_tone" = "トーン";
+"bw_grain" = "グレイン";
 /* Editor — Vignette section (plan 048 PR #6) */
 "vignette_section" = "ビネット";
 "vignette_strength" = "適用量";

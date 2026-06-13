@@ -23,12 +23,14 @@ Pipeline order, color-space rules, and slider mappings are in `047 §3` and `doc
 | PR | State | Commits |
 |---|---|---|
 | #1 Editor shell rebuild | ✅ landed | `7880148` (foundation) + `14507cc` (review fix-ups) |
-| #2 Crop tab | in flight | |
-| #3 Light section + slider primitives | in flight | |
-| #7 Sharpen | in flight | |
-| #8 Noise Reduction | in flight | |
-| #9 Definition | in flight | |
-| #4 Color, #5 Curves+Levels, #6 Vignette, #10–#14, #16, #17 | pending | |
+| #2 Crop tab | ✅ landed | `3de6be4` (feat) + `8ebb512` (Mini ratio) + `cb72b61` (aspect lock + affine order + grid timer) |
+| #3 Light section + AdjustmentSlider primitives | ✅ landed | `d9e2516` (single commit, audit verdict APPROVED-with-nits; M-level nits deferred to PR #17 fidelity pass) |
+| #4 Color section | in flight (Wave 1b) | |
+| #6 Vignette section | in flight (Wave 1b) | |
+| #7 Sharpen section | in flight (Wave 1b) | |
+| #8 Noise Reduction section | in flight (Wave 1b) | |
+| #9 Definition section | in flight (Wave 1b) | |
+| #5 Curves + Levels, #10–#14, #16, #17 | pending | |
 | #15 Filter rail | deferred | Needs filter model that doesn't yet exist in new editor — wait until after PR #14 ports the legacy filter set or earlier if scope clarifies |
 
 ---

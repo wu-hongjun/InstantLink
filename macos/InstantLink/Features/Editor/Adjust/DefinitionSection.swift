@@ -39,17 +39,17 @@ struct DefinitionSection: View {
         state.adjustments.definition = AdjustmentState.Definition()
     }
 
-    /// Apply a placeholder Auto preset. PR #16 wires the Apple analyzer
-    /// (`CIImage.autoAdjustmentFilters`) end-to-end across all sections;
-    /// for v1 we set a gentle midtone-contrast boost.
-    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    /// Apply Auto via `AutoEnhance.apply(target: .definition, …)`. The Apple
+    /// analyzer doesn't surface a definition-specific filter, so the helper
+    /// sets a gentle midtone-contrast preset. Toggles back to neutral on a
+    /// second click.
     private func applyAuto() {
-        if isNeutral {
-            state.adjustments.definition.amount = 0.25
-        } else {
-            // Photos toggles Auto off when clicked a second time.
+        if !isNeutral {
             reset()
+            return
         }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .definition, image: image, state: state)
     }
 }
 

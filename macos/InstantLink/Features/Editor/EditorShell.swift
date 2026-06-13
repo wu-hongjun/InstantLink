@@ -118,6 +118,18 @@ private struct EditorShellToolbar: View {
             }
             .disabled(!state.history.canRedo)
 
+            // Plan 048 PR #16 — global Enhance. Runs `AutoEnhance.apply(.global)`
+            // against the source image, matching the magic-wand button at the
+            // top of Photos' editor.
+            Button {
+                if let image = state.sourceImage ?? state.previewImage {
+                    AutoEnhance.apply(target: .global, image: image, state: state)
+                }
+            } label: {
+                Label(L("auto_enhance_global"), systemImage: "wand.and.stars")
+            }
+            .disabled(state.sourceImage == nil && state.previewImage == nil)
+
             Spacer()
 
             Button(L("editor_revert")) {

@@ -71,20 +71,17 @@ struct LevelsSection: View {
         state.adjustments.levels = AdjustmentState.Levels()
     }
 
-    /// Auto-Levels: 0.5% / 99.5% percentile cuts on the active channel.
-    /// Placeholder mid-point preset until PR #16 wires the analyzer end to
-    /// end. Per research 047 the percentile cuts shave noise from the tails
-    /// without saturating; here we model that with a small in/out crush.
-    // TODO: wire CIAreaHistogram percentile reader in PR #16.
+    /// Auto-Levels: ask the Apple analyzer for a CIToneCurve fit and read its
+    /// end-points as input black / white on the Luminance channel. Toggles
+    /// back to neutral on a second click when the active channel is already
+    /// non-neutral.
     private func applyAuto() {
         let channel = state.adjustments.levels.activeChannel
-        if state.adjustments.levels.channels[channel]?.isNeutral == true {
-            var c = AdjustmentState.Levels.ChannelLevels()
-            c.blackIn = 0.02
-            c.whiteIn = 0.98
-            state.adjustments.levels.channels[channel] = c
-        } else {
+        if state.adjustments.levels.channels[channel]?.isNeutral == false {
             state.adjustments.levels.channels[channel] = AdjustmentState.Levels.ChannelLevels()
+            return
         }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .levels, image: image, state: state)
     }
 }

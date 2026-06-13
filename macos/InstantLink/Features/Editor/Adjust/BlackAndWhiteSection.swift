@@ -69,16 +69,16 @@ struct BlackAndWhiteSection: View {
         state.adjustments.bw = AdjustmentState.BlackAndWhite()
     }
 
-    /// Placeholder Auto: enable B&W and set a mild S-curve. PR #16 wires the
-    /// Apple analyzer end-to-end. Toggles back to neutral on second click.
-    // TODO: wire CIImage.autoAdjustmentFilters in PR #16.
+    /// Apply Auto via `AutoEnhance.apply(target: .blackWhite, …)`. The
+    /// analyzer has no native B&W mode, so the helper turns on B&W and seeds
+    /// a mild intensity/tone preset. Toggles back to neutral on a second
+    /// click to match Photos.
     private func applyAuto() {
-        if isNeutral {
-            state.adjustments.bw.on = true
-            state.adjustments.bw.intensity = 0.2
-            state.adjustments.bw.tone = 0.3
-        } else {
+        if !isNeutral {
             reset()
+            return
         }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .blackWhite, image: image, state: state)
     }
 }

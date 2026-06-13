@@ -83,19 +83,16 @@ struct LightSection: View {
         state.adjustments.light = AdjustmentState.Light()
     }
 
-    /// Apply a placeholder Auto preset. PR #16 wires the Apple analyzer
-    /// (`CIImage.autoAdjustmentFilters`) end-to-end across all sections;
-    /// for v1 we set a sensible expand-the-range preset.
-    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    /// Fold the Apple analyzer's Light-relevant filters (CIToneCurve,
+    /// CIHighlightShadowAdjust) into the Light sliders via `AutoEnhance`.
+    /// Photos toggles Auto off on a second click — we honor that by resetting
+    /// when already non-neutral.
     private func applyAuto() {
-        if isNeutral {
-            state.adjustments.light.highlights = -0.3
-            state.adjustments.light.shadows = 0.3
-            state.adjustments.light.contrast = 0.2
-            state.adjustments.light.blackPoint = 0.1
-        } else {
-            // Photos toggles Auto off when clicked a second time.
+        if !isNeutral {
             reset()
+            return
         }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .light, image: image, state: state)
     }
 }

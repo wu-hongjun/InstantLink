@@ -280,6 +280,7 @@
 "editor_tab_annotate" = "Annotate";
 "editor_done" = "Done";
 "editor_revert" = "Revert";
+"auto_enhance_global" = "Enhance";
 "editor_undo" = "Undo";
 "editor_redo" = "Redo";
 "editor_coming_in_pr_2" = "Coming in PR #2";

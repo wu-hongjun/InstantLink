@@ -22,7 +22,7 @@ struct RedEyeSection: View {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("redeye_section"),
-                onAuto: { Task { await autoDetect() } },
+                onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral
             )
@@ -91,6 +91,22 @@ struct RedEyeSection: View {
                 .padding(.leading, 18)
             }
         }
+    }
+
+    // MARK: - Auto (analyzer-driven)
+
+    /// Wire the section header's Auto button to `AutoEnhance.apply(.redEye)`,
+    /// which runs the CoreImage analyzer's CIRedEyeCorrection filter. On a
+    /// second click (already non-neutral) we reset to match Photos' toggle
+    /// behavior. The dedicated "Auto Detect" button below still runs the
+    /// Vision face-landmarks pathway for higher-quality matches.
+    private func applyAuto() {
+        if !isNeutral {
+            reset()
+            return
+        }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .redEye, image: image, state: state)
     }
 
     // MARK: - Neutral / reset

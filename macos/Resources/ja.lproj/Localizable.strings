@@ -280,6 +280,7 @@
 "editor_tab_annotate" = "注釈";
 "editor_done" = "完了";
 "editor_revert" = "元に戻す";
+"auto_enhance_global" = "自動補正";
 "editor_undo" = "取り消す";
 "editor_redo" = "やり直す";
 "editor_coming_in_pr_2" = "PR #2 で実装予定";

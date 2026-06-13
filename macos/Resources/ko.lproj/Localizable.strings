@@ -280,6 +280,7 @@
 "editor_tab_annotate" = "주석";
 "editor_done" = "완료";
 "editor_revert" = "되돌리기";
+"auto_enhance_global" = "향상";
 "editor_undo" = "실행 취소";
 "editor_redo" = "다시 실행";
 "editor_coming_in_pr_2" = "PR #2에서 추가 예정";

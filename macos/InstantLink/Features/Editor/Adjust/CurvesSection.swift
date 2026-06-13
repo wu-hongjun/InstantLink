@@ -117,20 +117,15 @@ struct CurvesSection: View {
         state.adjustments.curves = AdjustmentState.Curves()
     }
 
-    /// Auto curve: gentle mid-tone S applied to the master / RGB curve. PR
-    /// #16 replaces with `CIImage.autoAdjustmentFilters`.
-    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    /// Auto curve: copy the 5 control points the Apple analyzer's CIToneCurve
+    /// returns into the master RGB curve via `AutoEnhance`. Toggles back to
+    /// neutral on a second click.
     private func applyAuto() {
-        if isNeutral {
-            state.adjustments.curves.master = [
-                CGPoint(x: 0, y: 0),
-                CGPoint(x: 0.25, y: 0.21),
-                CGPoint(x: 0.5, y: 0.5),
-                CGPoint(x: 0.75, y: 0.79),
-                CGPoint(x: 1, y: 1),
-            ]
-        } else {
+        if !isNeutral {
             reset()
+            return
         }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .curves, image: image, state: state)
     }
 }

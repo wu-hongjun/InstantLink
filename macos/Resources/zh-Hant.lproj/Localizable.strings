@@ -280,6 +280,7 @@
 "editor_tab_annotate" = "標註";
 "editor_done" = "完成";
 "editor_revert" = "還原";
+"auto_enhance_global" = "增強";
 "editor_undo" = "復原";
 "editor_redo" = "重做";
 "editor_coming_in_pr_2" = "將在 PR #2 中加入";

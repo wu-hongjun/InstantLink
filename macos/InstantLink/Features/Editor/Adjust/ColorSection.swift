@@ -64,17 +64,15 @@ struct ColorSection: View {
         state.adjustments.color = AdjustmentState.Color()
     }
 
-    /// Apply a placeholder Auto preset. PR #16 wires the Apple analyzer
-    /// (`CIImage.autoAdjustmentFilters`) end-to-end; for v1 we set a gentle
-    /// vibrance lift + warm pull, and toggle back to neutral on second click.
-    // TODO: wire CIImage.autoAdjustmentFilters in PR #16.
+    /// Fold the Apple analyzer's Color-relevant filters (CIVibrance,
+    /// CITemperatureAndTint) into the Color sliders via `AutoEnhance`. Toggles
+    /// back to neutral on a second click to match Photos.
     private func applyAuto() {
-        if isNeutral {
-            state.adjustments.color.vibrance = 0.2
-            state.adjustments.color.cast = -0.1
-        } else {
-            // Photos toggles Auto off when clicked a second time.
+        if !isNeutral {
             reset()
+            return
         }
+        guard let image = state.sourceImage ?? state.previewImage else { return }
+        AutoEnhance.apply(target: .color, image: image, state: state)
     }
 }

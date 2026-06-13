@@ -2260,7 +2260,7 @@
 <tr>
 <td>8</td>
 <td>Print-aware aspects</td>
-<td>Add Mini (2:3) / Square (1:1) / Wide (3:2)</td>
+<td>Add Mini (4:3 landscape) / Square (1:1) / Wide (3:2)</td>
 </tr>
 <tr>
 <td>9</td>
@@ -2573,7 +2573,7 @@
 <a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="p">}</span>
 </code></pre></div></p>
 <p><code>CropFrameView</code> overlays the MTKView canvas; on drag updates <code>state.crop.frame</code> clamped to the inscribed rectangle (formula in <code>docs/research/047-photos-crop-straighten-perspective.md</code> §"Math + Core Image mapping"). 3×3 grid renders only during drag (timer fades on release).</p>
-<p><code>AspectRatioPicker</code> is the Photos pop-up: Original / Freeform / Square / 16:9 / 10:8 / 7:5 / 4:3 / 5:3 / 3:2 / Custom… plus a separator and printer-aware rows shown only when <code>ViewModel.activePrinter != nil</code> (Mini = 2:3, Square = 1:1, Wide = 3:2). Adjacent V/H orientation toggle swaps any ratio.</p>
+<p><code>AspectRatioPicker</code> is the Photos pop-up: Original / Freeform / Square / 16:9 / 10:8 / 7:5 / 4:3 / 5:3 / 3:2 / Custom… plus a separator and printer-aware rows shown only when <code>ViewModel.activePrinter != nil</code> (Mini = 4:3 landscape, Square = 1:1, Wide = 3:2 — hardware per CLAUDE.md: Mini 600×800, Square 800×800, Wide 1260×840). Adjacent V/H orientation toggle swaps any ratio.</p>
 <p><strong>Acceptance</strong>:
 - Aspect chips constrain the frame; V/H toggle flips ratios.
 - Straighten slider rotates the canvas in real time; 0° detent snaps. Double-click resets.

@@ -1,0 +1,3160 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
+      
+      
+      
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/research/047-implementation-coreimage-mapping/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>047 — Core Image / Metal Implementation Mapping - InstantLink</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#047-core-image-metal-implementation-mapping" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="InstantLink" class="md-header__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InstantLink
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              047 — Core Image / Metal Implementation Mapping
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="white"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../plans/001-full-stack-scaffold/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plans
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InstantLink" class="md-nav__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InstantLink
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bridge-firmware-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Firmware Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/reverse-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reverse Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plans
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plans
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/001-full-stack-scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 001 Full-Stack Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/002-ci-cd-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 002 CI/CD Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/003-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 003 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/004-app-bundle-and-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 004 App Bundle and Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/005-mock-transport-device-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 005 Mock Transport Device Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/006-overlay-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 006 Overlay System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/007-ui-ux-pass-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 007 UI/UX Pass 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/008-ui-ux-pass-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 008 UI/UX Pass 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/009-repo-simplification-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 009 Repo Simplification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/010-ui-ux-pass-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 010 UI/UX Pass 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/013-ffi-connection-stage-callbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 013 FFI Connection Stage Callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/014-printer-led-print-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 014 Printer LED Print Phase Feedback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/018-auto-update-signature-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 018 Auto-Update Signature Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/019-packet-assembler-error-surfacing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 019 Packet Assembler Error Surfacing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/020-notification-listener-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 020 Notification Listener Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/021-print-flow-deduplication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 021 Print Flow Deduplication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/022-ffi-device-guard-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 022 FFI Device Guard Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/023-ffi-unsafe-block-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 023 FFI Unsafe Block Discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/024-protocol-build-packet-bounds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 024 Protocol Build Packet Bounds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/025-rand-dependency-upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 025 Rand Dependency Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/026-docs-ffi-symbol-count-and-context-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 026 Docs FFI Symbol Count and Context Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/027-docs-protocol-mini-link-3-flip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 027 Docs Protocol Mini Link 3 Flip
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/028-sparkle-2-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 028 Sparkle 2 Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/029-bridge-control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 029 Bridge Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/030-bridge-secure-management-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 030 Bridge Secure Management and Updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sources-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-slider-cifilter-mapping-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Slider → CIFilter mapping table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-pipeline-composition-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Pipeline composition order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-live-preview-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Live-preview architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Live-preview architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#render-loop-pattern-sketched-not-verified-compiled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render loop pattern (sketched, not verified-compiled)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#caching-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caching strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preview-vs-export-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview vs export resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gpu-vs-cpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU vs CPU
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#color-space-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color space management
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-state-undoredo-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. State + undo/redo model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. State + undo/redo model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shape-sketched-not-verified-compiled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape (sketched, not verified-compiled)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reset semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#undo-redo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Undo / redo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-histogram-thumbnail-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Histogram + thumbnail rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Histogram + thumbnail rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#live-histogram-for-levels-backdrop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live histogram (for Levels backdrop)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filter-rail-thumbnails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filter rail thumbnails
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-crop-straighten-perspective" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Crop + straighten + perspective
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Crop + straighten + perspective">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#order-of-geometric-ops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Order of geometric ops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keeping-the-crop-frame-valid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping the crop frame valid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#single-resample-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-resample composition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-eyedropper-for-white-balance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Eyedropper for White Balance
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Eyedropper for White Balance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#image-space-screen-space-mapping-in-mtkview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image-space → screen-space mapping in MTKView
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sampling-a-pixel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling a pixel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feeding-into-citemperatureandtint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feeding into CITemperatureAndTint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-uncertainties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open uncertainties
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="047-core-image-metal-implementation-mapping">047 — Core Image / Metal Implementation Mapping<a class="headerlink" href="#047-core-image-metal-implementation-mapping" title="Permanent link">&para;</a></h1>
+<p>Practical implementation reference for the Photos-style editor rebuild
+(see <code>docs/plans/047-photos-style-editor-audit.md</code> §2.2). Pairs every UI
+slider to a CIFilter (or custom kernel), names the input parameter,
+gives the range mapping from Photos' −1..+1 slider to Core Image
+native ranges, and notes color-space caveats. Sections 2–7 cover
+pipeline order, live-preview architecture, undo/redo, histograms,
+crop/perspective, and the eyedropper.</p>
+<h2 id="sources-used">Sources used<a class="headerlink" href="#sources-used" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Apple Developer Documentation — CIFilter / Core Image reference
+  pages: <code>CIHighlightShadowAdjust</code>, <code>CITemperatureAndTint</code>,
+  <code>CIToneCurve</code>, <code>CIPerspectiveCorrection</code>, <code>CIContext</code>
+  (<code>workingColorSpace</code>).
+  <a href="https://developer.apple.com/documentation/coreimage">https://developer.apple.com/documentation/coreimage</a></li>
+<li>Apple Developer Forums — "Core Image: Gamma curve best practice",
+  "Getting wide color with Core Image and MTKView (iOS)",
+  "Metal Core Image kernel workingColorSpace".
+  <a href="https://developer.apple.com/forums/thread/649425">https://developer.apple.com/forums/thread/649425</a>
+  <a href="https://developer.apple.com/forums/thread/66166">https://developer.apple.com/forums/thread/66166</a>
+  <a href="https://developer.apple.com/forums/thread/741441">https://developer.apple.com/forums/thread/741441</a></li>
+<li>WWDC22 — "Display EDR content with Core Image, Metal, and SwiftUI".
+  <a href="https://developer.apple.com/videos/play/wwdc2022/10114/">https://developer.apple.com/videos/play/wwdc2022/10114/</a></li>
+<li>Apple Library Archive — "Core Image Filter Reference" /
+  "Subclassing CIFilter: Recipes for Custom Effects" /
+  "Auto Enhancing Images".
+  <a href="https://developer.apple.com/library/archive/documentation/GraphicsImaging/Reference/CoreImageFilterReference/">https://developer.apple.com/library/archive/documentation/GraphicsImaging/Reference/CoreImageFilterReference/</a></li>
+<li>Microsoft Learn — Xamarin CoreImage mirror with parameter defaults
+  for <code>CIVibrance</code>, <code>CIHighlightShadowAdjust</code>, <code>CITemperatureAndTint</code>,
+  <code>CIToneCurve</code>, <code>CIUnsharpMask</code>. Useful when Apple's pages omit
+  numeric defaults.
+  <a href="https://learn.microsoft.com/en-us/dotnet/api/coreimage">https://learn.microsoft.com/en-us/dotnet/api/coreimage</a></li>
+<li>objc.io — "An Introduction to Core Image" (deferred evaluation,
+  context reuse).
+  <a href="https://www.objc.io/issues/21-camera-and-photos/core-image-intro/">https://www.objc.io/issues/21-camera-and-photos/core-image-intro/</a></li>
+<li>FlexMonkey — "Creating a Selective HSL Adjustment Filter in Core
+  Image" (custom CIKernel for 8-swatch HSL).
+  <a href="http://flexmonkey.blogspot.com/2016/03/creating-selective-hsl-adjustment.html">http://flexmonkey.blogspot.com/2016/03/creating-selective-hsl-adjustment.html</a></li>
+<li>DZone — "A Look at Perspective Transform and Correction With Core
+  Image".
+  <a href="https://dzone.com/articles/a-look-at-perspective-transform-correction-with-co">https://dzone.com/articles/a-look-at-perspective-transform-correction-with-co</a></li>
+<li>FlexMonkey/CoreImageHelpers — <code>MetalImageView</code> (reference MTKView
+  rendering pattern).
+  <a href="https://github.com/FlexMonkey/CoreImageHelpers/blob/master/CoreImageHelpers/coreImageHelpers/ImageView.swift">https://github.com/FlexMonkey/CoreImageHelpers/blob/master/CoreImageHelpers/coreImageHelpers/ImageView.swift</a></li>
+<li>Thomas1956/Histogram — CIAreaHistogram + CIHistogramDisplayFilter
+  example.
+  <a href="https://github.com/Thomas1956/Histogram">https://github.com/Thomas1956/Histogram</a></li>
+<li>IMG.LY — "Build a Simple Real-Time Video Editor with Metal" (live
+  preview architecture).
+  <a href="https://img.ly/blog/build-a-simple-real-time-video-editor-with-metal-for-ios/">https://img.ly/blog/build-a-simple-real-time-video-editor-with-metal-for-ios/</a></li>
+</ul>
+<hr />
+<h2 id="1-slider-cifilter-mapping-table">1. Slider → CIFilter mapping table<a class="headerlink" href="#1-slider-cifilter-mapping-table" title="Permanent link">&para;</a></h2>
+<p>UI slider ranges are the Photos convention (sliders snap to <strong>0</strong> as
+neutral; range nominally <strong>−1..+1</strong> unless noted). The "Range mapping"
+column shows how to translate slider <code>s</code> into the filter's native
+input. All filters live in Core Image unless prefixed <code>custom:</code>.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Slider</th>
+<th>Section</th>
+<th>CIFilter / Composite</th>
+<th>Input param</th>
+<th>Range mapping (<code>s</code> ∈ −1…+1 unless noted)</th>
+<th>Color-space notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Brilliance</td>
+<td>Light</td>
+<td>composite: <code>CIHighlightShadowAdjust</code> + <code>CIToneCurve</code> micro-S</td>
+<td><code>inputHighlightAmount</code>, <code>inputShadowAmount</code>, curve points</td>
+<td><code>highlight = 1 − 0.5·max(s,0)</code>; <code>shadow = 0.5·max(s,0)</code>; for <code>s&lt;0</code> reduce both. Add a +mid lift via toneCurve point2.</td>
+<td>Run in linear sRGB so highlight-roll-off behaves like film.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Exposure</td>
+<td>Light</td>
+<td><code>CIExposureAdjust</code></td>
+<td><code>inputEV</code></td>
+<td><code>EV = 2·s</code> (so ±1 slider ≈ ±2 stops, Photos' visible range).</td>
+<td>Must run in <strong>linear</strong> space (it's a stop multiply, <code>out = in · 2^EV</code>).</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Highlights</td>
+<td>Light</td>
+<td><code>CIHighlightShadowAdjust</code></td>
+<td><code>inputHighlightAmount</code></td>
+<td>Native is <code>0.0…1.0</code>, default <code>1.0</code> (no change). Map <code>s≥0</code> → <code>1 − s·0.7</code>; <code>s&lt;0</code> → <code>1 − s·0.3</code> (lift). Clamp 0.3…1.0.</td>
+<td>Apple notes the filter "adjusts highlights to reduce shadows"; ship-fix: run in linear, then re-encode.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Shadows</td>
+<td>Light</td>
+<td><code>CIHighlightShadowAdjust</code></td>
+<td><code>inputShadowAmount</code></td>
+<td>Native is <code>−1.0…+1.0</code>, default <code>0</code>. Map directly: <code>shadowAmount = s</code>.</td>
+<td>Linear space (same instance as Highlights — share one filter, set both inputs at once).</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Brightness</td>
+<td>Light</td>
+<td><code>CIColorControls</code></td>
+<td><code>inputBrightness</code></td>
+<td>Native <code>−1…+1</code>, default <code>0</code>. <code>brightness = 0.3·s</code> (Photos' slider is gentler than CIColorControls raw).</td>
+<td>Runs in working space; safe in linear or sRGB. Use linear.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Contrast</td>
+<td>Light</td>
+<td><code>CIColorControls</code></td>
+<td><code>inputContrast</code></td>
+<td>Native default <code>1.0</code>, useful range <code>0.25…4.0</code>. <code>contrast = 1 + 0.6·s</code> (so ±1 ≈ 0.4…1.6).</td>
+<td>Run in <strong>sRGB-gamma</strong> for "perceptual" contrast — that matches Photos' look. (Linear contrast crushes too aggressively at low end.)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Black Point</td>
+<td>Light</td>
+<td><code>CIToneCurve</code></td>
+<td><code>inputPoint0</code></td>
+<td>Move point0 along x: <code>point0 = CGPoint(x: max(0, 0.1·s + 0.0), y: 0)</code> for <code>s&gt;0</code> (crush); for <code>s&lt;0</code> (lift): <code>point0.y = 0.1·\|s\|</code>.</td>
+<td>Apple states tone curve uses "a perceptual (gamma 2) version of the working space" — so it's already perceptual.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Saturation</td>
+<td>Color</td>
+<td><code>CIColorControls</code></td>
+<td><code>inputSaturation</code></td>
+<td>Native <code>0.0…2.0+</code>, default <code>1.0</code>. <code>saturation = 1 + s</code> (clamp 0…2).</td>
+<td>Run in linear space, otherwise greens skew yellow.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Vibrance</td>
+<td>Color</td>
+<td><code>CIVibrance</code></td>
+<td><code>inputAmount</code></td>
+<td>Native <code>−1.0…+1.0</code>, default <code>0</code>. Direct: <code>amount = s</code>.</td>
+<td>Apple's <code>CIVibrance</code> boosts less-saturated colors more. No color-space change needed.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Cast</td>
+<td>Color</td>
+<td><code>CITemperatureAndTint</code> (or <code>CIHueAdjust</code> for pure rotation)</td>
+<td><code>inputNeutral</code> / <code>inputTargetNeutral</code> (Vec2 [temp, tint])</td>
+<td>"Cast" in Photos is a hue rotation. Use <code>CIHueAdjust.inputAngle = s · π/6</code> (±30°). If using T&amp;T, leave neutral=(6500,0), <code>targetNeutral=(6500, 50·s)</code>.</td>
+<td>Hue rotation should run in linear; T&amp;T expects raw RGB.</td>
+</tr>
+<tr>
+<td>11</td>
+<td>B&amp;W Intensity</td>
+<td>Black &amp; White</td>
+<td><code>CIPhotoEffectMono</code> + <code>CIColorControls.inputSaturation = 0</code> blended</td>
+<td>mix amount via <code>CIBlendWithMask</code> or <code>CIDissolveTransition</code></td>
+<td><code>mix = (s + 1)/2</code> (full-color at 0, full-mono at +1; in Photos B&amp;W mode the slider is asymmetric — research file <code>…-light-color-bw</code> confirms).</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>12</td>
+<td>B&amp;W Neutrals</td>
+<td>Black &amp; White</td>
+<td><code>CIToneCurve</code> on mid-grey</td>
+<td><code>inputPoint2</code></td>
+<td>Shift point2.y by <code>0.1·s</code> around <code>(0.5, 0.5)</code>.</td>
+<td>Perceptual (gamma 2) — built into CIToneCurve.</td>
+</tr>
+<tr>
+<td>13</td>
+<td>B&amp;W Tone</td>
+<td>Black &amp; White</td>
+<td><code>CIToneCurve</code> global S-curve</td>
+<td>points 1–3</td>
+<td><code>s&gt;0</code>: deepen S; <code>s&lt;0</code>: flatten. Build curve from <code>(0,0),(0.25, 0.25−0.05·s),(0.5,0.5),(0.75, 0.75+0.05·s),(1,1)</code>.</td>
+<td>Perceptual.</td>
+</tr>
+<tr>
+<td>14</td>
+<td>B&amp;W Grain</td>
+<td>Black &amp; White</td>
+<td><code>CIRandomGenerator</code> × <code>CIColorMatrix</code> (mono) blended <code>CISourceOverCompositing</code></td>
+<td>grain opacity</td>
+<td><code>opacity = max(0, s)</code>; 0 = off.</td>
+<td>Composite after all luma ops, in sRGB.</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Red Eye (Auto)</td>
+<td>Red Eye</td>
+<td><code>CIRedEyeCorrection</code></td>
+<td><code>inputCenters</code> (CIVector array)</td>
+<td>Use <code>CIDetector(ofType: CIDetectorTypeFace)</code> and <code>CIDetectorEyeBlink</code> to find centers, feed in.</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Red Eye (manual click)</td>
+<td>Red Eye</td>
+<td><code>CIRedEyeCorrection</code></td>
+<td><code>inputCenters</code></td>
+<td>Append click point in image coords.</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>17</td>
+<td>WB Neutral Gray (eyedropper)</td>
+<td>White Balance</td>
+<td><code>CITemperatureAndTint</code></td>
+<td><code>inputNeutral</code></td>
+<td>Sample pixel <code>(r,g,b)</code>, convert to estimated CCT (e.g. McCamy), set <code>inputNeutral = CIVector(x: cct, y: tintShift)</code>.</td>
+<td>Sample on the <strong>un-adjusted</strong> linear CIImage so eyedrop is repeatable.</td>
+</tr>
+<tr>
+<td>18</td>
+<td>WB Skin Tone (eyedropper)</td>
+<td>White Balance</td>
+<td><code>CITemperatureAndTint</code></td>
+<td><code>inputTargetNeutral</code></td>
+<td>Same as Neutral Gray but solve for skin chromaticity (~(5500, 8)).</td>
+<td>Linear.</td>
+</tr>
+<tr>
+<td>19</td>
+<td>WB Temperature</td>
+<td>White Balance</td>
+<td><code>CITemperatureAndTint</code></td>
+<td><code>inputNeutral.x</code></td>
+<td>Slider <code>s∈−1…+1</code> → <code>temp = 6500 + 4000·s</code> (so cool ≈ 2500K, warm ≈ 10500K).</td>
+<td>Linear.</td>
+</tr>
+<tr>
+<td>20</td>
+<td>WB Tint</td>
+<td>White Balance</td>
+<td><code>CITemperatureAndTint</code></td>
+<td><code>inputNeutral.y</code></td>
+<td><code>tint = 150·s</code> (Photos' tint range is roughly ±150).</td>
+<td>Linear.</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Curves (RGB / R / G / B)</td>
+<td>Curves</td>
+<td><code>CIToneCurve</code> per channel; or custom <code>CIColorCubeWithColorSpace</code> LUT</td>
+<td><code>point0…point4</code> (Photos' 5-point spline is identical)</td>
+<td>Direct mapping — Photos' tone-curve UI has 5 points. For per-channel: run 3 chained <code>CIToneCurve</code>s with <code>inputBrightness</code> matrix gating, or a single CIKernel that takes one LUT.</td>
+<td>CIToneCurve runs in <strong>perceptual</strong> working space. For wide gamut, set <code>CIContext(options: [.workingColorSpace: linearSRGB])</code> and tone curve still operates perceptually.</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Levels Input Black/White</td>
+<td>Levels</td>
+<td><code>CIColorMatrix</code> (scale+bias) → <code>CIGammaAdjust</code></td>
+<td>matrix coefficients; <code>inputPower</code></td>
+<td><code>gain = 1 / (whiteIn − blackIn)</code>; <code>bias = −blackIn · gain</code>. Then <code>gamma = log(0.5)/log(gammaSlider/255)</code> (Photoshop math).</td>
+<td>Perceptual / sRGB; histogram-aligned.</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Levels Gamma</td>
+<td>Levels</td>
+<td><code>CIGammaAdjust</code></td>
+<td><code>inputPower</code></td>
+<td><code>power = 1/(0.1 + 1.9·((s+1)/2))</code> so slider 0 → 1.0 (no change), +1 → 1/2 = brighter midtones, −1 → ~1/0.1.</td>
+<td>sRGB-gamma space (gamma adjust is inherently a gamma op).</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Levels Output Black/White</td>
+<td>Levels</td>
+<td><code>CIColorMatrix</code></td>
+<td>bias / scale</td>
+<td><code>scale = whiteOut − blackOut</code>; <code>bias = blackOut</code>.</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Definition Radius</td>
+<td>Definition</td>
+<td>custom: <code>CIUnsharpMask</code> w/ large radius + low intensity (local contrast)</td>
+<td><code>inputRadius</code></td>
+<td><code>radius = 10 + 40·((s+1)/2)</code> (Photos' radius is hidden but tunable here — say 10…50 px).</td>
+<td>Run on luma channel only; convert to YCbCr via <code>CIColorMatrix</code> then back to avoid color shifts.</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Definition Intensity</td>
+<td>Definition</td>
+<td><code>CIUnsharpMask</code></td>
+<td><code>inputIntensity</code></td>
+<td><code>intensity = 0.4·s</code> (subtle; &gt;0.5 = halos).</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Selective Color H/S/L (×8)</td>
+<td>Selective Color</td>
+<td><strong>custom CIColorKernel</strong> (per FlexMonkey)</td>
+<td>hueEdge0/1, hueShift/satShift/lumShift vec3 per band</td>
+<td>Each swatch maps to a 45° hue band (<code>Red 0±22.5°</code>, <code>Orange 30°</code>, <code>Yellow 60°</code>, <code>Green 120°</code>, <code>Aqua 180°</code>, <code>Blue 240°</code>, <code>Purple 270°</code>, <code>Magenta 300°</code>). Each H/S/L slider feeds the kernel as <code>±0.2·s</code> shift.</td>
+<td>Run in linear HSV; convert RGB→HSV in-kernel then back. Use <code>CIContext.workingColorSpace = extendedLinearSRGB</code>.</td>
+</tr>
+<tr>
+<td>28</td>
+<td>NR Luma</td>
+<td>Noise Reduction</td>
+<td><code>CINoiseReduction</code></td>
+<td><code>inputNoiseLevel</code></td>
+<td><code>noiseLevel = 0.02 + 0.06·max(0, s)</code> (default off at slider 0).</td>
+<td>Linear.</td>
+</tr>
+<tr>
+<td>29</td>
+<td>NR Color</td>
+<td>Noise Reduction</td>
+<td><code>CIMedianFilter</code> (chroma) or chained <code>CIGaussianBlur</code> on Cb/Cr channels</td>
+<td>(none / σ)</td>
+<td>Convert to YCbCr; blur chroma with σ = <code>0.0 + 4·max(0, s)</code>; recombine.</td>
+<td>Linear.</td>
+</tr>
+<tr>
+<td>30</td>
+<td>NR Detail</td>
+<td>Noise Reduction</td>
+<td><code>CINoiseReduction</code></td>
+<td><code>inputSharpness</code></td>
+<td><code>sharpness = 0.4 + 1.6·((s+1)/2)</code>.</td>
+<td>Same instance as NR Luma — single filter, two inputs.</td>
+</tr>
+<tr>
+<td>31</td>
+<td>Sharpen Intensity</td>
+<td>Sharpen</td>
+<td><code>CIUnsharpMask</code></td>
+<td><code>inputIntensity</code></td>
+<td><code>intensity = max(0, s)·1.0</code> (Photos clamps at 0; negative slider does nothing).</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>32</td>
+<td>Sharpen Edges</td>
+<td>Sharpen</td>
+<td><code>CIUnsharpMask</code></td>
+<td><code>inputRadius</code></td>
+<td><code>radius = 1.0 + 3·((s+1)/2)</code> (Photos uses radius ~1–4 px).</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>33</td>
+<td>Sharpen Falloff</td>
+<td>Sharpen</td>
+<td>custom kernel: edge-mask attenuation</td>
+<td>falloff scalar</td>
+<td>Multiply unsharp delta by <code>Sobel(luma)^falloff</code>; <code>falloff = 0.5 + 2·((s+1)/2)</code>.</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>34</td>
+<td>Vignette Radius</td>
+<td>Vignette</td>
+<td><code>CIVignette</code></td>
+<td><code>inputRadius</code></td>
+<td><code>radius = 0.5 + 1.5·((s+1)/2)</code> (Photos range maps ~0.5…2.0).</td>
+<td>Apply last, in sRGB.</td>
+</tr>
+<tr>
+<td>35</td>
+<td>Vignette Intensity</td>
+<td>Vignette</td>
+<td><code>CIVignette</code></td>
+<td><code>inputIntensity</code></td>
+<td><code>intensity = s</code> directly. Negative = black vignette, positive = white (requires a sign flip — use <code>CIVignetteEffect</code> for white).</td>
+<td>sRGB.</td>
+</tr>
+<tr>
+<td>36</td>
+<td>Vignette Falloff</td>
+<td>Vignette</td>
+<td>composite: blend <code>CIVignette</code> w/ <code>CIRadialGradient</code> mask</td>
+<td>gradient <code>inputRadius1</code> width</td>
+<td><code>falloffWidth = 0.1 + 0.5·((s+1)/2)</code>.</td>
+<td>sRGB.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes on the table</strong></p>
+<ul>
+<li><code>CIHighlightShadowAdjust</code> defaults: <code>inputHighlightAmount=1.0</code>,
+  <code>inputShadowAmount=0.0</code>; range <code>0…1</code> for highlight, <code>−1…+1</code> for
+  shadow (Apple docs, mirrored on Microsoft Learn). The filter is
+  cheap enough to share one instance for both sliders.</li>
+<li><code>CIToneCurve</code> defaults: <code>point0=(0,0)</code>, <code>point1=(0.25,0.25)</code>,
+  <code>point2=(0.5,0.5)</code>, <code>point3=(0.75,0.75)</code>, <code>point4=(1,1)</code>. Apple's
+  docs state it interpolates with a spline in a "perceptual (gamma 2)
+  version of the working space" — useful: it already does sRGB-feel
+  curves regardless of <code>workingColorSpace</code>.</li>
+<li><code>CITemperatureAndTint</code> <code>inputNeutral</code> is a <code>CIVector(x:6500, y:0)</code>
+  by default; x is Kelvin, y is tint magnitude (positive = magenta,
+  negative = green per Apple's coord convention).</li>
+<li>For Selective Color the "no 1:1 match" route is mandatory. The
+  FlexMonkey kernel uses <code>smoothstep(hueEdge0, hueEdge1, hue)</code> to
+  fade between bands. For 8 swatches × 3 sliders × 24 controls we
+  ship one CIColorKernel with 8 vec3 uniforms for hue/sat/lum.</li>
+</ul>
+<hr />
+<h2 id="2-pipeline-composition-order">2. Pipeline composition order<a class="headerlink" href="#2-pipeline-composition-order" title="Permanent link">&para;</a></h2>
+<p>Confirmed order (raw-decode → output) for our pipeline. The classic
+order in the prompt is mostly right; below is the corrected /
+expanded order based on Apple's "Auto Enhancing Images" guide and
+forum guidance about linear vs gamma space.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1. Decode (CIImage(contentsOf: …, options: [.applyOrientationProperty: true]))
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>2. White Balance               (CITemperatureAndTint, linear)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>3. Exposure                    (CIExposureAdjust, linear) ← MUST be linear
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>4. Highlights / Shadows        (CIHighlightShadowAdjust, linear)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>5. Brilliance                  (composite, linear)
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>6. Black Point                 (CIToneCurve, perceptual built-in)
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>7. Brightness / Contrast       (CIColorControls; contrast in sRGB look)
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>8. Curves                      (CIToneCurve per channel, perceptual)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>9. Levels                      (CIColorMatrix + CIGammaAdjust, sRGB)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>10. Color (Sat / Vibrance / Cast)  (CIColorControls + CIVibrance + CIHueAdjust)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>11. Selective Color            (custom CIColorKernel, linear-HSV)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>12. B&amp;W stack (if on)          (CIPhotoEffectMono + tone curves)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>13. Definition                 (luma-only CIUnsharpMask, sRGB)
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>14. Noise Reduction            (CINoiseReduction + chroma median, linear)
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>15. Sharpen                    (CIUnsharpMask, sRGB) ← AFTER NR
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>16. Red Eye                    (CIRedEyeCorrection, sRGB)
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>17. Geometry: rotate → perspective → straighten → flip → crop  (single CIAffineTransform where possible)
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>18. Vignette                   (CIVignette, sRGB) ← AFTER crop
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>19. Output encode (CIContext.outputColorSpace)
+</code></pre></div>
+<p>Corrections vs. the prompt:</p>
+<ul>
+<li><strong>Sharpen AFTER NR</strong> (not before). Sharpening noise then trying to
+  denoise it is destructive. Photos does it this order.</li>
+<li><strong>Vignette AFTER crop</strong>, not before. Otherwise the vignette darkens
+  the cropped corners unpredictably.</li>
+<li><strong>Geometry as one CIAffineTransform</strong> where possible — Core Image
+  concatenates transforms losslessly. Only fall back to discrete
+  <code>CIPerspectiveTransform</code> when the keystone slider is non-zero.</li>
+</ul>
+<p>Pre- vs post-gamma sliders:</p>
+<ul>
+<li><strong>Linear (pre-gamma)</strong>: Exposure, White Balance, Highlights/Shadows,
+  NR (chroma blur).</li>
+<li><strong>Perceptual / sRGB (post-gamma)</strong>: Contrast, Curves (Apple's
+  CIToneCurve is internally perceptual), Levels, Vignette, Sharpen.</li>
+</ul>
+<p>Set the context once:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">let</span><span class="w"> </span><span class="nv">ctx</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CIContext</span><span class="p">(</span><span class="n">mtlDevice</span><span class="p">:</span><span class="w"> </span><span class="n">device</span><span class="p">,</span><span class="w"> </span><span class="n">options</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">.</span><span class="n">workingColorSpace</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">.</span><span class="n">extendedLinearSRGB</span><span class="p">)</span><span class="o">!</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="p">.</span><span class="n">outputColorSpace</span><span class="p">:</span><span class="w">  </span><span class="n">CGColorSpace</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">.</span><span class="n">sRGB</span><span class="p">)</span><span class="o">!</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="p">.</span><span class="n">cacheIntermediates</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">])</span>
+</code></pre></div>
+<p>Where a sub-pipeline needs sRGB space (Contrast, Curves, Sharpen,
+Vignette), bracket the chain with <code>CIFilter(name: "CIColorSpaceConvert")</code>
+or compose <code>CIImage.matchedFromWorkingSpace(to: CGColorSpace.sRGB!)</code>
+and back. <em>Sketched, not verified-compiled.</em></p>
+<hr />
+<h2 id="3-live-preview-architecture">3. Live-preview architecture<a class="headerlink" href="#3-live-preview-architecture" title="Permanent link">&para;</a></h2>
+<p><strong>Choice</strong>: <code>MTKView</code> + <code>CIRenderDestination</code>. Not <code>NSImageView</code> —
+that path goes CIImage → CGImage → NSImage → AppKit composite, which
+forces a CPU readback and breaks the 60 fps target on a 10-MP image.</p>
+<h3 id="render-loop-pattern-sketched-not-verified-compiled">Render loop pattern (sketched, not verified-compiled)<a class="headerlink" href="#render-loop-pattern-sketched-not-verified-compiled" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kr">final</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">AdjustmentMetalView</span><span class="p">:</span><span class="w"> </span><span class="bp">MTKView</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">ciContext</span><span class="p">:</span><span class="w"> </span><span class="bp">CIContext</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">commandQueue</span><span class="p">:</span><span class="w"> </span><span class="bp">MTLCommandQueue</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">colorSpace</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">.</span><span class="n">sRGB</span><span class="p">)</span><span class="o">!</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">ciImage</span><span class="p">:</span><span class="w"> </span><span class="bp">CIImage</span><span class="p">?</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="kr">didSet</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">setNeedsDisplay</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="kd">init</span><span class="p">(</span><span class="n">device</span><span class="p">:</span><span class="w"> </span><span class="bp">MTLDevice</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">commandQueue</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">device</span><span class="p">.</span><span class="n">makeCommandQueue</span><span class="p">()</span><span class="o">!</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">ciContext</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CIContext</span><span class="p">(</span><span class="n">mtlCommandQueue</span><span class="p">:</span><span class="w"> </span><span class="n">commandQueue</span><span class="p">,</span><span class="w"> </span><span class="n">options</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">            </span><span class="p">.</span><span class="n">workingColorSpace</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">.</span><span class="n">extendedLinearSRGB</span><span class="p">)</span><span class="o">!</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">            </span><span class="p">.</span><span class="n">cacheIntermediates</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="p">])</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="kc">super</span><span class="p">.</span><span class="kd">init</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span><span class="w"> </span><span class="p">.</span><span class="n">zero</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">:</span><span class="w"> </span><span class="n">device</span><span class="p">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">framebufferOnly</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span><span class="w">        </span><span class="c1">// Core Image needs write access</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">isPaused</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                </span><span class="c1">// draw only when state changes</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">enableSetNeedsDisplay</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">preferredFramesPerSecond</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">60</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">        </span><span class="kc">self</span><span class="p">.</span><span class="n">colorPixelFormat</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">.</span><span class="n">bgra8Unorm</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="kr">required</span><span class="w"> </span><span class="kd">init</span><span class="p">(</span><span class="n">coder</span><span class="p">:</span><span class="w"> </span><span class="bp">NSCoder</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="bp">fatalError</span><span class="p">()</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="kr">override</span><span class="w"> </span><span class="kd">func</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="kc">_</span><span class="w"> </span><span class="n">rect</span><span class="p">:</span><span class="w"> </span><span class="n">CGRect</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">        </span><span class="k">guard</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">drawable</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">currentDrawable</span><span class="p">,</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">              </span><span class="kd">let</span><span class="w"> </span><span class="nv">image</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">ciImage</span><span class="p">,</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">              </span><span class="kd">let</span><span class="w"> </span><span class="nv">buffer</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">commandQueue</span><span class="p">.</span><span class="n">makeCommandBuffer</span><span class="p">()</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">        </span><span class="c1">// Fit the CIImage into the drawable preserving aspect ratio.</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="nv">drawableSize</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">CGSize</span><span class="p">(</span>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">            </span><span class="n">width</span><span class="p">:</span><span class="w">  </span><span class="n">CGFloat</span><span class="p">(</span><span class="n">drawable</span><span class="p">.</span><span class="n">texture</span><span class="p">.</span><span class="n">width</span><span class="p">),</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">            </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="n">CGFloat</span><span class="p">(</span><span class="n">drawable</span><span class="p">.</span><span class="n">texture</span><span class="p">.</span><span class="n">height</span><span class="p">))</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="nv">scale</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">min</span><span class="p">(</span><span class="n">drawableSize</span><span class="p">.</span><span class="n">width</span><span class="w">  </span><span class="o">/</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">width</span><span class="p">,</span>
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">                        </span><span class="n">drawableSize</span><span class="p">.</span><span class="n">height</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">height</span><span class="p">)</span>
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="nv">scaled</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">image</span>
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">            </span><span class="p">.</span><span class="n">transformed</span><span class="p">(</span><span class="n">by</span><span class="p">:</span><span class="w"> </span><span class="bp">CGAffineTransform</span><span class="p">(</span><span class="n">scaleX</span><span class="p">:</span><span class="w"> </span><span class="n">scale</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">scale</span><span class="p">))</span>
+<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a>
+<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="nv">destination</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CIRenderDestination</span><span class="p">(</span>
+<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">            </span><span class="n">mtlTexture</span><span class="p">:</span><span class="w"> </span><span class="n">drawable</span><span class="p">.</span><span class="n">texture</span><span class="p">,</span>
+<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">            </span><span class="n">commandBuffer</span><span class="p">:</span><span class="w"> </span><span class="n">buffer</span><span class="p">)</span>
+<a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">        </span><span class="n">destination</span><span class="p">.</span><span class="n">isFlipped</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="w">        </span><span class="n">destination</span><span class="p">.</span><span class="n">colorSpace</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">colorSpace</span>
+<a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a>
+<a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="w">        </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">            </span><span class="kc">_</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ciContext</span><span class="p">.</span><span class="n">startTask</span><span class="p">(</span><span class="n">toRender</span><span class="p">:</span><span class="w"> </span><span class="n">scaled</span><span class="p">,</span><span class="w"> </span><span class="n">to</span><span class="p">:</span><span class="w"> </span><span class="n">destination</span><span class="p">)</span>
+<a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">            </span><span class="bp">assertionFailure</span><span class="p">(</span><span class="s">&quot;CI render: </span><span class="si">\(</span><span class="n">error</span><span class="si">)</span><span class="s">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-51" name="__codelineno-2-51" href="#__codelineno-2-51"></a>
+<a id="__codelineno-2-52" name="__codelineno-2-52" href="#__codelineno-2-52"></a><span class="w">        </span><span class="n">buffer</span><span class="p">.</span><span class="n">present</span><span class="p">(</span><span class="n">drawable</span><span class="p">)</span>
+<a id="__codelineno-2-53" name="__codelineno-2-53" href="#__codelineno-2-53"></a><span class="w">        </span><span class="n">buffer</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+<a id="__codelineno-2-54" name="__codelineno-2-54" href="#__codelineno-2-54"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-55" name="__codelineno-2-55" href="#__codelineno-2-55"></a><span class="p">}</span>
+</code></pre></div>
+<p>Key tricks (sourced from WWDC22 EDR talk + FlexMonkey
+<code>MetalImageView</code>):</p>
+<ul>
+<li><code>isPaused = true</code> + <code>enableSetNeedsDisplay = true</code>: the view only
+  redraws when adjustments change, not at 60 fps idle. This drops
+  GPU power use to near zero between drags.</li>
+<li><code>framebufferOnly = false</code> is mandatory; otherwise <code>CIRenderDestination</code>
+  cannot write through the Metal texture.</li>
+<li><code>cacheIntermediates: true</code> lets Core Image keep intermediate
+  CIImages from the last frame, so adjusting one slider rebuilds
+  only its branch.</li>
+</ul>
+<h3 id="caching-strategy">Caching strategy<a class="headerlink" href="#caching-strategy" title="Permanent link">&para;</a></h3>
+<p>Core Image is lazy. We don't have to manually cache intermediate
+CIImages — but we <strong>do</strong> cache the <em>input</em> CIImage and the
+<em>downsampled preview</em> CIImage:</p>
+<table>
+<thead>
+<tr>
+<th>Cache key</th>
+<th>Source of truth</th>
+<th>Invalidate when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sourceCIImage</code></td>
+<td>original file URL</td>
+<td>new image opened</td>
+</tr>
+<tr>
+<td><code>previewCIImage</code> (1080-px)</td>
+<td>sourceCIImage.transformed(scale: previewK)</td>
+<td>new image opened</td>
+</tr>
+<tr>
+<td><code>cropCIImage</code></td>
+<td>previewCIImage + CropState</td>
+<td>crop frame changes</td>
+</tr>
+<tr>
+<td><code>adjustedCIImage</code></td>
+<td>apply pipeline(cropCIImage, AdjustmentState)</td>
+<td>any slider value changes</td>
+</tr>
+</tbody>
+</table>
+<p>The graph itself is rebuilt per frame; that is cheap (CIFilter setup
+is microseconds). Apple's <code>cacheIntermediates</code> option is what keeps
+the actual pixel work from re-running. (Source: Apple forum thread
+698511 on Core Image memory + cacheIntermediates.)</p>
+<h3 id="preview-vs-export-resolution">Preview vs export resolution<a class="headerlink" href="#preview-vs-export-resolution" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Preview: downsample on open to <code>min(longSide, 2048 px)</code>. A 10-MP
+  source at 2048 px long side is ~2 megapixels — well within MTKView
+  budget for chained CIFilters. Use <code>CILanczosScaleTransform</code> once,
+  cache result as <code>previewCIImage</code>.</li>
+<li>Export: run the same <code>AdjustmentPipeline</code> on <code>sourceCIImage</code>,
+  through <code>CIContext.writeJPEGRepresentation(of:to:colorSpace:)</code> or
+  <code>writeHEIFRepresentation(...)</code>. No MTKView involved.</li>
+</ul>
+<h3 id="gpu-vs-cpu">GPU vs CPU<a class="headerlink" href="#gpu-vs-cpu" title="Permanent link">&para;</a></h3>
+<p>Always GPU for preview. <code>CIContext(mtlDevice:)</code> enables Metal-backed
+kernels. CPU fallback (<code>CIContext(options: [.useSoftwareRenderer:
+true])</code>) only as a debugging tool — 50× slower on a 10-MP image
+(Apple WWDC22 measurements).</p>
+<h3 id="color-space-management">Color space management<a class="headerlink" href="#color-space-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>workingColorSpace</code>: <strong>extended linear sRGB</strong>. Apple's default and
+  the right call for filter math (linear is correct for blends,
+  blurs, exposure).</li>
+<li><code>outputColorSpace</code>: <strong>sRGB</strong> for the MTKView (matches <code>bgra8Unorm</code>
+  pixel format) and <strong>Display P3</strong> for export when source is P3.</li>
+<li>For wide-gamut displays (per Apple forum 66166): set the
+  <code>CAMetalLayer.colorspace</code> and <code>pixelFormat = .bgr10a2Unorm</code> if you
+  want P3 in the preview. We can ship sRGB preview first; P3
+  preview is a follow-up.</li>
+</ul>
+<hr />
+<h2 id="4-state-undoredo-model">4. State + undo/redo model<a class="headerlink" href="#4-state-undoredo-model" title="Permanent link">&para;</a></h2>
+<p>Photos uses <strong>non-destructive editing</strong>: every slider can be reset
+individually, and the original is always recoverable. Our model
+mirrors that.</p>
+<h3 id="shape-sketched-not-verified-compiled">Shape (sketched, not verified-compiled)<a class="headerlink" href="#shape-sketched-not-verified-compiled" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">struct</span><span class="w"> </span><span class="nc">AdjustmentState</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Light</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">brilliance</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">exposure</span><span class="p">:</span><span class="w">   </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">highlights</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">shadows</span><span class="p">:</span><span class="w">    </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">brightness</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">contrast</span><span class="p">:</span><span class="w">   </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">blackPoint</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">sectionEnabled</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Color</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">saturation</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">vibrance</span><span class="p">:</span><span class="w">   </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">cast</span><span class="p">:</span><span class="w">       </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">sectionEnabled</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">BlackAndWhite</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">on</span><span class="p">:</span><span class="w"> </span><span class="nb">Bool</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">intensity</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">neutrals</span><span class="p">:</span><span class="w">  </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">tone</span><span class="p">:</span><span class="w">      </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">grain</span><span class="p">:</span><span class="w">     </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">WhiteBalance</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">        </span><span class="kd">enum</span><span class="w"> </span><span class="nc">Mode</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">case</span><span class="w"> </span><span class="n">neutralGray</span><span class="p">,</span><span class="w"> </span><span class="n">skinTone</span><span class="p">,</span><span class="w"> </span><span class="n">temperatureTint</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">mode</span><span class="p">:</span><span class="w"> </span><span class="n">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">.</span><span class="n">temperatureTint</span>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">temperature</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="w">   </span><span class="c1">// slider −1…+1</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">tint</span><span class="p">:</span><span class="w">        </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">eyedropPoint</span><span class="p">:</span><span class="w"> </span><span class="n">CGPoint</span><span class="p">?</span><span class="w">    </span><span class="c1">// image-space</span>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Curves</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">master</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">CGPoint</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[.</span><span class="n">zero</span><span class="p">,</span><span class="w"> </span><span class="n">CGPoint</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mf">0.25</span><span class="p">),</span>
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a><span class="w">                                  </span><span class="n">CGPoint</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">),</span>
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="w">                                  </span><span class="n">CGPoint</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="mf">0.75</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mf">0.75</span><span class="p">),</span>
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a><span class="w">                                  </span><span class="n">CGPoint</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">)]</span>
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">red</span><span class="p">:</span><span class="w">    </span><span class="p">[</span><span class="n">CGPoint</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">green</span><span class="p">:</span><span class="w">  </span><span class="p">[</span><span class="n">CGPoint</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">blue</span><span class="p">:</span><span class="w">   </span><span class="p">[</span><span class="n">CGPoint</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">smooth</span><span class="p">:</span><span class="w"> </span><span class="nb">Bool</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Levels</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">lumaIn</span><span class="p">:</span><span class="w">  </span><span class="n">ClosedRange</span><span class="p">&lt;</span><span class="nb">Double</span><span class="p">&gt;</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.</span><span class="p">..</span><span class="mi">1</span>
+<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">lumaOut</span><span class="p">:</span><span class="w"> </span><span class="n">ClosedRange</span><span class="p">&lt;</span><span class="nb">Double</span><span class="p">&gt;</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.</span><span class="p">..</span><span class="mi">1</span>
+<a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">gamma</span><span class="p">:</span><span class="w">   </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">1.0</span>
+<a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a><span class="w">        </span><span class="c1">// … per-channel R/G/B equivalents</span>
+<a id="__codelineno-3-47" name="__codelineno-3-47" href="#__codelineno-3-47"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Definition</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-49" name="__codelineno-3-49" href="#__codelineno-3-49"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">radius</span><span class="p">:</span><span class="w">    </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-50" name="__codelineno-3-50" href="#__codelineno-3-50"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">intensity</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-51" name="__codelineno-3-51" href="#__codelineno-3-51"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-52" name="__codelineno-3-52" href="#__codelineno-3-52"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">SelectiveColor</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-53" name="__codelineno-3-53" href="#__codelineno-3-53"></a><span class="w">        </span><span class="kd">enum</span><span class="w"> </span><span class="nc">Swatch</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span><span class="w"> </span><span class="n">CaseIterable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-54" name="__codelineno-3-54" href="#__codelineno-3-54"></a><span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="n">red</span><span class="p">,</span><span class="w"> </span><span class="n">orange</span><span class="p">,</span><span class="w"> </span><span class="n">yellow</span><span class="p">,</span><span class="w"> </span><span class="n">green</span><span class="p">,</span><span class="w"> </span><span class="n">aqua</span><span class="p">,</span><span class="w"> </span><span class="n">blue</span><span class="p">,</span><span class="w"> </span><span class="n">purple</span><span class="p">,</span><span class="w"> </span><span class="n">magenta</span>
+<a id="__codelineno-3-55" name="__codelineno-3-55" href="#__codelineno-3-55"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-3-56" name="__codelineno-3-56" href="#__codelineno-3-56"></a><span class="w">        </span><span class="kd">struct</span><span class="w"> </span><span class="nc">HSL</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">h</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.0</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-3-57" name="__codelineno-3-57" href="#__codelineno-3-57"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">values</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">Swatch</span><span class="p">:</span><span class="w"> </span><span class="n">HSL</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[:]</span>
+<a id="__codelineno-3-58" name="__codelineno-3-58" href="#__codelineno-3-58"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-59" name="__codelineno-3-59" href="#__codelineno-3-59"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">NoiseReduction</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-60" name="__codelineno-3-60" href="#__codelineno-3-60"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">luma</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">color</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">detail</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-61" name="__codelineno-3-61" href="#__codelineno-3-61"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-62" name="__codelineno-3-62" href="#__codelineno-3-62"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Sharpen</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-63" name="__codelineno-3-63" href="#__codelineno-3-63"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">intensity</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">edges</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">falloff</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-64" name="__codelineno-3-64" href="#__codelineno-3-64"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-65" name="__codelineno-3-65" href="#__codelineno-3-65"></a><span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">Vignette</span><span class="p">:</span><span class="w"> </span><span class="nb">Equatable</span><span class="p">,</span><span class="w"> </span><span class="n">Codable</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-66" name="__codelineno-3-66" href="#__codelineno-3-66"></a><span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="nv">radius</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">intensity</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">falloff</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-67" name="__codelineno-3-67" href="#__codelineno-3-67"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-68" name="__codelineno-3-68" href="#__codelineno-3-68"></a>
+<a id="__codelineno-3-69" name="__codelineno-3-69" href="#__codelineno-3-69"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">light</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Light</span><span class="p">()</span>
+<a id="__codelineno-3-70" name="__codelineno-3-70" href="#__codelineno-3-70"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">color</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Color</span><span class="p">()</span>
+<a id="__codelineno-3-71" name="__codelineno-3-71" href="#__codelineno-3-71"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">bw</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="n">BlackAndWhite</span><span class="p">()</span>
+<a id="__codelineno-3-72" name="__codelineno-3-72" href="#__codelineno-3-72"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">redEye</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">CGPoint</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-3-73" name="__codelineno-3-73" href="#__codelineno-3-73"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">whiteBalance</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">WhiteBalance</span><span class="p">()</span>
+<a id="__codelineno-3-74" name="__codelineno-3-74" href="#__codelineno-3-74"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">curves</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Curves</span><span class="p">()</span>
+<a id="__codelineno-3-75" name="__codelineno-3-75" href="#__codelineno-3-75"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">levels</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Levels</span><span class="p">()</span>
+<a id="__codelineno-3-76" name="__codelineno-3-76" href="#__codelineno-3-76"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">definition</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Definition</span><span class="p">()</span>
+<a id="__codelineno-3-77" name="__codelineno-3-77" href="#__codelineno-3-77"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">selective</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">SelectiveColor</span><span class="p">()</span>
+<a id="__codelineno-3-78" name="__codelineno-3-78" href="#__codelineno-3-78"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">nr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">NoiseReduction</span><span class="p">()</span>
+<a id="__codelineno-3-79" name="__codelineno-3-79" href="#__codelineno-3-79"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">sharpen</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Sharpen</span><span class="p">()</span>
+<a id="__codelineno-3-80" name="__codelineno-3-80" href="#__codelineno-3-80"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">vignette</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Vignette</span><span class="p">()</span>
+<a id="__codelineno-3-81" name="__codelineno-3-81" href="#__codelineno-3-81"></a>
+<a id="__codelineno-3-82" name="__codelineno-3-82" href="#__codelineno-3-82"></a><span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">neutral</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">AdjustmentState</span><span class="p">()</span>
+<a id="__codelineno-3-83" name="__codelineno-3-83" href="#__codelineno-3-83"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="reset-semantics">Reset semantics<a class="headerlink" href="#reset-semantics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Per-slider reset</strong> (Photos: double-click): assign that single
+  field back to <code>AdjustmentState.neutral</code>'s value. Cheap, doesn't
+  touch other fields. The struct's per-slider <code>Equatable</code> is what
+  lets the UI badge "this section has changes".</li>
+<li><strong>Per-section reset</strong>: <code>state.light = AdjustmentState.neutral.light</code>.</li>
+<li><strong>Global revert</strong>: <code>state = AdjustmentState.neutral</code> (push to undo
+  stack first).</li>
+</ul>
+<h3 id="undo-redo">Undo / redo<a class="headerlink" href="#undo-redo" title="Permanent link">&para;</a></h3>
+<p>Snapshot diffing is not worth it — an <code>AdjustmentState</code> is a
+few-hundred-byte struct. Stack of full copies is fine.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kr">final</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">AdjustmentHistory</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">stack</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">AdjustmentState</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="nv">cursor</span><span class="p">:</span><span class="w"> </span><span class="nb">Int</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">limit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">64</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="kc">_</span><span class="w"> </span><span class="n">s</span><span class="p">:</span><span class="w"> </span><span class="n">AdjustmentState</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">cursor</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">stack</span><span class="p">.</span><span class="bp">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">stack</span><span class="p">.</span><span class="n">removeSubrange</span><span class="p">((</span><span class="n">cursor</span><span class="o">+</span><span class="mi">1</span><span class="p">)...)</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="n">stack</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">stack</span><span class="p">.</span><span class="bp">count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">stack</span><span class="p">.</span><span class="n">removeFirst</span><span class="p">()</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="n">cursor</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">stack</span><span class="p">.</span><span class="bp">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="nf">undo</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="n">AdjustmentState</span><span class="p">?</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="k">guard</span><span class="w"> </span><span class="n">cursor</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">        </span><span class="n">cursor</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">stack</span><span class="p">[</span><span class="n">cursor</span><span class="p">]</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="nf">redo</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="n">AdjustmentState</span><span class="p">?</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">        </span><span class="k">guard</span><span class="w"> </span><span class="n">cursor</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">stack</span><span class="p">.</span><span class="bp">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">        </span><span class="n">cursor</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">stack</span><span class="p">[</span><span class="n">cursor</span><span class="p">]</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="p">}</span>
+</code></pre></div>
+<p>Commit policy: debounce 200 ms during a slider drag; commit on
+drag end. This avoids 60 snapshots per second.</p>
+<hr />
+<h2 id="5-histogram-thumbnail-rendering">5. Histogram + thumbnail rendering<a class="headerlink" href="#5-histogram-thumbnail-rendering" title="Permanent link">&para;</a></h2>
+<h3 id="live-histogram-for-levels-backdrop">Live histogram (for Levels backdrop)<a class="headerlink" href="#live-histogram-for-levels-backdrop" title="Permanent link">&para;</a></h3>
+<p>Two viable paths:</p>
+<ol>
+<li><strong><code>CIAreaHistogram</code> → <code>CIHistogramDisplayFilter</code></strong> — Apple's
+   native GPU path. Output is a 1-px-tall histogram from
+   <code>CIAreaHistogram</code>, then <code>CIHistogramDisplayFilter</code> renders it as
+   a 2-D image. The cifilter.io and Apple forum (thread 678722)
+   confirm this chain. Inputs: <code>inputCount = 256</code>, <code>inputScale =
+   50.0</code>, <code>inputExtent = image.extent</code>. Per-channel split: feed
+   three permuted CIImages (R, G, B in luma slot).</li>
+<li><strong>CPU readback of a downsampled image</strong> — render a 128×128
+   version, read pixels, bucket manually. Lower fidelity, more
+   flexible (you can render the histogram into SwiftUI's <code>Canvas</code>
+   with custom styling). Recommended for the editor — the histogram
+   only needs to refresh on slider commit, not per drag-frame.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="nf">histogram</span><span class="p">(</span><span class="n">of</span><span class="w"> </span><span class="n">image</span><span class="p">:</span><span class="w"> </span><span class="bp">CIImage</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="bp">CIImage</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">area</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CIFilter</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CIAreaHistogram&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">parameters</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="n">kCIInputImageKey</span><span class="p">:</span><span class="w"> </span><span class="n">image</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="s">&quot;inputExtent&quot;</span><span class="p">:</span><span class="w"> </span><span class="bp">CIVector</span><span class="p">(</span><span class="n">cgRect</span><span class="p">:</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">),</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="s">&quot;inputCount&quot;</span><span class="p">:</span><span class="w">  </span><span class="mi">256</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="s">&quot;inputScale&quot;</span><span class="p">:</span><span class="w">  </span><span class="mf">50.0</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="p">])</span><span class="o">!</span><span class="p">.</span><span class="n">outputImage</span><span class="p">!</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="bp">CIFilter</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CIHistogramDisplayFilter&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">parameters</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="n">kCIInputImageKey</span><span class="p">:</span><span class="w"> </span><span class="n">area</span><span class="p">,</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="s">&quot;inputHeight&quot;</span><span class="p">:</span><span class="w">          </span><span class="mf">100.0</span><span class="p">,</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="s">&quot;inputHighLimit&quot;</span><span class="p">:</span><span class="w">         </span><span class="mf">1.0</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="s">&quot;inputLowLimit&quot;</span><span class="p">:</span><span class="w">          </span><span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p">])</span><span class="o">!</span><span class="p">.</span><span class="n">outputImage</span><span class="p">!</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><em>Sketched, not verified-compiled.</em></p>
+<h3 id="filter-rail-thumbnails">Filter rail thumbnails<a class="headerlink" href="#filter-rail-thumbnails" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Precompute once per source change.</strong> When the user opens an
+  image, kick off a background task that takes the
+  <code>previewCIImage</code> (or even smaller, ~256 px) and renders one
+  thumbnail per installed filter through <code>CIContext.render(...,
+  to: CGImage)</code>.</li>
+<li>Cache them in memory keyed by <code>(sourceHash, filterID)</code>. Drop the
+  cache when the source changes.</li>
+<li>Re-rendering on every adjustment change is <strong>not</strong> worth it —
+  Photos doesn't do it either; the thumbnails are based on the
+  source.</li>
+</ul>
+<hr />
+<h2 id="6-crop-straighten-perspective">6. Crop + straighten + perspective<a class="headerlink" href="#6-crop-straighten-perspective" title="Permanent link">&para;</a></h2>
+<h3 id="order-of-geometric-ops">Order of geometric ops<a class="headerlink" href="#order-of-geometric-ops" title="Permanent link">&para;</a></h3>
+<p>The mathematically clean order is <strong>single composed affine
++ optional perspective</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>imageCoord
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  → rotate (straighten angle)
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  → perspective (horiz keystone + vert keystone, if non-zero)
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  → flip (horizontal/vertical)
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  → crop (cropRect in post-rotate coords)
+</code></pre></div>
+<p>Where there is no perspective adjustment, <strong>compose rotate + flip
++ crop into one <code>CIAffineTransform</code></strong> to avoid double resampling.
+Apple's <code>CIImage.transformed(by:)</code> is purely matrix-level; it
+defers sampling until the next non-affine filter or render. (objc.io
+"Introduction to Core Image" explains the deferred-evaluation
+guarantee.)</p>
+<p>When perspective IS active, we cannot stay purely affine:</p>
+<ul>
+<li><strong><code>CIPerspectiveTransform</code></strong> alters the geometry to simulate the
+  observer's viewpoint — fits "vertical perspective" / "horizontal
+  perspective" sliders. We pass 4 corner CIVectors, computed from
+  the slider angle (±45°) by tilting the top edge in / out.</li>
+<li><strong><code>CIPerspectiveCorrection</code></strong> is for the <em>opposite</em> use case
+  (user picks 4 corners of a tilted rectangle, filter straightens
+  it). Not what our sliders want. (Apple Developer Documentation</li>
+<li>DZone confirm this distinction.)</li>
+</ul>
+<p>So:</p>
+<ul>
+<li>Vertical perspective slider <code>vp ∈ [−45°, +45°]</code> → top-left and
+  top-right CIVectors slide inward by <code>tan(vp) · imageWidth / 2</code>.</li>
+<li>Horizontal perspective <code>hp</code> → top-right and bottom-right slide.</li>
+</ul>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">func</span><span class="w"> </span><span class="nf">perspectiveTransform</span><span class="p">(</span><span class="n">image</span><span class="p">:</span><span class="w"> </span><span class="bp">CIImage</span><span class="p">,</span><span class="w"> </span><span class="n">vp</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="p">,</span><span class="w"> </span><span class="n">hp</span><span class="p">:</span><span class="w"> </span><span class="nb">Double</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="bp">CIImage</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">w</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">height</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">dxV</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">CGFloat</span><span class="p">(</span><span class="n">tan</span><span class="p">(</span><span class="n">vp</span><span class="p">))</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">dxH</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">CGFloat</span><span class="p">(</span><span class="n">tan</span><span class="p">(</span><span class="n">hp</span><span class="p">))</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">filter</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CIFilter</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CIPerspectiveTransform&quot;</span><span class="p">)</span><span class="o">!</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="bp">filter</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="w"> </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="n">kCIInputImageKey</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="bp">filter</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">CIVector</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">dxV</span><span class="p">,</span><span class="w">         </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">h</span><span class="p">),</span><span class="w">       </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;inputTopLeft&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="bp">filter</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">CIVector</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dxV</span><span class="p">,</span><span class="w">     </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">h</span><span class="p">),</span><span class="w">       </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;inputTopRight&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="bp">filter</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">CIVector</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dxH</span><span class="p">,</span><span class="w">     </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w">       </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;inputBottomLeft&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="bp">filter</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">CIVector</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dxH</span><span class="p">,</span><span class="w">     </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w">       </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;inputBottomRight&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="bp">filter</span><span class="p">.</span><span class="n">outputImage</span><span class="w"> </span><span class="p">??</span><span class="w"> </span><span class="n">image</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="p">}</span>
+</code></pre></div>
+<em>Sketched, not verified-compiled. Signs depend on Core Image's
+y-up convention.</em></p>
+<h3 id="keeping-the-crop-frame-valid">Keeping the crop frame valid<a class="headerlink" href="#keeping-the-crop-frame-valid" title="Permanent link">&para;</a></h3>
+<p>The crop frame is stored in <strong>post-transform</strong> coordinates. When
+the user drags the straighten dial, two options:</p>
+<ol>
+<li><strong>Clamp the crop frame</strong> to the new post-rotation extent (Photos'
+   behavior: the corners pull in as the rotation increases).</li>
+<li><strong>Re-fit</strong> the crop frame to the largest inscribed rectangle of
+   the rotated image (also Photos'; this is the auto-fit).</li>
+</ol>
+<p>Pick (1) for manual edits and (2) on the rotation gesture release.
+The largest-inscribed-rectangle math for an angle θ on a <code>w × h</code>
+image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>W&#39; = w·cos|θ| + h·sin|θ|
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>H&#39; = w·sin|θ| + h·cos|θ|
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>// inscribed rect inside the rotated bbox preserves aspect:
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>inscribedW = (w·h) / (h·|cosθ| + w·|sinθ|)  (when w ≥ h, swap otherwise)
+</code></pre></div>
+<p>(Standard derivation; verify when implementing.)</p>
+<h3 id="single-resample-composition">Single-resample composition<a class="headerlink" href="#single-resample-composition" title="Permanent link">&para;</a></h3>
+<p>Where possible, build one <code>CIAffineTransform</code> chain:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">let</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CGAffineTransform</span><span class="p">.</span><span class="n">identity</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="p">.</span><span class="n">translatedBy</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">midX</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">midY</span><span class="p">)</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="p">.</span><span class="n">rotated</span><span class="p">(</span><span class="n">by</span><span class="p">:</span><span class="w"> </span><span class="n">straightenAngle</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="p">.</span><span class="n">scaledBy</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">flipH</span><span class="w"> </span><span class="p">?</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">flipV</span><span class="w"> </span><span class="p">?</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="p">.</span><span class="n">translatedBy</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="o">-</span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">midX</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="o">-</span><span class="n">image</span><span class="p">.</span><span class="n">extent</span><span class="p">.</span><span class="n">midY</span><span class="p">)</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="kd">let</span><span class="w"> </span><span class="nv">rotated</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">image</span><span class="p">.</span><span class="n">transformed</span><span class="p">(</span><span class="n">by</span><span class="p">:</span><span class="w"> </span><span class="n">t</span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="kd">let</span><span class="w"> </span><span class="nv">cropped</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">rotated</span><span class="p">.</span><span class="n">cropped</span><span class="p">(</span><span class="n">to</span><span class="p">:</span><span class="w"> </span><span class="n">cropRect</span><span class="p">)</span>
+</code></pre></div>
+<p>Core Image fuses these to a single resample when rendered. Only the
+perspective step (if active) forces a second pass.</p>
+<hr />
+<h2 id="7-eyedropper-for-white-balance">7. Eyedropper for White Balance<a class="headerlink" href="#7-eyedropper-for-white-balance" title="Permanent link">&para;</a></h2>
+<h3 id="image-space-screen-space-mapping-in-mtkview">Image-space → screen-space mapping in MTKView<a class="headerlink" href="#image-space-screen-space-mapping-in-mtkview" title="Permanent link">&para;</a></h3>
+<p>When the MTKView renders a CIImage with <code>aspectFit</code> scaling, we
+already know the scale factor (<code>fitScale</code> from §3). So:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// view-coord click (x_v, y_v) → CIImage-coord (x_i, y_i)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kd">let</span><span class="w"> </span><span class="nv">x_i</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">x_v</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">offsetX</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">fitScale</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kd">let</span><span class="w"> </span><span class="nv">y_i</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">viewHeight</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">y_v</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">offsetY</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">fitScale</span><span class="w">   </span><span class="c1">// CI is y-up</span>
+</code></pre></div>
+<p><code>offsetX/Y</code> are the padding from aspect-fit. Store them on the
+view after each layout pass.</p>
+<h3 id="sampling-a-pixel">Sampling a pixel<a class="headerlink" href="#sampling-a-pixel" title="Permanent link">&para;</a></h3>
+<p>Two sampling strategies:</p>
+<ol>
+<li><strong><code>CIContext.render(_:toBitmap:rowBytes:bounds:format:colorSpace:)</code></strong>
+   on a 1×1 region of the <em>unadjusted, linear</em> CIImage. Cheap; one
+   GPU dispatch. Recommended.</li>
+<li><strong>CPU-side <code>CIImage.cropped(to: CGRect(x: x_i, y: y_i, width: 1,
+   height: 1))</code></strong> → <code>CIContext.createCGImage(...)</code> → read pixel.
+   Equivalent; just a different API surface.</li>
+</ol>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="n">at</span><span class="w"> </span><span class="n">p</span><span class="p">:</span><span class="w"> </span><span class="n">CGPoint</span><span class="p">,</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">image</span><span class="p">:</span><span class="w"> </span><span class="bp">CIImage</span><span class="p">,</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">            </span><span class="n">context</span><span class="p">:</span><span class="w"> </span><span class="bp">CIContext</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="n">SIMD4</span><span class="p">&lt;</span><span class="nb">Float</span><span class="p">&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nv">rgba</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">SIMD4</span><span class="p">&lt;</span><span class="nb">Float</span><span class="p">&gt;(</span><span class="n">repeating</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">bounds</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">CGRect</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="n">context</span><span class="p">.</span><span class="n">render</span><span class="p">(</span><span class="n">image</span><span class="p">,</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">                   </span><span class="n">toBitmap</span><span class="p">:</span><span class="w"> </span><span class="p">&amp;</span><span class="n">rgba</span><span class="p">,</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">                   </span><span class="n">rowBytes</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">                   </span><span class="n">bounds</span><span class="p">:</span><span class="w"> </span><span class="n">bounds</span><span class="p">,</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">                   </span><span class="n">format</span><span class="p">:</span><span class="w"> </span><span class="p">.</span><span class="n">RGBAf</span><span class="p">,</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">                   </span><span class="n">colorSpace</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="n">CGColorSpace</span><span class="p">.</span><span class="n">sRGB</span><span class="p">)</span><span class="o">!</span><span class="p">)</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">rgba</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="p">}</span>
+</code></pre></div>
+<em>Sketched. <code>RGBAf</code> and 16-byte rowBytes are correct per Apple docs.</em></p>
+<h3 id="feeding-into-citemperatureandtint">Feeding into CITemperatureAndTint<a class="headerlink" href="#feeding-into-citemperatureandtint" title="Permanent link">&para;</a></h3>
+<p>Given a sampled <code>(r, g, b)</code> neutral target, set:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">let</span><span class="w"> </span><span class="nv">wb</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="bp">CIFilter</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CITemperatureAndTint&quot;</span><span class="p">)</span><span class="o">!</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">wb</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">source</span><span class="p">,</span><span class="w">                                    </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="n">kCIInputImageKey</span><span class="p">)</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">wb</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">CIVector</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="n">cct</span><span class="p">(</span><span class="n">from</span><span class="p">:</span><span class="w"> </span><span class="n">rgb</span><span class="p">),</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="n">tint</span><span class="p">(</span><span class="n">from</span><span class="p">:</span><span class="w"> </span><span class="n">rgb</span><span class="p">)),</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">            </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;inputNeutral&quot;</span><span class="p">)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">wb</span><span class="p">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">CIVector</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="mi">6500</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w">                   </span><span class="n">forKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;inputTargetNeutral&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Where <code>cct(from:)</code> is McCamy's polynomial approximation on <code>(r, g,
+b)</code> → chromaticity → CCT. The "Skin Tone" mode swaps the target
+neutral to the canonical skin chromaticity instead.</p>
+<p>Do <strong>not</strong> re-render the MTKView between sample and apply — the
+eyedropper sample must be on the un-white-balanced image so it
+produces idempotent results.</p>
+<hr />
+<h2 id="open-uncertainties">Open uncertainties<a class="headerlink" href="#open-uncertainties" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Photos' actual slider→native math is not public.</strong> Our mappings
+   are calibrated to "feel like Photos" but unverified against the
+   ground-truth implementation. Plan a manual A/B pass once the
+   pipeline ships: load the same image into Photos and our editor,
+   set each slider to +0.5, compare histograms.</li>
+<li><strong><code>CIToneCurve</code>'s "perceptual gamma 2" claim</strong> — Apple's docs say
+   the curve is applied in perceptual space, but they don't expose
+   a toggle. If we need a true linear-space curve (e.g. for HDR
+   later) we'll have to write a CIKernel.</li>
+<li><strong><code>CIHighlightShadowAdjust</code> quality at extreme settings</strong> — known
+   to halo. Photos appears to use a custom local-tonemapping kernel
+   for its Highlights/Shadows. For v1 the CI filter is acceptable;
+   v2 may want a luma-only bilateral version.</li>
+<li><strong><code>CIVignette</code> is round-only.</strong> Photos' vignette is elliptical
+   when the image is non-square. Custom <code>CIRadialGradient</code> × blend
+   may be needed.</li>
+<li><strong>White-Balance eyedropper math</strong> — McCamy's approximation is
+   reasonable but Photos' neutral-gray mode likely uses a fuller
+   chromatic adaptation transform (Bradford). Acceptable for v1.</li>
+<li><strong>Selective-color band boundaries</strong> — FlexMonkey's smoothstep is
+   a known starting point; Photos may use wider overlap. Tune by
+   eye in v1.</li>
+<li><strong>EDR / wide-gamut preview</strong> — sRGB-only preview is fine for the
+   first ship. WWDC22's EDR talk covers the P3 / extended-range
+   path when we move there.</li>
+<li><strong><code>CIRedEyeCorrection</code> is iOS-leaning.</strong> It exists on macOS but
+   the <code>CIDetector</code> pipeline behind auto-detect is less tested on
+   macOS. Manual click-to-fix is the safer primary UX.</li>
+</ol>
+<hr />
+<p>Word count: ~3,800.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

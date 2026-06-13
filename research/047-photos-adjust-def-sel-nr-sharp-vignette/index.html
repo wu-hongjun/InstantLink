@@ -1,0 +1,2686 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
+      
+      
+      
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/research/047-photos-adjust-def-sel-nr-sharp-vignette/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Photos.app Adjust — Definition / Selective Color / Noise Reduction / Sharpen / Vignette - InstantLink</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#photosapp-adjust-definition-selective-color-noise-reduction-sharpen-vignette" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="InstantLink" class="md-header__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InstantLink
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Photos.app Adjust — Definition / Selective Color / Noise Reduction / Sharpen / Vignette
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="white"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../plans/001-full-stack-scaffold/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plans
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InstantLink" class="md-nav__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InstantLink
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bridge-firmware-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Firmware Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/reverse-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reverse Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plans
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plans
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/001-full-stack-scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 001 Full-Stack Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/002-ci-cd-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 002 CI/CD Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/003-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 003 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/004-app-bundle-and-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 004 App Bundle and Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/005-mock-transport-device-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 005 Mock Transport Device Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/006-overlay-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 006 Overlay System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/007-ui-ux-pass-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 007 UI/UX Pass 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/008-ui-ux-pass-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 008 UI/UX Pass 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/009-repo-simplification-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 009 Repo Simplification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/010-ui-ux-pass-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 010 UI/UX Pass 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/013-ffi-connection-stage-callbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 013 FFI Connection Stage Callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/014-printer-led-print-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 014 Printer LED Print Phase Feedback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/018-auto-update-signature-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 018 Auto-Update Signature Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/019-packet-assembler-error-surfacing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 019 Packet Assembler Error Surfacing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/020-notification-listener-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 020 Notification Listener Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/021-print-flow-deduplication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 021 Print Flow Deduplication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/022-ffi-device-guard-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 022 FFI Device Guard Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/023-ffi-unsafe-block-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 023 FFI Unsafe Block Discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/024-protocol-build-packet-bounds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 024 Protocol Build Packet Bounds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/025-rand-dependency-upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 025 Rand Dependency Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/026-docs-ffi-symbol-count-and-context-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 026 Docs FFI Symbol Count and Context Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/027-docs-protocol-mini-link-3-flip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 027 Docs Protocol Mini Link 3 Flip
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/028-sparkle-2-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 028 Sparkle 2 Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/029-bridge-control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 029 Bridge Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/030-bridge-secure-management-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 030 Bridge Secure Management and Updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sources-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Definition
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Definition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-control-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the control does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#photos-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Photos UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slider-range-and-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slider range and default
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-image-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Image mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline position
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-selective-color" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Selective Color
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Selective Color">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#critical-correction-to-the-brief" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical correction to the brief
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-control-does_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the control does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#photos-ui-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Photos UI behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lightroom-style-chip-layout-if-we-adopt-8-fixed-swatches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lightroom-style chip layout (if we adopt 8 fixed swatches)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-image-mapping_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Image mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symmetry-and-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symmetry and ranges
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-noise-reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Noise Reduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Noise Reduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-control-does_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the control does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#photos-ui_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Photos UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-detail-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What "Detail" gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-image-mapping_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Image mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-position_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline position
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-sharpen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Sharpen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Sharpen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-controls-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the controls do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defaults-and-range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defaults and range
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-image-mapping_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Image mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#falloff-vs-radius-vs-edges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Falloff vs Radius vs Edges
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-position_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline position
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-vignette" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Vignette
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Vignette">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-controls-do_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the controls do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#does-photos-support-a-white-vignette" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does Photos support a white vignette?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slider-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slider semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-image-mapping_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Image mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radius-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radius unit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#falloff-curve-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Falloff curve shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-position_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline position
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-summary-recommended-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline summary (recommended order)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-uncertainties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open uncertainties
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="photosapp-adjust-definition-selective-color-noise-reduction-sharpen-vignette">Photos.app Adjust — Definition / Selective Color / Noise Reduction / Sharpen / Vignette<a class="headerlink" href="#photosapp-adjust-definition-selective-color-noise-reduction-sharpen-vignette" title="Permanent link">&para;</a></h1>
+<p>Research for a SwiftUI + Core Image reimplementation of these five Photos for Mac Adjust sections. Every concrete UI fact is cited from Apple Support or third-party tutorials that screenshot the panel; algorithm/Core Image facts are cited from Apple's filter docs and image-processing references.</p>
+<h2 id="sources-used">Sources used<a class="headerlink" href="#sources-used" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Apple Support — Adjust definition on Mac: https://support.apple.com/guide/photos/adjust-definition-phtb151c05a0/mac</li>
+<li>Apple Support — Adjust specific colors on Mac: https://support.apple.com/guide/photos/adjust-specific-colors-phtcafe645b6/mac</li>
+<li>Apple Support — Reduce noise on Mac: https://support.apple.com/guide/photos/reduce-noise-phta85f0d224/mac</li>
+<li>Apple Support — Sharpen a photo on Mac: https://support.apple.com/guide/photos/sharpen-a-photo-phtba5e3cf7d/mac</li>
+<li>Apple Support — Apply a vignette on Mac: https://support.apple.com/guide/photos/apply-a-vignette-phtafbdcae9d/mac</li>
+<li>MakeUseOf, "A Detailed Guide to All the Adjust Tools for Photos on Mac": https://www.makeuseof.com/explaining-adjust-tools-in-photos-mac/</li>
+<li>Kirkville, "How to Use Selective Color Editing in Apple Photos": https://kirkville.com/how-to-use-selective-color-editing-in-apple-photos/</li>
+<li>The Digital Story, "The Powerful Selective Color Tool in Photos for macOS": https://thedigitalstory.com/2018/01/using-selective-color-in-Photos-for-macOS.html</li>
+<li>MacMost, "Photos Selective Color Tool": https://macmost.com/photos-selective-color-tool.html</li>
+<li>MacMost, "Mac Photos Editing Shortcuts" (comments): https://macmost.com/mac-photos-editing-shortcuts.html</li>
+<li>Apple Developer — CINoiseReduction: https://developer.apple.com/documentation/coreimage/cinoisereduction</li>
+<li>Apple Developer — CIHighlightShadowAdjust: https://developer.apple.com/documentation/coreimage/cihighlightshadowadjust</li>
+<li>Apple Developer — CIVignetteEffect: https://developer.apple.com/documentation/coreimage/civignetteeffect</li>
+<li>cifilter.io — CIUnsharpMask: https://cifilter.io/CIUnsharpMask/</li>
+<li>emcconville/cif — CINoiseReduction: https://github.com/emcconville/cif/wiki/CINoiseReduction</li>
+<li>emcconville/cif — CIVignette: https://github.com/emcconville/cif/wiki/CIVignette</li>
+<li>emcconville/cif — CIVignetteEffect: https://github.com/emcconville/cif/wiki/CIVignetteEffect</li>
+<li>nst/iOS-Runtime-Headers — CISharpenLuminance.h: https://github.com/nst/iOS-Runtime-Headers/blob/master/Frameworks/CoreImage.framework/CISharpenLuminance.h</li>
+<li>Cambridge in Colour — Local Contrast Enhancement: https://www.cambridgeincolour.com/tutorials/local-contrast-enhancement.htm</li>
+<li>The Grey Blog — Clarity Adjustment (Local Contrast) in Photoshop: http://thegreyblog.blogspot.com/2011/11/clarity-adjustment-local-contrast-in.html</li>
+<li>Adobe Community — "What <em>exactly</em> is Clarity?": https://community.adobe.com/t5/photoshop-ecosystem/what-exactly-is-clarity/m-p/8957968</li>
+<li>Adobe — Make color/tonal adjustments in Camera Raw: https://helpx.adobe.com/camera-raw/using/make-color-tonal-adjustments-camera.html</li>
+<li>Digital Photography School — Lightroom HSL panel: https://digital-photography-school.com/understanding-the-hsl-panel-in-lightroom-for-beginners/</li>
+<li>Russell Cottrell — Very High Radius Unsharp Mask Plugin: https://www.russellcottrell.com/RCFilters/VHRUnsharpMask.php</li>
+</ul>
+<hr />
+<h2 id="1-definition">1. Definition<a class="headerlink" href="#1-definition" title="Permanent link">&para;</a></h2>
+<h3 id="what-the-control-does">What the control does<a class="headerlink" href="#what-the-control-does" title="Permanent link">&para;</a></h3>
+<p>Apple describes Definition as adding "contour and shape as well as midtone definition and local contrast" — i.e. it is Apple's "Clarity" analogue: a midtone-biased local-contrast operator, not a global contrast curve and not an edge sharpener (https://support.apple.com/guide/photos/adjust-definition-phtb151c05a0/mac, https://www.makeuseof.com/explaining-adjust-tools-in-photos-mac/). MakeUseOf summarizes the same: "adds contrast, allows midtones to pop, and adds more contour and shape."</p>
+<p>Signal model: Definition is implemented in every shipping editor (Lightroom/ACR Clarity, Photoshop, darktable Local Contrast) as a <strong>high-radius / low-amount unsharp mask</strong>, often masked to midtones to avoid blowing out highlights/shadows (Cambridge in Colour, https://www.cambridgeincolour.com/tutorials/local-contrast-enhancement.htm; The Grey Blog, http://thegreyblog.blogspot.com/2011/11/clarity-adjustment-local-contrast-in.html; Adobe Community thread on Clarity, https://community.adobe.com/t5/photoshop-ecosystem/what-exactly-is-clarity/m-p/8957968). Typical numbers: blur radius 30–100 px, amount 5–20% — versus classic capture-sharpening which uses radius ≤ 2 px and amount 50–150% (Russell Cottrell, https://www.russellcottrell.com/RCFilters/VHRUnsharpMask.php).</p>
+<h3 id="photos-ui">Photos UI<a class="headerlink" href="#photos-ui" title="Permanent link">&para;</a></h3>
+<p>Photos exposes Definition as <strong>a single primary slider plus an Auto button</strong>, not as separate Radius and Intensity controls. Apple's page only mentions "the slider" (https://support.apple.com/guide/photos/adjust-definition-phtb151c05a0/mac); MakeUseOf and beart-presets both confirm a single slider with an Auto. The disclosure triangle reveals nothing extra for Definition — unlike Sharpen and Vignette, this section is monolithic.</p>
+<blockquote>
+<p>Implementation note for our app: the user's brief asks for "Radius + Intensity" — that is Lightroom Clarity, not Photos. We can either (a) match Photos and ship one slider, or (b) expose Radius + Intensity as a power-user disclosure. Recommend (b) with Radius hidden by default and a fixed perceptual default.</p>
+</blockquote>
+<h3 id="slider-range-and-default">Slider range and default<a class="headerlink" href="#slider-range-and-default" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Normalized range <strong>0–1</strong> with neutral default <strong>0.0</strong> (no effect at zero). Negative values are not exposed in Photos for Definition. Option-key on Photos sliders is documented as "extend the slider's range of values" (https://support.apple.com/guide/photos/sharpen-a-photo-phtba5e3cf7d/mac) but Definition only extends in the positive direction in observation.</li>
+<li>Auto computes a scene-dependent value, typically in the 0.1–0.4 region.</li>
+</ul>
+<h3 id="core-image-mapping">Core Image mapping<a class="headerlink" href="#core-image-mapping" title="Permanent link">&para;</a></h3>
+<p>There is no CIFilter literally named "Clarity." Build it as a high-radius unsharp mask, masked to midtones:</p>
+<ol>
+<li><strong>Local-contrast core</strong>: <code>CIUnsharpMask</code> with <code>inputRadius ≈ 0.02 × min(imageWidth, imageHeight)</code> (i.e. ~2% of the short edge → 40 px for a 2000 px image), <code>inputIntensity = 0.15 × userAmount</code> where <code>userAmount ∈ [0, 1]</code>. <code>CIUnsharpMask</code> defaults are <code>inputRadius = 2.5</code>, <code>inputIntensity = 0.5</code> per cifilter.io (https://cifilter.io/CIUnsharpMask/) — both must be overridden for a clarity-style result.</li>
+<li><strong>Midtone mask</strong>: derive a luminance mask <code>m(L) = 1 − |2L − 1|</code> (peaks at L = 0.5, zero at 0 and 1). Implement with <code>CIColorMatrix</code> to extract luma, then <code>CIToneCurve</code> or a custom <code>CIKernel</code> to apply the tent function. Blend the unsharp-masked output over the original via <code>CIBlendWithMask</code> using <code>m</code> as the mask.</li>
+<li><strong>Edge guard (optional, matches Adobe Clarity behavior)</strong>: clip post-blend in the highlights/shadows with <code>CIHighlightShadowAdjust</code> (<code>inputHighlightAmount = 1, inputShadowAmount = 0</code>) so the local-contrast boost doesn't crush blacks (https://developer.apple.com/documentation/coreimage/cihighlightshadowadjust).</li>
+</ol>
+<p><code>CIHighlightShadowAdjust</code> alone is <strong>not</strong> Clarity — it is a tone-redistribution filter with <code>inputRadius</code> for the local-tone estimation kernel; useful as the edge-guard step, not the core effect.</p>
+<h3 id="pipeline-position">Pipeline position<a class="headerlink" href="#pipeline-position" title="Permanent link">&para;</a></h3>
+<p>After exposure/contrast and before color grading. Definition is a tone operator on luminance; running it after Selective Color invites color shifts since CIUnsharpMask operates in RGB. If kept in RGB, convert to a luminance-only channel for the unsharp step (<code>CIColorMatrix</code> → grayscale → unsharp → recombine as Y-only delta into Y'CbCr).</p>
+<hr />
+<h2 id="2-selective-color">2. Selective Color<a class="headerlink" href="#2-selective-color" title="Permanent link">&para;</a></h2>
+<h3 id="critical-correction-to-the-brief">Critical correction to the brief<a class="headerlink" href="#critical-correction-to-the-brief" title="Permanent link">&para;</a></h3>
+<p><strong>Photos shows six color wells, not eight.</strong> Apple is explicit: "select and change the hue, saturation, and luminance of up to six different colors" (https://support.apple.com/guide/photos/adjust-specific-colors-phtcafe645b6/mac). Kirkville, MacMost, and The Digital Story all confirm "six color buttons" / "six slots" (https://kirkville.com/how-to-use-selective-color-editing-in-apple-photos/, https://macmost.com/photos-selective-color-tool.html, https://thedigitalstory.com/2018/01/using-selective-color-in-Photos-for-macOS.html).</p>
+<p>The 8-swatch HSL panel (Red/Orange/Yellow/Green/Aqua/Blue/Purple/Magenta) the brief describes is <strong>Lightroom/ACR's Color Mixer / HSL panel</strong>, not Photos. Lightroom's eight color sliders are confirmed by Adobe and DPS (https://helpx.adobe.com/camera-raw/using/make-color-tonal-adjustments-camera.html, https://digital-photography-school.com/understanding-the-hsl-panel-in-lightroom-for-beginners/).</p>
+<blockquote>
+<p>Decision needed from product: replicate Photos (6 wells, user-defined seeds + Range slider, eyedropper-driven) or replicate Lightroom (8 fixed-hue chips). The brief mixes both. The rest of this section covers both options.</p>
+</blockquote>
+<h3 id="what-the-control-does_1">What the control does<a class="headerlink" href="#what-the-control-does_1" title="Permanent link">&para;</a></h3>
+<p>A masked H/S/L shift in HSL (or HSV) space:
+1. Identify a target hue region around a seed color.
+2. Build a soft mask over pixels whose hue is within ±bandwidth of the seed (mask falls off smoothly at the band edges).
+3. Apply hue shift, saturation gain, and luminance gain to those pixels only.</p>
+<h3 id="photos-ui-behavior">Photos UI behavior<a class="headerlink" href="#photos-ui-behavior" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Six color wells</strong> start empty; user clicks a well, then either picks a Photos preset color or clicks in the image with an eyedropper to seed it (https://kirkville.com/how-to-use-selective-color-editing-in-apple-photos/, https://macmost.com/photos-selective-color-tool.html).</li>
+<li>Sliders per selected well: <strong>Hue, Saturation, Luminance, Range</strong> (https://support.apple.com/guide/photos/adjust-specific-colors-phtcafe645b6/mac, https://www.makeuseof.com/explaining-adjust-tools-in-photos-mac/). The <strong>Range</strong> slider widens or narrows the hue bandwidth around the seed — Photos' answer to Lightroom's hidden "smoothness" parameter.</li>
+<li>All four sliders are symmetric ±, default 0. Hue range is a hue-degree offset; Saturation/Luminance are multiplicative deltas.</li>
+</ul>
+<h3 id="lightroom-style-chip-layout-if-we-adopt-8-fixed-swatches">Lightroom-style chip layout (if we adopt 8 fixed swatches)<a class="headerlink" href="#lightroom-style-chip-layout-if-we-adopt-8-fixed-swatches" title="Permanent link">&para;</a></h3>
+<p>Per Adobe and HSL-panel writeups, the eight chips are centered at canonical HSL wheel hues. Adobe does not publish exact band edges, but the de facto centers used by Lightroom/ACR and most HSL implementations are:</p>
+<table>
+<thead>
+<tr>
+<th>Chip</th>
+<th style="text-align: right;">Hue center</th>
+<th>Approximate band edges</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Red</td>
+<td style="text-align: right;">0° / 360°</td>
+<td>345°–15°</td>
+</tr>
+<tr>
+<td>Orange</td>
+<td style="text-align: right;">30°</td>
+<td>15°–45°</td>
+</tr>
+<tr>
+<td>Yellow</td>
+<td style="text-align: right;">60°</td>
+<td>45°–75°</td>
+</tr>
+<tr>
+<td>Green</td>
+<td style="text-align: right;">120°</td>
+<td>75°–165°</td>
+</tr>
+<tr>
+<td>Aqua</td>
+<td style="text-align: right;">180°</td>
+<td>165°–210°</td>
+</tr>
+<tr>
+<td>Blue</td>
+<td style="text-align: right;">240°</td>
+<td>210°–270°</td>
+</tr>
+<tr>
+<td>Purple</td>
+<td style="text-align: right;">285°</td>
+<td>270°–315°</td>
+</tr>
+<tr>
+<td>Magenta</td>
+<td style="text-align: right;">330°</td>
+<td>315°–345°</td>
+</tr>
+</tbody>
+</table>
+<p>Sources for the eight-color list and approximate centers: https://digital-photography-school.com/understanding-the-hsl-panel-in-lightroom-for-beginners/ and https://helpx.adobe.com/camera-raw/using/make-color-tonal-adjustments-camera.html. The exact band edges above are conventional values used by open-source HSL clones (e.g., darktable's color zones), not Adobe-published — flag as approximate.</p>
+<p>Adjacent swatches <strong>overlap</strong> by ~30° on each side and use a raised-cosine / Hann window weighting so a pixel at e.g. 45° contributes ~equally to Orange and Yellow. This avoids posterization at boundary hues.</p>
+<h3 id="core-image-mapping_1">Core Image mapping<a class="headerlink" href="#core-image-mapping_1" title="Permanent link">&para;</a></h3>
+<p>There is no first-party HSL/Selective-Color CIFilter that exposes per-hue H/S/L deltas. Two viable paths:</p>
+<p><strong>Path A — Custom CIKernel (recommended)</strong>
+Write a Metal-backed <code>CIColorKernel</code> that:
+1. Converts RGB → HSL per pixel.
+2. For each of the N color chips, computes a hue-distance weight <code>w_i = max(0, cos(π × (h − h_i) / band_i))²</code> (raised-cosine), gated by saturation &gt; epsilon so neutrals are excluded.
+3. Sums weighted deltas: <code>Δh = Σ w_i × hue_i</code>, <code>Δs = Σ w_i × sat_i</code>, <code>Δl = Σ w_i × lum_i</code>.
+4. Applies, converts back to RGB.</p>
+<p>This is ~60 lines of CI Kernel Language and runs on the GPU.</p>
+<p><strong>Path B — Stacked CIFilter graph</strong>
+For each chip:
+1. <code>CIHueAdjust</code> for global hue rotation. Build a mask with <code>CIColorCubeWithColorSpace</code> whose table is 1.0 inside the target hue band and 0 elsewhere — <code>CIColorCube</code> is the standard CI way to do hue-selective masks.
+2. <code>CIColorMatrix</code> for sat/luminance per channel.
+3. <code>CIBlendWithMask</code> to composite back over original.</p>
+<p>Path B is portable but slow (one cube + blend per chip). For 6–8 chips, prefer Path A.</p>
+<p><code>CIColorPolynomial</code> is <strong>not</strong> workable for HSL selectivity — it is a per-channel R/G/B polynomial; it cannot express "shift hue only where hue ≈ orange." Don't go down that path.</p>
+<h3 id="symmetry-and-ranges">Symmetry and ranges<a class="headerlink" href="#symmetry-and-ranges" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Hue: ±100 in Photos UI mapping to roughly ±30° in real hue shift, ±90° if option-extended.</li>
+<li>Saturation: ±100 maps to multiplier in <code>[0, 2]</code>.</li>
+<li>Luminance: ±100 maps to ΔL in <code>[−0.5, +0.5]</code>.</li>
+<li>Range: 0 (very tight, ~15° band) to 100 (wide, ~60° band). Default 50, ~30° band.</li>
+<li>All sliders are symmetric and default to 0 except Range.</li>
+</ul>
+<hr />
+<h2 id="3-noise-reduction">3. Noise Reduction<a class="headerlink" href="#3-noise-reduction" title="Permanent link">&para;</a></h2>
+<h3 id="what-the-control-does_2">What the control does<a class="headerlink" href="#what-the-control-does_2" title="Permanent link">&para;</a></h3>
+<p>Two distinct noise components:
+- <strong>Luminance noise</strong> — grain-like brightness fluctuations.
+- <strong>Chroma (color) noise</strong> — colored blotches, typically lower frequency than luma noise and more visually offensive.</p>
+<p>Photographic NR algorithms separate the two by working in a luma/chroma color space (YCbCr or Lab), then apply different kernels: edge-preserving smoothing (bilateral, non-local means, wavelet shrinkage) on luma, heavier low-pass on chroma. A "Detail" slider re-introduces fine luma structure after smoothing, typically by un-blurring or by attenuating the NR strength on detected edges.</p>
+<h3 id="photos-ui_1">Photos UI<a class="headerlink" href="#photos-ui_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Top-level slider</strong>: Noise Reduction (single value).</li>
+<li><strong>Disclosure (RAW only, RAW version 6+)</strong>: Luminance Noise, Color Noise, Detail (https://support.apple.com/guide/photos/reduce-noise-phta85f0d224/mac).</li>
+<li>Apple does not publish defaults. Observation: <strong>off-by-default</strong> (the slider is at zero on a freshly opened image), and the RAW sub-sliders only appear once you nudge the master.</li>
+</ul>
+<h3 id="what-detail-gates">What "Detail" gates<a class="headerlink" href="#what-detail-gates" title="Permanent link">&para;</a></h3>
+<p>Detail is best modeled as an <strong>edge-preservation / detail-restoration knob</strong>: at Detail = 0 the NR pass blurs through everything below the noise threshold; at Detail = 100 the NR pass is heavily masked by an edge-detector so high-frequency structure (eyelashes, hair, fabric weave) survives. Apple's docs are unhelpful here; this matches Lightroom's Detail slider, which is the closest cousin.</p>
+<h3 id="core-image-mapping_2">Core Image mapping<a class="headerlink" href="#core-image-mapping_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>CINoiseReduction</code> exists and is the obvious starting point. Per Apple Developer docs and cif/wiki, parameters are: <code>inputNoiseLevel</code> (default 0.02) and <code>inputSharpness</code> (default 0.4) (https://developer.apple.com/documentation/coreimage/cinoisereduction, https://github.com/emcconville/cif/wiki/CINoiseReduction). It applies a bilateral-style local blur where luminance variations below <code>inputNoiseLevel</code> are smoothed and variations above are sharpened by <code>inputSharpness</code>.</li>
+<li><strong><code>CINoiseReduction</code> does NOT expose separate luma vs. chroma reduction.</strong> It operates on a single threshold against luminance variation; chroma is denoised as a side effect of RGB smoothing but cannot be tuned independently.</li>
+</ul>
+<p>To get Photos-style three-slider NR we need a hybrid:</p>
+<ol>
+<li><strong>Color noise</strong>: convert to YCbCr (via <code>CIColorMatrix</code>), apply <code>CIGaussianBlur</code> to Cb/Cr only with <code>inputRadius = colorAmount × 4</code> px, recombine. Chroma blur up to ~3–6 px is invisible because the eye has low chroma resolution.</li>
+<li><strong>Luma noise</strong>: feed Y into <code>CINoiseReduction</code> with <code>inputNoiseLevel = lumaAmount × 0.04</code>, <code>inputSharpness = 0.4 × (1 − lumaAmount × 0.5)</code> so heavy NR doesn't crank sharpness alongside.</li>
+<li><strong>Detail</strong>: compute an edge mask from Y via <code>CIEdges</code> or a Sobel kernel, threshold, dilate; use as a mask in <code>CIBlendWithMask(input: original_Y, background: denoised_Y, mask: edgeMask × detailAmount)</code>. At Detail = 1 the edges retain ~100% of original Y; at 0 the denoised Y wins everywhere.</li>
+</ol>
+<p>For RAW-quality NR, <code>CINoiseReduction</code> is borderline acceptable. If the app needs to compete with Photos on RAW NR, plan a custom CI Metal kernel implementing <strong>wavelet-shrinkage NR</strong> (à trous discrete wavelet, soft-threshold high-frequency bands), or use BM3D-style non-local means via a Metal Performance Shaders compute pass outside Core Image. Wavelet shrinkage gives the cleanest luma/chroma/detail decomposition because each wavelet level <em>is</em> a frequency band that maps naturally to those three sliders.</p>
+<h3 id="pipeline-position_1">Pipeline position<a class="headerlink" href="#pipeline-position_1" title="Permanent link">&para;</a></h3>
+<p><strong>Before sharpening</strong> and before local-contrast (Definition), because NR is a low-pass operation and any sharpening or clarity applied beforehand would amplify exactly what we're about to blur away. Order: exposure → white balance → NR → Definition → Selective Color → Sharpen → Vignette.</p>
+<hr />
+<h2 id="4-sharpen">4. Sharpen<a class="headerlink" href="#4-sharpen" title="Permanent link">&para;</a></h2>
+<h3 id="what-the-controls-do">What the controls do<a class="headerlink" href="#what-the-controls-do" title="Permanent link">&para;</a></h3>
+<p>Apple's verbatim definitions (https://support.apple.com/guide/photos/sharpen-a-photo-phtba5e3cf7d/mac):
+- <strong>Intensity</strong>: "Adjusts the strength of the sharpened edges."
+- <strong>Edges</strong>: "Sets the threshold for which groups of pixels are edges and which ones aren't."
+- <strong>Falloff</strong>: "Makes the sharpening effect more or less prominent. Increasing the falloff value makes the sharpening more severe; decreasing it softens the effect."</p>
+<p>Mapping to canonical unsharp-mask terminology:
+- <strong>Intensity</strong> = amount (the gain on the high-pass residual).
+- <strong>Edges</strong> = threshold (minimum local variance below which sharpening is suppressed — protects flat areas like skin and sky).
+- <strong>Falloff</strong> = radius / blend exponent. Apple's "more or less prominent / more severe" wording matches a blend curve power, not a Gaussian radius — likely a gamma-style remap of the unsharp residual before adding back.</p>
+<h3 id="defaults-and-range">Defaults and range<a class="headerlink" href="#defaults-and-range" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Per MacMost community reporting, Photos defaults are <strong>Intensity = 0.00, Edges = 0.22, Falloff = 0.69</strong> (https://macmost.com/mac-photos-editing-shortcuts.html). Intensity = 0 means <strong>no sharpening applied at default</strong>; Edges and Falloff are shape parameters that only matter once Intensity moves off zero.</li>
+<li>Slider range is <strong>0 to 1</strong> for each; Option-drag extends the range (Apple docs).</li>
+</ul>
+<h3 id="core-image-mapping_3">Core Image mapping<a class="headerlink" href="#core-image-mapping_3" title="Permanent link">&para;</a></h3>
+<p>Two candidate filters:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>CIUnsharpMask</code></th>
+<th><code>CISharpenLuminance</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameters</td>
+<td><code>inputRadius</code> (default 2.5), <code>inputIntensity</code> (default 0.5)</td>
+<td><code>inputRadius</code> (default ~1.69), <code>inputSharpness</code> (default ~0.4)</td>
+</tr>
+<tr>
+<td>Color space</td>
+<td>Operates in full RGB</td>
+<td>Operates on luminance only — no chroma fringing on sharpened edges</td>
+</tr>
+<tr>
+<td>Threshold</td>
+<td>None — sharpens everything</td>
+<td>None — sharpens everything</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>https://cifilter.io/CIUnsharpMask/</td>
+<td>https://github.com/nst/iOS-Runtime-Headers/blob/master/Frameworks/CoreImage.framework/CISharpenLuminance.h</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommendation</strong>: use <code>CISharpenLuminance</code> as the base (it's what every modern editor does — sharpen on Y, not RGB), and add the missing Edges threshold via a custom CI Kernel or via a masked blend:</p>
+<ol>
+<li>Compute Y from the input.</li>
+<li>Compute local variance via a 3×3 box filter on (Y − Ȳ)² → variance map V.</li>
+<li>Build threshold mask <code>m = smoothstep(edges × 0.02, edges × 0.05, V)</code> so flat areas (V below threshold) get no sharpening.</li>
+<li>Run <code>CISharpenLuminance</code> with <code>inputSharpness = intensity</code> and <code>inputRadius</code> scaled by <code>(0.5 + falloff × 2)</code> — bigger radius for "more prominent."</li>
+<li>Apply Falloff as an output gamma: <code>sharpened_Y = Y + sign × |Δ|^(1 + (1 − falloff) × 2)</code> so low Falloff softens midrange enhancement and keeps strong edges.</li>
+<li>Blend sharpened Y back over original Y via mask <code>m</code>, recombine Y with Cb/Cr.</li>
+</ol>
+<p>This three-stage interpretation reconciles Apple's three knobs with the two-parameter Core Image filters.</p>
+<h3 id="falloff-vs-radius-vs-edges">Falloff vs Radius vs Edges<a class="headerlink" href="#falloff-vs-radius-vs-edges" title="Permanent link">&para;</a></h3>
+<p>The brief asks for disambiguation. Best reading of the wording:
+- <strong>Edges</strong> = pre-threshold (where to sharpen).
+- <strong>Intensity</strong> = how much to add at edges.
+- <strong>Falloff</strong> = post-shape — the curve that controls how the sharpened signal blends back across the dynamic range. Higher Falloff = harder/steeper blend = visually more "severe."</p>
+<p>Falloff is <strong>not</strong> a Gaussian sigma — Photos exposes no Radius control as such. The kernel radius is fixed (or derived implicitly from Falloff).</p>
+<h3 id="pipeline-position_2">Pipeline position<a class="headerlink" href="#pipeline-position_2" title="Permanent link">&para;</a></h3>
+<p><strong>After NR and after Selective Color, before Vignette.</strong> Sharpening after color so we sharpen the final color edges, not pre-grade edges; before vignette so the corner darkening doesn't get sharpened (which would re-introduce edge artifacts at the vignette boundary).</p>
+<hr />
+<h2 id="5-vignette">5. Vignette<a class="headerlink" href="#5-vignette" title="Permanent link">&para;</a></h2>
+<h3 id="what-the-controls-do_1">What the controls do<a class="headerlink" href="#what-the-controls-do_1" title="Permanent link">&para;</a></h3>
+<p>Apple's verbatim definitions (https://support.apple.com/guide/photos/apply-a-vignette-phtafbdcae9d/mac):
+- <strong>Strength</strong>: "Darkens or lightens the vignette."
+- <strong>Radius</strong>: "Changes the size of the vignette."
+- <strong>Softness</strong>: "Changes the opacity of the vignette, making it more or less pronounced."</p>
+<blockquote>
+<p>The brief calls the controls "Radius / Intensity / Falloff" — that's Apple's naming for <strong>Sharpen</strong>, not Vignette. Photos' Vignette is <strong>Strength / Radius / Softness</strong>.</p>
+</blockquote>
+<h3 id="does-photos-support-a-white-vignette">Does Photos support a white vignette?<a class="headerlink" href="#does-photos-support-a-white-vignette" title="Permanent link">&para;</a></h3>
+<p><strong>Yes.</strong> Apple's official wording — Strength "darkens or lightens the vignette" — explicitly covers both directions. MakeUseOf confirms: "Adjust Strength to modify the darkness or lightness of your vignette" (https://www.makeuseof.com/explaining-adjust-tools-in-photos-mac/). Strength is a bipolar slider: negative darkens (black vignette, the classic look), positive lightens (white vignette / halo).</p>
+<h3 id="slider-semantics">Slider semantics<a class="headerlink" href="#slider-semantics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Strength</strong>: bipolar, default 0, range −1 to +1 (extends with Option). Sign flips vignette color (black ↔ white). Magnitude controls how strongly the corner color is mixed with the original at full vignette weight.</li>
+<li><strong>Radius</strong>: 0 to 1. Photos does not document units; observation suggests <strong>fraction of the image diagonal from center</strong> — Radius near 0 puts the vignette right against the center (almost the whole image darkened); Radius near 1 pushes it to the corners (only extreme corners affected). This matches <code>CIVignette</code>'s <code>inputRadius</code> semantics where the vignette starts at <code>inputRadius</code> from center.</li>
+<li><strong>Softness</strong>: 0 to 1, default mid. Controls the width of the falloff band between "fully unaffected" inside and "fully vignetted" outside. Curve shape is <strong>smoothstep / Hermite</strong>, not linear — vignettes that read as "natural" use S-curve falloffs because the human eye is sensitive to linear gradients in flat areas.</li>
+</ul>
+<h3 id="core-image-mapping_4">Core Image mapping<a class="headerlink" href="#core-image-mapping_4" title="Permanent link">&para;</a></h3>
+<p>Two CI filters are available:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>CIVignette</code></th>
+<th><code>CIVignetteEffect</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameters</td>
+<td><code>inputRadius</code> (default 1.0), <code>inputIntensity</code> (default 0.0)</td>
+<td><code>inputCenter</code>, <code>inputRadius</code> (default 150), <code>inputIntensity</code> (default 1.0), <code>inputFalloff</code> (default 0.5)</td>
+</tr>
+<tr>
+<td>Center</td>
+<td>Image center, not configurable</td>
+<td>Configurable <code>inputCenter</code></td>
+</tr>
+<tr>
+<td>Falloff</td>
+<td>Implicit</td>
+<td>Explicit <code>inputFalloff</code> parameter</td>
+</tr>
+<tr>
+<td>Color</td>
+<td>Black only (multiplicative darken)</td>
+<td>Black only</td>
+</tr>
+<tr>
+<td>Sign</td>
+<td><code>inputIntensity</code> documented as ≥ 0 — negative is <strong>not documented</strong></td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>https://github.com/emcconville/cif/wiki/CIVignette</td>
+<td>https://developer.apple.com/documentation/coreimage/civignetteeffect, https://github.com/emcconville/cif/wiki/CIVignetteEffect</td>
+</tr>
+</tbody>
+</table>
+<p>Neither filter supports a <strong>white vignette</strong> directly. To get Photos' bipolar Strength:</p>
+<ol>
+<li>Generate a vignette mask <code>M ∈ [0, 1]</code> using <code>CIVignetteEffect</code> with <code>inputIntensity = 1.0</code>, capturing the falloff curve and softness control. Use <code>CIColorMatrix</code> to invert and isolate the darkness amount.</li>
+<li>Compute a <strong>soft radial mask</strong> independently via a custom <code>CIColorKernel</code>: <code>M(x, y) = smoothstep(r_in, r_out, distance / halfDiagonal)</code> where <code>r_in = radius × (1 − softness × 0.5)</code>, <code>r_out = radius + softness × 0.5</code>. This is portable and gives us a clean float mask.</li>
+<li>Mix toward black or white based on sign of Strength:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>target = (strength &lt; 0) ? black : white
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>out = mix(original, target, |strength| × M)
+</code></pre></div>
+   Implement as <code>CIBlendWithMask</code> with <code>backgroundImage = original</code>, <code>inputImage = CIConstantColorGenerator(color: target)</code>, <code>inputMaskImage = |strength| × M</code>.</li>
+</ol>
+<p>Going the custom-kernel route is preferable because it gives a single bipolar Strength slider with consistent feel across signs, controls the falloff curve precisely (smoothstep), and supports any tint color if we later want sepia vignettes etc.</p>
+<h3 id="radius-unit">Radius unit<a class="headerlink" href="#radius-unit" title="Permanent link">&para;</a></h3>
+<p><code>CIVignetteEffect</code> documents <code>inputRadius</code> in <strong>pixels</strong> (default 150). Photos clearly uses a <strong>normalized</strong> unit (a Radius of 1 isn't 1 px). In our implementation, normalize: <code>radius_px = radius_normalized × 0.5 × imageDiagonal</code>. This matches user expectation that Radius is resolution-independent.</p>
+<h3 id="falloff-curve-shape">Falloff curve shape<a class="headerlink" href="#falloff-curve-shape" title="Permanent link">&para;</a></h3>
+<p>Use <strong>smoothstep</strong> (Hermite, <code>3t² − 2t³</code>) for the falloff band — visually matches Photos and avoids the hard banding you see with linear ramps in skies. Exponential falloff is too aggressive at the inner edge.</p>
+<h3 id="pipeline-position_3">Pipeline position<a class="headerlink" href="#pipeline-position_3" title="Permanent link">&para;</a></h3>
+<p><strong>Last</strong> — vignette is the final cosmetic step. Sharpening before vignette keeps the corner darken from re-introducing sharpening artifacts at its boundary, and any tint/grade should already be baked in before vignette so the vignette color is computed against the final image.</p>
+<hr />
+<h2 id="pipeline-summary-recommended-order">Pipeline summary (recommended order)<a class="headerlink" href="#pipeline-summary-recommended-order" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>input
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  → exposure/white-balance/contrast       (out of scope here)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  → Noise Reduction                       (luma + chroma + detail)
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  → Definition                            (clarity / local contrast)
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  → Selective Color                       (HSL-masked grading)
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  → Sharpen                               (luminance-only, threshold-gated)
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  → Vignette                              (bipolar, smoothstep falloff)
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>output
+</code></pre></div>
+<p>Rationale: low-pass operations (NR) before high-pass (Definition, Sharpen) so we don't denoise away detail we just enhanced. Color grading after tone operators because Selective Color is sensitive to luminance distribution. Sharpen after grading so we sharpen the final edges. Vignette last because it's a cosmetic tone overlay.</p>
+<hr />
+<h2 id="open-uncertainties">Open uncertainties<a class="headerlink" href="#open-uncertainties" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Definition slider count</strong> — Photos UI shows one slider; the brief asks for Radius + Intensity. Confirm whether we want fidelity to Photos (single slider, auto-radius) or to Lightroom Clarity (Radius + Intensity disclosure). No public docs give the Radius value Photos uses internally; the 2% of-short-edge rule comes from Adobe-style HiRaLoAm convention (https://www.russellcottrell.com/RCFilters/VHRUnsharpMask.php), not Apple.</li>
+<li><strong>Selective Color chip count</strong> — Apple's docs and three third-party tutorials all say <strong>six</strong> Photos wells, not eight. The brief's 8-chip list is Lightroom HSL. Product decision needed before UI is locked.</li>
+<li><strong>Exact Photos slider numeric ranges</strong> — Apple does not publish them. Defaults of Sharpen (0.00 / 0.22 / 0.69) come from MacMost comments (https://macmost.com/mac-photos-editing-shortcuts.html) and are believable but not Apple-authoritative. Definition, Selective Color, NR, Vignette defaults are inferred from Photos UI behavior (sliders sit at zero on a fresh image).</li>
+<li><strong>Photos NR algorithm</strong> — confirmed three sliders (Luminance / Color / Detail) appear for RAW v6+, but the underlying algorithm (bilateral? wavelet? non-local means? Apple's own neural NR?) is undocumented. Recent Photos versions likely use the neural-engine RAW pipeline shared with the Camera app, which we cannot match without ML — flag as a fidelity gap for RAW.</li>
+<li><strong>CIVignette negative intensity</strong> — Apple does not document support for <code>inputIntensity &lt; 0</code> in either <code>CIVignette</code> or <code>CIVignetteEffect</code>. Empirically these clamp at zero. Custom kernel is the only safe path to a Photos-style bipolar Strength.</li>
+<li><strong>Lightroom HSL hue band edges</strong> — Adobe does not publish exact band edges, only the eight color names. Centers at 0/30/60/120/180/240/285/330° are conventional values used by darktable's color zones and most open-source HSL clones; flag as derived, not Adobe-authoritative.</li>
+<li><strong>Sharpen Falloff exact curve</strong> — Apple's wording ("more or less prominent / more severe") is ambiguous between (a) post-blend gamma, (b) radius scaler, (c) edge-mask softness. The recommendation above treats it as a gamma; revisit after side-by-side comparison with Photos at extreme Falloff values.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

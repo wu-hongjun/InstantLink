@@ -40,7 +40,7 @@ struct CropState: Equatable, Codable {
             case .r4x3:          return CGSize(width: 4, height: 3)
             case .r5x3:          return CGSize(width: 5, height: 3)
             case .r3x2:          return CGSize(width: 3, height: 2)
-            case .printerMini:   return CGSize(width: 3, height: 2)
+            case .printerMini:   return CGSize(width: 4, height: 3)
             case .printerSquare: return CGSize(width: 1, height: 1)
             case .printerWide:   return CGSize(width: 3, height: 2)
             }

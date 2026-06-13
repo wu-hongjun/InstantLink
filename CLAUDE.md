@@ -5,6 +5,23 @@
 - Every plan created during plan mode must be saved as a numbered file in `/docs/plans/` (e.g., `001-scaffold.md`, `002-protocol.md`).
 - Plans are the source of truth for implementation decisions and should be committed alongside the code they describe.
 
+## Terminology
+
+Use these terms consistently in code, docs, commit messages, and user-facing copy:
+
+| Term | Meaning |
+|---|---|
+| **InstantLink** (project) | The umbrella — GitHub repo and the family of components below. Used as the top-level brand in README and marketing. |
+| **App** | The native macOS app (`InstantLink.app`). When UI/docs say "the App", it always means the macOS app — never the Bridge, CLI, or core library. |
+| **Bridge** | The custom hardware appliance we built (Raspberry Pi Zero 2 W). Accepts FTP uploads from anything (cameras, scripts, etc.) and relays them to a paired Instax printer over BLE. Has its own UI, power management, and provisioning. |
+| **Core / CLI / FFI** | Rust crates: `instantlink-core`, `instantlink-cli`, `instantlink-ffi`. Always lowercase in code identifiers. |
+| **Printer** | An Instax Link device (Mini / Square / Wide). Never call this "the Bridge". |
+
+Rules:
+- In user-facing strings, "App" = macOS app, "Bridge" = the Pi appliance. Don't use bare "InstantLink" to refer to the App in copy where the distinction matters.
+- "Bridge software" / "bridge OS" / "bridge firmware" all refer to the same thing — prefer just **Bridge** unless contrast is needed.
+- The App talks *to* the Bridge over HTTP (when on the same network) and *to* a Printer directly over BLE.
+
 ## Code Standards
 
 - `cargo fmt --all` before every commit

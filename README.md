@@ -11,12 +11,14 @@ The Instax Link BLE protocol was reverse-engineered by the open-source community
 
 ## What's Included
 
+The InstantLink project ships two end-user products and the shared Rust core they're both built on.
+
 | Component | Description |
 |-------|-------------|
-| **instantlink-core** | Core library — BLE protocol, image processing, device communication |
-| **instantlink-cli** (`instantlink` binary) | Command-line tool to scan, query, and print |
-| **instantlink-ffi** | C FFI bindings for building native GUIs (Swift, etc.) |
-| **bridge** | Raspberry Pi camera FTP appliance using the InstantLink FFI backend |
+| **App** (`InstantLink.app`) | Native macOS app — image editor, camera capture, BLE printing, Bridge management |
+| **Bridge** (`bridge/`) | Raspberry Pi Zero 2 W appliance — accepts FTP uploads from anything (cameras, scripts) and relays them to a paired Instax printer over BLE |
+| **CLI** (`instantlink` binary, crate `instantlink-cli`) | Command-line tool to scan, query, and print |
+| **instantlink-core / instantlink-ffi** | Rust core library (BLE protocol, image processing) and C FFI bindings used by the App and Bridge |
 
 ## Install
 

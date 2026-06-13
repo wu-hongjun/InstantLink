@@ -11,7 +11,7 @@ struct EditorShell: View {
         VStack(spacing: 0) {
             EditorShellToolbar(
                 state: state,
-                onDone: { dismiss() },
+                onDone: { persistSnapshot(); dismiss() },
                 onRevert: { state.revert() }
             )
             Divider()
@@ -42,14 +42,27 @@ struct EditorShell: View {
         .frame(minWidth: 980, minHeight: 640)
         .onAppear {
             if let image = viewModel.selectedImage {
-                state.loadSource(image)
+                state.loadSource(image, initialSnapshot: viewModel.currentEditorSnapshot)
             }
         }
         .onChange(of: viewModel.selectedQueueIndex) { _, _ in
+            persistSnapshot()
             if let image = viewModel.selectedImage {
-                state.loadSource(image)
+                state.loadSource(image, initialSnapshot: viewModel.currentEditorSnapshot)
             }
         }
+        .onDisappear {
+            persistSnapshot()
+        }
+    }
+
+    /// Writes the current `EditorSnapshot` back onto the queue item (locked
+    /// decision Q3 — plan 048 PR #14). Snapshot is intentionally written only
+    /// when the editor closes / the selected item changes so single-edit
+    /// inspector mutations aren't billed against the queue diff per keystroke.
+    private func persistSnapshot() {
+        guard viewModel.selectedImage != nil else { return }
+        viewModel.currentEditorSnapshot = state.snapshot()
     }
 }
 

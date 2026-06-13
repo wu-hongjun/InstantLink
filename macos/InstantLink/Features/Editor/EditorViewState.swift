@@ -12,6 +12,8 @@ final class EditorViewState: ObservableObject {
     @Published var activeTab: EditorTab = .adjust
     @Published var adjustments: AdjustmentState = .neutral
     @Published var crop: CropState = .neutral
+    @Published var overlays: [OverlayItem] = []
+    @Published var selectedOverlayID: UUID?
     @Published var sourceImage: CIImage?
     @Published var previewImage: CIImage?
     @Published var renderedPreview: CIImage?
@@ -37,11 +39,12 @@ final class EditorViewState: ObservableObject {
 
     init() {
         // Re-render whenever a user-visible field changes. 16 ms matches one
-        // 60 Hz frame so dragging coalesces cleanly.
-        Publishers.CombineLatest($adjustments, $crop)
+        // 60 Hz frame so dragging coalesces cleanly. Overlay edits also push
+        // through so the live preview updates with the Annotate tab.
+        Publishers.CombineLatest3($adjustments, $crop, $overlays)
             .dropFirst()
             .debounce(for: .milliseconds(16), scheduler: DispatchQueue.main)
-            .sink { [weak self] _, _ in
+            .sink { [weak self] _, _, _ in
                 guard let self else { return }
                 self.scheduleRender()
                 if !self.isRestoring {
@@ -55,6 +58,18 @@ final class EditorViewState: ObservableObject {
             .sink { [weak self] _ in self?.scheduleRender() }
             .store(in: &cancellables)
 
+        // Keep `selectedOverlayID` consistent when the overlay list mutates
+        // (deletion clears stale IDs).
+        $overlays
+            .sink { [weak self] items in
+                guard let self else { return }
+                if let id = self.selectedOverlayID,
+                   !items.contains(where: { $0.id == id }) {
+                    self.selectedOverlayID = items.last?.id
+                }
+            }
+            .store(in: &cancellables)
+
         history.reset(to: snapshot())
     }
 
@@ -64,7 +79,12 @@ final class EditorViewState: ObservableObject {
 
     /// Capture the current editable state.
     func snapshot() -> EditorSnapshot {
-        EditorSnapshot(adjustments: adjustments, crop: crop)
+        EditorSnapshot(
+            adjustments: adjustments,
+            crop: crop,
+            filterID: nil,
+            overlays: overlays
+        )
     }
 
     /// Restore a snapshot without re-pushing it onto the history stack.
@@ -72,12 +92,18 @@ final class EditorViewState: ObservableObject {
         isRestoring = true
         adjustments = snap.adjustments
         crop = snap.crop
+        overlays = snap.overlays
+        if let id = selectedOverlayID,
+           !snap.overlays.contains(where: { $0.id == id }) {
+            selectedOverlayID = snap.overlays.last?.id
+        }
         isRestoring = false
     }
 
     /// Load the editor's source image, build the downsampled preview, and seed
-    /// history with the starting snapshot.
-    func loadSource(_ image: NSImage) {
+    /// history with the starting snapshot. Optional `initialSnapshot` restores
+    /// per-image state on reopen (locked decision Q3 — plan 048 PR #14).
+    func loadSource(_ image: NSImage, initialSnapshot: EditorSnapshot? = nil) {
         guard let tiff = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiff),
               let cg = bitmap.cgImage else {
@@ -86,14 +112,19 @@ final class EditorViewState: ObservableObject {
             renderedPreview = nil
             return
         }
-        loadSource(CIImage(cgImage: cg))
+        loadSource(CIImage(cgImage: cg), initialSnapshot: initialSnapshot)
     }
 
-    func loadSource(_ image: CIImage) {
+    func loadSource(_ image: CIImage, initialSnapshot: EditorSnapshot? = nil) {
         sourceImage = image
         previewImage = downsampledPreview(from: image)
-        adjustments = .neutral
-        crop = .neutral
+        let snap = initialSnapshot ?? .neutral
+        isRestoring = true
+        adjustments = snap.adjustments
+        crop = snap.crop
+        overlays = snap.overlays
+        selectedOverlayID = snap.overlays.last?.id
+        isRestoring = false
         history.reset(to: snapshot())
         scheduleRender()
     }
@@ -106,11 +137,75 @@ final class EditorViewState: ObservableObject {
         if let snap = history.redo() { apply(snap) }
     }
 
-    /// Reset adjustments + crop back to neutral and commit one history entry.
+    /// Reset adjustments + crop + overlays back to neutral and commit one
+    /// history entry.
     func revert() {
         let snap = EditorSnapshot.neutral
         apply(snap)
         history.commit(snap)
+    }
+
+    // MARK: - Overlay mutation helpers
+
+    var selectedOverlay: OverlayItem? {
+        guard let id = selectedOverlayID else { return nil }
+        return overlays.first(where: { $0.id == id })
+    }
+
+    func selectOverlay(_ id: UUID?) {
+        selectedOverlayID = id
+    }
+
+    func addOverlay(_ overlay: OverlayItem) {
+        var item = overlay
+        item.zIndex = (overlays.map(\.zIndex).max() ?? -1) + 1
+        overlays.append(item)
+        selectedOverlayID = item.id
+    }
+
+    func deleteOverlay(id: UUID) {
+        overlays.removeAll { $0.id == id }
+    }
+
+    func updateOverlay(id: UUID, _ mutate: (inout OverlayItem) -> Void) {
+        guard let index = overlays.firstIndex(where: { $0.id == id }) else { return }
+        var updated = overlays[index]
+        mutate(&updated)
+        if updated.aspectRatioReference == nil || !updated.preservesAspectRatio {
+            updated.syncAspectRatioToPlacement()
+        }
+        updated.placement = updated.placement.clamped
+        overlays[index] = updated
+    }
+
+    func updateSelectedOverlay(_ mutate: (inout OverlayItem) -> Void) {
+        guard let id = selectedOverlayID else { return }
+        updateOverlay(id: id, mutate)
+    }
+
+    func moveSelectedOverlay(forward: Bool) {
+        guard let id = selectedOverlayID,
+              let index = overlays.firstIndex(where: { $0.id == id }) else { return }
+        if forward {
+            guard index < overlays.count - 1 else { return }
+            overlays.swapAt(index, index + 1)
+        } else {
+            guard index > 0 else { return }
+            overlays.swapAt(index, index - 1)
+        }
+        for (i, _) in overlays.enumerated() {
+            overlays[i].zIndex = i
+        }
+    }
+
+    func duplicateSelectedOverlay() {
+        guard let overlay = selectedOverlay else { return }
+        var copy = overlay
+        copy.id = UUID()
+        copy.createdAt = Date()
+        copy.placement.normalizedCenterX = min(0.92, copy.placement.normalizedCenterX + 0.04)
+        copy.placement.normalizedCenterY = min(0.92, copy.placement.normalizedCenterY + 0.04)
+        addOverlay(copy)
     }
 
     private func scheduleRender() {

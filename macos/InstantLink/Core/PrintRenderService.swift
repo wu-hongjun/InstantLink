@@ -18,7 +18,15 @@ enum PrintRenderService {
         let printerAspectRatio: CGFloat?
         let imageDate: Date?
         let imageLocation: ImageLocationMetadata?
+        /// Photos-style editor snapshot persisted on the queue item. When
+        /// present the renderer composes adjustments + crop through
+        /// `AdjustmentPipeline` instead of the legacy single-EV exposure
+        /// path (plan 048 PR #14).
+        let editorState: EditorSnapshot?
     }
+
+    private static let pipelineCIContext = CIContext(options: nil)
+    private static let pipeline = AdjustmentPipeline()
 
     struct PreparedPrint {
         let path: String
@@ -59,7 +67,12 @@ enum PrintRenderService {
             processed = true
         }
 
-        if let exposureAdjusted = ImageAdjustmentService.applyExposure(to: currentCG, ev: request.exposureEV) {
+        if let snapshot = request.editorState,
+           !isNeutralEditorSnapshot(snapshot),
+           let pipelined = applyEditorPipeline(currentCG, snapshot: snapshot) {
+            currentCG = pipelined
+            processed = true
+        } else if let exposureAdjusted = ExposureFilter.render(currentCG, ev: request.exposureEV) {
             currentCG = exposureAdjusted
             processed = true
         }
@@ -767,5 +780,26 @@ enum PrintRenderService {
         NSGraphicsContext.restoreGraphicsState()
 
         return rep.cgImage
+    }
+
+    // MARK: - Photos-style pipeline integration (plan 048 PR #14)
+
+    /// Returns true if every Adjust + Crop field in the snapshot is at
+    /// neutral, so the pipeline can be skipped (avoids a needless CIImage
+    /// round-trip when the user opened the editor but didn't change anything).
+    private static func isNeutralEditorSnapshot(_ snapshot: EditorSnapshot) -> Bool {
+        snapshot.adjustments == .neutral && snapshot.crop == .neutral
+    }
+
+    /// Runs the snapshot's Adjust + Crop chain through `AdjustmentPipeline`
+    /// and materializes the result as a CGImage so the renderer's
+    /// downstream overlay-compose / fit-canvas / rotate paths can keep
+    /// using the existing CGImage code.
+    private static func applyEditorPipeline(_ cgImage: CGImage, snapshot: EditorSnapshot) -> CGImage? {
+        let input = CIImage(cgImage: cgImage)
+        let output = pipeline.compose(input, state: snapshot)
+        let extent = output.extent
+        guard extent.width > 0, extent.height > 0 else { return nil }
+        return pipelineCIContext.createCGImage(output, from: extent)
     }
 }

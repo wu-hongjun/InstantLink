@@ -1,6 +1,40 @@
 import AppKit
 import AVFoundation
+import CoreImage
 import SwiftUI
+
+/// Lightweight `CIExposureAdjust` wrapper used by the live preview surfaces.
+///
+/// The legacy single-EV exposure shim was retired with the legacy editor
+/// (plan 048 PR #14); the live preview path still needs an EV-only adjust
+/// for the queue-item `exposureEV` field that survives the rebuild. Final
+/// print rendering goes through `AdjustmentPipeline` when the queue item
+/// carries an `EditorSnapshot`.
+enum ExposureFilter {
+    private static let context = CIContext(options: nil)
+
+    static func render(_ image: NSImage, ev: Double) -> NSImage? {
+        guard abs(ev) > 0.001,
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let adjusted = render(cgImage, ev: ev) else {
+            return abs(ev) > 0.001 ? nil : image
+        }
+        return NSImage(
+            cgImage: adjusted,
+            size: NSSize(width: adjusted.width, height: adjusted.height)
+        )
+    }
+
+    static func render(_ cgImage: CGImage, ev: Double) -> CGImage? {
+        guard abs(ev) > 0.001 else { return cgImage }
+        let input = CIImage(cgImage: cgImage)
+        guard let filter = CIFilter(name: "CIExposureAdjust") else { return nil }
+        filter.setValue(input, forKey: kCIInputImageKey)
+        filter.setValue(ev, forKey: kCIInputEVKey)
+        guard let output = filter.outputImage else { return nil }
+        return context.createCGImage(output, from: input.extent)
+    }
+}
 
 struct FilmFrameView<Content: View>: View {
     let filmModel: String?
@@ -263,7 +297,7 @@ struct ExposureAdjustedImageView<Content: View>: View {
         self.image = image
         self.exposureEV = exposureEV
         self.content = content
-        _renderedImage = State(initialValue: ImageAdjustmentService.applyExposure(to: image, ev: exposureEV) ?? image)
+        _renderedImage = State(initialValue: ExposureFilter.render(image, ev: exposureEV) ?? image)
     }
 
     var body: some View {
@@ -274,7 +308,7 @@ struct ExposureAdjustedImageView<Content: View>: View {
     }
 
     private func refresh() {
-        renderedImage = ImageAdjustmentService.applyExposure(to: image, ev: exposureEV) ?? image
+        renderedImage = ExposureFilter.render(image, ev: exposureEV) ?? image
     }
 }
 

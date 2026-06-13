@@ -109,14 +109,6 @@ class ViewModel: ObservableObject {
             AppAppearanceService.apply(appearancePreference)
         }
     }
-    @Published var editorSettings: EditorSettings = initialEditorSettings {
-        didSet {
-            if editorSettings != oldValue {
-                editorSettings.save()
-            }
-        }
-    }
-
     var selectedImage: NSImage? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].image : nil }
     var selectedImagePath: String? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].url.path : nil }
     var imageDate: Date? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].imageDate : nil }
@@ -1026,8 +1018,23 @@ class ViewModel: ObservableObject {
             rotationAngle: rotationAngle,
             isHorizontallyFlipped: isHorizontallyFlipped,
             overlays: overlays,
-            filmOrientation: filmOrientation
+            filmOrientation: filmOrientation,
+            editorState: currentEditorSnapshot
         )
+    }
+
+    /// Cached Photos-style editor snapshot for the currently selected queue
+    /// item. Reads/writes are routed through the queue item's `editState`
+    /// (plan 048 PR #14, persisting per-image — locked decision Q3).
+    var currentEditorSnapshot: EditorSnapshot? {
+        get {
+            guard queue.indices.contains(selectedQueueIndex) else { return nil }
+            return queue[selectedQueueIndex].editState.editorState
+        }
+        set {
+            guard queue.indices.contains(selectedQueueIndex) else { return }
+            queue[selectedQueueIndex].editState.editorState = newValue
+        }
     }
 
     private func currentQueueEditingSnapshot() -> QueueEditingSnapshot? {
@@ -1775,7 +1782,8 @@ class ViewModel: ObservableObject {
                 filmOrientation: item.editState.filmOrientation,
                 printerAspectRatio: printerAspectRatio,
                 imageDate: item.imageDate,
-                imageLocation: item.imageLocation
+                imageLocation: item.imageLocation,
+                editorState: item.editState.editorState
             )
         ) else {
             return nil

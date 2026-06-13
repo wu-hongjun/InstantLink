@@ -284,10 +284,17 @@
 "editor_redo" = "やり直す";
 "editor_coming_in_pr_2" = "PR #2 で実装予定";
 "editor_coming_in_pr_3" = "PR #3 で実装予定";
-"editor_coming_in_pr_14" = "PR #14 で実装予定";
 "editor_coming_in_pr_15" = "PR #15 で実装予定";
-"settings_use_new_editor" = "新しいエディタを使用（実験的）";
-"settings_experimental" = "実験的機能";
+"annotate_add_text" = "テキスト";
+"annotate_add_qr" = "QRコード";
+"annotate_add_timestamp" = "タイムスタンプ";
+"annotate_add_image" = "画像";
+"annotate_add_location" = "位置情報";
+"annotate_inspector_position" = "位置";
+"annotate_inspector_appearance" = "外観";
+"annotate_inspector_content" = "内容";
+"annotate_overlay_locked" = "ロック中";
+"annotate_overlay_hidden" = "非表示";
 
 /* Editor Crop tab (plan 048 PR #2) */
 "crop_aspect_original" = "オリジナル";

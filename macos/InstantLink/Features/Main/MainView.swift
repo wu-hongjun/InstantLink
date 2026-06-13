@@ -221,13 +221,8 @@ struct MainView: View {
                 .environmentObject(viewModel)
         }
         .sheet(isPresented: $viewModel.showImageEditor) {
-            if viewModel.editorSettings.useNewEditor {
-                EditorShell()
-                    .environmentObject(viewModel)
-            } else {
-                ImageEditorView()
-                    .environmentObject(viewModel)
-            }
+            EditorShell()
+                .environmentObject(viewModel)
         }
         .confirmationDialog(
             L("Discard captured photo?"),

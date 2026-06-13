@@ -271,6 +271,11 @@ struct QueueItemEditState: Equatable {
     var isHorizontallyFlipped: Bool = false
     var overlays: [OverlayItem] = []
     var filmOrientation: String = "default"
+    /// Per-image editor snapshot persisted across editor opens (locked
+    /// decision Q3 — plan 048 PR #14). `nil` means the queue item has never
+    /// been opened in the new editor; `PrintRenderService` falls back to the
+    /// legacy single-EV path in that case.
+    var editorState: EditorSnapshot?
 }
 
 struct QueueItem: Identifiable, Equatable {

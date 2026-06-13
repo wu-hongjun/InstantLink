@@ -284,10 +284,17 @@
 "editor_redo" = "다시 실행";
 "editor_coming_in_pr_2" = "PR #2에서 추가 예정";
 "editor_coming_in_pr_3" = "PR #3에서 추가 예정";
-"editor_coming_in_pr_14" = "PR #14에서 추가 예정";
 "editor_coming_in_pr_15" = "PR #15에서 추가 예정";
-"settings_use_new_editor" = "새 편집기 사용(실험적)";
-"settings_experimental" = "실험적 기능";
+"annotate_add_text" = "텍스트";
+"annotate_add_qr" = "QR 코드";
+"annotate_add_timestamp" = "타임스탬프";
+"annotate_add_image" = "이미지";
+"annotate_add_location" = "위치";
+"annotate_inspector_position" = "위치";
+"annotate_inspector_appearance" = "모양";
+"annotate_inspector_content" = "내용";
+"annotate_overlay_locked" = "잠김";
+"annotate_overlay_hidden" = "숨김";
 
 /* Editor Crop tab (plan 048 PR #2) */
 "crop_aspect_original" = "원본";

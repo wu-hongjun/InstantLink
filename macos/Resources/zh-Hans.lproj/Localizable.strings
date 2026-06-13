@@ -309,10 +309,17 @@
 "editor_redo" = "重做";
 "editor_coming_in_pr_2" = "将在 PR #2 中加入";
 "editor_coming_in_pr_3" = "将在 PR #3 中加入";
-"editor_coming_in_pr_14" = "将在 PR #14 中加入";
 "editor_coming_in_pr_15" = "将在 PR #15 中加入";
-"settings_use_new_editor" = "使用新版编辑器(实验性)";
-"settings_experimental" = "实验性功能";
+"annotate_add_text" = "文字";
+"annotate_add_qr" = "二维码";
+"annotate_add_timestamp" = "时间戳";
+"annotate_add_image" = "图片";
+"annotate_add_location" = "位置";
+"annotate_inspector_position" = "位置";
+"annotate_inspector_appearance" = "外观";
+"annotate_inspector_content" = "内容";
+"annotate_overlay_locked" = "已锁定";
+"annotate_overlay_hidden" = "已隐藏";
 
 /* Editor Crop tab (plan 048 PR #2) */
 "crop_aspect_original" = "原始";

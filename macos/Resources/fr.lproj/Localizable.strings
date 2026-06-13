@@ -285,10 +285,17 @@
 "editor_redo" = "Redo";
 "editor_coming_in_pr_2" = "Coming in PR #2";
 "editor_coming_in_pr_3" = "Coming in PR #3";
-"editor_coming_in_pr_14" = "Coming in PR #14";
 "editor_coming_in_pr_15" = "Coming in PR #15";
-"settings_use_new_editor" = "Use New Editor (Experimental)";
-"settings_experimental" = "Experimental";
+"annotate_add_text" = "Text";
+"annotate_add_qr" = "QR Code";
+"annotate_add_timestamp" = "Timestamp";
+"annotate_add_image" = "Image";
+"annotate_add_location" = "Location";
+"annotate_inspector_position" = "Position";
+"annotate_inspector_appearance" = "Appearance";
+"annotate_inspector_content" = "Content";
+"annotate_overlay_locked" = "Locked";
+"annotate_overlay_hidden" = "Hidden";
 
 /* Editor Crop tab (plan 048 PR #2) */
 "crop_aspect_original" = "Original";

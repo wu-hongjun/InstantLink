@@ -17,6 +17,8 @@ struct QueueEditingSnapshot: Equatable {
     var isHorizontallyFlipped: Bool
     var overlays: [OverlayItem]
     var filmOrientation: String
+    /// Photos-style editor snapshot persisted per-image (plan 048 PR #14).
+    var editorState: EditorSnapshot?
 
     init(editState: QueueItemEditState) {
         fitMode = editState.fitMode
@@ -27,6 +29,7 @@ struct QueueEditingSnapshot: Equatable {
         isHorizontallyFlipped = editState.isHorizontallyFlipped
         overlays = editState.overlays
         filmOrientation = editState.filmOrientation
+        editorState = editState.editorState
     }
 
     var editState: QueueItemEditState {
@@ -38,7 +41,8 @@ struct QueueEditingSnapshot: Equatable {
             rotationAngle: rotationAngle,
             isHorizontallyFlipped: isHorizontallyFlipped,
             overlays: overlays,
-            filmOrientation: filmOrientation
+            filmOrientation: filmOrientation,
+            editorState: editorState
         )
     }
 }

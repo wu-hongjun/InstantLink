@@ -1,17 +1,19 @@
 import SwiftUI
 
-/// Placeholder sidebar for the Annotate tab; filled in by PR #14.
+/// Annotate sidebar — 4th tab of the Photos-style editor (plan 048 PR #14).
+/// Hosts the overlay add palette, the overlay list, and the inspector for
+/// the selected overlay.
 struct AnnotateSidebar: View {
     @ObservedObject var state: EditorViewState
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L("editor_tab_annotate"))
-                    .font(.headline)
-                Text(L("editor_coming_in_pr_14"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 16) {
+                OverlayAddPalette(state: state)
+                OverlayListView(state: state)
+                if state.selectedOverlay != nil {
+                    OverlayInspectorView(state: state)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)

@@ -283,6 +283,15 @@
 "auto_enhance_global" = "增強";
 "editor_undo" = "復原";
 "editor_redo" = "重做";
+"editor_adjust_header" = "調整";
+"editor_zoom" = "縮放";
+"editor_reset_adjustments" = "重設調整";
+"editor_info" = "資訊";
+"editor_favorite" = "收藏";
+"editor_rotate" = "旋轉";
+"editor_enhance" = "增強";
+"editor_more" = "更多";
+"adjust_options" = "選項";
 "editor_coming_in_pr_15" = "將在 PR #15 中加入";
 "annotate_add_text" = "文字";
 "annotate_add_qr" = "二維碼";

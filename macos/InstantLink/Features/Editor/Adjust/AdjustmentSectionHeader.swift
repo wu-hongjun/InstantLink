@@ -1,27 +1,32 @@
 import SwiftUI
 
-/// Photos-style collapsible section header.
+/// Photos-style collapsible section header — plan 049 redesign.
 ///
-/// Visually a compact row: chevron toggle, title, optional `Auto` /
-/// `Reset` buttons, optional on-off `Toggle`. Reused by every adjustment
-/// panel that follows.
+/// Single horizontal row: chevron toggle, section icon, title, optional
+/// `Reset` link (only when non-neutral), optional `AUTO` badge button, and
+/// optional on/off circle toggle. Sections are intended to default
+/// collapsed; only Light, Color, and Black & White ship expanded by default.
 struct AdjustmentSectionHeader: View {
     @Binding var isExpanded: Bool
     let title: LocalizedStringKey
 
-    /// Optional Auto handler; when present the Auto button is shown.
+    /// SF Symbol name. Each section picks the closest Photos match
+    /// (see plan 049 §icons for the canonical list).
+    var systemImage: String = "circle"
+
+    /// Optional Auto handler; when present an `AUTO` pill badge is shown.
     var onAuto: (() -> Void)? = nil
 
     /// Optional Reset handler; when present and `isNeutral == false` the
-    /// Reset button is shown.
+    /// curved-arrow reset glyph is shown.
     var onReset: (() -> Void)? = nil
 
     /// `true` when the section state matches its neutral baseline. Hides
-    /// the Reset button when neutral; ignored if `onReset == nil`.
+    /// the Reset glyph when neutral; ignored if `onReset == nil`.
     var isNeutral: Bool = true
 
-    /// Optional on-off toggle (used by B&W in PR #13). When provided the
-    /// switch shows on the trailing edge.
+    /// Optional on-off toggle. When provided the trailing circle glyph
+    /// reads the binding; clicking flips it.
     var enabledBinding: Binding<Bool>? = nil
 
     var body: some View {
@@ -38,31 +43,63 @@ struct AdjustmentSectionHeader: View {
             }
             .buttonStyle(.plain)
 
+            Image(systemName: systemImage)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(width: 18, alignment: .center)
+
             Text(title)
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.primary)
 
             Spacer()
 
-            if let onAuto {
-                Button(L("adjust_auto")) { onAuto() }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
+            if let onReset, !isNeutral {
+                Button {
+                    onReset()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(L("adjust_reset"))
             }
 
-            if let onReset, !isNeutral {
-                Button(L("adjust_reset")) { onReset() }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
+            if let onAuto {
+                Button {
+                    onAuto()
+                } label: {
+                    Text(L_key("adjust_auto"))
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.primary.opacity(0.08))
+                        )
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
 
             if let enabledBinding {
-                Toggle("", isOn: enabledBinding)
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .labelsHidden()
+                Button {
+                    enabledBinding.wrappedValue.toggle()
+                } label: {
+                    Image(systemName: enabledBinding.wrappedValue
+                        ? "circle.inset.filled"
+                        : "circle")
+                        .font(.callout)
+                        .foregroundStyle(enabledBinding.wrappedValue
+                            ? Color.accentColor
+                            : .secondary)
+                }
+                .buttonStyle(.plain)
             }
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }

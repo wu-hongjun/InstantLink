@@ -21,6 +21,10 @@ final class EditorViewState: ObservableObject {
     @Published var sourceImage: CIImage?
     @Published var previewImage: CIImage?
     @Published var renderedPreview: CIImage?
+    /// Canvas zoom slider position (`-1…+1`, neutral `0`). Drives an extra
+    /// scale factor on top of the MTKView's aspect-fit display; positive
+    /// zooms in, negative zooms out. Wired by `EditorShellTopBar` (plan 049).
+    @Published var zoomLevel: Double = 0
 
     let history = AdjustmentHistory()
     let pipeline = AdjustmentPipeline()
@@ -58,8 +62,15 @@ final class EditorViewState: ObservableObject {
             }
             .store(in: &cancellables)
 
+        // Plan 049: do NOT `dropFirst()` here. The very first emission of
+        // `previewImage` is the freshly-downsampled source produced inside
+        // `loadSource`. Dropping it meant the editor's initial render only
+        // happened via the explicit `scheduleRender()` call at the end of
+        // `loadSource` — which races with the CombineLatest4 sink for the
+        // same Task slot. In the v0.1.45 build the race surfaced as a blank
+        // canvas. Letting every `previewImage` change schedule a render keeps
+        // the contract simple: "preview source changed → re-render".
         $previewImage
-            .dropFirst()
             .sink { [weak self] _ in self?.scheduleRender() }
             .store(in: &cancellables)
 

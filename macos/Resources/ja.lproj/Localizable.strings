@@ -283,6 +283,15 @@
 "auto_enhance_global" = "自動補正";
 "editor_undo" = "取り消す";
 "editor_redo" = "やり直す";
+"editor_adjust_header" = "調整";
+"editor_zoom" = "ズーム";
+"editor_reset_adjustments" = "調整をリセット";
+"editor_info" = "情報";
+"editor_favorite" = "お気に入り";
+"editor_rotate" = "回転";
+"editor_enhance" = "自動補正";
+"editor_more" = "その他";
+"adjust_options" = "オプション";
 "editor_coming_in_pr_15" = "PR #15 で実装予定";
 "annotate_add_text" = "テキスト";
 "annotate_add_qr" = "QRコード";

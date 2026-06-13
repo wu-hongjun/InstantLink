@@ -9,13 +9,14 @@ import SwiftUI
 /// out of the gate.
 struct SharpenSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("sharpen_section"),
+                systemImage: "triangle.righthalf.filled",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral
@@ -61,9 +62,9 @@ struct SharpenSection: View {
         state.adjustments.sharpen = AdjustmentState.Sharpen()
     }
 
-    /// Auto preset: placeholder until PR #16 wires the Apple analyzer.
-    /// Toggles a moderate sharpen on/off.
-    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    /// Auto preset: toggle a moderate sharpen (`intensity = 0.3`) on/off.
+    /// `CIImage.autoAdjustmentFilters` does not surface a sharpen analyzer
+    /// recommendation, so this preset-based Auto is the shipped behavior.
     private func applyAuto() {
         if isNeutral {
             state.adjustments.sharpen.intensity = 0.3

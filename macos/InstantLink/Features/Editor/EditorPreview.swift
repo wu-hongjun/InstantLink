@@ -18,11 +18,13 @@ struct EditorPreview: NSViewRepresentable {
         let device = MTLCreateSystemDefaultDevice() ?? MTLCopyAllDevices().first!
         let view = EditorMetalView(device: device)
         view.image = state.renderedPreview ?? state.previewImage
+        view.zoom = state.zoomLevel
         return view
     }
 
     func updateNSView(_ nsView: EditorMetalView, context: Context) {
         nsView.image = state.renderedPreview ?? state.previewImage
+        nsView.zoom = state.zoomLevel
     }
 }
 
@@ -33,9 +35,25 @@ final class EditorMetalView: MTKView {
     private let commandQueue: MTLCommandQueue
     private let outputColorSpace: CGColorSpace = ColorSpaces.sRGB
 
+    /// User-facing canvas zoom, `-1…+1` (neutral `0` = aspect-fit). Plan 049:
+    /// drives an extra scale factor on top of the aspect-fit scale; positive
+    /// values zoom in (1.0 → 2× total), negative zoom out (-1.0 → 0.5×).
+    var zoom: Double = 0 {
+        didSet {
+            if zoom != oldValue {
+                setNeedsDisplay(bounds)
+            }
+        }
+    }
+
     var image: CIImage? {
         didSet {
-            if image != oldValue {
+            // Plan 049: always re-display when `image` changes, including the
+            // identity case (`oldValue == nil → image == nil` is filtered, but
+            // re-assigning the SAME CIImage during initial layout should still
+            // wake the next `draw(_:)` so we don't strand a blank canvas when
+            // SwiftUI flushes the first frame).
+            if image != oldValue || (image != nil && oldValue == nil) {
                 setNeedsDisplay(bounds)
             }
         }
@@ -61,11 +79,26 @@ final class EditorMetalView: MTKView {
         colorPixelFormat = .bgra8Unorm
         autoResizeDrawable = true
         layer?.isOpaque = false
-        clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+        // Near-black canvas backdrop matches macOS Photos.app. Plan 049: the
+        // alpha-0 clear color in v0.1.45 let the SwiftUI window chrome bleed
+        // through, which when combined with the (now-fixed) blank initial
+        // render looked like a totally empty canvas. A solid dark clear color
+        // means even a missed initial draw shows the canvas, not the window.
+        clearColor = MTLClearColor(red: 0.07, green: 0.07, blue: 0.07, alpha: 1)
     }
 
     required init(coder: NSCoder) {
         fatalError("init(coder:) not used")
+    }
+
+    /// Force a redraw the first time the view is laid out at a non-zero size.
+    /// MTKView's `setNeedsDisplay` calls issued before SwiftUI assigns the
+    /// view a real frame would otherwise be lost.
+    override func layout() {
+        super.layout()
+        if bounds.width > 0, bounds.height > 0 {
+            setNeedsDisplay(bounds)
+        }
     }
 
     override func draw(_ rect: CGRect) {
@@ -78,10 +111,14 @@ final class EditorMetalView: MTKView {
         )
 
         if let image, image.extent.width > 0, image.extent.height > 0 {
-            let scale = min(
+            let aspectFit = min(
                 drawableSize.width / image.extent.width,
                 drawableSize.height / image.extent.height
             )
+            // Map zoom (`-1…+1`) onto a 0.5× — 2× multiplier so the slider
+            // stays bipolar and centred.
+            let zoomMultiplier = pow(2.0, zoom)
+            let scale = aspectFit * zoomMultiplier
             let scaled = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
             let scaledExtent = scaled.extent
             let offsetX = (drawableSize.width - scaledExtent.width) / 2 - scaledExtent.origin.x

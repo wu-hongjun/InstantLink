@@ -10,13 +10,14 @@ import SwiftUI
 /// detail = 0.6) preset and neutral.
 struct NoiseReductionSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("nr_section"),
+                systemImage: "dot.radiowaves.left.and.right",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral
@@ -67,10 +68,10 @@ struct NoiseReductionSection: View {
         state.adjustments.nr = AdjustmentState.NoiseReduction()
     }
 
-    /// Apply a placeholder Auto preset. PR #16 wires the Apple analyzer
-    /// end-to-end across all sections; for v1 we set a mild denoise preset
-    /// that engages the master slider with edge preservation via Detail.
-    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    /// Apply a mild denoise preset (`master = 0.3`, `detail = 0.6`).
+    /// `CIImage.autoAdjustmentFilters` does not surface a noise-reduction
+    /// analyzer recommendation, so this preset-based Auto is the shipped
+    /// behavior — there is no PR-side TODO outstanding.
     private func applyAuto() {
         if isNeutral {
             state.adjustments.nr.master = 0.3

@@ -61,11 +61,38 @@ final class FilterThumbnailCache: ObservableObject {
     }
 
     /// Compute a stable hash of `source`'s pixel content so the cache key
-    /// changes whenever the user opens a different image. Falls back to the
-    /// extent dimensions if pixel readback fails.
+    /// changes whenever the user opens a different image. Plan 049 L1:
+    /// in addition to extent dimensions, sample the four corners + center
+    /// pixels so same-dimension images from the same camera don't collide.
+    /// Falls back to extent-only if pixel readback fails.
     static func hash(for source: CIImage) -> String {
         let extent = source.extent
-        return "\(Int(extent.width))x\(Int(extent.height))@\(extent.origin.x),\(extent.origin.y)"
+        let dimensions = "\(Int(extent.width))x\(Int(extent.height))@\(extent.origin.x),\(extent.origin.y)"
+        let ctx = CIContext(options: nil)
+        guard let cg = ctx.createCGImage(source, from: extent),
+              let data = cg.dataProvider?.data,
+              let bytes = CFDataGetBytePtr(data) else {
+            return dimensions
+        }
+        let bpr = cg.bytesPerRow
+        let w = cg.width
+        let h = cg.height
+        func pixel(_ x: Int, _ y: Int) -> Int {
+            let xi = max(0, min(w - 1, x))
+            let yi = max(0, min(h - 1, y))
+            let i = yi * bpr + xi * 4
+            return (Int(bytes[i]) << 16)
+                | (Int(bytes[i + 1]) << 8)
+                | Int(bytes[i + 2])
+        }
+        let signature = [
+            pixel(0, 0),
+            pixel(w - 1, 0),
+            pixel(0, h - 1),
+            pixel(w - 1, h - 1),
+            pixel(w / 2, h / 2),
+        ]
+        return dimensions + "@" + signature.map { String($0, radix: 16) }.joined(separator: ".")
     }
 
     /// Sentinel ID used by the rail's "None" entry. Calling

@@ -8,13 +8,14 @@ import SwiftUI
 /// top counterpart.
 struct LevelsSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("levels_section"),
+                systemImage: "chart.bar",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral

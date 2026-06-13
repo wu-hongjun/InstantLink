@@ -10,13 +10,20 @@ import SwiftUI
 /// currently-selected mode.
 struct WhiteBalanceSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
+
+    // Plan 049 M4 — White Balance intentionally ships without an Auto
+    // button. `CIImage.autoAdjustmentFilters` only returns a global
+    // `CITemperatureAndTint` recommendation, which would force the section
+    // into Temperature & Tint mode regardless of the user's current
+    // Neutral Gray / Skin Tone selection. Photos avoids that here.
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("wb_section"),
+                systemImage: "thermometer.medium",
                 onReset: { reset() },
                 isNeutral: isNeutral
             )

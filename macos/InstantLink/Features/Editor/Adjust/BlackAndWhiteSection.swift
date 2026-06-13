@@ -1,25 +1,28 @@
 import SwiftUI
 
-/// Photos-style "Black & White" panel: on/off toggle + 4 sliders
-/// (Intensity, Neutrals, Tone, Grain) + section header with Auto / Reset.
+/// Photos-style "Black & White" panel — plan 049 rebuild.
+///
+/// Header + 5-thumbnail intensity strip (dominant slider = Intensity) +
+/// `Options` disclosure for the full Intensity / Neutrals / Tone / Grain
+/// slider set. The on/off circle in the header is the section enable.
 ///
 /// B&W is a **mode flag** (`AdjustmentState.BlackAndWhite.on`), not
 /// Saturation = −1. While `on == true`:
-/// - The Color section grays out (wired in PR #4 / ColorPipeline).
+/// - The Color section grays out (wired in ColorPipeline).
 /// - The four sliders below are enabled.
-///
-/// Neutrals is a **mid-tone LUMINANCE shift** (no hue/tint — Photos has no
-/// hue-tint slider in B&W). Grain is asymmetric (`0..+1`); negative is a
-/// no-op in the pipeline.
 struct BlackAndWhiteSection: View {
     @ObservedObject var state: EditorViewState
     @State private var isExpanded: Bool = true
+    @State private var showOptions: Bool = false
+
+    private let intensities: [Double] = [-1.0, -0.5, 0, 0.5, 1.0]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("bw_section"),
+                systemImage: "circle.lefthalf.filled",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral,
@@ -27,35 +30,62 @@ struct BlackAndWhiteSection: View {
             )
 
             if isExpanded {
-                VStack(spacing: 6) {
-                    AdjustmentSlider(
-                        value: $state.adjustments.bw.intensity,
-                        range: -1...1,
-                        neutral: 0,
-                        label: L_key("bw_intensity")
-                    )
-                    AdjustmentSlider(
-                        value: $state.adjustments.bw.neutrals,
-                        range: -1...1,
-                        neutral: 0,
-                        label: L_key("bw_neutrals")
-                    )
-                    AdjustmentSlider(
-                        value: $state.adjustments.bw.tone,
-                        range: -1...1,
-                        neutral: 0,
-                        label: L_key("bw_tone")
-                    )
-                    AdjustmentSlider(
-                        value: $state.adjustments.bw.grain,
-                        range: 0...1,
-                        neutral: 0,
-                        label: L_key("bw_grain"),
-                        asymmetric: true
-                    )
+                SectionThumbnailStrip(
+                    state: state,
+                    sectionID: "bw",
+                    intensities: intensities,
+                    currentValue: state.adjustments.bw.intensity,
+                    renderForIntensity: { value in
+                        var snap = state.snapshot()
+                        // Force the B&W stack on so the strip previews the
+                        // mode itself, not just intensity deltas on a colour
+                        // image. This matches Photos' strip behavior.
+                        snap.adjustments.bw.on = true
+                        snap.adjustments.bw.intensity = value
+                        return snap
+                    },
+                    onSelect: { value in
+                        state.adjustments.bw.on = true
+                        state.adjustments.bw.intensity = value
+                    }
+                )
+
+                DisclosureGroup(isExpanded: $showOptions) {
+                    VStack(spacing: 6) {
+                        AdjustmentSlider(
+                            value: $state.adjustments.bw.intensity,
+                            range: -1...1,
+                            neutral: 0,
+                            label: L_key("bw_intensity")
+                        )
+                        AdjustmentSlider(
+                            value: $state.adjustments.bw.neutrals,
+                            range: -1...1,
+                            neutral: 0,
+                            label: L_key("bw_neutrals")
+                        )
+                        AdjustmentSlider(
+                            value: $state.adjustments.bw.tone,
+                            range: -1...1,
+                            neutral: 0,
+                            label: L_key("bw_tone")
+                        )
+                        AdjustmentSlider(
+                            value: $state.adjustments.bw.grain,
+                            range: 0...1,
+                            neutral: 0,
+                            label: L_key("bw_grain"),
+                            asymmetric: true
+                        )
+                    }
+                    .padding(.leading, 6)
+                    .disabled(!state.adjustments.bw.on)
+                } label: {
+                    Text(L_key("adjust_options"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.leading, 18)
-                .disabled(!state.adjustments.bw.on)
             }
         }
     }

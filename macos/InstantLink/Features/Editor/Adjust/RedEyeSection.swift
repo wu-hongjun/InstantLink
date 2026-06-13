@@ -15,13 +15,14 @@ import Vision
 /// - List of current corrections with per-row delete buttons.
 struct RedEyeSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("redeye_section"),
+                systemImage: "eye.slash",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral

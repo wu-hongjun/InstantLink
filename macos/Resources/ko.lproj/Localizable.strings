@@ -283,6 +283,15 @@
 "auto_enhance_global" = "향상";
 "editor_undo" = "실행 취소";
 "editor_redo" = "다시 실행";
+"editor_adjust_header" = "조정";
+"editor_zoom" = "확대/축소";
+"editor_reset_adjustments" = "조정 재설정";
+"editor_info" = "정보";
+"editor_favorite" = "즐겨찾기";
+"editor_rotate" = "회전";
+"editor_enhance" = "향상";
+"editor_more" = "더 보기";
+"adjust_options" = "옵션";
 "editor_coming_in_pr_15" = "PR #15에서 추가 예정";
 "annotate_add_text" = "텍스트";
 "annotate_add_qr" = "QR 코드";

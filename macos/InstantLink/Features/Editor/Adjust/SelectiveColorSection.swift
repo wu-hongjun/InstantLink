@@ -13,14 +13,19 @@ import SwiftUI
 /// first interaction; otherwise the user picks via the swatch tap.
 struct SelectiveColorSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
     @State private var selectedWell: Int = 0
+
+    // Plan 049 M4 — Selective Color intentionally ships without an Auto
+    // button. `CIImage.autoAdjustmentFilters` returns no per-well selective
+    // color suggestion, so there is nothing to seed.
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("sel_section"),
+                systemImage: "swatchpalette",
                 onReset: { reset() },
                 isNeutral: isNeutral
             )

@@ -8,7 +8,9 @@ import SwiftUI
 /// Mid / White point). Histogram backdrop renders behind the curve.
 struct CurvesSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    // Plan 049: every section except Light / Color / Black & White ships
+    // collapsed by default to match the Photos sidebar.
+    @State private var isExpanded: Bool = false
     @State private var activeChannel: ActiveChannel = .rgb
 
     /// Curves is per Apple: RGB master + R / G / B per-channel. No Luminance
@@ -39,6 +41,7 @@ struct CurvesSection: View {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("curves_section"),
+                systemImage: "chart.xyaxis.line",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral
@@ -62,9 +65,21 @@ struct CurvesSection: View {
                     .frame(height: 160)
 
                     HStack(spacing: 6) {
-                        eyedropperButton(systemName: "eyedropper", label: L_key("curves_dropper_black"))
-                        eyedropperButton(systemName: "eyedropper.halffull", label: L_key("curves_dropper_mid"))
-                        eyedropperButton(systemName: "eyedropper.full", label: L_key("curves_dropper_white"))
+                        eyedropperButton(
+                            mode: .curvesBlack,
+                            systemName: "eyedropper",
+                            label: L_key("curves_dropper_black")
+                        )
+                        eyedropperButton(
+                            mode: .curvesMid,
+                            systemName: "eyedropper.halffull",
+                            label: L_key("curves_dropper_mid")
+                        )
+                        eyedropperButton(
+                            mode: .curvesWhite,
+                            systemName: "eyedropper.full",
+                            label: L_key("curves_dropper_white")
+                        )
                         Spacer()
                     }
                 }
@@ -73,17 +88,40 @@ struct CurvesSection: View {
         }
     }
 
-    // MARK: - Eyedropper buttons (UI scaffold — image hit-test lands in PR #12)
+    // MARK: - Eyedropper buttons
 
-    private func eyedropperButton(systemName: String, label: LocalizedStringKey) -> some View {
-        // The actual click-on-canvas wiring lands with the eyedropper
-        // infrastructure in PR #12; in PR #5 we surface the buttons so
-        // the section's layout matches Photos.
-        Button {
-            // TODO(PR #12): activate EyedropperManager for the matching
-            // curves dropper kind (.curvesBlack / .curvesMid / .curvesWhite).
+    /// Plan 049 H1 fix: wire each Curves eyedropper to `EyedropperManager`
+    /// with a callback that drops the sampled luminance into the matching
+    /// master-RGB control point (point0 = black, point2 = mid, point4 = white).
+    /// The CIToneCurve master curve has five points; we keep their `x`
+    /// coordinates fixed and write the sampled luminance into `y`.
+    private func eyedropperButton(
+        mode: EyedropperManager.ActiveMode,
+        systemName: String,
+        label: LocalizedStringKey
+    ) -> some View {
+        let isActive = state.eyedropperManager.active == mode
+        return Button {
+            if isActive {
+                state.eyedropperManager.cancel()
+                return
+            }
+            state.eyedropperManager.start(mode) { [state] sample in
+                let luma = 0.299 * sample.red + 0.587 * sample.green + 0.114 * sample.blue
+                let pointIndex: Int
+                switch mode {
+                case .curvesBlack: pointIndex = 0
+                case .curvesMid:   pointIndex = 2
+                case .curvesWhite: pointIndex = 4
+                default:           return
+                }
+                var pts = state.adjustments.curves.master
+                guard pts.indices.contains(pointIndex) else { return }
+                pts[pointIndex].y = CGFloat(max(0, min(1, luma)))
+                state.adjustments.curves.master = pts
+            }
         } label: {
-            Image(systemName: systemName)
+            Image(systemName: isActive ? "scope" : systemName)
                 .font(.caption)
                 .help(label)
                 .frame(width: 22, height: 18)

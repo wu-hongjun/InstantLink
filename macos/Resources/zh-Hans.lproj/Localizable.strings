@@ -308,6 +308,15 @@
 "auto_enhance_global" = "增强";
 "editor_undo" = "撤销";
 "editor_redo" = "重做";
+"editor_adjust_header" = "调整";
+"editor_zoom" = "缩放";
+"editor_reset_adjustments" = "重置调整";
+"editor_info" = "信息";
+"editor_favorite" = "收藏";
+"editor_rotate" = "旋转";
+"editor_enhance" = "增强";
+"editor_more" = "更多";
+"adjust_options" = "选项";
 "editor_coming_in_pr_15" = "将在 PR #15 中加入";
 "annotate_add_text" = "文字";
 "annotate_add_qr" = "二维码";

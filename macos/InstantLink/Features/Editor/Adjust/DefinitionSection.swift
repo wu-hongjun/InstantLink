@@ -4,13 +4,14 @@ import SwiftUI
 /// with Auto / Reset. Locked decision Q7 — Photos parity (no Radius slider).
 struct DefinitionSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("definition_section"),
+                systemImage: "triangle",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral

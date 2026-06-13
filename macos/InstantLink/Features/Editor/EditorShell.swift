@@ -1,24 +1,43 @@
 import AppKit
 import SwiftUI
 
-/// New Photos-style editor entry view. Top tab bar + split canvas / sidebar.
+/// Photos-style editor entry view. Plan 049 rewrites the layout to mirror the
+/// real macOS Photos.app Edit window:
+///
+///   ┌───────────────────────────────────────────────────────────┐
+///   │   zoom slider │       Adjust|Filters|Crop|Annotate (pill) │   info … ♡ ↻ ✨  [ Done ]
+///   ├───────────────────────────────────────────────────────────┤
+///   │                                                           │
+///   │              canvas (HStack lead, near-black)             │   sidebar (~320 pt)
+///   │                                                           │
+///   └───────────────────────────────────────────────────────────┘
+///
+/// The v0.1.45 implementation used HSplitView and a full-width tab strip —
+/// both replaced here so the editor reads like Photos at a glance.
 struct EditorShell: View {
     @EnvironmentObject var viewModel: ViewModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var state = EditorViewState()
 
+    /// Plan 049 PR §sidebar — Photos sidebar is fixed-width, not draggable.
+    private let sidebarWidth: CGFloat = 320
+
     var body: some View {
         VStack(spacing: 0) {
-            EditorShellToolbar(
+            EditorShellTopBar(
                 state: state,
                 onDone: { persistSnapshot(); dismiss() },
                 onRevert: { state.revert() }
             )
             Divider()
-            EditorTabBar(active: $state.activeTab)
-            Divider()
-            HSplitView {
+            HStack(spacing: 0) {
                 ZStack {
+                    // Plan 049: explicit dark canvas background, matching
+                    // Photos. The MTKView itself also has a near-black clear
+                    // color (defense-in-depth against the v0.1.45 blank-
+                    // canvas bug).
+                    Color(white: 0.07)
+                        .ignoresSafeArea(edges: .bottom)
                     EditorPreview(state: state)
                     if state.activeTab == .crop {
                         CropFrameView(state: state)
@@ -27,7 +46,10 @@ struct EditorShell: View {
                         EyedropperOverlay(state: state)
                     }
                 }
-                .frame(minWidth: 620)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                Divider()
+
                 Group {
                     switch state.activeTab {
                     case .adjust:   AdjustSidebar(state: state)
@@ -36,7 +58,8 @@ struct EditorShell: View {
                     case .annotate: AnnotateSidebar(state: state)
                     }
                 }
-                .frame(minWidth: 320, idealWidth: 400, maxWidth: 460)
+                .frame(width: sidebarWidth)
+                .frame(maxHeight: .infinity)
             }
         }
         .frame(minWidth: 980, minHeight: 640)
@@ -63,86 +86,5 @@ struct EditorShell: View {
     private func persistSnapshot() {
         guard viewModel.selectedImage != nil else { return }
         viewModel.currentEditorSnapshot = state.snapshot()
-    }
-}
-
-/// Top tab bar.
-private struct EditorTabBar: View {
-    @Binding var active: EditorTab
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(EditorTab.allCases, id: \.self) { tab in
-                Button {
-                    active = tab
-                } label: {
-                    Text(tab.localizedTitle)
-                        .font(.callout.weight(active == tab ? .semibold : .regular))
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            active == tab
-                                ? Color.accentColor.opacity(0.15)
-                                : Color.clear
-                        )
-                        .foregroundStyle(active == tab ? Color.accentColor : Color.primary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-    }
-}
-
-/// Done / Revert / Undo / Redo toolbar.
-private struct EditorShellToolbar: View {
-    @ObservedObject var state: EditorViewState
-    let onDone: () -> Void
-    let onRevert: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Button {
-                state.undo()
-            } label: {
-                Label(L("editor_undo"), systemImage: "arrow.uturn.backward")
-            }
-            .disabled(!state.history.canUndo)
-
-            Button {
-                state.redo()
-            } label: {
-                Label(L("editor_redo"), systemImage: "arrow.uturn.forward")
-            }
-            .disabled(!state.history.canRedo)
-
-            // Plan 048 PR #16 — global Enhance. Runs `AutoEnhance.apply(.global)`
-            // against the source image, matching the magic-wand button at the
-            // top of Photos' editor.
-            Button {
-                if let image = state.sourceImage ?? state.previewImage {
-                    AutoEnhance.apply(target: .global, image: image, state: state)
-                }
-            } label: {
-                Label(L("auto_enhance_global"), systemImage: "wand.and.stars")
-            }
-            .disabled(state.sourceImage == nil && state.previewImage == nil)
-
-            Spacer()
-
-            Button(L("editor_revert")) {
-                onRevert()
-            }
-
-            Button(L("editor_done")) {
-                onDone()
-            }
-            .keyboardShortcut(.return, modifiers: [.command])
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
     }
 }

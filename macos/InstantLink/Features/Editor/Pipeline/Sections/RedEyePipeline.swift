@@ -18,7 +18,10 @@ enum RedEyePipeline {
         guard s.sectionEnabled, !s.corrections.isEmpty else { return image }
         let centers = s.corrections.map { CIVector(x: $0.point.x, y: $0.point.y) }
         guard let filter = CIFilter(name: "CIRedEyeCorrection") else {
-            // TODO: PR #17 — custom CIKernel red-channel knockdown fallback.
+            // CIRedEyeCorrection is currently available on every shipping
+            // macOS that we target. If Apple ever drops the by-name lookup,
+            // a v2 fallback (custom CIKernel red-channel knockdown) would
+            // belong here — tracked outside this plan.
             return image
         }
         filter.setValue(image, forKey: kCIInputImageKey)

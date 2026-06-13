@@ -284,6 +284,15 @@
 "auto_enhance_global" = "Aprimorar";
 "editor_undo" = "Desfazer";
 "editor_redo" = "Refazer";
+"editor_adjust_header" = "ADJUST";
+"editor_zoom" = "Zoom";
+"editor_reset_adjustments" = "Reset Adjustments";
+"editor_info" = "Info";
+"editor_favorite" = "Favorite";
+"editor_rotate" = "Rotate";
+"editor_enhance" = "Enhance";
+"editor_more" = "More";
+"adjust_options" = "Options";
 "editor_coming_in_pr_15" = "Coming in PR #15";
 "annotate_add_text" = "Text";
 "annotate_add_qr" = "QR Code";

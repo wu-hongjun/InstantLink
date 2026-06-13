@@ -19,7 +19,9 @@ import Foundation
 /// PR #17 fidelity pass tunes them against side-by-side Photos comparison.
 enum BlackAndWhitePipeline {
     static func apply(_ image: CIImage, _ s: AdjustmentState.BlackAndWhite) -> CIImage {
-        guard s.on else { return image }
+        // Plan 049 H2: respect `sectionEnabled` like every other pipeline,
+        // then the `on` mode flag. Skips when EITHER is off.
+        guard s.sectionEnabled, s.on else { return image }
 
         var img = image.applyingFilter("CIColorControls", parameters: [
             "inputSaturation": 0.0,

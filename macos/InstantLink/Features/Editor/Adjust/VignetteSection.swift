@@ -9,13 +9,14 @@ import SwiftUI
 /// a sensible starting size.
 struct VignetteSection: View {
     @ObservedObject var state: EditorViewState
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             AdjustmentSectionHeader(
                 isExpanded: $isExpanded,
                 title: L_key("vignette_section"),
+                systemImage: "circle.dotted",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral
@@ -58,9 +59,9 @@ struct VignetteSection: View {
         state.adjustments.vignette = AdjustmentState.Vignette()
     }
 
-    /// Placeholder Auto: a mild dark vignette. PR #16 wires the Apple
-    /// analyzer end-to-end across all sections.
-    // TODO: wire Apple analyzer in PR #16 Auto buttons.
+    /// Auto preset: toggle a mild dark vignette (`strength = -0.2`).
+    /// `CIImage.autoAdjustmentFilters` does not surface a vignette analyzer
+    /// recommendation, so this preset-based Auto is the shipped behavior.
     private func applyAuto() {
         if state.adjustments.vignette.strength == 0 {
             state.adjustments.vignette.strength = -0.2

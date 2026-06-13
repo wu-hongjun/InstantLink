@@ -306,3 +306,16 @@
 "crop_reset" = "재설정";
 "crop_orientation_landscape" = "가로";
 "crop_orientation_portrait" = "세로";
+/* Editor — Adjust section primitives (plan 048 PR #3) */
+"adjust_auto" = "자동";
+"adjust_reset" = "재설정";
+
+/* Editor — Light section (plan 048 PR #3) */
+"light_section" = "빛";
+"light_brilliance" = "광채";
+"light_exposure" = "노출";
+"light_highlights" = "하이라이트";
+"light_shadows" = "그림자";
+"light_brightness" = "밝기";
+"light_contrast" = "대비";
+"light_black_point" = "검은 점";

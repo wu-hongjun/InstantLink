@@ -306,3 +306,16 @@
 "crop_reset" = "Reset";
 "crop_orientation_landscape" = "Landscape";
 "crop_orientation_portrait" = "Portrait";
+/* Editor — Adjust section primitives (plan 048 PR #3) */
+"adjust_auto" = "Auto";
+"adjust_reset" = "Reset";
+
+/* Editor — Light section (plan 048 PR #3) */
+"light_section" = "Light";
+"light_brilliance" = "Brilliance";
+"light_exposure" = "Exposure";
+"light_highlights" = "Highlights";
+"light_shadows" = "Shadows";
+"light_brightness" = "Brightness";
+"light_contrast" = "Contrast";
+"light_black_point" = "Black Point";

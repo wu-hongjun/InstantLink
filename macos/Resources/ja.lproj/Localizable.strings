@@ -306,3 +306,16 @@
 "crop_reset" = "リセット";
 "crop_orientation_landscape" = "横向き";
 "crop_orientation_portrait" = "縦向き";
+/* Editor — Adjust section primitives (plan 048 PR #3) */
+"adjust_auto" = "自動";
+"adjust_reset" = "リセット";
+
+/* Editor — Light section (plan 048 PR #3) */
+"light_section" = "光";
+"light_brilliance" = "鮮やかさ";
+"light_exposure" = "露出";
+"light_highlights" = "ハイライト";
+"light_shadows" = "シャドウ";
+"light_brightness" = "明るさ";
+"light_contrast" = "コントラスト";
+"light_black_point" = "ブラックポイント";

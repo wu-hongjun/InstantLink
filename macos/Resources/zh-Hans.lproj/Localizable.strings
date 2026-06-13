@@ -331,3 +331,16 @@
 "crop_reset" = "重置";
 "crop_orientation_landscape" = "横向";
 "crop_orientation_portrait" = "纵向";
+/* Editor — Adjust section primitives (plan 048 PR #3) */
+"adjust_auto" = "自动";
+"adjust_reset" = "重置";
+
+/* Editor — Light section (plan 048 PR #3) */
+"light_section" = "光";
+"light_brilliance" = "光彩";
+"light_exposure" = "曝光";
+"light_highlights" = "高光";
+"light_shadows" = "阴影";
+"light_brightness" = "亮度";
+"light_contrast" = "对比度";
+"light_black_point" = "黑点";

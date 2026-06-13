@@ -1,20 +1,28 @@
 import SwiftUI
 
-/// Placeholder sidebar for the Adjust tab; filled in across PRs #3 – #13.
+/// Host for all Adjust panels. Subsequent PRs append their section views
+/// to the same scrollable VStack.
 struct AdjustSidebar: View {
     @ObservedObject var state: EditorViewState
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L("editor_tab_adjust"))
-                    .font(.headline)
-                Text(L("editor_coming_in_pr_3"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 16) {
+                LightSection(state: state)
+                // PR #4: ColorSection(state: state)
+                // PR #5: CurvesSection / LevelsSection / HistogramView
+                // PR #6: VignetteSection
+                // PR #7: SharpenSection
+                // PR #8: NoiseReductionSection
+                // PR #9: DefinitionSection
+                // PR #10: SelectiveColorSection
+                // PR #11: RedEyeSection
+                // PR #12: WhiteBalanceSection
+                // PR #13: BlackAndWhiteSection
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
     }
 }

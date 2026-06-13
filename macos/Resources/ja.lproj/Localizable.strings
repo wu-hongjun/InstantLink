@@ -288,3 +288,21 @@
 "editor_coming_in_pr_15" = "PR #15 で実装予定";
 "settings_use_new_editor" = "新しいエディタを使用（実験的）";
 "settings_experimental" = "実験的機能";
+
+/* Editor Crop tab (plan 048 PR #2) */
+"crop_aspect_original" = "オリジナル";
+"crop_aspect_freeform" = "フリーフォーム";
+"crop_aspect_square" = "正方形";
+"crop_aspect_custom" = "カスタム…";
+"crop_aspect_printer_mini" = "Mini Link";
+"crop_aspect_printer_square" = "Square Link";
+"crop_aspect_printer_wide" = "Wide Link";
+"crop_straighten" = "傾き補正";
+"crop_vertical" = "垂直";
+"crop_horizontal" = "水平";
+"crop_flip" = "反転";
+"crop_rotate_90" = "90°回転";
+"crop_auto" = "自動";
+"crop_reset" = "リセット";
+"crop_orientation_landscape" = "横向き";
+"crop_orientation_portrait" = "縦向き";

@@ -289,3 +289,21 @@
 "editor_coming_in_pr_15" = "Coming in PR #15";
 "settings_use_new_editor" = "Use New Editor (Experimental)";
 "settings_experimental" = "Experimental";
+
+/* Editor Crop tab (plan 048 PR #2) */
+"crop_aspect_original" = "Original";
+"crop_aspect_freeform" = "Freeform";
+"crop_aspect_square" = "Square";
+"crop_aspect_custom" = "Custom…";
+"crop_aspect_printer_mini" = "Mini Link";
+"crop_aspect_printer_square" = "Square Link";
+"crop_aspect_printer_wide" = "Wide Link";
+"crop_straighten" = "Straighten";
+"crop_vertical" = "Vertical";
+"crop_horizontal" = "Horizontal";
+"crop_flip" = "Flip";
+"crop_rotate_90" = "Rotate 90°";
+"crop_auto" = "Auto";
+"crop_reset" = "Reset";
+"crop_orientation_landscape" = "Landscape";
+"crop_orientation_portrait" = "Portrait";

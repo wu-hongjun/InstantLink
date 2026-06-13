@@ -313,3 +313,21 @@
 "editor_coming_in_pr_15" = "将在 PR #15 中加入";
 "settings_use_new_editor" = "使用新版编辑器(实验性)";
 "settings_experimental" = "实验性功能";
+
+/* Editor Crop tab (plan 048 PR #2) */
+"crop_aspect_original" = "原始";
+"crop_aspect_freeform" = "自由";
+"crop_aspect_square" = "方形";
+"crop_aspect_custom" = "自定…";
+"crop_aspect_printer_mini" = "Mini Link";
+"crop_aspect_printer_square" = "Square Link";
+"crop_aspect_printer_wide" = "Wide Link";
+"crop_straighten" = "校正";
+"crop_vertical" = "垂直";
+"crop_horizontal" = "水平";
+"crop_flip" = "翻转";
+"crop_rotate_90" = "旋转 90°";
+"crop_auto" = "自动";
+"crop_reset" = "重置";
+"crop_orientation_landscape" = "横向";
+"crop_orientation_portrait" = "纵向";

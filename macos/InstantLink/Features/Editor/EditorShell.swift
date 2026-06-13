@@ -18,8 +18,13 @@ struct EditorShell: View {
             EditorTabBar(active: $state.activeTab)
             Divider()
             HSplitView {
-                EditorPreview(state: state)
-                    .frame(minWidth: 620)
+                ZStack {
+                    EditorPreview(state: state)
+                    if state.activeTab == .crop {
+                        CropFrameView(state: state)
+                    }
+                }
+                .frame(minWidth: 620)
                 Group {
                     switch state.activeTab {
                     case .adjust:   AdjustSidebar(state: state)

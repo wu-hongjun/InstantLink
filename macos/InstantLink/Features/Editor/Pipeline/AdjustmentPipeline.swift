@@ -35,6 +35,6 @@ struct AdjustmentPipeline {
     private func applyNoiseReduction(_ image: CIImage, _ state: AdjustmentState.NoiseReduction) -> CIImage { image }
     private func applySharpen(_ image: CIImage, _ state: AdjustmentState.Sharpen) -> CIImage { image }
     private func applyRedEye(_ image: CIImage, _ state: AdjustmentState.RedEye) -> CIImage { image }
-    private func applyCrop(_ image: CIImage, _ state: CropState) -> CIImage { image }
+    private func applyCrop(_ image: CIImage, _ state: CropState) -> CIImage { CropPipeline.apply(image, state) }
     private func applyVignette(_ image: CIImage, _ state: AdjustmentState.Vignette) -> CIImage { image }
 }

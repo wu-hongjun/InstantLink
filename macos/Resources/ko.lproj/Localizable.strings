@@ -288,3 +288,21 @@
 "editor_coming_in_pr_15" = "PR #15에서 추가 예정";
 "settings_use_new_editor" = "새 편집기 사용(실험적)";
 "settings_experimental" = "실험적 기능";
+
+/* Editor Crop tab (plan 048 PR #2) */
+"crop_aspect_original" = "원본";
+"crop_aspect_freeform" = "자유 형식";
+"crop_aspect_square" = "정사각형";
+"crop_aspect_custom" = "사용자 지정…";
+"crop_aspect_printer_mini" = "Mini Link";
+"crop_aspect_printer_square" = "Square Link";
+"crop_aspect_printer_wide" = "Wide Link";
+"crop_straighten" = "수평 맞추기";
+"crop_vertical" = "수직";
+"crop_horizontal" = "수평";
+"crop_flip" = "뒤집기";
+"crop_rotate_90" = "90° 회전";
+"crop_auto" = "자동";
+"crop_reset" = "재설정";
+"crop_orientation_landscape" = "가로";
+"crop_orientation_portrait" = "세로";

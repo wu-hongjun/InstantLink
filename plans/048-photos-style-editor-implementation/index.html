@@ -2362,8 +2362,8 @@
 </tr>
 <tr>
 <td>#17 Final polish + fidelity pass + version bumps</td>
-<td>in flight (Wave 6)</td>
-<td></td>
+<td>✅ landed</td>
+<td><code>adbcfc7</code> — option-drag extended range + VoiceOver on AdjustmentSlider, LightPipeline contrast multiplier tune, 100 ms histogram debounce confirmed, 7-locale (de/es/fr/it/pt-BR/ar/he) backfill for editor tab bar + section titles + Light slider labels, stale editor_coming_in_pr_2/3 keys dropped, PR #14 audit L1–L4 nits cleared (annotate_overlay_lock/unlock/show/hide help text + OverlayItem.displayTitle DRY + EditorPreview film-frame Q4 comment + annotate_select_image_overlay key), crate versions verified at 0.1.45</td>
 </tr>
 <tr>
 <td>#15 Filter rail</td>
@@ -2372,6 +2372,7 @@
 </tr>
 </tbody>
 </table>
+<p><strong>🎉 Plan 048 complete.</strong> All 17 PRs landed. The Photos-style editor rebuild is shipped; legacy <code>EditorViews.swift</code> is deleted; <code>useNewEditor</code> flag is gone. App + crates at 0.1.45.</p>
 <hr />
 <h2 id="0-new-file-layout">0. New file layout<a class="headerlink" href="#0-new-file-layout" title="Permanent link">&para;</a></h2>
 <p>The existing editor (<code>macos/InstantLink/Features/Editor/EditorViews.swift</code>, 1364 lines) is retired piecewise. PR #1 introduces the new shell <strong>alongside</strong> the legacy view behind a settings flag; PRs #2–#14 add tabs and sections; PR #14 ports overlays and deletes <code>EditorViews.swift</code>.</p>

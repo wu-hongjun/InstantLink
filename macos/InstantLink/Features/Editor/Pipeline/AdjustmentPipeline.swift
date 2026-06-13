@@ -35,7 +35,9 @@ struct AdjustmentPipeline {
     }
     private func applySelectiveColor(_ image: CIImage, _ state: AdjustmentState.SelectiveColor) -> CIImage { image }
     private func applyBlackAndWhite(_ image: CIImage, _ state: AdjustmentState.BlackAndWhite) -> CIImage { image }
-    private func applyDefinition(_ image: CIImage, _ state: AdjustmentState.Definition) -> CIImage { image }
+    private func applyDefinition(_ image: CIImage, _ state: AdjustmentState.Definition) -> CIImage {
+        DefinitionPipeline.apply(image, state)
+    }
     private func applyNoiseReduction(_ image: CIImage, _ state: AdjustmentState.NoiseReduction) -> CIImage {
         NoiseReductionPipeline.apply(image, state)
     }

@@ -341,3 +341,6 @@
 "nr_luminance" = "輝度";
 "nr_color" = "カラー";
 "nr_detail" = "ディテール";
+/* Editor — Definition section (plan 048 PR #9) */
+"definition_section" = "精細度";
+"definition_amount" = "精細度";

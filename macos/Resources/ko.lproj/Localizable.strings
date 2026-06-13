@@ -341,3 +341,6 @@
 "nr_luminance" = "광도";
 "nr_color" = "색상";
 "nr_detail" = "세부 사항";
+/* Editor — Definition section (plan 048 PR #9) */
+"definition_section" = "선명도";
+"definition_amount" = "선명도";

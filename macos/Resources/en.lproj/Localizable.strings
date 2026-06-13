@@ -341,3 +341,6 @@
 "nr_luminance" = "Luminance";
 "nr_color" = "Color";
 "nr_detail" = "Detail";
+/* Editor — Definition section (plan 048 PR #9) */
+"definition_section" = "Definition";
+"definition_amount" = "Definition";

@@ -366,3 +366,6 @@
 "nr_luminance" = "亮度";
 "nr_color" = "颜色";
 "nr_detail" = "细节";
+/* Editor — Definition section (plan 048 PR #9) */
+"definition_section" = "清晰度";
+"definition_amount" = "清晰度";

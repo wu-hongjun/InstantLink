@@ -82,15 +82,8 @@ struct EditorPreviewView: View {
         }
         .frame(minHeight: 250, idealHeight: 350)
         .animation(.easeInOut(duration: 0.22), value: viewModel.selectedImage != nil)
-        .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
-            guard !providers.isEmpty else { return false }
-            for provider in providers {
-                _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                    guard let url = url else { return }
-                    DispatchQueue.main.async { viewModel.addImages(from: [url]) }
-                }
-            }
-            return true
+        .onDrop(of: imageDropTypes, isTargeted: $isTargeted) { providers in
+            handleImageDrop(providers: providers, into: viewModel)
         }
     }
 }

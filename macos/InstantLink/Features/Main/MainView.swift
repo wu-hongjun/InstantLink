@@ -7,98 +7,11 @@ struct MainView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var isQueueStripVisible = false
     @State private var lastQueueCount = 0
+    @State private var showForgetPrinterConfirm = false
 
     var body: some View {
         VStack(spacing: 0) {
-            BridgeDiscoveryBanner(snapshot: viewModel.bridgeSnapshot) {
-                openWindow(id: "BridgeControl")
-            }
-
-            if let error = viewModel.updateError {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.caption)
-                    Text(L("update_failed", error))
-                        .font(.caption)
-                        .lineLimit(1)
-                    Spacer()
-                    Button(L("Dismiss")) {
-                        viewModel.updateError = nil
-                    }
-                    .font(.caption)
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.red.opacity(0.15))
-                .transition(.move(edge: .top).combined(with: .opacity))
-            } else if viewModel.isUpdating {
-                HStack(spacing: 6) {
-                    if viewModel.updateProgress >= 1.0 {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(L("Installing update..."))
-                            .font(.caption)
-                    } else {
-                        Image(systemName: "arrow.down.circle")
-                            .font(.caption)
-                        Text(L("Downloading update..."))
-                            .font(.caption)
-                        Spacer()
-                        ProgressView(value: viewModel.updateProgress)
-                            .frame(width: 60)
-                        Text("\(Int(viewModel.updateProgress * 100))%")
-                            .font(.caption)
-                            .monospacedDigit()
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.1))
-                .transition(.move(edge: .top).combined(with: .opacity))
-            } else if let version = viewModel.updateAvailable {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                    Text(L("update_available_version", version))
-                        .font(.caption)
-                    Spacer()
-                    Button(L("Update Now")) {
-                        viewModel.performUpdate()
-                    }
-                    .font(.caption)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.1))
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
-            if let message = viewModel.statusMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: statusBannerIcon)
-                        .font(.caption)
-                    Text(message)
-                        .font(.caption)
-                        .lineLimit(2)
-                    Spacer()
-                    if viewModel.isStatusMessagePersistent {
-                        Button(L("Dismiss")) {
-                            viewModel.dismissStatusMessage()
-                        }
-                        .font(.caption)
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(statusBannerBackground)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
+            bannerSection
 
             if viewModel.isConnected {
                 ViewThatFits(in: .horizontal) {
@@ -188,18 +101,18 @@ struct MainView: View {
                             .controlSize(.large)
                         } else if viewModel.hasKnownPrinterTarget {
                             InstaxPrinterGlyph(size: 54)
-                            Text(L("No printer connected"))
-                                .font(.headline)
-                            if viewModel.pairingRecoveryMode == .reconnectFallback {
-                                VStack(spacing: 4) {
-                                    Text(L("pairing_stage_connect_failed"))
-                                        .font(.subheadline.weight(.medium))
-                                    if let target = viewModel.reconnectRecoveryTargetDisplayName {
-                                        Text(target)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
+                            // Plan 046 B1: name the failed printer in the
+                            // headline when a targeted reconnect just failed.
+                            // The separate "Connection failed" subtitle is
+                            // dropped — the named headline plus the warning
+                            // banner from B2 carry the failure signal.
+                            if viewModel.pairingRecoveryMode == .reconnectFallback,
+                               let target = viewModel.reconnectRecoveryTargetDisplayName {
+                                Text(L("couldnt_reach_printer", target))
+                                    .font(.headline)
+                            } else {
+                                Text(L("No printer connected"))
+                                    .font(.headline)
                             }
                             VStack(alignment: .leading, spacing: 4) {
                                 Label(L("Make sure your printer is turned on"), systemImage: "1.circle")
@@ -209,18 +122,39 @@ struct MainView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.vertical, 4)
-                            HStack(spacing: 10) {
-                                Button(L("Reconnect")) {
-                                    viewModel.reconnectSelectedPrinterOrScan()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.large)
+                            // Plan 046 B3: point at the OS-level Bluetooth
+                            // recovery path only after the user has personally
+                            // seen a reconnect fail — keeps the fresh-pair
+                            // screen uncluttered.
+                            if viewModel.pairingRecoveryMode == .reconnectFallback {
+                                Label(L("bluetooth_hint_after_failed_reconnect"), systemImage: "info.circle")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            VStack(spacing: 10) {
+                                HStack(spacing: 10) {
+                                    Button(L("Reconnect")) {
+                                        viewModel.reconnectSelectedPrinterOrScan()
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.large)
 
-                                Button(L("Switch Printer")) {
-                                    viewModel.showPrinterPicker = true
-                                    viewModel.scanNearby()
+                                    Button(L("Switch Printer")) {
+                                        viewModel.showPrinterPicker = true
+                                        viewModel.scanNearby()
+                                    }
+                                    .controlSize(.large)
                                 }
-                                .controlSize(.large)
+                                // Plan 046 A: Forget escape, gated on observed
+                                // failure so it can't be hit accidentally on
+                                // a transient disconnect. `deleteProfile`
+                                // already chains into a fresh pairing loop.
+                                if viewModel.pairingRecoveryMode == .reconnectFallback {
+                                    Button(L("Forget Printer"), role: .destructive) {
+                                        showForgetPrinterConfirm = true
+                                    }
+                                    .controlSize(.large)
+                                }
                             }
                             if let summary = viewModel.reconnectRecoverySummary {
                                 Text(summary)
@@ -301,6 +235,34 @@ struct MainView: View {
             Button(L("Cancel"), role: .cancel) {
                 viewModel.cancelPendingCaptureModeChange()
             }
+        }
+        // Plan 046 A: Forget Printer confirmation. Reuses the same strings
+        // as the Settings trash-icon flow (SettingsViews.swift:507–531) so
+        // translations stay stable and the OS-level Bluetooth-bond cleanup
+        // path is surfaced in both entry points.
+        .confirmationDialog(
+            L("delete_printer_confirm"),
+            isPresented: $showForgetPrinterConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(L("Open Bluetooth Settings")) {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.BluetoothSettings") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            Button(L("Delete"), role: .destructive) {
+                if let target = viewModel.printerName
+                    ?? viewModel.selectedPrinter
+                    ?? viewModel.pairingRecoveryTarget {
+                    viewModel.deleteProfile(target)
+                }
+                showForgetPrinterConfirm = false
+            }
+            Button(L("Cancel"), role: .cancel) {
+                showForgetPrinterConfirm = false
+            }
+        } message: {
+            Text(L("delete_printer_bluetooth_message"))
         }
         .onAppear {
             lastQueueCount = viewModel.queue.count
@@ -386,6 +348,99 @@ struct MainView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isQueueStripVisible = true
             }
+        }
+    }
+
+    @ViewBuilder
+    private var bannerSection: some View {
+        if let error = viewModel.updateError {
+            BannerStrip(
+                tone: .error,
+                icon: "exclamationmark.triangle",
+                text: L("update_failed", error),
+                dismiss: BannerStrip.Action(
+                    label: L("Dismiss"),
+                    onTap: { viewModel.updateError = nil }
+                )
+            )
+        } else if let message = viewModel.statusMessage,
+                  viewModel.statusMessageTone == .error {
+            BannerStrip(
+                tone: .error,
+                icon: "xmark.octagon.fill",
+                text: message,
+                dismiss: viewModel.isStatusMessagePersistent
+                    ? BannerStrip.Action(
+                        label: L("Dismiss"),
+                        onTap: { viewModel.dismissStatusMessage() }
+                    )
+                    : nil
+            )
+        } else if let message = viewModel.statusMessage,
+                  viewModel.statusMessageTone == .warning {
+            BannerStrip(
+                tone: .warning,
+                icon: "exclamationmark.triangle.fill",
+                text: message,
+                dismiss: viewModel.isStatusMessagePersistent
+                    ? BannerStrip.Action(
+                        label: L("Dismiss"),
+                        onTap: { viewModel.dismissStatusMessage() }
+                    )
+                    : nil
+            )
+        } else if viewModel.isUpdating {
+            if viewModel.updateProgress >= 1.0 {
+                BannerStrip(
+                    tone: .info,
+                    icon: "arrow.down.circle",
+                    text: L("Installing update...")
+                )
+            } else {
+                BannerStrip(
+                    tone: .info,
+                    icon: "arrow.down.circle",
+                    text: L("Downloading update..."),
+                    progress: viewModel.updateProgress
+                )
+            }
+        } else if let version = viewModel.updateAvailable {
+            BannerStrip(
+                tone: .info,
+                icon: "arrow.up.circle.fill",
+                text: L("update_available_version", version),
+                primary: BannerStrip.Action(
+                    label: L("Update Now"),
+                    onTap: { viewModel.performUpdate() },
+                    prominent: true
+                )
+            )
+        } else if case .found(_, let medium) = viewModel.bridgeSnapshot.discovery,
+                  medium != .usb,
+                  case .unpaired = viewModel.bridgeSnapshot.pairing {
+            BannerStrip(
+                tone: .accent,
+                icon: "link.badge.plus",
+                text: L("InstantLink Bridge ready to set up"),
+                primary: BannerStrip.Action(
+                    label: L("Set up"),
+                    onTap: { openWindow(id: "BridgeControl") }
+                )
+            )
+        } else if let message = viewModel.statusMessage {
+            BannerStrip(
+                tone: viewModel.statusMessageTone == .success ? .success : .info,
+                icon: viewModel.statusMessageTone == .success
+                    ? "checkmark.circle.fill"
+                    : "info.circle",
+                text: message,
+                dismiss: viewModel.isStatusMessagePersistent
+                    ? BannerStrip.Action(
+                        label: L("Dismiss"),
+                        onTap: { viewModel.dismissStatusMessage() }
+                    )
+                    : nil
+            )
         }
     }
 
@@ -521,24 +576,6 @@ struct MainView: View {
                 .foregroundColor(.secondary)
         }
         .buttonStyle(.plain)
-    }
-
-    private var statusBannerIcon: String {
-        switch viewModel.statusMessageTone {
-        case .info: return "info.circle"
-        case .success: return "checkmark.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .error: return "xmark.octagon.fill"
-        }
-    }
-
-    private var statusBannerBackground: Color {
-        switch viewModel.statusMessageTone {
-        case .info: return Color.blue.opacity(0.1)
-        case .success: return Color.green.opacity(0.12)
-        case .warning: return Color.orange.opacity(0.14)
-        case .error: return Color.red.opacity(0.14)
-        }
     }
 
     private var printerStatusColor: Color {

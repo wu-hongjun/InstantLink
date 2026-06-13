@@ -137,7 +137,6 @@
 
 /* Settings Window */
 "Settings" = "הגדרות";
-"Experimental Settings" = "הגדרות ניסיוניות";
 "Language" = "שפה";
 "Language & Appearance" = "שפה ומראה";
 "Appearance" = "מראה";
@@ -270,3 +269,7 @@
 "Printer" = "מדפסת";
 "Queue" = "תור";
 "failed_to_save_captured_image" = "שמירת התמונה שצולמה נכשלה: %@";
+"Forget Printer" = "Forget Printer";
+"couldnt_reach_printer" = "Couldn't reach %@";
+"couldnt_reach_printer_banner" = "Couldn't reach %@. Try again, switch, or forget.";
+"bluetooth_hint_after_failed_reconnect" = "If pairing keeps failing, check System Settings → Bluetooth";

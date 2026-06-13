@@ -136,7 +136,6 @@
 
 /* Settings Window */
 "Settings" = "설정";
-"Experimental Settings" = "실험적 설정";
 "Language" = "언어";
 "Language & Appearance" = "언어 및 모양";
 "Appearance" = "모양";
@@ -269,3 +268,7 @@
 "Printer" = "프린터";
 "Queue" = "대기열";
 "failed_to_save_captured_image" = "촬영한 이미지를 저장하지 못했습니다: %@";
+"Forget Printer" = "프린터 잊기";
+"couldnt_reach_printer" = "%@에 연결할 수 없습니다";
+"couldnt_reach_printer_banner" = "%@에 연결할 수 없습니다. 다시 시도, 전환 또는 잊기를 누르세요.";
+"bluetooth_hint_after_failed_reconnect" = "페어링이 계속 실패하면 시스템 설정 → Bluetooth를 확인하세요";

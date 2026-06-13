@@ -227,16 +227,13 @@ final class PrinterConnectionCoordinator: ObservableObject {
 
             if disconnectCurrentPrinter || self.snapshot.isConnected {
                 await self.ffi.disconnectPrinter()
-            } else {
-                await self.ffi.disconnectPrinter()
             }
             if self.shouldEndPairingSession(pairingSessionID) {
                 self.finishPairingSession(id: pairingSessionID)
                 return
             }
 
-            if let reconnectTarget = self.currentReconnectTarget() {
-                let target = self.currentReconnectTarget() ?? reconnectTarget
+            if let target = self.currentReconnectTarget() {
                 let connected = await self.attemptConnection(
                     to: target,
                     connectDuration: connectDuration,
@@ -596,6 +593,17 @@ final class PrinterConnectionCoordinator: ObservableObject {
             snapshot.pairingRecoveryTarget = target
             snapshot.hasSearchedOnce = true
         }
+
+        // Surface the failure through the global banner (plan 046 B2). The
+        // existing in-flow `pairing_stage_connect_failed` subtitle is too
+        // quiet for the one event users care about most, and `startPairingLoop`
+        // already fires `emitStatus(.dismiss)` so the banner clears on retry.
+        let bannerTarget = profiles[target]?.displayName ?? target
+        emitStatus(.show(PrinterConnectionStatusMessage(
+            text: L("couldnt_reach_printer_banner", bannerTarget),
+            tone: .warning,
+            autoDismiss: false
+        )))
     }
 
     private func currentReconnectTarget() -> String? {

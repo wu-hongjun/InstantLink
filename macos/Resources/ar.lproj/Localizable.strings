@@ -136,7 +136,6 @@
 
 /* Settings Window */
 "Settings" = "الإعدادات";
-"Experimental Settings" = "إعدادات تجريبية";
 "Language" = "اللغة";
 "Language & Appearance" = "اللغة والمظهر";
 "Appearance" = "المظهر";
@@ -269,3 +268,7 @@
 "Printer" = "الطابعة";
 "Queue" = "قائمة الانتظار";
 "failed_to_save_captured_image" = "تعذر حفظ الصورة الملتقطة: %@";
+"Forget Printer" = "Forget Printer";
+"couldnt_reach_printer" = "Couldn't reach %@";
+"couldnt_reach_printer_banner" = "Couldn't reach %@. Try again, switch, or forget.";
+"bluetooth_hint_after_failed_reconnect" = "If pairing keeps failing, check System Settings → Bluetooth";

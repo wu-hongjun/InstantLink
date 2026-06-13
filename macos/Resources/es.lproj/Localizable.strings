@@ -136,7 +136,6 @@
 
 /* Settings Window */
 "Settings" = "Ajustes";
-"Experimental Settings" = "Ajustes experimentales";
 "Language" = "Idioma";
 "Language & Appearance" = "Idioma y apariencia";
 "Appearance" = "Apariencia";
@@ -269,3 +268,7 @@
 "Printer" = "Impresora";
 "Queue" = "Cola";
 "failed_to_save_captured_image" = "No se pudo guardar la imagen capturada: %@";
+"Forget Printer" = "Forget Printer";
+"couldnt_reach_printer" = "Couldn't reach %@";
+"couldnt_reach_printer_banner" = "Couldn't reach %@. Try again, switch, or forget.";
+"bluetooth_hint_after_failed_reconnect" = "If pairing keeps failing, check System Settings → Bluetooth";

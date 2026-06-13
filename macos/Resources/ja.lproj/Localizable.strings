@@ -136,7 +136,6 @@
 
 /* Settings Window */
 "Settings" = "設定";
-"Experimental Settings" = "実験的な設定";
 "Language" = "言語";
 "Language & Appearance" = "言語と外観";
 "Appearance" = "外観";
@@ -269,3 +268,7 @@
 "Printer" = "プリンター";
 "Queue" = "キュー";
 "failed_to_save_captured_image" = "撮影画像を保存できませんでした: %@";
+"Forget Printer" = "プリンターを削除";
+"couldnt_reach_printer" = "%@に接続できませんでした";
+"couldnt_reach_printer_banner" = "%@に接続できませんでした。再試行、切替、または削除してください。";
+"bluetooth_hint_after_failed_reconnect" = "ペアリングが続けて失敗する場合はシステム設定 → Bluetooth を確認してください";

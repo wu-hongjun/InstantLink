@@ -136,7 +136,6 @@
 
 /* Settings Window */
 "Settings" = "設定";
-"Experimental Settings" = "實驗性設定";
 "Language" = "語言";
 "Language & Appearance" = "語言與外觀";
 "Appearance" = "外觀";
@@ -269,3 +268,7 @@
 "Printer" = "印表機";
 "Queue" = "佇列";
 "failed_to_save_captured_image" = "無法儲存拍攝的影像：%@";
+"Forget Printer" = "忘記印表機";
+"couldnt_reach_printer" = "無法連接 %@";
+"couldnt_reach_printer_banner" = "無法連接 %@。請重試、切換或忘記。";
+"bluetooth_hint_after_failed_reconnect" = "若反覆失敗，請檢查系統設定 → 藍牙";

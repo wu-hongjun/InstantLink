@@ -313,6 +313,7 @@ class ViewModel: ObservableObject {
     @Published var bridgeSnapshot: BridgeControlSnapshot = .empty
     private var bridgeSnapshotCancellable: AnyCancellable?
     private var bridgeStarted = false
+    private var lastObservedAutoTrustEvent: Date?
 
     init() {
         guard let f = InstantLinkFFI() else {
@@ -332,7 +333,16 @@ class ViewModel: ObservableObject {
         bridgeSnapshotCancellable = bridgeCoordinator.$snapshot
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in
-                self?.bridgeSnapshot = snapshot
+                guard let self else { return }
+                if let event = snapshot.lastAutoTrustEvent,
+                   event != self.lastObservedAutoTrustEvent {
+                    self.lastObservedAutoTrustEvent = event
+                    self.showStatus(
+                        L("Bridge connected and authorized"),
+                        tone: .success
+                    )
+                }
+                self.bridgeSnapshot = snapshot
             }
     }
 

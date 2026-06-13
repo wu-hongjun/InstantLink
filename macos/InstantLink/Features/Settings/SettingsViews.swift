@@ -211,12 +211,32 @@ struct SettingsView: View {
                     LanguageAppearanceSection()
                     Divider().padding(.vertical, 12)
                     PrinterManagementSection()
+                    Divider().padding(.vertical, 12)
+                    ExperimentalSection()
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
         }
         .frame(width: 380, height: 500)
+    }
+}
+
+struct ExperimentalSection: View {
+    @EnvironmentObject var viewModel: ViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("Experimental"))
+                .font(.headline)
+            Toggle(isOn: Binding(
+                get: { viewModel.editorSettings.useNewEditor },
+                set: { viewModel.editorSettings.useNewEditor = $0 }
+            )) {
+                Text(L("settings_use_new_editor"))
+            }
+            .toggleStyle(.switch)
+        }
     }
 }
 

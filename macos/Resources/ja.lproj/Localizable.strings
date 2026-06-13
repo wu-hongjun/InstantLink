@@ -272,3 +272,19 @@
 "couldnt_reach_printer" = "%@に接続できませんでした";
 "couldnt_reach_printer_banner" = "%@に接続できませんでした。再試行、切替、または削除してください。";
 "bluetooth_hint_after_failed_reconnect" = "ペアリングが続けて失敗する場合はシステム設定 → Bluetooth を確認してください";
+
+/* Editor Shell (plan 048 PR #1) */
+"editor_tab_adjust" = "調整";
+"editor_tab_filters" = "フィルタ";
+"editor_tab_crop" = "切り取り";
+"editor_tab_annotate" = "注釈";
+"editor_done" = "完了";
+"editor_revert" = "元に戻す";
+"editor_undo" = "取り消す";
+"editor_redo" = "やり直す";
+"editor_coming_in_pr_2" = "PR #2 で実装予定";
+"editor_coming_in_pr_3" = "PR #3 で実装予定";
+"editor_coming_in_pr_14" = "PR #14 で実装予定";
+"editor_coming_in_pr_15" = "PR #15 で実装予定";
+"settings_use_new_editor" = "新しいエディタを使用（実験的）";
+"Experimental" = "実験的機能";

@@ -272,3 +272,19 @@
 "couldnt_reach_printer" = "%@에 연결할 수 없습니다";
 "couldnt_reach_printer_banner" = "%@에 연결할 수 없습니다. 다시 시도, 전환 또는 잊기를 누르세요.";
 "bluetooth_hint_after_failed_reconnect" = "페어링이 계속 실패하면 시스템 설정 → Bluetooth를 확인하세요";
+
+/* Editor Shell (plan 048 PR #1) */
+"editor_tab_adjust" = "조정";
+"editor_tab_filters" = "필터";
+"editor_tab_crop" = "자르기";
+"editor_tab_annotate" = "주석";
+"editor_done" = "완료";
+"editor_revert" = "되돌리기";
+"editor_undo" = "실행 취소";
+"editor_redo" = "다시 실행";
+"editor_coming_in_pr_2" = "PR #2에서 추가 예정";
+"editor_coming_in_pr_3" = "PR #3에서 추가 예정";
+"editor_coming_in_pr_14" = "PR #14에서 추가 예정";
+"editor_coming_in_pr_15" = "PR #15에서 추가 예정";
+"settings_use_new_editor" = "새 편집기 사용(실험적)";
+"Experimental" = "실험적 기능";

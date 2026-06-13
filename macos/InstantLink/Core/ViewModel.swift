@@ -109,6 +109,13 @@ class ViewModel: ObservableObject {
             AppAppearanceService.apply(appearancePreference)
         }
     }
+    @Published var editorSettings: EditorSettings = initialEditorSettings {
+        didSet {
+            if editorSettings != oldValue {
+                editorSettings.save()
+            }
+        }
+    }
 
     var selectedImage: NSImage? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].image : nil }
     var selectedImagePath: String? { queue.indices.contains(selectedQueueIndex) ? queue[selectedQueueIndex].url.path : nil }

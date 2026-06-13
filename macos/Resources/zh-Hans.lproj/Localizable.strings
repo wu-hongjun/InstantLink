@@ -297,3 +297,19 @@
 "couldnt_reach_printer" = "无法连接 %@";
 "couldnt_reach_printer_banner" = "无法连接 %@。请重试、切换或忘记。";
 "bluetooth_hint_after_failed_reconnect" = "若反复失败，请检查系统设置 → 蓝牙";
+
+/* Editor Shell (plan 048 PR #1) */
+"editor_tab_adjust" = "调整";
+"editor_tab_filters" = "滤镜";
+"editor_tab_crop" = "裁剪";
+"editor_tab_annotate" = "标注";
+"editor_done" = "完成";
+"editor_revert" = "还原";
+"editor_undo" = "撤销";
+"editor_redo" = "重做";
+"editor_coming_in_pr_2" = "将在 PR #2 中加入";
+"editor_coming_in_pr_3" = "将在 PR #3 中加入";
+"editor_coming_in_pr_14" = "将在 PR #14 中加入";
+"editor_coming_in_pr_15" = "将在 PR #15 中加入";
+"settings_use_new_editor" = "使用新版编辑器(实验性)";
+"Experimental" = "实验性功能";

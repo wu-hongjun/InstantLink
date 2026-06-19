@@ -2,29 +2,46 @@ import CoreImage
 import Metal
 import MetalKit
 import SwiftUI
+import os.log
 
-/// `NSViewRepresentable` wrapping an `MTKView` that draws a CIImage via
-/// `CIRenderDestination`. Runs `isPaused = true` + `enableSetNeedsDisplay = true`
-/// so the GPU only wakes when the editor's rendered preview changes.
+private let mtkLog = Logger(subsystem: "fi.bullpen.instantlink.editor", category: "mtkview")
+
+/// Editor canvas. After multiple iterations of MTKView + CIRenderDestination
+/// producing only a black box (see EditorMetalView below — kept for future
+/// debug but not used), the canvas now renders via a SwiftUI `Image` driven by
+/// a CGImage rasterised on every preview change. Performance is "good enough"
+/// for the editor's interactive sliders; we can revisit a GPU live-preview
+/// path once the underlying MTKView issue is properly diagnosed.
 ///
 /// Plan 047 §Q4 (film-frame in canvas): the Photos-style editor canvas is
 /// pixel-accurate and intentionally does NOT render an Instax film border —
 /// the simulated frame stays in the main-window queue preview, not here.
-/// Confirmed moot for the new editor in PR #17 of plan 048.
-struct EditorPreview: NSViewRepresentable {
+struct EditorPreview: View {
     @ObservedObject var state: EditorViewState
 
-    func makeNSView(context: Context) -> EditorMetalView {
-        let device = MTLCreateSystemDefaultDevice() ?? MTLCopyAllDevices().first!
-        let view = EditorMetalView(device: device)
-        view.image = state.renderedPreview ?? state.previewImage
-        view.zoom = state.zoomLevel
-        return view
-    }
+    /// Shared CIContext for rasterisation. CPU-backed (default) is fine here;
+    /// the bottleneck is the SwiftUI Image redraw, not the render itself.
+    private static let renderContext: CIContext = {
+        if let device = MTLCreateSystemDefaultDevice() {
+            return CIContext(mtlDevice: device, options: [.cacheIntermediates: true])
+        }
+        return CIContext(options: [.cacheIntermediates: true])
+    }()
 
-    func updateNSView(_ nsView: EditorMetalView, context: Context) {
-        nsView.image = state.renderedPreview ?? state.previewImage
-        nsView.zoom = state.zoomLevel
+    var body: some View {
+        Group {
+            if let ci = state.renderedPreview ?? state.previewImage,
+               let cg = Self.renderContext.createCGImage(ci, from: ci.extent) {
+                Image(cg, scale: 1.0, label: Text(""))
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .scaleEffect(pow(2.0, state.zoomLevel))
+            } else {
+                Color.clear
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -76,9 +93,15 @@ final class EditorMetalView: MTKView {
         isPaused = true
         enableSetNeedsDisplay = true
         preferredFramesPerSecond = 60
-        colorPixelFormat = .bgra8Unorm
+        // Plan 049 follow-up: the original `.bgra8Unorm` (linear) format
+        // combined with a `CIRenderDestination.colorSpace = sRGB` meant
+        // CI was sRGB-encoding pixels into a texture CALayer treated as
+        // linear — the texture stayed at clear color (visible as a black
+        // box). `.bgra8Unorm_srgb` matches what the destination is
+        // emitting; CALayer reads it as sRGB and composits correctly.
+        colorPixelFormat = .bgra8Unorm_srgb
         autoResizeDrawable = true
-        layer?.isOpaque = false
+        layer?.isOpaque = true
         // Near-black canvas backdrop matches macOS Photos.app. Plan 049: the
         // alpha-0 clear color in v0.1.45 let the SwiftUI window chrome bleed
         // through, which when combined with the (now-fixed) blank initial
@@ -103,12 +126,16 @@ final class EditorMetalView: MTKView {
 
     override func draw(_ rect: CGRect) {
         guard let drawable = currentDrawable,
-              let buffer = commandQueue.makeCommandBuffer() else { return }
+              let buffer = commandQueue.makeCommandBuffer() else {
+            mtkLog.error("draw(\(rect.width)x\(rect.height)): no drawable or command buffer")
+            return
+        }
 
         let drawableSize = CGSize(
             width: CGFloat(drawable.texture.width),
             height: CGFloat(drawable.texture.height)
         )
+        mtkLog.info("draw(\(rect.width)x\(rect.height)) drawable=\(drawableSize.width)x\(drawableSize.height) image=\(self.image == nil ? "nil" : String(format: "%.0fx%.0f", self.image!.extent.width, self.image!.extent.height))")
 
         if let image, image.extent.width > 0, image.extent.height > 0 {
             let aspectFit = min(
@@ -134,8 +161,9 @@ final class EditorMetalView: MTKView {
 
             do {
                 _ = try ciContext.startTask(toRender: positioned, to: destination)
+                mtkLog.info("startTask submitted: scale=\(scale) positioned extent=\(positioned.extent.width)x\(positioned.extent.height) at (\(positioned.extent.origin.x),\(positioned.extent.origin.y))")
             } catch {
-                // Drawing errors are non-fatal — fall back to clearing the frame.
+                mtkLog.error("CIContext.startTask FAILED: \(error.localizedDescription)")
             }
         }
 

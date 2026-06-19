@@ -39,6 +39,22 @@ struct EditorShell: View {
                     Color(white: 0.07)
                         .ignoresSafeArea(edges: .bottom)
                     EditorPreview(state: state)
+                    if state.previewImage == nil {
+                        // Visible empty-state — was silent black before. If
+                        // this banner shows when the user expected an image,
+                        // the NSImage → CIImage conversion failed and we need
+                        // to investigate.
+                        VStack(spacing: 6) {
+                            Image(systemName: "photo")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.secondary)
+                            Text(viewModel.selectedImage == nil
+                                 ? "No image selected"
+                                 : "Couldn't decode the selected image")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     if state.activeTab == .crop {
                         CropFrameView(state: state)
                     }

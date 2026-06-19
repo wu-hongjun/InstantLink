@@ -1,6 +1,6 @@
 [package]
 name = "instantlink-ffi"
-version = "0.1.46"
+version = "0.1.50"
 edition = "2024"
 
 [lib]

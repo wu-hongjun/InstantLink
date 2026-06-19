@@ -2,7 +2,12 @@ import AppKit
 import Combine
 import CoreImage
 import Foundation
+import os.log
 import SwiftUI
+
+/// Debug logger for the preview pipeline. Visible via `log show --predicate
+/// 'subsystem == "fi.bullpen.instantlink.editor"'`.
+let editorPreviewLog = Logger(subsystem: "fi.bullpen.instantlink.editor", category: "preview")
 
 /// Observable state for the new Photos-style editor shell. Holds the source
 /// image, downsampled preview, current snapshot, undo / redo history, and the
@@ -120,21 +125,41 @@ final class EditorViewState: ObservableObject {
     /// Load the editor's source image, build the downsampled preview, and seed
     /// history with the starting snapshot. Optional `initialSnapshot` restores
     /// per-image state on reopen (locked decision Q3 — plan 048 PR #14).
+    ///
+    /// Robust NSImage → CGImage conversion (plan 049 follow-up): the original
+    /// path (`tiffRepresentation → NSBitmapImageRep → cgImage`) silently
+    /// returns nil for some color-profile-tagged sources (notably HEIC and
+    /// wide-gamut JPEGs from iPhones). Try `cgImage(forProposedRect:context:)`
+    /// first — it round-trips any image AppKit could draw — and fall back to
+    /// the TIFF path only if direct extraction is unavailable.
     func loadSource(_ image: NSImage, initialSnapshot: EditorSnapshot? = nil) {
-        guard let tiff = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let cg = bitmap.cgImage else {
-            sourceImage = nil
-            previewImage = nil
-            renderedPreview = nil
+        editorPreviewLog.info("loadSource(NSImage) called: size=\(image.size.width)x\(image.size.height), reps=\(image.representations.count)")
+        var rect = NSRect(origin: .zero, size: image.size)
+        if let cg = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) {
+            editorPreviewLog.info("NSImage → CGImage via cgImage(forProposedRect:) OK: \(cg.width)x\(cg.height)")
+            loadSource(CIImage(cgImage: cg), initialSnapshot: initialSnapshot)
             return
         }
-        loadSource(CIImage(cgImage: cg), initialSnapshot: initialSnapshot)
+        editorPreviewLog.info("cgImage(forProposedRect:) returned nil; falling back to TIFF path")
+        if let tiff = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiff),
+           let cg = bitmap.cgImage {
+            editorPreviewLog.info("NSImage → CGImage via TIFF OK: \(cg.width)x\(cg.height)")
+            loadSource(CIImage(cgImage: cg), initialSnapshot: initialSnapshot)
+            return
+        }
+        editorPreviewLog.error("NSImage → CGImage ALL PATHS FAILED — preview will be blank")
+        sourceImage = nil
+        previewImage = nil
+        renderedPreview = nil
     }
 
     func loadSource(_ image: CIImage, initialSnapshot: EditorSnapshot? = nil) {
+        editorPreviewLog.info("loadSource(CIImage) called: extent=\(image.extent.width)x\(image.extent.height) at (\(image.extent.origin.x),\(image.extent.origin.y))")
         sourceImage = image
-        previewImage = downsampledPreview(from: image)
+        let preview = downsampledPreview(from: image)
+        editorPreviewLog.info("downsampled previewImage: extent=\(preview.extent.width)x\(preview.extent.height)")
+        previewImage = preview
         let snap = initialSnapshot ?? .neutral
         isRestoring = true
         adjustments = snap.adjustments
@@ -229,14 +254,17 @@ final class EditorViewState: ObservableObject {
     private func scheduleRender() {
         renderTask?.cancel()
         guard let source = previewImage else {
+            editorPreviewLog.info("scheduleRender: previewImage is nil → renderedPreview = nil")
             renderedPreview = nil
             return
         }
+        editorPreviewLog.info("scheduleRender: source extent=\(source.extent.width)x\(source.extent.height)")
         let snap = snapshot()
         let pipeline = pipeline
         renderTask = Task { @MainActor [weak self] in
             let composed = pipeline.compose(source, state: snap)
             guard !Task.isCancelled else { return }
+            editorPreviewLog.info("scheduleRender: pipeline composed extent=\(composed.extent.width)x\(composed.extent.height)")
             self?.renderedPreview = composed
         }
     }

@@ -27,6 +27,7 @@ ed25519 = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519
 
 BRIDGE_ROOT = Path(__file__).resolve().parents[1]
 BUILD_SCRIPT = BRIDGE_ROOT / "scripts" / "build-firmware-bundle.sh"
+STAGE_SCRIPT = BRIDGE_ROOT.parent / "scripts" / "stage-bridge-firmware-for-app.sh"
 
 
 def firmware_manifest() -> dict[str, object]:
@@ -211,6 +212,25 @@ def write_fake_native_artifacts(path: Path) -> None:
         '{"schema_version": 1}\n',
         encoding="utf-8",
     )
+
+
+def write_stage_script_package(path: Path, version: str) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    archive = path / f"InstantLinkBridgeFirmware-v{version}-linux-aarch64.tar.gz"
+    archive.write_bytes(f"firmware archive {version}\n".encode())
+    (path / f"{archive.name}.sha256").write_text(
+        f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n",
+        encoding="utf-8",
+    )
+    (path / f"{archive.name.removesuffix('.tar.gz')}.manifest.json").write_text(
+        json.dumps({"bridge_version": version}) + "\n",
+        encoding="utf-8",
+    )
+    (path / f"{archive.name.removesuffix('.tar.gz')}.manifest.sig").write_text(
+        "{}\n",
+        encoding="utf-8",
+    )
+    return archive
 
 
 def base_bundle_env(tmp_path: Path, artifact_dir: Path, app_bundle: Path) -> dict[str, str]:
@@ -644,3 +664,52 @@ def test_build_script_unsigned_by_default_omits_signature_sidecars(tmp_path: Pat
     assert not (dist / "latest.json.sig").exists()
     assert not (app_bundle / "InstantLinkBridgeFirmware-v0.9.1-linux-aarch64.manifest.sig").exists()
     assert not (app_bundle / "latest.json.sig").exists()
+
+
+def test_stage_script_uses_latest_json_instead_of_lexical_archive_sort(tmp_path: Path) -> None:
+    dist = tmp_path / "dist"
+    app_bundle = tmp_path / "app-bundle" / "BridgeFirmware"
+    older_archive = write_stage_script_package(dist, "0.9.0")
+    newer_archive = write_stage_script_package(dist, "0.10.0")
+    (dist / "latest.json").write_text(
+        json.dumps({"archive_name": newer_archive.name}) + "\n",
+        encoding="utf-8",
+    )
+    (dist / "latest.json.sig").write_text("{}\n", encoding="utf-8")
+
+    env = os.environ.copy()
+    env["INSTANTLINK_BRIDGE_FIRMWARE_APP_BUNDLE_DIR"] = str(app_bundle)
+    env["PYTHON_BIN"] = sys.executable
+    result = subprocess.run(
+        ["bash", str(STAGE_SCRIPT), "--from-dir", str(dist)],
+        cwd=BRIDGE_ROOT.parent,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (app_bundle / newer_archive.name).exists()
+    assert not (app_bundle / older_archive.name).exists()
+
+
+def test_stage_script_rejects_invalid_version_before_archive_lookup(tmp_path: Path) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    app_bundle = tmp_path / "app-bundle" / "BridgeFirmware"
+    env = os.environ.copy()
+    env["INSTANTLINK_BRIDGE_FIRMWARE_APP_BUNDLE_DIR"] = str(app_bundle)
+    env["PYTHON_BIN"] = sys.executable
+
+    result = subprocess.run(
+        ["bash", str(STAGE_SCRIPT), "--from-dir", str(dist), "--version", "bridge-vbad"],
+        cwd=BRIDGE_ROOT.parent,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "invalid firmware version" in result.stderr

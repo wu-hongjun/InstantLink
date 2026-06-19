@@ -2130,7 +2130,8 @@
 <p>The checked-in header at <code>crates/instantlink-ffi/include/instantlink.h</code> is only refreshed when <code>INSTANTLINK_UPDATE_HEADER</code> is set:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">INSTANTLINK_UPDATE_HEADER</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>cargo<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>-p<span class="w"> </span>instantlink-ffi
 </code></pre></div>
-<p>Without that environment variable, cbindgen writes the generated header into Cargo's <code>OUT_DIR</code>.</p>
+<p>Without that environment variable, cbindgen writes the generated header into Cargo's <code>OUT_DIR</code>.
+Use <code>bash scripts/check-ffi-header.sh --release</code> before release work to regenerate the header and fail if it differs from the checked-in ABI.</p>
 <div class="admonition note">
 <p class="admonition-title">Bluetooth Permissions</p>
 <p><code>InstantLink.app</code> includes <code>NSBluetoothAlwaysUsageDescription</code>. When running the CLI directly outside the app bundle, macOS will prompt for Bluetooth permission on first use.</p>

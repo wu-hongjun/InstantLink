@@ -4,12 +4,15 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=cbindgen.toml");
+    println!("cargo:rerun-if-env-changed=INSTANTLINK_HEADER_OUT");
     println!("cargo:rerun-if-env-changed=INSTANTLINK_UPDATE_HEADER");
 
     let crate_dir =
         env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set by Cargo");
     let crate_path = PathBuf::from(&crate_dir);
-    let output_path = if env::var_os("INSTANTLINK_UPDATE_HEADER").is_some() {
+    let output_path = if let Some(output_path) = env::var_os("INSTANTLINK_HEADER_OUT") {
+        PathBuf::from(output_path)
+    } else if env::var_os("INSTANTLINK_UPDATE_HEADER").is_some() {
         let output_dir = crate_path.join("include");
         std::fs::create_dir_all(&output_dir).expect("failed to create include/ directory");
         output_dir.join("instantlink.h")

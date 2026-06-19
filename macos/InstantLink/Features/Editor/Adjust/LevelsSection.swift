@@ -18,7 +18,8 @@ struct LevelsSection: View {
                 systemImage: "chart.bar",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.levels.sectionEnabled
             )
 
             if isExpanded {

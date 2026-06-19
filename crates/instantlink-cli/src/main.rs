@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use instantlink_core::error::PrinterError;
 use instantlink_core::image::FitMode;
 use instantlink_core::printer;
 use serde::Serialize;
@@ -142,6 +143,138 @@ fn build_disconnected_status_output() -> DisconnectedStatusOutput {
     DisconnectedStatusOutput { connected: false }
 }
 
+fn validate_image_path(path: &Path) -> Result<()> {
+    if !path.exists() {
+        anyhow::bail!("image file not found: {}", path.display());
+    }
+    if !path.is_file() {
+        anyhow::bail!("image path is not a file: {}", path.display());
+    }
+    std::fs::File::open(path)
+        .with_context(|| format!("image file is not readable: {}", path.display()))?;
+    Ok(())
+}
+
+fn combine_operation_and_disconnect<T>(
+    operation_result: Result<T>,
+    disconnect_result: Result<()>,
+) -> Result<T> {
+    match (operation_result, disconnect_result) {
+        (Err(operation_error), _) => Err(operation_error),
+        (Ok(_), Err(disconnect_error)) => Err(disconnect_error),
+        (Ok(value), Ok(())) => Ok(value),
+    }
+}
+
+fn status_error_means_disconnected(error: &PrinterError) -> bool {
+    matches!(error, PrinterError::PrinterNotFound)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CliFitMode {
+    Crop,
+    Contain,
+    Stretch,
+}
+
+impl CliFitMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            CliFitMode::Crop => "crop",
+            CliFitMode::Contain => "contain",
+            CliFitMode::Stretch => "stretch",
+        }
+    }
+
+    fn to_core(self) -> FitMode {
+        match self {
+            CliFitMode::Crop => FitMode::Crop,
+            CliFitMode::Contain => FitMode::Contain,
+            CliFitMode::Stretch => FitMode::Stretch,
+        }
+    }
+}
+
+fn parse_fit_mode(value: &str) -> std::result::Result<CliFitMode, String> {
+    match value.to_ascii_lowercase().as_str() {
+        "crop" => Ok(CliFitMode::Crop),
+        "contain" => Ok(CliFitMode::Contain),
+        "stretch" => Ok(CliFitMode::Stretch),
+        _ => Err("expected one of: crop, contain, stretch".to_string()),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ColorMode {
+    Rich,
+    Natural,
+}
+
+impl ColorMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            ColorMode::Rich => "rich",
+            ColorMode::Natural => "natural",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            ColorMode::Rich => "Rich",
+            ColorMode::Natural => "Natural",
+        }
+    }
+
+    fn print_option(self) -> u8 {
+        match self {
+            ColorMode::Rich => 0,
+            ColorMode::Natural => 1,
+        }
+    }
+}
+
+fn parse_color_mode(value: &str) -> std::result::Result<ColorMode, String> {
+    match value.to_ascii_lowercase().as_str() {
+        "rich" => Ok(ColorMode::Rich),
+        "natural" => Ok(ColorMode::Natural),
+        _ => Err("expected one of: rich, natural".to_string()),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LedPattern {
+    Solid,
+    Blink,
+    Breathe,
+}
+
+impl LedPattern {
+    fn as_str(self) -> &'static str {
+        match self {
+            LedPattern::Solid => "solid",
+            LedPattern::Blink => "blink",
+            LedPattern::Breathe => "breathe",
+        }
+    }
+
+    fn byte(self) -> u8 {
+        match self {
+            LedPattern::Solid => 0,
+            LedPattern::Blink => 1,
+            LedPattern::Breathe => 2,
+        }
+    }
+}
+
+fn parse_led_pattern(value: &str) -> std::result::Result<LedPattern, String> {
+    match value.to_ascii_lowercase().as_str() {
+        "solid" => Ok(LedPattern::Solid),
+        "blink" => Ok(LedPattern::Blink),
+        "breathe" => Ok(LedPattern::Breathe),
+        _ => Err("expected one of: solid, blink, breathe".to_string()),
+    }
+}
+
 #[derive(Debug, Parser)]
 #[command(
     name = "instantlink",
@@ -180,14 +313,14 @@ enum Commands {
         /// Path to the image file
         image: PathBuf,
         /// JPEG quality (1-100, default 97)
-        #[arg(long, default_value = "97")]
+        #[arg(long, default_value_t = 97, value_parser = clap::value_parser!(u8).range(1..=100))]
         quality: u8,
         /// How to fit the image: crop, contain, or stretch
-        #[arg(long, default_value = "crop")]
-        fit: String,
+        #[arg(long, default_value = "crop", value_parser = parse_fit_mode)]
+        fit: CliFitMode,
         /// Color mode: rich (vivid) or natural (classic film look)
-        #[arg(long, default_value = "rich")]
-        color_mode: String,
+        #[arg(long, default_value = "rich", value_parser = parse_color_mode)]
+        color_mode: ColorMode,
     },
     /// Control the printer LED
     Led {
@@ -205,8 +338,8 @@ enum LedAction {
         /// Color as hex (#RRGGBB)
         color: String,
         /// Pattern: solid, blink, or breathe
-        #[arg(long, default_value = "solid")]
-        pattern: String,
+        #[arg(long, default_value = "solid", value_parser = parse_led_pattern)]
+        pattern: LedPattern,
     },
     /// Turn LED off
     Off,
@@ -318,16 +451,10 @@ async fn main() -> Result<()> {
             fit,
             color_mode,
         } => {
-            let fit_mode = FitMode::from_str_lossy(&fit);
-            let fit_mode_name = match fit_mode {
-                FitMode::Crop => "crop",
-                FitMode::Contain => "contain",
-                FitMode::Stretch => "stretch",
-            };
-            let print_option: u8 = match color_mode.to_lowercase().as_str() {
-                "natural" => 1,
-                _ => 0, // rich (default)
-            };
+            validate_image_path(&image)?;
+            let fit_mode = fit.to_core();
+            let fit_mode_name = fit.as_str();
+            let print_option = color_mode.print_option();
 
             let sp = (!cli.json).then(|| output::spinner("Connecting to printer..."));
             let device = match cli.device.as_deref() {
@@ -339,7 +466,7 @@ async fn main() -> Result<()> {
             }
 
             let model = device.model();
-            let mode_name = if print_option == 0 { "Rich" } else { "Natural" };
+            let mode_name = color_mode.label();
             if !cli.json {
                 println!("Printing to {} ({}) [{}]", device.name(), model, mode_name);
             }
@@ -358,13 +485,14 @@ async fn main() -> Result<()> {
                     print_option,
                     (!cli.json).then_some(&progress),
                 )
-                .await;
+                .await
+                .context("print failed");
             if let Some(sp) = transfer_spinner {
                 sp.finish_and_clear();
             }
 
-            device.disconnect().await?;
-            print_result.context("print failed")?;
+            let disconnect_result = device.disconnect().await.context("failed to disconnect");
+            combine_operation_and_disconnect(print_result, disconnect_result)?;
             if cli.json {
                 output::print_json(&build_print_output(
                     device.name(),
@@ -372,34 +500,45 @@ async fn main() -> Result<()> {
                     &image,
                     fit_mode_name,
                     quality,
-                    &mode_name.to_ascii_lowercase(),
+                    color_mode.as_str(),
                 ))?;
             } else {
-                println!("Print complete!");
+                println!("Print sent to printer");
             }
         }
 
         Commands::Led { action } => match action {
             LedAction::Set { color, pattern } => {
                 let (r, g, b) = parse_hex_color(&color)?;
-                let pattern_byte = match pattern.to_lowercase().as_str() {
-                    "blink" => 1,
-                    "breathe" => 2,
-                    _ => 0, // solid
-                };
+                let pattern_byte = pattern.byte();
 
                 let device = match cli.device.as_deref() {
                     Some(name) => printer::connect(name, None).await?,
                     None => printer::connect_any(None).await?,
                 };
 
-                let result = device.set_led(r, g, b, pattern_byte).await;
-                device.disconnect().await?;
-                result.context("failed to set LED")?;
+                let result = device
+                    .set_led(r, g, b, pattern_byte)
+                    .await
+                    .context("failed to set LED");
+                let disconnect_result = device.disconnect().await.context("failed to disconnect");
+                combine_operation_and_disconnect(result, disconnect_result)?;
                 if cli.json {
-                    output::print_json(&build_led_set_output(device.name(), r, g, b, &pattern))?;
+                    output::print_json(&build_led_set_output(
+                        device.name(),
+                        r,
+                        g,
+                        b,
+                        pattern.as_str(),
+                    ))?;
                 } else {
-                    println!("LED set to #{:02x}{:02x}{:02x} ({})", r, g, b, pattern);
+                    println!(
+                        "LED set to #{:02x}{:02x}{:02x} ({})",
+                        r,
+                        g,
+                        b,
+                        pattern.as_str()
+                    );
                 }
             }
             LedAction::Off => {
@@ -408,9 +547,9 @@ async fn main() -> Result<()> {
                     None => printer::connect_any(None).await?,
                 };
 
-                let result = device.led_off().await;
-                device.disconnect().await?;
-                result.context("failed to turn off LED")?;
+                let result = device.led_off().await.context("failed to turn off LED");
+                let disconnect_result = device.disconnect().await.context("failed to disconnect");
+                combine_operation_and_disconnect(result, disconnect_result)?;
                 if cli.json {
                     output::print_json(&build_led_off_output(device.name()))?;
                 } else {
@@ -449,7 +588,7 @@ async fn main() -> Result<()> {
                         println!("Prints:     {}", status.print_count);
                     }
                 }
-                Err(_) => {
+                Err(err) if status_error_means_disconnected(&err) => {
                     if cli.json {
                         output::print_json(&build_disconnected_status_output())?;
                     } else {
@@ -457,6 +596,7 @@ async fn main() -> Result<()> {
                         println!("No Instax printer found");
                     }
                 }
+                Err(err) => return Err(err).context("failed to get printer status"),
             }
         }
     }
@@ -482,6 +622,14 @@ mod tests {
     use clap::Parser;
     use serde_json::Value;
 
+    fn unique_temp_path(prefix: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()))
+    }
+
     #[test]
     fn parse_scan_defaults() {
         let cli = Cli::try_parse_from(["instantlink", "scan"]).unwrap();
@@ -505,8 +653,8 @@ mod tests {
             } => {
                 assert_eq!(image, PathBuf::from("sample.jpg"));
                 assert_eq!(quality, 97);
-                assert_eq!(fit, "crop");
-                assert_eq!(color_mode, "rich");
+                assert_eq!(fit, CliFitMode::Crop);
+                assert_eq!(color_mode, ColorMode::Rich);
             }
             other => panic!("expected print command, got {other:?}"),
         }
@@ -535,11 +683,37 @@ mod tests {
             } => {
                 assert_eq!(image, PathBuf::from("nested/photo.jpg"));
                 assert_eq!(quality, 88);
-                assert_eq!(fit, "stretch");
-                assert_eq!(color_mode, "natural");
+                assert_eq!(fit, CliFitMode::Stretch);
+                assert_eq!(color_mode, ColorMode::Natural);
             }
             other => panic!("expected print command, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn parse_print_rejects_invalid_fit() {
+        let err = Cli::try_parse_from(["instantlink", "print", "sample.jpg", "--fit", "fill"])
+            .unwrap_err();
+        assert!(err.to_string().contains("crop, contain, stretch"));
+    }
+
+    #[test]
+    fn parse_print_rejects_invalid_color_mode() {
+        let err =
+            Cli::try_parse_from(["instantlink", "print", "sample.jpg", "--color-mode", "mono"])
+                .unwrap_err();
+        assert!(err.to_string().contains("rich, natural"));
+    }
+
+    #[test]
+    fn parse_print_rejects_quality_outside_declared_range() {
+        assert!(
+            Cli::try_parse_from(["instantlink", "print", "sample.jpg", "--quality", "0"]).is_err()
+        );
+        assert!(
+            Cli::try_parse_from(["instantlink", "print", "sample.jpg", "--quality", "101"])
+                .is_err()
+        );
     }
 
     #[test]
@@ -549,12 +723,20 @@ mod tests {
             Commands::Led { action } => match action {
                 LedAction::Set { color, pattern } => {
                     assert_eq!(color, "#ff0000");
-                    assert_eq!(pattern, "solid");
+                    assert_eq!(pattern, LedPattern::Solid);
                 }
                 other => panic!("expected led set action, got {other:?}"),
             },
             other => panic!("expected led command, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn parse_led_rejects_invalid_pattern() {
+        let err =
+            Cli::try_parse_from(["instantlink", "led", "set", "#ff0000", "--pattern", "pulse"])
+                .unwrap_err();
+        assert!(err.to_string().contains("solid, blink, breathe"));
     }
 
     #[test]
@@ -570,6 +752,65 @@ mod tests {
         assert!(cli.json);
         assert_eq!(cli.device.as_deref(), Some("INSTAX-12345678"));
         assert!(matches!(cli.command, Commands::Status));
+    }
+
+    #[test]
+    fn validate_image_path_rejects_missing_file() {
+        let path = unique_temp_path("instantlink-missing-image");
+        let error = validate_image_path(&path).unwrap_err().to_string();
+        assert!(error.contains("image file not found"));
+    }
+
+    #[test]
+    fn validate_image_path_rejects_directory() {
+        let error = validate_image_path(&std::env::temp_dir())
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("image path is not a file"));
+    }
+
+    #[test]
+    fn validate_image_path_accepts_readable_file() {
+        let path = unique_temp_path("instantlink-readable-image");
+        std::fs::write(&path, b"placeholder").unwrap();
+        let result = validate_image_path(&path);
+        std::fs::remove_file(&path).unwrap();
+        result.unwrap();
+    }
+
+    #[test]
+    fn combine_operation_and_disconnect_prefers_operation_error() {
+        let result = combine_operation_and_disconnect::<()>(
+            Err(anyhow::anyhow!("operation failed")),
+            Err(anyhow::anyhow!("disconnect failed")),
+        );
+        assert_eq!(result.unwrap_err().to_string(), "operation failed");
+    }
+
+    #[test]
+    fn combine_operation_and_disconnect_returns_disconnect_error_after_success() {
+        let result = combine_operation_and_disconnect::<()>(
+            Ok(()),
+            Err(anyhow::anyhow!("disconnect failed")),
+        );
+        assert_eq!(result.unwrap_err().to_string(), "disconnect failed");
+    }
+
+    #[test]
+    fn combine_operation_and_disconnect_returns_operation_value() {
+        let result = combine_operation_and_disconnect(Ok(42), Ok(()));
+        assert_eq!(result.unwrap(), 42);
+    }
+
+    #[test]
+    fn status_error_mapping_only_treats_not_found_as_disconnected() {
+        assert!(status_error_means_disconnected(
+            &PrinterError::PrinterNotFound
+        ));
+        assert!(!status_error_means_disconnected(
+            &PrinterError::MultiplePrinters { count: 2 }
+        ));
+        assert!(!status_error_means_disconnected(&PrinterError::Timeout));
     }
 
     #[test]

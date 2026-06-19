@@ -14,7 +14,8 @@ struct DefinitionSection: View {
                 systemImage: "triangle",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.definition.sectionEnabled
             )
 
             if isExpanded {

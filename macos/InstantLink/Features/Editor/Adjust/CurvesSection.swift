@@ -44,7 +44,8 @@ struct CurvesSection: View {
                 systemImage: "chart.xyaxis.line",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.curves.sectionEnabled
             )
 
             if isExpanded {
@@ -127,6 +128,8 @@ struct CurvesSection: View {
                 .frame(width: 22, height: 18)
         }
         .buttonStyle(.borderless)
+        .accessibilityLabel(Text(label))
+        .accessibilityValue(Text(verbatim: isActive ? "Active" : "Inactive"))
     }
 
     // MARK: - Bindings / helpers

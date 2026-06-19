@@ -18,6 +18,7 @@ from instantlink_bridge.manager.auth import (
     SIGNATURE_HEADER,
     TIMESTAMP_HEADER,
     AuthorizedClient,
+    ClientRecordError,
     ClientStore,
     PairingWindowStore,
     SignedRequestVerifier,
@@ -120,6 +121,17 @@ def test_manager_cli_status_json_omits_credentials(
     assert data["printer"]["device_name"] == "INSTAX-1N034655"
     assert "super-secret" not in output
     assert "password" not in output
+
+
+def test_client_store_read_client_rejects_malformed_record(tmp_path: Path) -> None:
+    clients_dir = tmp_path / "clients"
+    clients_dir.mkdir()
+    (clients_dir / "macbook.json").write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(ClientRecordError) as excinfo:
+        ClientStore(clients_dir).read_client("macbook")
+
+    assert excinfo.value.error_code == "client_record_invalid"
 
 
 def test_http_status_payload_printer_carries_battery_charge_and_estimate_fields(
@@ -906,6 +918,36 @@ async def test_manager_http_admin_route_rejects_revoked_client(
         data = cast(dict[str, Any], await response.json())
         assert response.status == 401
         assert_error_envelope(data, error_code="client_revoked")
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_manager_http_admin_route_reports_malformed_client_record(
+    tmp_path: Path,
+) -> None:
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    clients_dir = tmp_path / "clients"
+    clients_dir.mkdir()
+    (clients_dir / "macbook.json").write_text("{not-json", encoding="utf-8")
+    verifier = SignedRequestVerifier(ClientStore(clients_dir), now_seconds=lambda: 1000)
+    app = create_app(
+        config_path=tmp_path / "missing.toml",
+        request_id_factory=lambda: "req-bad-client-record",
+        auth_verifier=verifier,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        response = await client.get("/v1/status", headers=signed_headers(private_key))
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 401
+        assert_error_envelope(
+            data,
+            error_code="client_record_invalid",
+            request_id="req-bad-client-record",
+        )
+        assert data["auth_required"] is True
     finally:
         await client.close()
 

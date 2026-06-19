@@ -4,8 +4,8 @@ import SwiftUI
 ///
 /// Layout (top → bottom): three sliders (Straighten / Vertical / Horizontal),
 /// the Aspect picker + orientation toggle inline with Flip + Rotate-90°, the
-/// Auto button (currently a no-op placeholder for v1; Vision horizon detection
-/// lands in the polish PR #17), and the Reset button.
+/// Reset button. Auto-straighten stays hidden until a real Vision horizon
+/// detector is available; the editor should not expose a no-op control.
 struct CropSidebar: View {
     @ObservedObject var state: EditorViewState
     @EnvironmentObject var viewModel: ViewModel
@@ -17,9 +17,8 @@ struct CropSidebar: View {
                 Divider()
                 aspectAndFlipSection
                 Divider()
-                autoButton
-                Spacer(minLength: 8)
                 resetButton
+                Spacer(minLength: 8)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,18 +66,6 @@ struct CropSidebar: View {
                 FlipRotateControls(crop: $state.crop)
             }
         }
-    }
-
-    private var autoButton: some View {
-        // TODO: Vision horizon detection (PR #17 polish). For v1 this is a
-        // no-op placeholder so the UI layout matches Photos.
-        Button {
-            // No-op for v1; horizon detection lands in PR #17.
-        } label: {
-            Label(L("crop_auto"), systemImage: "wand.and.stars")
-                .frame(maxWidth: .infinity)
-        }
-        .controlSize(.regular)
     }
 
     private var resetButton: some View {

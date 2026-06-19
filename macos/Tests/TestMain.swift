@@ -473,6 +473,12 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeDiagnosticsCoordinatorTests.testDismissRecoveryFromRecoveredReturnsToOK", {
                 try await BridgeDiagnosticsCoordinatorTests().testDismissRecoveryFromRecoveredReturnsToOK()
             }),
+            ("EditorAdjustmentPipelineTests.testBlackAndWhitePipelineSkipsWhenSectionDisabled", {
+                try EditorAdjustmentPipelineTests().testBlackAndWhitePipelineSkipsWhenSectionDisabled()
+            }),
+            ("EditorAdjustmentPipelineTests.testBlackAndWhitePipelineAppliesWhenEnabledAndOn", {
+                try EditorAdjustmentPipelineTests().testBlackAndWhitePipelineAppliesWhenEnabledAndOn()
+            }),
         ]
 
         var failures = 0

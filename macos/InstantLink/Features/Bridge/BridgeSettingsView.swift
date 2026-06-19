@@ -576,7 +576,7 @@ struct BridgeSettingsView: View {
                 .font(.callout)
                 .frame(width: 160, alignment: .leading)
             Stepper(value: value, in: range, step: step) {
-                Text("\(value.wrappedValue) \(suffix)")
+                Text(verbatim: "\(value.wrappedValue) \(suffix)")
                     .font(.callout)
             }
             Spacer()

@@ -7,17 +7,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-typedef void (*instantlink_connect_stage_cb)(int32_t stage, const char *detail);
-
-typedef void (*instantlink_connect_stage_cb_ctx)(int32_t stage,
-                                                 const char *detail,
-                                                 void *context);
-
-typedef void (*instantlink_print_progress_cb_ctx)(uint32_t sent,
-                                                  uint32_t total,
-                                                  void *context);
-
 typedef enum instantlink_connect_stage_code {
   INSTANTLINK_CONNECT_STAGE_SCAN_STARTED = 0,
   INSTANTLINK_CONNECT_STAGE_SCAN_FINISHED = 1,
@@ -31,6 +20,13 @@ typedef enum instantlink_connect_stage_code {
   INSTANTLINK_CONNECT_STAGE_CONNECTED = 9,
   INSTANTLINK_CONNECT_STAGE_FAILED = 10,
 } instantlink_connect_stage_code;
+
+
+typedef void (*instantlink_connect_stage_cb)(int32_t, const char*);
+
+typedef void (*instantlink_connect_stage_cb_ctx)(int32_t, const char*, void*);
+
+typedef void (*instantlink_print_progress_cb_ctx)(uint32_t, uint32_t, void*);
 
 /**
  * Initialize the FFI layer (logging + runtime). Safe to call multiple times.
@@ -77,6 +73,7 @@ int32_t instantlink_connect_named(const char *name, int32_t duration_secs);
  * # Safety
  *
  * `name` must be a valid, non-null, null-terminated UTF-8 C string.
+ * `progress_cb` may be null (no progress reporting).
  * `detail` passed to callback is only valid during the callback invocation.
  */
 int32_t instantlink_connect_named_with_progress(const char *name,
@@ -84,12 +81,16 @@ int32_t instantlink_connect_named_with_progress(const char *name,
                                                 instantlink_connect_stage_cb progress_cb);
 
 /**
- * Connect to a specific printer by name with configurable scan duration and
- * progress callback plus an opaque context pointer.
+ * Connect to a specific printer by name with configurable scan duration and progress callback
+ * plus an opaque context pointer.
+ *
+ * This is the context-safe variant used by the macOS app so callback state
+ * remains per-call instead of global.
  *
  * # Safety
  *
  * `name` must be a valid, non-null, null-terminated UTF-8 C string.
+ * `progress_cb` may be null (no progress reporting).
  * `detail` passed to callback is only valid during the callback invocation.
  */
 int32_t instantlink_connect_named_with_progress_ctx(const char *name,

@@ -16,6 +16,10 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Localization.swift"
   "$REPO_ROOT/macos/InstantLink/OverlayModels.swift"
   "$REPO_ROOT/macos/InstantLink/InstantLinkFFI.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Editor/State/AdjustmentState.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Editor/State/CropState.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Editor/State/AdjustmentHistory.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Editor/Pipeline/Sections/BlackAndWhitePipeline.swift"
   "$REPO_ROOT/macos/InstantLink/Core/AppModels.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeFirmwareBundle.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeConfig.swift"
@@ -34,46 +38,16 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Core/AppRuntimeServices.swift"
   "$REPO_ROOT/macos/InstantLink/Core/QueueEditCoordinator.swift"
   "$REPO_ROOT/macos/InstantLink/Core/PrinterConnectionCoordinator.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeConnectionIndicator.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeDiscoveryBanner.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeOverviewView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgePairingView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeSettingsSection.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeSettingsView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeSchemaSectionView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeAdjustmentsPreviewView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeAdjustmentSliderSheet.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeUpdatePreflightView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeUpdateProgressView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeUpdateView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeBackupView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeDiagnosticsView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeRecoveryView.swift"
-  "$REPO_ROOT/macos/InstantLink/Features/Bridge/BridgeControlWindow.swift"
 )
 
-TESTS=(
-  "$REPO_ROOT/macos/Tests/TestSupport.swift"
-  "$REPO_ROOT/macos/Tests/AppModelsTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeFirmwareBundleTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeModelsTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeHTTPTransportTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeTransportTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeClientFileStoreTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgePairingViewModelTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeControlCoordinatorTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeUpdateCoordinatorTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeBackupCoordinatorTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeDiagnosticsCoordinatorTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeConfigTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeConfigSchemaTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeSettingsDraftTests.swift"
-  "$REPO_ROOT/macos/Tests/BridgeSettingsApplyFlowTests.swift"
-  "$REPO_ROOT/macos/Tests/AppRuntimeServicesTests.swift"
-  "$REPO_ROOT/macos/Tests/QueueEditCoordinatorTests.swift"
-  "$REPO_ROOT/macos/Tests/PrinterConnectionCoordinatorTests.swift"
-  "$REPO_ROOT/macos/Tests/TestMain.swift"
-)
+while IFS= read -r source; do
+  SOURCES+=("$source")
+done < <(find "$REPO_ROOT/macos/InstantLink/Features/Bridge" -name '*.swift' | sort)
+
+TESTS=()
+while IFS= read -r test_source; do
+  TESTS+=("$test_source")
+done < <(find "$REPO_ROOT/macos/Tests" -maxdepth 1 -name '*.swift' | sort)
 
 swiftc \
   -sdk "$SDK_PATH" \
@@ -87,6 +61,7 @@ swiftc \
   -framework AppKit \
   -framework SwiftUI \
   -framework Security \
-  -framework CoreText
+  -framework CoreText \
+  -framework CoreImage
 
 "$TEST_BIN"

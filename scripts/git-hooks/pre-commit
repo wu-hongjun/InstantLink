@@ -7,6 +7,7 @@
 # its area has staged changes, plus a few cheap global checks always run.
 #
 #   crates/ | Cargo.toml | Cargo.lock  -> cargo fmt --check, clippy -D warnings, test
+#   crates/instantlink-ffi/             -> generated FFI header drift check
 #   bridge/                            -> ruff check, mypy, pytest
 #   macos/                             -> scripts/test-macos.sh (swiftc build + tests)
 #   always                             -> git diff --check, shell syntax, py_compile
@@ -67,6 +68,10 @@ if changed '^crates/|^Cargo\.(toml|lock)$'; then
   run "cargo fmt --all -- --check" cargo fmt --all -- --check
   run "cargo clippy --workspace -- -D warnings" cargo clippy --workspace -- -D warnings
   run "cargo test --workspace" cargo test --workspace
+fi
+
+if changed '^crates/instantlink-ffi/|^Cargo\.(toml|lock)$'; then
+  run "scripts/check-ffi-header.sh" bash scripts/check-ffi-header.sh
 fi
 
 # ---------- Bridge Python ----------

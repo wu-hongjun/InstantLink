@@ -19,7 +19,8 @@ struct LightSection: View {
                 systemImage: "sun.max",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.light.sectionEnabled
             )
 
             if isExpanded {

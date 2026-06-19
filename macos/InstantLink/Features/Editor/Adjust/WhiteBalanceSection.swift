@@ -25,7 +25,8 @@ struct WhiteBalanceSection: View {
                 title: L_key("wb_section"),
                 systemImage: "thermometer.medium",
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.whiteBalance.sectionEnabled
             )
 
             if isExpanded {

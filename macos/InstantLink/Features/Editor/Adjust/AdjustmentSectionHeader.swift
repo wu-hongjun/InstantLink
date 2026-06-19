@@ -40,17 +40,24 @@ struct AdjustmentSectionHeader: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 12, alignment: .center)
+                    .accessibilityHidden(true)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: isExpanded
+                ? "Collapse adjustment section"
+                : "Expand adjustment section"))
+            .accessibilityHint(Text(title))
 
             Image(systemName: systemImage)
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .frame(width: 18, alignment: .center)
+                .accessibilityHidden(true)
 
             Text(title)
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
 
@@ -61,9 +68,11 @@ struct AdjustmentSectionHeader: View {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 }
                 .buttonStyle(.plain)
                 .help(L("adjust_reset"))
+                .accessibilityLabel(Text(L_key("adjust_reset")))
             }
 
             if let onAuto {
@@ -81,6 +90,7 @@ struct AdjustmentSectionHeader: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(L_key("adjust_auto")))
             }
 
             if let enabledBinding {
@@ -94,12 +104,17 @@ struct AdjustmentSectionHeader: View {
                         .foregroundStyle(enabledBinding.wrappedValue
                             ? Color.accentColor
                             : .secondary)
+                        .accessibilityHidden(true)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(verbatim: enabledBinding.wrappedValue
+                    ? "Disable adjustment section"
+                    : "Enable adjustment section"))
+                .accessibilityValue(Text(verbatim: enabledBinding.wrappedValue
+                    ? "Enabled"
+                    : "Disabled"))
             }
         }
         .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
     }
 }

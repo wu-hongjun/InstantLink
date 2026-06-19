@@ -27,7 +27,8 @@ struct SelectiveColorSection: View {
                 title: L_key("sel_section"),
                 systemImage: "swatchpalette",
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.selective.sectionEnabled
             )
 
             if isExpanded {

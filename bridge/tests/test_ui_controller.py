@@ -3061,7 +3061,7 @@ async def _wait_for_mode(display: _FakeDisplay, mode: UiMode) -> None:
 
 
 async def _wait_for_preview_image(display: _FakeDisplay) -> None:
-    for _ in range(50):
+    for _ in range(200):
         if display.snapshots and display.snapshots[-1].preview_image is not None:
             return
         await asyncio.sleep(0.01)
@@ -3069,7 +3069,7 @@ async def _wait_for_preview_image(display: _FakeDisplay) -> None:
 
 
 async def _wait_for_preview_image_name(display: _FakeDisplay, image_name: str) -> None:
-    for _ in range(50):
+    for _ in range(200):
         if (
             display.snapshots
             and display.snapshots[-1].last_image_name == image_name
@@ -3451,6 +3451,11 @@ async def test_reset_credentials_second_select_executes(
     monkeypatch.setenv("INSTANTLINK_BRIDGE_HOTSPOT_PSK_FILE", str(psk_path))
 
     applied_ftp: list[object] = []
+    restart_calls = 0
+
+    async def fake_hotspot_restart() -> None:
+        nonlocal restart_calls
+        restart_calls += 1
 
     display = _FakeDisplay()
     ui = BridgeUi(
@@ -3462,6 +3467,7 @@ async def test_reset_credentials_second_select_executes(
         wifi_mode_setter=_unused_wifi_mode_setter,
         ftp_config_applied_callback=lambda cfg: applied_ftp.append(cfg),
     )
+    monkeypatch.setattr(ui, "_restart_hotspot_for_credentials", fake_hotspot_restart)
 
     # Navigate to Upload FTP page and go to Reset credentials row
     await ui._handle_action(UiAction.SELECT)  # open settings
@@ -3490,6 +3496,7 @@ async def test_reset_credentials_second_select_executes(
     # Move focus to Confirm and activate.
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.SELECT)
+    await asyncio.sleep(0)
 
     new_ssid = ssid_path.read_text(encoding="utf-8").strip()
     new_psk = psk_path.read_text(encoding="utf-8").strip()
@@ -3501,6 +3508,7 @@ async def test_reset_credentials_second_select_executes(
     assert ui._config.ftp.password != "11111111"
     assert len(ui._config.ftp.password) == 8
     assert len(applied_ftp) >= 1
+    assert restart_calls == 1
     assert ui._snapshot.mode is UiMode.SETTINGS
 
 

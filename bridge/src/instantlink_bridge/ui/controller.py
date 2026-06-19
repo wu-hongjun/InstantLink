@@ -538,6 +538,7 @@ class BridgeUi:
             self._silent_link_recovery_task,
             self._proactive_bond_reset_task,
             self._initial_status_task,
+            self._credential_hotspot_task,
         ):
             if task is None:
                 continue
@@ -2588,7 +2589,9 @@ class BridgeUi:
         # Notify live FTP server of the new password
         self._notify_ftp_config_applied(updated.ftp)
 
-        # Restart hotspot so new SSID/PSK take effect (fire-and-forget)
+        # Restart hotspot so new SSID/PSK take effect (fire-and-forget).
+        if self._credential_hotspot_task is not None and not self._credential_hotspot_task.done():
+            self._credential_hotspot_task.cancel()
         self._credential_hotspot_task = asyncio.create_task(
             self._restart_hotspot_for_credentials(),
             name="bridge.credentials_hotspot_restart",

@@ -19,6 +19,7 @@ use uuid::Uuid;
 #[cfg(target_os = "linux")]
 use std::process::Stdio;
 
+use crate::commands::ResponseExpectation;
 use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::error::{PrinterError, Result};
 use crate::protocol::{self, PacketAssembler};
@@ -39,19 +40,50 @@ async fn receive_packet_from_channel(
 
         let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
         if remaining.is_zero() {
+            assembler.reset();
             return Err(PrinterError::Timeout);
         }
 
-        let data = tokio::time::timeout(remaining, rx.recv())
-            .await
-            .map_err(|_| PrinterError::Timeout)?
-            .ok_or_else(|| PrinterError::Ble("notification channel closed".into()))?;
+        let data = match tokio::time::timeout(remaining, rx.recv()).await {
+            Ok(Some(data)) => data,
+            Ok(None) => return Err(PrinterError::Ble("notification channel closed".into())),
+            Err(_) => {
+                assembler.reset();
+                return Err(PrinterError::Timeout);
+            }
+        };
 
         match assembler.feed(&data) {
             Ok(Some(packet)) => return Ok(packet),
             Ok(None) => {}
             Err(e) => log::warn!("protocol error (incoming data): {e}"),
         }
+    }
+}
+
+async fn receive_expected_from_transport<T: Transport + ?Sized>(
+    transport: &T,
+    timeout: Duration,
+    expectation: ResponseExpectation,
+) -> Result<protocol::Packet> {
+    let deadline = tokio::time::Instant::now() + timeout;
+
+    loop {
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            return Err(PrinterError::Timeout);
+        }
+
+        let packet = transport.receive(remaining).await?;
+        if expectation.matches(&packet) {
+            return Ok(packet);
+        }
+
+        log::debug!(
+            "skipping unrelated printer response while waiting for {expectation:?}: opcode=0x{:04x}, payload_len={}",
+            packet.opcode,
+            packet.payload.len()
+        );
     }
 }
 
@@ -102,6 +134,18 @@ pub trait Transport: Send + Sync {
 
     /// Send a command packet and wait for the response.
     async fn send_and_receive(&self, data: &[u8], timeout: Duration) -> Result<protocol::Packet>;
+
+    /// Send a command packet and wait for a matching response, skipping stale
+    /// notifications or ACKs that belong to earlier commands.
+    async fn send_and_receive_expected(
+        &self,
+        data: &[u8],
+        timeout: Duration,
+        expectation: ResponseExpectation,
+    ) -> Result<protocol::Packet> {
+        self.send(data).await?;
+        receive_expected_from_transport(self, timeout, expectation).await
+    }
 
     /// Disconnect from the printer.
     async fn disconnect(&self) -> Result<()>;
@@ -656,6 +700,17 @@ impl Transport for BleTransport {
         self.receive(timeout).await
     }
 
+    async fn send_and_receive_expected(
+        &self,
+        data: &[u8],
+        timeout: Duration,
+        expectation: ResponseExpectation,
+    ) -> Result<protocol::Packet> {
+        let _guard = self.command_lock.lock().await;
+        self.send(data).await?;
+        receive_expected_from_transport(self, timeout, expectation).await
+    }
+
     async fn disconnect(&self) -> Result<()> {
         // Shut down the listener before touching the peripheral so it doesn't
         // try to forward notifications after the BLE connection is gone.
@@ -874,6 +929,41 @@ mod tests {
         sender.await.unwrap();
 
         assert!(matches!(err, PrinterError::Timeout));
+    }
+
+    #[tokio::test]
+    async fn receive_packet_from_channel_resets_partial_buffer_after_timeout() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let mut assembler = PacketAssembler::new();
+
+        // Valid response header + huge declared length. Without a reset on
+        // timeout, this partial frame poisons the assembler for every later
+        // receive call.
+        tx.send(vec![
+            protocol::RESPONSE_HEADER[0],
+            protocol::RESPONSE_HEADER[1],
+            0xFF,
+            0xFF,
+        ])
+        .await
+        .unwrap();
+
+        let err = receive_packet_from_channel(&mut rx, &mut assembler, Duration::from_millis(10))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, PrinterError::Timeout));
+
+        let valid = protocol::build_packet(0xCAFE, &[0x42]).unwrap();
+        tx.send(valid).await.unwrap();
+
+        let received =
+            receive_packet_from_channel(&mut rx, &mut assembler, Duration::from_millis(100))
+                .await
+                .expect(
+                    "valid packet after timeout should not be hidden behind stale partial data",
+                );
+        assert_eq!(received.opcode, 0xCAFE);
+        assert_eq!(received.payload, vec![0x42]);
     }
 
     /// A fake "never-ending" notification source: a task that loops forever

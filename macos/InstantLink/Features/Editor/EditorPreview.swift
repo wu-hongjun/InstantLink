@@ -49,7 +49,7 @@ struct EditorPreview: View {
 /// into its drawable using `CIRenderDestination`.
 final class EditorMetalView: MTKView {
     private let ciContext: CIContext
-    private let commandQueue: MTLCommandQueue
+    private let commandQueue: MTLCommandQueue?
     private let outputColorSpace: CGColorSpace = ColorSpaces.sRGB
 
     /// User-facing canvas zoom, `-1…+1` (neutral `0` = aspect-fit). Plan 049:
@@ -77,17 +77,26 @@ final class EditorMetalView: MTKView {
     }
 
     init(device: MTLDevice) {
-        guard let queue = device.makeCommandQueue() else {
-            fatalError("Failed to create Metal command queue for editor preview")
-        }
+        let queue = device.makeCommandQueue()
         commandQueue = queue
-        ciContext = CIContext(
-            mtlCommandQueue: queue,
-            options: [
-                .workingColorSpace: ColorSpaces.linearSRGB,
-                .cacheIntermediates: true,
-            ]
-        )
+        if let queue {
+            ciContext = CIContext(
+                mtlCommandQueue: queue,
+                options: [
+                    .workingColorSpace: ColorSpaces.linearSRGB,
+                    .cacheIntermediates: true,
+                ]
+            )
+        } else {
+            mtkLog.error("Failed to create Metal command queue for editor preview")
+            ciContext = CIContext(
+                mtlDevice: device,
+                options: [
+                    .workingColorSpace: ColorSpaces.linearSRGB,
+                    .cacheIntermediates: true,
+                ]
+            )
+        }
         super.init(frame: .zero, device: device)
         framebufferOnly = false
         isPaused = true
@@ -126,8 +135,9 @@ final class EditorMetalView: MTKView {
 
     override func draw(_ rect: CGRect) {
         guard let drawable = currentDrawable,
+              let commandQueue,
               let buffer = commandQueue.makeCommandBuffer() else {
-            mtkLog.error("draw(\(rect.width)x\(rect.height)): no drawable or command buffer")
+            mtkLog.error("draw(\(rect.width)x\(rect.height)): no drawable, command queue, or command buffer")
             return
         }
 

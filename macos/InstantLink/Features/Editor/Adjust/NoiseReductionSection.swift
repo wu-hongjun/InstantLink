@@ -20,7 +20,8 @@ struct NoiseReductionSection: View {
                 systemImage: "dot.radiowaves.left.and.right",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.nr.sectionEnabled
             )
 
             if isExpanded {

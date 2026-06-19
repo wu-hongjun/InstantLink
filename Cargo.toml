@@ -31,7 +31,7 @@ clap = { version = "4", features = ["derive"] }
 indicatif = "0.17"
 
 # FFI
-cbindgen = "0.27"
+cbindgen = "0.29"
 
 # Utilities
 uuid = { version = "1", features = ["v4"] }

@@ -21,7 +21,8 @@ struct ColorSection: View {
                 systemImage: "paintpalette",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.color.sectionEnabled
             )
 
             if isExpanded {

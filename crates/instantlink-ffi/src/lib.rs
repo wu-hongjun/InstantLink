@@ -27,6 +27,15 @@ type DeviceLock = Mutex<Option<DeviceArc>>;
 type KeepaliveIntervalLock = Mutex<Option<Duration>>;
 type KeepaliveTaskLock = Mutex<Option<tokio::task::JoinHandle<()>>>;
 
+#[allow(non_camel_case_types)]
+pub type instantlink_connect_stage_cb = Option<extern "C" fn(i32, *const c_char)>;
+
+#[allow(non_camel_case_types)]
+pub type instantlink_connect_stage_cb_ctx = Option<extern "C" fn(i32, *const c_char, *mut c_void)>;
+
+#[allow(non_camel_case_types)]
+pub type instantlink_print_progress_cb_ctx = Option<extern "C" fn(u32, u32, *mut c_void)>;
+
 static INIT: Once = Once::new();
 static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static DEVICE: OnceLock<DeviceLock> = OnceLock::new();
@@ -153,10 +162,7 @@ fn connect_stage_code(stage: ConnectStage) -> i32 {
     stage as i32
 }
 
-fn emit_connect_progress(
-    progress_cb: Option<extern "C" fn(i32, *const c_char)>,
-    event: ConnectProgressEvent,
-) {
+fn emit_connect_progress(progress_cb: instantlink_connect_stage_cb, event: ConnectProgressEvent) {
     let Some(progress_cb) = progress_cb else {
         return;
     };
@@ -168,7 +174,7 @@ fn emit_connect_progress(
 }
 
 fn emit_connect_progress_with_context(
-    progress_cb: Option<extern "C" fn(i32, *const c_char, *mut c_void)>,
+    progress_cb: instantlink_connect_stage_cb_ctx,
     context: *mut c_void,
     event: ConnectProgressEvent,
 ) {
@@ -450,11 +456,13 @@ pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration
 /// # Safety
 ///
 /// `name` must be a valid, non-null, null-terminated UTF-8 C string.
+/// `progress_cb` may be null (no progress reporting).
+/// `detail` passed to callback is only valid during the callback invocation.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn instantlink_connect_named_with_progress(
     name: *const c_char,
     duration_secs: i32,
-    progress_cb: Option<extern "C" fn(i32, *const c_char)>,
+    progress_cb: instantlink_connect_stage_cb,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         // SAFETY: name must be a valid, non-null, null-terminated UTF-8 C string that remains
@@ -487,11 +495,13 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress(
 /// # Safety
 ///
 /// `name` must be a valid, non-null, null-terminated UTF-8 C string.
+/// `progress_cb` may be null (no progress reporting).
+/// `detail` passed to callback is only valid during the callback invocation.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn instantlink_connect_named_with_progress_ctx(
     name: *const c_char,
     duration_secs: i32,
-    progress_cb: Option<extern "C" fn(i32, *const c_char, *mut c_void)>,
+    progress_cb: instantlink_connect_stage_cb_ctx,
     context: *mut c_void,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -919,13 +929,14 @@ pub unsafe extern "C" fn instantlink_print_with_progress(
 /// # Safety
 ///
 /// `path` must be a valid, non-null, null-terminated UTF-8 C string.
+/// `progress_cb` may be null (no progress reporting).
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn instantlink_print_with_progress_ctx(
     path: *const c_char,
     quality: u8,
     fit_mode: u8,
     print_option: u8,
-    progress_cb: Option<extern "C" fn(u32, u32, *mut c_void)>,
+    progress_cb: instantlink_print_progress_cb_ctx,
     context: *mut c_void,
 ) -> i32 {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

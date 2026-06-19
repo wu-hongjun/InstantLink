@@ -19,6 +19,14 @@ By default, cbindgen writes the generated header into Cargo's `OUT_DIR`. To refr
 INSTANTLINK_UPDATE_HEADER=1 cargo build --release -p instantlink-ffi
 ```
 
+To verify that the checked-in header matches the generated ABI without leaving drift behind, run:
+
+```bash
+bash scripts/check-ffi-header.sh --release
+```
+
+Release CI runs this drift check before packaging the FFI zip, so `InstantLink-FFI-*.zip` only ships with a header that matches the generated bindings.
+
 ## Status Codes
 
 All exported functions return `i32` status codes:

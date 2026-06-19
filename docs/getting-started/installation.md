@@ -61,6 +61,7 @@ INSTANTLINK_UPDATE_HEADER=1 cargo build --release -p instantlink-ffi
 ```
 
 Without that environment variable, cbindgen writes the generated header into Cargo's `OUT_DIR`.
+Use `bash scripts/check-ffi-header.sh --release` before release work to regenerate the header and fail if it differs from the checked-in ABI.
 
 !!! note "Bluetooth Permissions"
     `InstantLink.app` includes `NSBluetoothAlwaysUsageDescription`. When running the CLI directly outside the app bundle, macOS will prompt for Bluetooth permission on first use.

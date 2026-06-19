@@ -1,5 +1,6 @@
 import CoreImage
 import Foundation
+import AppKit
 import simd
 import SwiftUI
 
@@ -29,6 +30,13 @@ struct EyedropperOverlay: View {
                 }
         }
         .allowsHitTesting(state.eyedropperManager.active != nil)
+        .accessibilityHidden(state.eyedropperManager.active == nil)
+        .accessibilityLabel(Text(verbatim: "Eyedropper active"))
+        .accessibilityHint(Text(verbatim: "Click the image to sample a color."))
+        .accessibilityAddTraits(.isButton)
+        .onChange(of: state.eyedropperManager.active) { _, activeMode in
+            announceIfNeeded(activeMode)
+        }
     }
 
     private func handleTap(at point: CGPoint, viewSize: CGSize) {
@@ -112,5 +120,18 @@ struct EyedropperOverlay: View {
             colorSpace: ColorSpaces.sRGB
         )
         return pixel
+    }
+
+    private func announceIfNeeded(_ activeMode: EyedropperManager.ActiveMode?) {
+        guard activeMode != nil else { return }
+
+        NSAccessibility.post(
+            element: NSApp.mainWindow as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: "Eyedropper active. Click the image to sample a color.",
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ]
+        )
     }
 }

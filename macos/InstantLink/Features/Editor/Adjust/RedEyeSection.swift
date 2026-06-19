@@ -25,7 +25,8 @@ struct RedEyeSection: View {
                 systemImage: "eye.slash",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.redEye.sectionEnabled
             )
 
             if isExpanded {

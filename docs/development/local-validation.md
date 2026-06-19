@@ -29,6 +29,7 @@ It is **path-scoped** — each suite runs only when its area has staged changes:
 | Staged path | Checks |
 |-------------|--------|
 | `crates/`, `Cargo.toml`, `Cargo.lock` | `cargo fmt --all -- --check`, `cargo clippy --workspace -- -D warnings`, `cargo test --workspace` |
+| `crates/instantlink-ffi/`, `Cargo.toml`, `Cargo.lock` | `scripts/check-ffi-header.sh` |
 | `bridge/` | `ruff check src tests`, `mypy src`, `pytest -q` |
 | `macos/` | `scripts/test-macos.sh` (swiftc build + tests) |
 | any `*.sh` | `bash -n` syntax check |

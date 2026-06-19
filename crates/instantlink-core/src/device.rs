@@ -146,19 +146,26 @@ impl BlePrinterDevice {
         // Query image support info to detect model
         emit_connect_progress(progress, ConnectStage::ModelDetecting, None::<String>);
         let cmd = Command::ImageSupportInfo;
-        let packet = transport
-            .send_and_receive(&cmd.encode()?, DEFAULT_TIMEOUT)
-            .await?;
-        let response = Response::decode(&packet);
+        let model_result = async {
+            let packet =
+                send_command_and_receive_matching(transport.as_ref(), &cmd, DEFAULT_TIMEOUT)
+                    .await?;
+            let response = Response::decode(&packet);
 
-        let model = match response {
-            Response::ImageSupportInfo { width, height, .. } => {
-                detect_model(width, height, dis_model.as_deref())?
-            }
-            _ => {
-                return Err(PrinterError::UnexpectedResponse(
+            match response {
+                Response::ImageSupportInfo { width, height, .. } => {
+                    detect_model(width, height, dis_model.as_deref())
+                }
+                _ => Err(PrinterError::UnexpectedResponse(
                     "expected ImageSupportInfo response".into(),
-                ));
+                )),
+            }
+        };
+        let model = match model_result.await {
+            Ok(model) => model,
+            Err(error) => {
+                let _ = transport.disconnect().await;
+                return Err(error);
             }
         };
 
@@ -174,10 +181,9 @@ impl BlePrinterDevice {
 
     /// Send a command and decode the response.
     async fn command_unlocked(&self, cmd: &Command) -> Result<Response> {
-        let packet = self
-            .transport
-            .send_and_receive(&cmd.encode()?, DEFAULT_TIMEOUT)
-            .await?;
+        let packet =
+            send_command_and_receive_matching(self.transport.as_ref(), cmd, DEFAULT_TIMEOUT)
+                .await?;
         Ok(Response::decode(&packet))
     }
 
@@ -477,6 +483,20 @@ impl PrinterDevice for BlePrinterDevice {
     }
 }
 
+async fn send_command_and_receive_matching(
+    transport: &dyn Transport,
+    cmd: &Command,
+    timeout: Duration,
+) -> Result<crate::protocol::Packet> {
+    let encoded = cmd.encode()?;
+    let expectation = cmd.response_expectation().ok_or_else(|| {
+        PrinterError::UnexpectedResponse(format!("{cmd:?} does not expect a response"))
+    })?;
+    transport
+        .send_and_receive_expected(&encoded, timeout, expectation)
+        .await
+}
+
 /// Detect the printer model from image support dimensions and optional DIS model string.
 fn detect_model(width: u16, height: u16, dis_model: Option<&str>) -> Result<PrinterModel> {
     // Check DIS model string first for Link 3 detection
@@ -502,7 +522,8 @@ mod tests {
     use super::*;
     use crate::commands::{
         INFO_BATTERY, INFO_IMAGE_SUPPORT, INFO_PRINT_HISTORY, INFO_PRINTER_FUNCTION, OP_DATA,
-        OP_DOWNLOAD_END, OP_DOWNLOAD_START, OP_LED_PATTERN_SETTINGS, OP_SUPPORT_FUNCTION_INFO,
+        OP_DOWNLOAD_END, OP_DOWNLOAD_START, OP_LED_PATTERN_SETTINGS, OP_PRINT_IMAGE,
+        OP_SUPPORT_FUNCTION_INFO,
     };
     use crate::protocol;
     use async_trait::async_trait;
@@ -515,6 +536,7 @@ mod tests {
     struct MockState {
         responses: VecDeque<Result<protocol::Packet>>,
         sent: Vec<Vec<u8>>,
+        disconnects: usize,
     }
 
     struct MockTransport {
@@ -536,6 +558,7 @@ mod tests {
             let state = Arc::new(Mutex::new(MockState {
                 responses: responses.into(),
                 sent: Vec::new(),
+                disconnects: 0,
             }));
             let transport = Box::new(MockTransport {
                 state: Arc::clone(&state),
@@ -571,6 +594,7 @@ mod tests {
         }
 
         async fn disconnect(&self) -> Result<()> {
+            self.state.lock().unwrap().disconnects += 1;
             Ok(())
         }
 
@@ -626,6 +650,13 @@ mod tests {
         Ok(protocol::Packet {
             opcode: OP_LED_PATTERN_SETTINGS,
             payload: vec![],
+        })
+    }
+
+    fn print_status_packet(status: u8) -> Result<protocol::Packet> {
+        Ok(protocol::Packet {
+            opcode: OP_PRINT_IMAGE,
+            payload: vec![status],
         })
     }
 
@@ -694,20 +725,22 @@ mod tests {
         data.extend_from_slice(&999u16.to_be_bytes());
         data.extend_from_slice(&999u16.to_be_bytes());
         let packet = support_function_packet(INFO_IMAGE_SUPPORT, &data);
-        let (transport, _) = MockTransport::new(vec![packet]);
+        let (transport, state) = MockTransport::new(vec![packet]);
         let Err(err) = BlePrinterDevice::new(transport, "Test".into()).await else {
             panic!("expected error");
         };
         assert!(err.to_string().contains("unknown printer dimensions"));
+        assert_eq!(state.lock().unwrap().disconnects, 1);
     }
 
     #[tokio::test]
     async fn detect_model_wrong_response() {
-        let (transport, _) = MockTransport::new(vec![battery_packet(50)]);
+        let (transport, state) = MockTransport::new(vec![battery_packet(50)]);
         let Err(err) = BlePrinterDevice::new(transport, "Test".into()).await else {
             panic!("expected error");
         };
-        assert!(err.to_string().contains("expected ImageSupportInfo"));
+        assert!(matches!(err, PrinterError::Timeout));
+        assert_eq!(state.lock().unwrap().disconnects, 1);
     }
 
     // ── Success Code Handling ─────────────────────────────────────────────
@@ -769,8 +802,20 @@ mod tests {
 
     #[tokio::test]
     async fn battery() {
-        let (device, _) = make_device(PrinterModel::Mini, vec![battery_packet(85)]).await;
+        let (device, state) = make_device(PrinterModel::Mini, vec![battery_packet(85)]).await;
         assert_eq!(device.battery().await.unwrap(), 85);
+        assert_eq!(state.lock().unwrap().disconnects, 0);
+    }
+
+    #[tokio::test]
+    async fn command_skips_stale_unrelated_notification_before_expected_response() {
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![print_status_packet(0), battery_packet(77)],
+        )
+        .await;
+
+        assert_eq!(device.battery().await.unwrap(), 77);
     }
 
     #[tokio::test]
@@ -843,8 +888,14 @@ mod tests {
 
     #[tokio::test]
     async fn battery_unexpected_response() {
-        let (device, _) =
-            make_device(PrinterModel::Mini, vec![printer_function_packet(5, false)]).await;
+        let (device, _) = make_device(
+            PrinterModel::Mini,
+            vec![Ok(protocol::Packet {
+                opcode: OP_SUPPORT_FUNCTION_INFO,
+                payload: vec![0x00, INFO_BATTERY],
+            })],
+        )
+        .await;
         let result = device.battery().await;
         assert!(result.is_err());
         assert!(
@@ -1048,13 +1099,7 @@ mod tests {
         let result = device
             .send_image_data(&[0u8; 100], &[vec![0u8; 100]], 0, None)
             .await;
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("expected DownloadAck")
-        );
+        assert!(matches!(result.unwrap_err(), PrinterError::Timeout));
     }
 
     #[tokio::test]
@@ -1081,9 +1126,10 @@ mod tests {
 
     #[tokio::test]
     async fn transport_error_during_new() {
-        let (transport, _) = MockTransport::new(vec![Err(PrinterError::Timeout)]);
+        let (transport, state) = MockTransport::new(vec![Err(PrinterError::Timeout)]);
         let result = BlePrinterDevice::new(transport, "Test".into()).await;
         assert!(result.is_err());
+        assert_eq!(state.lock().unwrap().disconnects, 1);
     }
 
     // ── Other ──────────────────────────────────────────────────────────────

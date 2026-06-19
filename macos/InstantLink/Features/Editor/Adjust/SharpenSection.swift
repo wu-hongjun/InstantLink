@@ -19,7 +19,8 @@ struct SharpenSection: View {
                 systemImage: "triangle.righthalf.filled",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.sharpen.sectionEnabled
             )
 
             if isExpanded {

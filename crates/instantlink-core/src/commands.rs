@@ -5,6 +5,42 @@
 use crate::error::Result;
 use crate::protocol;
 
+/// Expected response identity for a command.
+///
+/// The fields are private so callers normally obtain this from
+/// [`Command::response_expectation`] instead of constructing loose matchers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ResponseExpectation {
+    opcode: u16,
+    support_info_type: Option<u8>,
+}
+
+impl ResponseExpectation {
+    fn opcode(opcode: u16) -> Self {
+        Self {
+            opcode,
+            support_info_type: None,
+        }
+    }
+
+    fn support_info(info_type: u8) -> Self {
+        Self {
+            opcode: OP_SUPPORT_FUNCTION_INFO,
+            support_info_type: Some(info_type),
+        }
+    }
+
+    pub fn matches(self, packet: &protocol::Packet) -> bool {
+        packet.opcode == self.opcode
+            && self.support_info_type.is_none_or(|expected| {
+                packet
+                    .payload
+                    .get(1)
+                    .is_none_or(|info_type| *info_type == expected)
+            })
+    }
+}
+
 // ── Opcode constants (EventType values from reference) ────────────────────────
 
 /// Device information query.
@@ -143,6 +179,30 @@ impl Command {
             }
             Command::Shutdown => protocol::build_packet(OP_SHUT_DOWN, &[]),
             Command::Reset => protocol::build_packet(OP_RESET, &[]),
+        }
+    }
+
+    pub fn response_expectation(&self) -> Option<ResponseExpectation> {
+        match self {
+            Command::DeviceInfo => Some(ResponseExpectation::opcode(OP_DEVICE_INFO_SERVICE)),
+            Command::ImageSupportInfo => {
+                Some(ResponseExpectation::support_info(INFO_IMAGE_SUPPORT))
+            }
+            Command::BatteryStatus => Some(ResponseExpectation::support_info(INFO_BATTERY)),
+            Command::PrinterFunctionInfo => {
+                Some(ResponseExpectation::support_info(INFO_PRINTER_FUNCTION))
+            }
+            Command::HistoryInfo => Some(ResponseExpectation::support_info(INFO_PRINT_HISTORY)),
+            Command::DownloadStart { .. } => Some(ResponseExpectation::opcode(OP_DOWNLOAD_START)),
+            Command::Data { .. } => Some(ResponseExpectation::opcode(OP_DATA)),
+            Command::DownloadEnd => Some(ResponseExpectation::opcode(OP_DOWNLOAD_END)),
+            Command::DownloadCancel => Some(ResponseExpectation::opcode(OP_DOWNLOAD_CANCEL)),
+            Command::PrintImage => Some(ResponseExpectation::opcode(OP_PRINT_IMAGE)),
+            Command::LedPatternSettings { .. } => {
+                Some(ResponseExpectation::opcode(OP_LED_PATTERN_SETTINGS))
+            }
+            Command::Shutdown => None,
+            Command::Reset => None,
         }
     }
 }

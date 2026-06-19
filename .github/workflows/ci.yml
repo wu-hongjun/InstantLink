@@ -37,6 +37,9 @@ jobs:
       - name: Test
         run: cargo test --workspace --locked
 
+      - name: FFI header drift check
+        run: bash scripts/check-ffi-header.sh
+
       - name: macOS Core Tests
         run: bash scripts/test-macos.sh
 

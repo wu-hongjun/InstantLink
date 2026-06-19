@@ -201,10 +201,23 @@ class ClientStore:
         path = self.client_path(client_id)
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
-        except OSError as exc:
+        except FileNotFoundError as exc:
             raise ManagementAuthError("management client is not authorized") from exc
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise ClientRecordError(
+                "management client record is invalid",
+                error_code="client_record_invalid",
+            ) from exc
+        except OSError as exc:
+            raise ClientRecordError(
+                "management client record could not be read",
+                error_code="client_record_invalid",
+            ) from exc
         if not isinstance(value, dict):
-            raise ClientRecordError("client record must be a JSON object")
+            raise ClientRecordError(
+                "client record must be a JSON object",
+                error_code="client_record_invalid",
+            )
         return AuthorizedClient.from_dict(value)
 
     def save_client(self, client: AuthorizedClient) -> None:

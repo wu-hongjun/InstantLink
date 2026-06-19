@@ -4,7 +4,8 @@ import SwiftUI
 ///
 /// Header + 5-thumbnail intensity strip (dominant slider = Intensity) +
 /// `Options` disclosure for the full Intensity / Neutrals / Tone / Grain
-/// slider set. The on/off circle in the header is the section enable.
+/// slider set. The on/off circle in the header is the visible B&W mode
+/// toggle and also clears the persisted section mute bit.
 ///
 /// B&W is a **mode flag** (`AdjustmentState.BlackAndWhite.on`), not
 /// Saturation = −1. While `on == true`:
@@ -26,7 +27,15 @@ struct BlackAndWhiteSection: View {
                 onAuto: { applyAuto() },
                 onReset: { reset() },
                 isNeutral: isNeutral,
-                enabledBinding: $state.adjustments.bw.on
+                enabledBinding: Binding(
+                    get: {
+                        state.adjustments.bw.sectionEnabled && state.adjustments.bw.on
+                    },
+                    set: { enabled in
+                        state.adjustments.bw.sectionEnabled = enabled
+                        state.adjustments.bw.on = enabled
+                    }
+                )
             )
 
             if isExpanded {
@@ -40,11 +49,13 @@ struct BlackAndWhiteSection: View {
                         // Force the B&W stack on so the strip previews the
                         // mode itself, not just intensity deltas on a colour
                         // image. This matches Photos' strip behavior.
+                        snap.adjustments.bw.sectionEnabled = true
                         snap.adjustments.bw.on = true
                         snap.adjustments.bw.intensity = value
                         return snap
                     },
                     onSelect: { value in
+                        state.adjustments.bw.sectionEnabled = true
                         state.adjustments.bw.on = true
                         state.adjustments.bw.intensity = value
                     }

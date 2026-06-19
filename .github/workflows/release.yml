@@ -38,8 +38,8 @@ jobs:
       - name: Build Rust workspace
         run: cargo build --workspace --release --target "$RUST_TARGET"
 
-      - name: Generate FFI header
-        run: INSTANTLINK_UPDATE_HEADER=1 cargo build --release -p instantlink-ffi --target "$RUST_TARGET"
+      - name: Verify generated FFI header
+        run: bash scripts/check-ffi-header.sh --release --target "$RUST_TARGET"
 
       - name: Build bundled Bridge firmware
         env:
@@ -85,7 +85,8 @@ jobs:
       - name: Generate SHA-256 checksums
         run: |
           TAG="${GITHUB_REF_NAME}"
-          shasum -a 256 "InstantLink-${TAG}.dmg"          > "InstantLink-${TAG}.dmg.sha256"
+          APP_DMG="InstantLink-${TAG}-aarch64-apple-darwin.dmg"
+          shasum -a 256 "${APP_DMG}"                      > "${APP_DMG}.sha256"
           shasum -a 256 "InstantLink-CLI-${TAG}.zip"      > "InstantLink-CLI-${TAG}.zip.sha256"
           shasum -a 256 "InstantLink-FFI-${TAG}.zip"      > "InstantLink-FFI-${TAG}.zip.sha256"
 

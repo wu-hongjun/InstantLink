@@ -19,7 +19,8 @@ struct VignetteSection: View {
                 systemImage: "circle.dotted",
                 onAuto: { applyAuto() },
                 onReset: { reset() },
-                isNeutral: isNeutral
+                isNeutral: isNeutral,
+                enabledBinding: $state.adjustments.vignette.sectionEnabled
             )
 
             if isExpanded {

@@ -666,6 +666,20 @@ class BridgeUi:
         """Show a short image-received confirmation."""
 
         await self._record_power_activity()
+        if self._snapshot.mode is UiMode.SYNC_PAIRING:
+            # Deliberate (plan 051 P2.4): an incoming photo must not clobber
+            # the QR card while the user is mid-scan. In both-mode the
+            # print/sync work still proceeds in the background — app.py
+            # drives it from the image queue, not from this notification —
+            # so only the lightweight state is recorded here: the last image
+            # name plus the queue/outbox chips via their own hooks. The QR
+            # stays up until the user exits with KEY2/LEFT.
+            LOGGER.info(
+                "ui.image_received_suppressed reason=sync_pairing image=%s",
+                received.path.name,
+            )
+            self._snapshot = replace(self._snapshot, last_image_name=received.path.name)
+            return
         self._cancel_image_reset()
         self._snapshot = replace(
             self._snapshot,
@@ -1164,7 +1178,22 @@ class BridgeUi:
             self._apply_battery_event(event.battery, event.battery_alert)
             return
         if event.kind is PowerEventKind.IDLE_STAGE_CHANGED and event.idle_state is not None:
-            self._apply_idle_stage(event.idle_state.stage)
+            stage = event.idle_state.stage
+            if stage is not IdleStage.ACTIVE and self._snapshot.mode is UiMode.SYNC_PAIRING:
+                # Plan 051 P2.5: the QR pairing card is a "user is looking
+                # at the screen" state that generates no GPIO/FTP events —
+                # aiming a phone at the LCD is invisible to the idle timer.
+                # Convert the escalation into activity instead of applying
+                # it: the display never dims/blanks mid-scan and the power
+                # monitor resets to ACTIVE (which also keeps idle-poweroff
+                # at bay). Exiting the card takes a key press — real
+                # activity — so normal idle behavior resumes on its own.
+                # Low-battery/idle shutdown requests use a different event
+                # kind and are deliberately NOT exempted.
+                LOGGER.info("ui.sync_pairing_idle_exempted stage=%s", stage.value)
+                await self._record_power_activity()
+                return
+            self._apply_idle_stage(stage)
             return
         if event.kind is PowerEventKind.SHUTDOWN_REQUESTED:
             self._apply_shutdown_requested(event)
@@ -1415,9 +1444,7 @@ class BridgeUi:
         """Route input while the confirmation-dialog overlay is open."""
 
         if action in {UiAction.LEFT, UiAction.RIGHT, UiAction.UP, UiAction.DOWN}:
-            new_focus = (
-                "confirm" if self._snapshot.confirmation_focus == "cancel" else "cancel"
-            )
+            new_focus = "confirm" if self._snapshot.confirmation_focus == "cancel" else "cancel"
             self._snapshot = replace(self._snapshot, confirmation_focus=new_focus)
             self._render()
             return
@@ -2178,8 +2205,7 @@ class BridgeUi:
             self._show_confirmation_dialog(
                 title=f"Overwrite {slot}?",
                 message=(
-                    f"The current values of {slot} will be replaced "
-                    "with the active adjustments."
+                    f"The current values of {slot} will be replaced with the active adjustments."
                 ),
                 confirm_label="Overwrite",
                 destructive=True,
@@ -2384,10 +2410,7 @@ class BridgeUi:
             return
         self._show_confirmation_dialog(
             title="Forget printer?",
-            message=(
-                "The bridge will forget the paired printer. "
-                "You'll need to re-pair to print."
-            ),
+            message=("The bridge will forget the paired printer. You'll need to re-pair to print."),
             confirm_label="Forget",
             destructive=True,
             action_key="forget_printer",
@@ -2407,10 +2430,7 @@ class BridgeUi:
             return
         self._show_confirmation_dialog(
             title="Reset connection?",
-            message=(
-                "Drop the current Bluetooth link to the printer and let "
-                "it reconnect fresh."
-            ),
+            message=("Drop the current Bluetooth link to the printer and let it reconnect fresh."),
             confirm_label="Reset",
             destructive=True,
             action_key="reset_ble_link",
@@ -2490,8 +2510,7 @@ class BridgeUi:
         self._show_confirmation_dialog(
             title="Reset credentials?",
             message=(
-                "Wi-Fi PIN and FTP password will be regenerated. "
-                "Update the camera afterwards."
+                "Wi-Fi PIN and FTP password will be regenerated. Update the camera afterwards."
             ),
             confirm_label="Reset",
             destructive=True,
@@ -2574,8 +2593,7 @@ class BridgeUi:
             target_slot = overwrite_slot
             title = f"Overwrite {target_slot}?"
             message = (
-                f"The current values of {target_slot} will be replaced "
-                "with the active adjustments."
+                f"The current values of {target_slot} will be replaced with the active adjustments."
             )
             confirm_label = "Overwrite"
         else:

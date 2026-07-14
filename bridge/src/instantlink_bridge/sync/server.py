@@ -84,6 +84,7 @@ class SyncService:
         token_path: Path,
         device_id: str,
         client_activity_callback: Callable[[], None] | None = None,
+        outbox_changed_callback: Callable[[int], None] | None = None,
         enable_zeroconf: bool = True,
         address_provider: Callable[[], list[str]] | None = None,
     ) -> None:
@@ -91,6 +92,10 @@ class SyncService:
         self._port = port
         self._device_id = device_id
         self._client_activity_callback = client_activity_callback
+        # Invoked with the new outbox depth after a successful ack so the
+        # LCD chip decrements as the iPhone drains the queue (plan 051
+        # P1.2); the spool-add side notifies from app.py.
+        self._outbox_changed_callback = outbox_changed_callback
         self._enable_zeroconf = enable_zeroconf
         self._address_provider = address_provider or _advertise_addresses
         self._advertised_addresses: list[str] = []
@@ -229,7 +234,21 @@ class SyncService:
         acked = await asyncio.to_thread(self._outbox.ack, item_id)
         if not acked:
             return _unknown_item_response(item_id)
+        depth = await asyncio.to_thread(self._outbox.depth)
+        LOGGER.info("sync.photo_acked item=%s outbox_depth=%s", item_id, depth)
+        self._notify_outbox_changed(depth)
         return web.json_response({"ok": True})
+
+    def _notify_outbox_changed(self, depth: int) -> None:
+        """Report a new outbox depth; guarded like the activity callback so
+        a UI-side failure can never turn a successful ack into a 500."""
+
+        if self._outbox_changed_callback is None:
+            return
+        try:
+            self._outbox_changed_callback(depth)
+        except Exception:
+            LOGGER.exception("sync.outbox_changed_callback_failed depth=%s", depth)
 
     async def refresh_zeroconf(self) -> None:
         """Re-detect advertised addresses; register late or update in place.

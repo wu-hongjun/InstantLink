@@ -1637,3 +1637,90 @@ def test_print_only_destination_keeps_printer_gate() -> None:
     # (printer trouble owns the full screen in print mode).
     assert not can_accept_images(snapshot)
     assert sync_print_paused_note(snapshot) is None
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P1.1: iphone-only READY gating — the sync-ready headline must not
+# render without an FTP receive path; the Setup-needed body with the FTP
+# cause renders instead (ux-flows.md READY gating).
+# ---------------------------------------------------------------------------
+
+
+def _drawn_texts(monkeypatch: pytest.MonkeyPatch, snapshot: UiSnapshot) -> list[str]:
+    """Render ``snapshot`` while recording every string drawn on the LCD.
+
+    Patches the module-level ``_text`` primitive; every text helper
+    (including ``_center_lines``) funnels through it, so assertions can
+    check user-visible copy without OCR.
+    """
+
+    from PIL import ImageDraw
+
+    from instantlink_bridge.ui import render as render_module
+    from instantlink_bridge.ui.render import Font
+
+    drawn: list[str] = []
+    real_text = render_module._text
+
+    def record_text(
+        draw: ImageDraw.ImageDraw,
+        x: int,
+        y: int,
+        text: str,
+        font: Font,
+        fill: str,
+    ) -> None:
+        drawn.append(text)
+        real_text(draw, x, y, text, font, fill)
+
+    monkeypatch.setattr(render_module, "_text", record_text)
+    render_snapshot(snapshot)
+    return drawn
+
+
+def test_iphone_only_ready_without_ftp_path_renders_setup_needed_with_cause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """iphone-only + no FTP receive path must NOT claim sync-ready.
+
+    The body degrades to the Setup-needed rendering and surfaces the FTP
+    cause from ``readiness_cause_texts`` so the screen says what to fix.
+    """
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=False,
+    )
+    assert not can_accept_images(snapshot)
+    causes = readiness_cause_texts(snapshot)
+    assert causes  # the FTP cause exists ("Choose FTP Wi-Fi" by default)
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Sync to iPhone" not in drawn
+    assert "Setup needed" in drawn
+    assert any(cause in drawn for cause in causes)
+
+
+def test_iphone_only_ready_with_ftp_path_shows_sync_headline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Positive case: with an FTP path up, iphone-only READY shows the
+    sync-ready headline (and no Setup-needed body)."""
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        hotspot_ssid="InstantLink-AB12",
+    )
+    assert can_accept_images(snapshot)
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Sync to iPhone" in drawn
+    assert "Setup needed" not in drawn

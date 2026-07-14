@@ -23,15 +23,18 @@ def _make_service(
     tmp_path: Path,
     *,
     client_activity_callback: object = None,
+    outbox_changed_callback: object = None,
 ) -> tuple[SyncOutbox, SyncService]:
     outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
     callback = client_activity_callback if callable(client_activity_callback) else None
+    depth_callback = outbox_changed_callback if callable(outbox_changed_callback) else None
     service = SyncService(
         outbox,
         port=8721,
         token_path=tmp_path / "sync.token",
         device_id="IB-TEST",
         client_activity_callback=callback,
+        outbox_changed_callback=depth_callback,
         enable_zeroconf=False,
     )
     return outbox, service
@@ -216,6 +219,58 @@ async def test_ack_removes_item_and_spool_file(tmp_path: Path) -> None:
 
         response = await client.post(f"/v1/photos/{item.item_id}/ack", headers=_auth(service))
         assert response.status == 404
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_ack_fires_outbox_changed_callback_with_new_depth(tmp_path: Path) -> None:
+    """Plan 051 P1.2: draining the queue must notify the UI per ack so the
+    LCD outbox chip decrements instead of reading "N pending" forever."""
+
+    depths: list[int] = []
+    outbox, service = _make_service(tmp_path, outbox_changed_callback=depths.append)
+    first = outbox.add(_write_source(tmp_path / "u", "a.jpg", b"a"))
+    second = outbox.add(_write_source(tmp_path / "u", "b.jpg", b"b"))
+    client = await _start_client(service)
+    try:
+        response = await client.post(f"/v1/photos/{first.item_id}/ack", headers=_auth(service))
+        assert response.status == 200
+        assert depths == [1]
+
+        response = await client.post(f"/v1/photos/{second.item_id}/ack", headers=_auth(service))
+        assert response.status == 200
+        assert depths == [1, 0]
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_failed_ack_does_not_fire_outbox_changed_callback(tmp_path: Path) -> None:
+    depths: list[int] = []
+    _, service = _make_service(tmp_path, outbox_changed_callback=depths.append)
+    client = await _start_client(service)
+    try:
+        response = await client.post("/v1/photos/unknown/ack", headers=_auth(service))
+        assert response.status == 404
+        assert depths == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_outbox_changed_callback_exception_does_not_break_ack(tmp_path: Path) -> None:
+    def _boom(depth: int) -> None:
+        raise RuntimeError("callback exploded")
+
+    outbox, service = _make_service(tmp_path, outbox_changed_callback=_boom)
+    item = outbox.add(_write_source(tmp_path / "u", "c.jpg", b"c"))
+    client = await _start_client(service)
+    try:
+        response = await client.post(f"/v1/photos/{item.item_id}/ack", headers=_auth(service))
+        assert response.status == 200
+        assert (await response.json()) == {"ok": True}
+        assert outbox.depth() == 0
     finally:
         await client.close()
 

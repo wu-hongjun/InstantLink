@@ -2149,10 +2149,7 @@ async def test_about_page_refresh_loop_rebuilds_settings_rows_only_when_on_about
     # Off-page: the loop body should leave the snapshot's settings_rows alone.
     ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
     rows_before = ui._snapshot.settings_rows
-    if (
-        ui._snapshot.mode is UiMode.SETTINGS
-        and ui._settings_page is SettingsPage.ABOUT
-    ):
+    if ui._snapshot.mode is UiMode.SETTINGS and ui._settings_page is SettingsPage.ABOUT:
         ui._snapshot = replace(
             ui._snapshot,
             settings_rows=ui._settings_rows(),
@@ -2168,10 +2165,7 @@ async def test_about_page_refresh_loop_rebuilds_settings_rows_only_when_on_about
         settings_rows=(),
     )
     # Mirror the body of _run_about_page_refresh's `while True` block:
-    if (
-        ui._snapshot.mode is UiMode.SETTINGS
-        and ui._settings_page is SettingsPage.ABOUT
-    ):
+    if ui._snapshot.mode is UiMode.SETTINGS and ui._settings_page is SettingsPage.ABOUT:
         ui._snapshot = replace(
             ui._snapshot,
             settings_rows=ui._settings_rows(),
@@ -5740,3 +5734,163 @@ async def test_both_destination_printer_searching_keeps_ready_surface() -> None:
     assert ui._snapshot.mode is UiMode.READY
     assert not ui._snapshot.printer_status_fresh
     assert ui._snapshot.printer_status_message == "Searching Printer"
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.4: incoming photos must not clobber the QR pairing card.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_image_received_does_not_clobber_sync_pairing_qr(tmp_path: Path) -> None:
+    """An FTP upload landing while the user aims a phone at the QR must not
+    switch the LCD away from SYNC_PAIRING (both-mode print/sync work proceeds
+    in the background from app.py's queue, not from this notification)."""
+
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(
+            sync=SyncConfig(
+                destination=SyncDestination.BOTH,
+                token_path=tmp_path / "sync.token",
+            )
+        ),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    await ui.image_received(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.20"))
+
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    assert ui._snapshot.sync_qr_payload is not None
+    # No deferred return-home may be pending either — it would yank the QR
+    # away a couple of seconds later.
+    assert ui._image_reset_task is None
+
+    # Chip state still updates while the QR stays up.
+    await ui.sync_outbox_changed(2)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    assert ui._snapshot.sync_outbox_depth == 2
+    await ui.image_queue_changed(depth=1, max_size=100)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    assert ui._snapshot.image_queue_depth == 1
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
+    tmp_path: Path,
+) -> None:
+    """BACK from the QR after an image arrived mid-scan must land on the
+    originating settings page — no stuck or half-updated state."""
+
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(
+            sync=SyncConfig(
+                destination=SyncDestination.BOTH,
+                token_path=tmp_path / "sync.token",
+            )
+        ),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    await ui.image_received(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.20"))
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    await ui._handle_action(UiAction.BACK)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert display.snapshots[-1].settings_title == "Network"
+    assert ui._snapshot.sync_qr_payload is None
+    assert ui._image_reset_task is None
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.5: the QR pairing card must not dim/blank mid-scan.
+# ---------------------------------------------------------------------------
+
+
+def _idle_event(stage: IdleStage, idle_seconds: float) -> PowerEvent:
+    return PowerEvent(
+        kind=PowerEventKind.IDLE_STAGE_CHANGED,
+        created_at_monotonic=idle_seconds,
+        idle_state=IdleState(
+            stage=stage,
+            idle_seconds=idle_seconds,
+            last_activity_monotonic=0.0,
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
+    tmp_path: Path,
+) -> None:
+    """Aiming a phone at the QR generates no GPIO/FTP activity, so idle
+    escalations must not dim or blank the LCD while SYNC_PAIRING is up;
+    they are converted into power activity instead."""
+
+    activity_calls = {"n": 0}
+
+    async def record_activity() -> None:
+        activity_calls["n"] += 1
+
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        power_activity_callback=record_activity,
+        system_info=_test_system_info(),
+    )
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    activity_calls["n"] = 0
+
+    await ui.apply_power_event(_idle_event(IdleStage.DIM, 30.0))
+    await ui.apply_power_event(_idle_event(IdleStage.SCREEN_OFF, 90.0))
+
+    # The display never left the active stage and the QR stayed up; each
+    # escalation was converted into activity so the monitor resets too.
+    assert display.idle_stages == []
+    assert activity_calls["n"] == 2
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    assert ui._snapshot.idle_stage == "active"
+
+
+@pytest.mark.asyncio
+async def test_leaving_sync_pairing_restores_normal_idle_behavior(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    await ui.apply_power_event(_idle_event(IdleStage.DIM, 30.0))
+    assert display.idle_stages == []
+
+    await ui._handle_action(UiAction.BACK)
+    assert ui._snapshot.mode is UiMode.SETTINGS
+
+    await ui.apply_power_event(_idle_event(IdleStage.SCREEN_OFF, 90.0))
+
+    assert display.idle_stages == ["screen_off"]

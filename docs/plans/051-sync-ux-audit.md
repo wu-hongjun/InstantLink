@@ -92,3 +92,30 @@ sub-states instead of giving sync its own readiness rendering.
 - **Pass 2:** P2.3 service-state honesty, P2.6 footer, P2.7 discoverability,
   then the doc updates above reflecting as-built behavior.
 - **Pass 3:** P3 items alongside the iPhone field test.
+
+## Pass 1 outcome (2026-07-14, TDD)
+
+- **P1.1 — did not reproduce; finding was stale.** `_ready` has had a
+  `can_accept_images` → `_validation` fallback since `c43f5bd5` (2026-05-29):
+  iphone-only with no FTP path already renders "Setup needed" + causes, and
+  the controller comment the audit called false is accurate. The surface was
+  previously untested, so the two renders (negative + positive) are now
+  regression-pinned in `test_ui_render.py`.
+- **P1.2 — confirmed, fixed.** `SyncService` gained a keyword-only
+  `outbox_changed_callback`; `_handle_ack` notifies the new depth
+  (exception-guarded), wired in `app.py` to the existing
+  `notify_sync_outbox_changed` task pattern. The chip now decrements as the
+  iPhone drains the queue.
+- **P2.4 — confirmed by failing test, fixed.** `image_received` suppresses the
+  mode switch while `SYNC_PAIRING` is up (logs
+  `ui.image_received_suppressed`); queue/outbox chips still update. Settles
+  the audit's open question. **New Pass-2 item:** in both-mode with a usable
+  printer, the auto-print preview (`_show_print_preview`/`printing_started`)
+  can still switch away from the QR — fold into Pass 2.
+- **P2.5 — confirmed, fixed.** Non-ACTIVE idle-stage events arriving during
+  `SYNC_PAIRING` are converted into power activity instead of applied
+  (`ui.sync_pairing_idle_exempted`), so the QR never dims/blanks mid-scan;
+  `SHUTDOWN_REQUESTED` (critical battery) is deliberately not exempted.
+  Normal idle behavior resumes on exit (key press = real activity).
+- Verification: full bridge suite 1013 passed; ruff + `mypy --strict` clean on
+  touched files.

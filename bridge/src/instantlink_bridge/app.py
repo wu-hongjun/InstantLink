@@ -207,6 +207,15 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         ui_event_tasks.add(task)
         task.add_done_callback(ui_event_tasks.discard)
 
+    def on_sync_outbox_changed(depth: int) -> None:
+        # Called by SyncService's ack handler on this event loop (plan 051
+        # P1.2): same notify path as spool-add, scheduled as a task like
+        # on_sync_client_activity so the HTTP response never waits on an
+        # LCD render.
+        task = loop.create_task(notify_sync_outbox_changed(ui, depth=depth))
+        ui_event_tasks.add(task)
+        task.add_done_callback(ui_event_tasks.discard)
+
     def apply_runtime_sync_config(sync_config: SyncConfig) -> None:
         nonlocal sync_desired
         sync_desired = sync_config.sync_enabled
@@ -228,6 +237,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             token_path=config.sync.token_path,
             device_id=read_device_id(),
             client_activity_callback=on_sync_client_activity,
+            outbox_changed_callback=on_sync_outbox_changed,
         )
         return outbox, built
 

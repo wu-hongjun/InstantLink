@@ -26,6 +26,7 @@ from instantlink_bridge.config import (
     FtpSourceKind,
     PowerBackend,
     StatusSinkKind,
+    SyncConfig,
     write_config,
 )
 from instantlink_bridge.imaging.pipeline import (
@@ -94,6 +95,7 @@ from instantlink_bridge.ui.settings import (
     setting_action_hint,
     setting_help_text,
     setting_options,
+    sync_destination_label,
 )
 from instantlink_bridge.ui.status import (
     BlePrinterStatusProvider,
@@ -191,6 +193,10 @@ _GENERIC_SEARCHING_MESSAGES = frozenset({"Searching Printer"})
 # shows a stale frame while a coroutine is busy. The `snapshot == last_rendered` short-circuit in
 # `_render` keeps this cheap and prevents render-spam.
 RENDER_TICK_S = 0.35
+# How long after the last authenticated iPhone sync request the "connected"
+# chip stays on the READY card (plan 050). Aged back to False by the render
+# tick, mirroring the printer_status_fresh TTL pattern.
+SYNC_CLIENT_RECENT_TTL_S = 20.0
 USB_STATUS_POLL_S = 1.0
 # Readiness freshness gate: "Ready to print" must be backed by a printer status that succeeded
 # recently, not just stale cached film/mode. If the printer powers off, status polls fail and the
@@ -211,6 +217,7 @@ DEFAULT_HOTSPOT_SSID = default_hotspot_ssid()
 WifiModeSetter = Callable[[WifiMode], Awaitable[str]]
 PowerActivityCallback = Callable[[], Awaitable[None]]
 FtpConfigAppliedCallback = Callable[[FtpConfig], None]
+SyncConfigAppliedCallback = Callable[[SyncConfig], None]
 PreviewTool = Literal["zoom", "crop", "rotate"]
 PREVIEW_TOOLS: tuple[PreviewTool, ...] = ("zoom", "crop", "rotate")
 STATUS_VISIBLE_MODES = {
@@ -341,6 +348,7 @@ class BridgeUi:
         wifi_mode_setter: WifiModeSetter | None = None,
         power_activity_callback: PowerActivityCallback | None = None,
         ftp_config_applied_callback: FtpConfigAppliedCallback | None = None,
+        sync_config_applied_callback: SyncConfigAppliedCallback | None = None,
         system_info: SystemInfo | None = None,
         ready_event: asyncio.Event | None = None,
         status_sink: StatusSink | None = None,
@@ -374,6 +382,7 @@ class BridgeUi:
         )
         self._power_activity_callback = power_activity_callback
         self._ftp_config_applied_callback = ftp_config_applied_callback
+        self._sync_config_applied_callback = sync_config_applied_callback
         self._system_info = system_info
         # Live About-page stats: dedicated sampler (stateful — needs two reads
         # to compute CPU%) plus a small (3s) cache so repeat renders within
@@ -411,6 +420,12 @@ class BridgeUi:
         # is only asserted while this is within PRINTER_STATUS_FRESH_TTL_S; -inf means never proven.
         self._last_printer_status_ok_at: float = float("-inf")
         self._image_queue_depth = 0
+        # iPhone sync surfaces (plan 050): outbox depth mirrors the sync
+        # spool; the seen-at clock backs the TTL-aged "connected" chip.
+        self._sync_outbox_depth = 0
+        self._sync_client_seen_at: float = float("-inf")
+        # Settings page to return to when the SYNC_PAIRING QR screen exits.
+        self._sync_pairing_return_page: SettingsPage | None = None
         self._actions: asyncio.Queue[UiAction] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
@@ -597,6 +612,21 @@ class BridgeUi:
     async def refresh_printer_status(self) -> None:
         """Detect whether an Instax printer is already paired."""
 
+        if not self._config.sync.print_enabled:
+            # iPhone-only sync (plan 050): the printer never gates the home
+            # surface, so skip the BLE lookup + poll entirely and land on the
+            # sync-ready screen. READY with no FTP path renders the standard
+            # Setup-needed body via the renderer's can_accept fallback.
+            await self._cancel_status_refresh()
+            self._snapshot = self._build_snapshot(
+                mode=UiMode.READY,
+                paired_printer=self._snapshot.paired_printer,
+                printer_model=self._known_printer_model(),
+            )
+            LOGGER.info("ui.status mode=ready destination=iphone printer_poll=skipped")
+            self._render()
+            return
+
         try:
             printers = await self._pairer.list_paired()
         except Exception:
@@ -609,17 +639,21 @@ class BridgeUi:
             self._render()
             return
 
+        sync_enabled = self._config.sync.sync_enabled
         printer = self._select_printer(printers)
         if printer is None:
+            # Both-mode without a paired printer stays on the READY sync
+            # surface (paused-print line covers the missing printer); the
+            # print-only SKU keeps the full-screen pairing prompt.
             self._snapshot = self._build_snapshot(
-                mode=UiMode.NEEDS_PAIRING,
+                mode=UiMode.READY if sync_enabled else UiMode.NEEDS_PAIRING,
                 printer_model=self._config.printer.model,
             )
             LOGGER.info("ui.status mode=needs_pairing paired_printer=none")
         else:
             self._printer_status_misses = 0
             self._snapshot = self._build_snapshot(
-                mode=UiMode.PRINTER_SEARCHING,
+                mode=UiMode.READY if sync_enabled else UiMode.PRINTER_SEARCHING,
                 paired_printer=printer,
                 printer_model=printer.model or self._known_printer_model(),
                 printer_status_message="Searching Printer",
@@ -962,6 +996,12 @@ class BridgeUi:
         self._show_cached_home_status()
 
     def _cached_home_mode(self) -> UiMode:
+        if self._config.sync.sync_enabled:
+            # Sync destinations keep the home surface on READY: the renderer
+            # degrades to the Setup-needed body when no FTP path is visible,
+            # and both-mode printer trouble shows as a paused-print line
+            # instead of the NO_FILM / VALIDATION full screens (plan 050).
+            return UiMode.READY
         if self._snapshot.paired_printer is None:
             return UiMode.NEEDS_PAIRING
         if (
@@ -1066,6 +1106,40 @@ class BridgeUi:
         if self._snapshot.mode in STATUS_VISIBLE_MODES:
             self._render()
 
+    async def sync_outbox_changed(self, depth: int) -> None:
+        """Update the displayed iPhone sync outbox depth (plan 050)."""
+
+        self._sync_outbox_depth = depth
+        self._snapshot = replace(self._snapshot, sync_outbox_depth=depth)
+        if self._snapshot.mode in STATUS_VISIBLE_MODES:
+            self._render()
+
+    async def sync_client_seen(self) -> None:
+        """Record an authenticated iPhone sync request (plan 050).
+
+        Counts as power/idle activity (a transfer must not let the idle
+        stages dim the radio mid-sync) and turns on the "connected" chip;
+        the render tick ages it back off after ``SYNC_CLIENT_RECENT_TTL_S``.
+        """
+
+        await self._record_power_activity()
+        self._sync_client_seen_at = self._monotonic()
+        self._snapshot = replace(self._snapshot, sync_client_recent=True)
+        if self._snapshot.mode in STATUS_VISIBLE_MODES:
+            self._render()
+
+    def _sync_client_is_recent(self) -> bool:
+        """Return whether an authed sync request landed within the TTL.
+
+        Never-seen state (``-inf``) short-circuits before consulting the
+        clock so this is safe before the event loop runs (the BOOTING
+        snapshot in ``__init__``), mirroring ``_printer_status_is_fresh``.
+        """
+
+        if self._sync_client_seen_at == float("-inf"):
+            return False
+        return self._monotonic() - self._sync_client_seen_at < SYNC_CLIENT_RECENT_TTL_S
+
     async def _run_actions(self) -> None:
         while True:
             action = await self._actions.get()
@@ -1158,6 +1232,13 @@ class BridgeUi:
             return
         if self._snapshot.mode is UiMode.HELP_DIALOG:
             self._handle_help_dialog_action(action)
+            return
+        if self._snapshot.mode is UiMode.SYNC_PAIRING:
+            # Modal QR card (plan 050): KEY2 / LEFT return to the Network
+            # settings page; every other input is a no-op so a stray press
+            # can't dismiss the code mid-scan.
+            if action in {UiAction.BACK, UiAction.LEFT}:
+                self._exit_sync_pairing()
             return
         if self._snapshot.mode is UiMode.SETTINGS:
             await self._handle_settings_action(action)
@@ -1553,6 +1634,9 @@ class BridgeUi:
             return
         if key is SettingKey.REFRESH_STATUS:
             await self._refresh_status_from_settings()
+            return
+        if key is SettingKey.SYNC_PAIRING:
+            await self._show_sync_pairing()
             return
         if key in INFO_SETTING_KEYS:
             self._show_settings(self._info_message_for_setting(key))
@@ -2194,11 +2278,14 @@ class BridgeUi:
                 self._show_settings("Save failed")
                 return False
         previous_ftp = self._config.ftp
+        previous_sync = self._config.sync
         previous_keepalive = self._config.printer.keepalive_interval_s
         self._config = config
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         if config.ftp != previous_ftp:
             self._notify_ftp_config_applied(config.ftp)
+        if config.sync != previous_sync:
+            self._notify_sync_config_applied(config.sync)
         if config.printer.keepalive_interval_s != previous_keepalive:
             await self._configure_printer_keepalive()
         self._snapshot = replace(
@@ -2208,6 +2295,7 @@ class BridgeUi:
             font_size=config.ui.font_size.value,
             language=config.ui.language.value,
             appearance=config.ui.appearance.value,
+            sync_destination=config.sync.destination.value,
         )
         self._show_settings(message)
         return True
@@ -2219,6 +2307,14 @@ class BridgeUi:
             self._ftp_config_applied_callback(config)
         except Exception:
             LOGGER.exception("ui.ftp_config_applied_callback_failed")
+
+    def _notify_sync_config_applied(self, config: SyncConfig) -> None:
+        if self._sync_config_applied_callback is None:
+            return
+        try:
+            self._sync_config_applied_callback(config)
+        except Exception:
+            LOGGER.exception("ui.sync_config_applied_callback_failed")
 
     async def _configure_printer_keepalive(self) -> None:
         configure = getattr(self._status_provider, "configure_keepalive", None)
@@ -2858,6 +2954,14 @@ class BridgeUi:
             # hold. The actual instruction lives in the toast that
             # appears after the first KEY1 press.
             return SettingsRow("Reset credentials", "")
+        if key is SettingKey.SYNC_DESTINATION:
+            return SettingsRow(
+                "Send to",
+                sync_destination_label(self._config.sync.destination),
+            )
+        if key is SettingKey.SYNC_PAIRING:
+            # Action row: value stays empty like Pair / Reconnect / Forget.
+            return SettingsRow("iPhone pairing", "")
         if key is SettingKey.NETWORK_DIAGNOSTICS_HEADER:
             # Info-only section divider — no value, no action.
             return SettingsRow("Diagnostics", "", is_header=True)
@@ -3159,6 +3263,71 @@ class BridgeUi:
             return f"Idle poweroff: {bool_label(self._config.power.idle_poweroff_enabled)}"
         return _info_message_for_setting(key)
 
+    async def _show_sync_pairing(self) -> None:
+        """Open the full-screen iPhone pairing QR (plan 050).
+
+        The bearer token is loaded (or created) off the event loop — it is
+        file IO and may write a fresh token file. Failure degrades to a
+        settings toast rather than an error screen; the row stays usable.
+        """
+
+        from instantlink_bridge.sync.server import load_or_create_sync_token
+
+        try:
+            token = await asyncio.to_thread(load_or_create_sync_token, self._config.sync.token_path)
+        except Exception:
+            LOGGER.exception("ui.sync_pairing_token_failed path=%s", self._config.sync.token_path)
+            self._show_settings("Pairing unavailable")
+            return
+        payload = self._sync_pairing_payload(token)
+        self._cancel_image_reset()
+        self._sync_pairing_return_page = self._settings_page
+        self._snapshot = replace(
+            self._snapshot,
+            mode=UiMode.SYNC_PAIRING,
+            sync_qr_payload=payload,
+            settings_message=None,
+        )
+        LOGGER.info("ui.sync_pairing_shown hotspot=%s", self._hotspot_host is not None)
+        self._render()
+
+    def _sync_pairing_payload(self, token: str) -> str:
+        """Build the ``instantlink://pair`` QR payload.
+
+        Host mirrors what the status surfaces show: the hotspot address when
+        the bridge AP is the active FTP path, else the current Wi-Fi address,
+        else the provisioned hotspot address. The hotspot SSID/PSK ride along
+        only when the hotspot is actually active — in Same-Wi-Fi mode the
+        iPhone is already on the right network and must not be yanked onto
+        the AP.
+        """
+
+        from urllib.parse import quote
+
+        device_id = self._system_info_snapshot().device_id
+        host = self._hotspot_host or self._wifi_host or self._config.ftp.hotspot_host
+        payload = (
+            "instantlink://pair?v=1"
+            f"&device={quote(device_id, safe='')}"
+            f"&host={quote(host, safe='')}"
+            f"&port={self._config.sync.port}"
+            f"&token={quote(token, safe='')}"
+        )
+        if self._hotspot_host is not None:
+            payload += f"&ssid={quote(self._hotspot_ssid_value(), safe='')}"
+            psk = _read_first_line(_hotspot_psk_file())
+            if psk is not None:
+                payload += f"&psk={quote(psk, safe='')}"
+        return payload
+
+    def _exit_sync_pairing(self) -> None:
+        """Leave the QR card and return to the originating settings page."""
+
+        page = self._sync_pairing_return_page or SettingsPage.NETWORK
+        self._sync_pairing_return_page = None
+        self._snapshot = replace(self._snapshot, sync_qr_payload=None)
+        self._show_settings(page=page)
+
     async def _refresh_status_from_settings(self) -> None:
         page = self._settings_page
         self._show_settings("Refreshing status")
@@ -3389,6 +3558,9 @@ class BridgeUi:
             appearance=self._config.ui.appearance.value,
             image_queue_depth=self._image_queue_depth,
             adjustments_profile=adjustments_profile,
+            sync_destination=self._config.sync.destination.value,
+            sync_outbox_depth=self._sync_outbox_depth,
+            sync_client_recent=self._sync_client_is_recent(),
         )
 
     def _cancel_image_reset(self) -> None:
@@ -3782,7 +3954,13 @@ class BridgeUi:
             UiMode.PRINTER_SEARCHING,
             UiMode.PRINTER_OFFLINE,
         }:
-            if status.film_remaining is None:
+            if self._config.sync.sync_enabled:
+                # Sync destinations (plan 050): printer state never demotes
+                # the READY sync surface — no-film / unknown-film downgrade
+                # to the paused-print line the renderer derives from the
+                # stamped film/freshness fields.
+                mode = UiMode.READY
+            elif status.film_remaining is None:
                 mode = UiMode.VALIDATION
             elif status.film_remaining <= 0:
                 mode = (
@@ -3849,9 +4027,17 @@ class BridgeUi:
             return
         if current.address != printer.address or current.name != printer.name:
             return
-        mode = (
-            UiMode.PRINTER_OFFLINE if message == "Hold K3 to re-pair" else UiMode.PRINTER_SEARCHING
-        )
+        if self._config.sync.sync_enabled:
+            # Sync destinations keep the READY sync surface up while the
+            # printer is searched; the paused-print line (renderer-derived
+            # from printer_status_fresh=False) reports the print side.
+            mode = UiMode.READY
+        else:
+            mode = (
+                UiMode.PRINTER_OFFLINE
+                if message == "Hold K3 to re-pair"
+                else UiMode.PRINTER_SEARCHING
+            )
         if self._snapshot.mode is UiMode.SETTINGS:
             self._snapshot = replace(
                 self._snapshot,
@@ -4005,6 +4191,12 @@ class BridgeUi:
             fresh = self._printer_status_is_fresh()
             if fresh != self._snapshot.printer_status_fresh:
                 self._snapshot = replace(self._snapshot, printer_status_fresh=fresh)
+            # Age out the iPhone "connected" chip the same way: once no authed
+            # sync request landed within the TTL the chip must leave the card
+            # even though no explicit "client gone" event exists (plan 050).
+            client_recent = self._sync_client_is_recent()
+            if client_recent != self._snapshot.sync_client_recent:
+                self._snapshot = replace(self._snapshot, sync_client_recent=client_recent)
             self._render()
 
     async def _run_network_status(self) -> None:

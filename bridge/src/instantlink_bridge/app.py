@@ -41,6 +41,8 @@ from instantlink_bridge.config import (
     BridgeConfig,
     FtpConfig,
     PowerBackend,
+    SyncConfig,
+    SyncDestination,
     load_config,
 )
 from instantlink_bridge.imaging.pipeline import (
@@ -57,15 +59,21 @@ from instantlink_bridge.power.monitor import BatteryPolicy, IdlePolicy, PowerMon
 from instantlink_bridge.power.pisugar import PiSugarClient
 from instantlink_bridge.power.x306 import NoBatteryClient, X306BatteryClient
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
-from instantlink_bridge.system_info import format_status_report, format_version_summary
+from instantlink_bridge.system_info import (
+    format_status_report,
+    format_version_summary,
+    read_device_id,
+)
 from instantlink_bridge.ui.controller import BridgeUi
-from instantlink_bridge.ui.models import PairedPrinter
+from instantlink_bridge.ui.models import PairedPrinter, UiSnapshot
 from instantlink_bridge.ui.pairing import BluetoothctlPrinterPairer, PrinterPairer
 from instantlink_bridge.ui.status import scan_bluez_instax_printers, status_target_for_visible_match
 from instantlink_bridge.watchdog import WatchdogNotifier, run_watchdog_heartbeat
 
 if TYPE_CHECKING:
     from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
+    from instantlink_bridge.sync.outbox import SyncOutbox
+    from instantlink_bridge.sync.server import SyncService
 
     # Full signature visible to type-checkers (ReceivedImage is importable here).
     PrinterSender = Callable[
@@ -86,6 +94,7 @@ PRINT_JOB_HARD_TIMEOUT_S = 300.0
 PRINT_TARGET_SCAN_TIMEOUT_S = 1.0
 PRINT_TARGET_SCAN_ATTEMPTS = 5
 POWEROFF_HELPER = "/usr/local/sbin/instantlink-bridge-poweroff"
+SYNC_SERVICE_STOP_TIMEOUT_S = 5.0
 
 
 class PrintJobError(RuntimeError):
@@ -142,6 +151,16 @@ class AsyncStopService(Protocol):
         """Stop the helper."""
 
 
+class AsyncStartStopService(Protocol):
+    """Startable/stoppable runtime helper (e.g. the iPhone sync service)."""
+
+    async def start(self) -> None:
+        """Start the helper."""
+
+    async def stop(self) -> None:
+        """Stop the helper."""
+
+
 async def run_ftp_receive_slice(config_path: Path) -> None:
     """Run the first vertical slice: FTP upload -> logged file path."""
 
@@ -159,6 +178,13 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     power_monitor: PowerMonitor | None = None
     service: FtpReceiveService | None = None
     bluez_agent: AsyncStopService | None = None
+    sync_outbox: SyncOutbox | None = None
+    sync_service: SyncService | None = None
+    sync_setup_task: asyncio.Task[None] | None = None
+    # Desired sync-enabled state; updated by the runtime config-applied
+    # callback so a destination flip that lands while sync setup is still
+    # running is honored once setup finishes.
+    sync_desired = config.sync.sync_enabled
 
     async def record_power_activity() -> None:
         if power_monitor is not None:
@@ -168,6 +194,55 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         if service is not None:
             service.set_config(ftp_config)
 
+    async def handle_sync_client_activity() -> None:
+        # Mirror the FTP upload path: an authenticated iPhone request is both
+        # a UI event and power activity (keeps idle stages from cutting the
+        # radio mid-transfer).
+        await notify_sync_client_seen(ui)
+        await record_power_activity()
+
+    def on_sync_client_activity() -> None:
+        # Called by SyncService's aiohttp middleware on this event loop.
+        task = loop.create_task(handle_sync_client_activity())
+        ui_event_tasks.add(task)
+        task.add_done_callback(ui_event_tasks.discard)
+
+    def apply_runtime_sync_config(sync_config: SyncConfig) -> None:
+        nonlocal sync_desired
+        sync_desired = sync_config.sync_enabled
+        task = loop.create_task(apply_sync_destination_change(sync_config, service=sync_service))
+        ui_event_tasks.add(task)
+        task.add_done_callback(ui_event_tasks.discard)
+
+    def _build_sync_service_sync() -> tuple[SyncOutbox, SyncService]:
+        # Import in the worker thread for the same startup-latency reason as
+        # _setup_ftp_service_sync: aiohttp/zeroconf are heavy imports on a
+        # cold Pi Zero 2 W and sync must never delay FTP/BLE readiness.
+        from instantlink_bridge.sync.outbox import SyncOutbox
+        from instantlink_bridge.sync.server import SyncService
+
+        outbox = SyncOutbox(config.sync.outbox_dir, budget_mb=config.sync.outbox_budget_mb)
+        built = SyncService(
+            outbox,
+            port=config.sync.port,
+            token_path=config.sync.token_path,
+            device_id=read_device_id(),
+            client_activity_callback=on_sync_client_activity,
+        )
+        return outbox, built
+
+    async def setup_sync_service() -> None:
+        # Sync is secondary to printing: any failure here logs an error and
+        # leaves the bridge running print-only.
+        nonlocal sync_outbox, sync_service
+        try:
+            sync_outbox, sync_service = await asyncio.to_thread(_build_sync_service_sync)
+        except Exception:
+            LOGGER.exception("sync.setup_failed outbox_dir=%s", config.sync.outbox_dir)
+            return
+        if sync_desired:
+            await start_sync_service_guarded(sync_service, reason="startup")
+
     ready_event = asyncio.Event()
     ui = BridgeUi(
         config,
@@ -176,6 +251,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         ftp_activity=ftp_activity,
         power_activity_callback=record_power_activity,
         ftp_config_applied_callback=apply_runtime_ftp_config,
+        sync_config_applied_callback=apply_runtime_sync_config,
         ready_event=ready_event,
     )
     power_monitor = build_power_monitor(config, ui=ui)
@@ -232,6 +308,12 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # Reverted 2026-05-28. The Sprint 3 deferred status poll already moves the FFI
         # load off the critical path post-ready_event; Phase 6 (FTP-as-signal) absorbs
         # the remaining gap from the user's perspective via Sony's 4xx auto-retry.
+        #
+        # Sync (plan 050) starts as a fire-and-forget sibling task instead of a
+        # third gather branch: it must never delay bridge.ready, its imports run
+        # off-loop in a worker thread, and it holds no BLE locks (the failure
+        # mode that sank the Sprint 6 warmup branch).
+        sync_setup_task = asyncio.create_task(setup_sync_service())
         ftp_result, ble_result = await asyncio.gather(
             start_ftp_service(),
             start_ble_stack(),
@@ -281,15 +363,13 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             )
             await power_monitor.record_activity()
             try:
-                current_config = ui.config
-                await ui.image_received(received)
-                await handle_received_image(
+                await dispatch_received_image(
                     received,
-                    config=current_config,
+                    snapshot=ui.snapshot,
+                    config=ui.config,
                     ui=ui,
                     pairer=pairer,
-                    timeout_s=current_config.workflow.auto_print_delay_s,
-                    notify_received=False,
+                    outbox=sync_outbox,
                 )
             except Exception as exc:
                 LOGGER.exception(
@@ -314,6 +394,11 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             task.cancel()
         if ui_event_tasks:
             await asyncio.gather(*ui_event_tasks, return_exceptions=True)
+        if sync_setup_task is not None:
+            sync_setup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await sync_setup_task
+        await stop_sync_service_guarded(sync_service, reason="shutdown")
         await ui.stop()
         await close_default_instantlink_backend()
         if bluez_agent is not None:
@@ -400,6 +485,147 @@ async def request_system_poweroff() -> None:
             f"rc={process.returncode} stdout={stdout.decode(errors='replace').strip()!r} "
             f"stderr={stderr.decode(errors='replace').strip()!r}"
         )
+
+
+async def dispatch_received_image(
+    received: ReceivedImage,
+    *,
+    snapshot: UiSnapshot,
+    config: BridgeConfig,
+    ui: PrintUi,
+    pairer: PrinterPairer,
+    outbox: SyncOutbox | None,
+    printer_sender: PrinterSender | None = None,
+) -> None:
+    """Fan one dequeued image out to the sync outbox and/or the print flow.
+
+    The destination is read from the UI snapshot per item so runtime Settings
+    changes apply without a restart. Spooling always happens BEFORE the print
+    flow because the print pipeline may consume/delete the received file; an
+    outbox failure never breaks the print path.
+    """
+
+    destination = snapshot.sync_destination
+    if destination in _SYNC_SPOOL_DESTINATIONS:
+        await spool_image_to_sync_outbox(received, ui=ui, outbox=outbox)
+    if destination == SyncDestination.IPHONE.value:
+        LOGGER.info("sync.print_skipped_destination path=%s", received.path)
+        return
+    if destination == SyncDestination.BOTH.value and not _printer_usable_for_print(snapshot):
+        # No error screens on every upload while the printer is off: in
+        # both-mode the spool already succeeded, so skip quietly.
+        LOGGER.info(
+            "sync.print_skipped_printer_unready path=%s mode=%s",
+            received.path,
+            snapshot.mode.value,
+        )
+        return
+    await ui.image_received(received)
+    await handle_received_image(
+        received,
+        config=config,
+        ui=ui,
+        pairer=pairer,
+        printer_sender=printer_sender,
+        timeout_s=config.workflow.auto_print_delay_s,
+        notify_received=False,
+    )
+
+
+_SYNC_SPOOL_DESTINATIONS = frozenset({SyncDestination.IPHONE.value, SyncDestination.BOTH.value})
+
+
+def _printer_usable_for_print(snapshot: UiSnapshot) -> bool:
+    # Lazy import for the same reason as _setup_ftp_service_sync: camera.ftp
+    # stays off app.py's module-import path. By dequeue time the module is
+    # already loaded, so this resolves from sys.modules.
+    from instantlink_bridge.camera.ftp import printer_usable_for_print
+
+    return printer_usable_for_print(snapshot)
+
+
+async def spool_image_to_sync_outbox(
+    received: ReceivedImage,
+    *,
+    ui: object,
+    outbox: SyncOutbox | None,
+) -> bool:
+    """Spool a received original for iPhone pickup; never raise into printing."""
+
+    if outbox is None:
+        LOGGER.error("sync.outbox_add_failed path=%s reason=outbox_unavailable", received.path)
+        return False
+    try:
+        await asyncio.to_thread(outbox.add, received.path, remote_ip=received.remote_ip)
+    except Exception:
+        LOGGER.exception("sync.outbox_add_failed path=%s", received.path)
+        return False
+    depth = await asyncio.to_thread(outbox.depth)
+    await notify_sync_outbox_changed(ui, depth=depth)
+    return True
+
+
+async def notify_sync_outbox_changed(ui: object, *, depth: int) -> None:
+    """Notify UI implementations that opt in to sync outbox depth updates."""
+
+    await call_optional_ui_hook(ui, "sync_outbox_changed", depth)
+
+
+async def notify_sync_client_seen(ui: object) -> None:
+    """Notify UI implementations that opt in to sync client activity."""
+
+    await call_optional_ui_hook(ui, "sync_client_seen")
+
+
+async def apply_sync_destination_change(
+    sync_config: SyncConfig,
+    *,
+    service: AsyncStartStopService | None,
+) -> None:
+    """Apply a runtime destination change to the sync service lifecycle."""
+
+    LOGGER.info(
+        "sync.config_applied destination=%s sync_enabled=%s",
+        sync_config.destination.value,
+        sync_config.sync_enabled,
+    )
+    if sync_config.sync_enabled:
+        await start_sync_service_guarded(service, reason="config_applied")
+    else:
+        await stop_sync_service_guarded(service, reason="config_applied")
+
+
+async def start_sync_service_guarded(
+    service: AsyncStartStopService | None,
+    *,
+    reason: str,
+) -> None:
+    """Start the sync service; failures log an error but never propagate."""
+
+    if service is None:
+        LOGGER.warning("sync.service_unavailable action=start reason=%s", reason)
+        return
+    try:
+        await service.start()
+        LOGGER.info("sync.service_start reason=%s", reason)
+    except Exception:
+        LOGGER.exception("sync.service_start_failed reason=%s", reason)
+
+
+async def stop_sync_service_guarded(
+    service: AsyncStartStopService | None,
+    *,
+    reason: str,
+) -> None:
+    """Stop the sync service within the shutdown budget; never propagate."""
+
+    if service is None:
+        return
+    try:
+        await asyncio.wait_for(service.stop(), timeout=SYNC_SERVICE_STOP_TIMEOUT_S)
+        LOGGER.info("sync.service_stop reason=%s", reason)
+    except Exception:
+        LOGGER.exception("sync.service_stop_failed reason=%s", reason)
 
 
 async def handle_received_image(

@@ -40,6 +40,10 @@ class UiMode(StrEnum):
     # settings_message bottom-strip toast pattern so the body content
     # stays uncrowded and help is opt-in.
     HELP_DIALOG = "help_dialog"
+    # Full-screen QR pairing card for the iPhone sync path (plan 050).
+    # Shows the instantlink://pair payload as a QR code; KEY2/LEFT exits
+    # back to Settings.
+    SYNC_PAIRING = "sync_pairing"
 
 
 class UiAction(StrEnum):
@@ -164,3 +168,12 @@ class UiSnapshot:
     # back to the underlying mode.
     help_dialog_title: str | None = None
     help_dialog_body: str | None = None
+    # iPhone sync state (plan 050). ``sync_destination`` mirrors
+    # ``[sync].destination`` ("print" | "iphone" | "both") so the FTP
+    # preflight gate and readiness surfaces can be destination-aware
+    # without importing config. ``sync_qr_payload`` is populated only
+    # while ``mode is UiMode.SYNC_PAIRING``.
+    sync_destination: str = "print"
+    sync_outbox_depth: int = 0
+    sync_client_recent: bool = False
+    sync_qr_payload: str | None = None

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import re
 import time
 from collections.abc import Iterable
 from functools import lru_cache
 
+import segno
 from PIL import Image, ImageDraw, ImageFont
 
 from instantlink_bridge.ble.models import PrinterModel
@@ -234,6 +236,8 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
         _confirmation_dialog(image, draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.HELP_DIALOG:
         _help_dialog(image, draw, snapshot, fonts, theme)
+    elif snapshot.mode is UiMode.SYNC_PAIRING:
+        _sync_pairing(image, draw, snapshot, fonts, theme)
     else:
         _needs_pairing(draw, snapshot, fonts, theme)
 
@@ -835,6 +839,8 @@ _MODE_STATUS_WORD: dict[UiMode, str] = {
     UiMode.ERROR: "Error",
     UiMode.SETTINGS: "Settings",
     UiMode.ADJUSTMENT_EDIT: "Adjustments",
+    # iPhone pairing QR (plan 050) — same neutral treatment as PAIRING.
+    UiMode.SYNC_PAIRING: "Pairing",
 }
 
 
@@ -1204,10 +1210,23 @@ def _ready(
     lang = snapshot.language
     font_small = fonts["small"]
 
+    # Destination-aware surface (plan 050): iphone-only replaces the print
+    # framing with the sync framing and drops the printer rows entirely;
+    # "both" keeps the print card but adds a cause-style paused line when
+    # the printer cannot currently print.
+    iphone_only = snapshot.sync_destination == "iphone"
+
     # Centered title — translated via i18n so it reads "就绪" / "Ready".
     # y=56 (was 75): pushes the title up so the info card at y=104 has a
     # comfortable ~18 px gap below the title instead of touching it.
-    _center_lines(draw, [t("Ready", lang)], 56, fonts["large"], theme.label_primary)
+    title = "Sync to iPhone" if iphone_only else "Ready"
+    _center_lines(draw, [t(title, lang)], 56, fonts["large"], theme.label_primary)
+
+    paused_note = sync_print_paused_note(snapshot)
+    if paused_note is not None:
+        # Cause-style single line between the title and the card: printing
+        # is paused but sync keeps accepting uploads.
+        _center_lines(draw, [t(paused_note, lang)], 84, font_small, theme.accent_yellow)
 
     # Card spanning x=12..228, y=104..200
     card_x, card_y = 12, 104
@@ -1220,18 +1239,18 @@ def _ready(
     # split row is what compacts Film and Battery into a single line.
     row_groups: list[list[tuple[str, str]]] = []
 
-    if snapshot.paired_printer is not None:
+    if snapshot.paired_printer is not None and not iphone_only:
         row_groups.append([(t("Type", lang), _status_bar_printer_name(snapshot))])
 
     film_cell: tuple[str, str] | None = None
-    if snapshot.film_remaining is not None:
+    if snapshot.film_remaining is not None and not iphone_only:
         film_cell = (
             t("Film", lang),
             f"{snapshot.film_remaining}/{snapshot.film_capacity}",
         )
 
     battery_cell: tuple[str, str] | None = None
-    if snapshot.printer_battery is not None:
+    if snapshot.printer_battery is not None and not iphone_only:
         charging = "+" if snapshot.printer_is_charging else ""
         # Drop the body-line battery-life estimate from this row: pairing
         # Film + Battery on one line leaves no room for "(4h32m left)", and
@@ -1280,6 +1299,19 @@ def _ready(
         # needed. The conditional pluralisation lived here as a leftover
         # from an earlier i18n design and was equivalent to its else arm.
         row_groups.append([(t("Queue", lang), f"{depth} {t('photos', lang)}")])
+
+    # iPhone sync row (plan 050): pending outbox count while photos wait for
+    # the app, plus a "connected" marker while an authed client is active.
+    # "iPhone" stays Latin per the i18n brand doctrine.
+    if sync_enabled(snapshot):
+        outbox_depth = snapshot.sync_outbox_depth
+        if outbox_depth > 0:
+            sync_value = f"{outbox_depth} {t('pending', lang)}"
+            if snapshot.sync_client_recent:
+                sync_value = f"{sync_value} · {t('connected', lang)}"
+            row_groups.append([("iPhone", sync_value)])
+        elif snapshot.sync_client_recent:
+            row_groups.append([("iPhone", t("connected", lang))])
 
     if not row_groups:
         hints = _mode_hints(snapshot)
@@ -2351,6 +2383,100 @@ def _adjustment_edit(
     draw_hint_bar(draw, hints, fonts["hint"], theme)
 
 
+# iPhone-pairing QR geometry (plan 050). The body between the status bar
+# (36 px) and hint bar (top at 200 px) is 164 px tall; a body-font title at
+# the top and a one-line caption above the hint bar leave ~116 px for the
+# QR card, so the module raster targets the largest integer scale that fits
+# a 114 px square. The white card adds its own margin around the PNG's
+# 2-module quiet zone so scanners get contrast regardless of theme.
+_QR_TITLE_Y = 40
+_QR_AREA_TOP = 60
+_QR_AREA_BOTTOM = 174
+_QR_TARGET_PX = _QR_AREA_BOTTOM - _QR_AREA_TOP  # 114
+_QR_CARD_PAD = 6
+_QR_CAPTION_Y = 180
+
+
+@lru_cache(maxsize=1)
+def _sync_pairing_qr_image(payload: str, target_px: int) -> Image.Image:
+    """Encode ``payload`` as a QR raster, integer-scaled to fit ``target_px``.
+
+    Cached with an LRU of 1: the payload is stable for the whole time the
+    SYNC_PAIRING screen is open, and the ~3 fps render tick must not
+    re-encode the QR on the Pi Zero 2 W. Always black-on-white — scanners
+    need the contrast, so the dark theme does not restyle the code.
+    """
+
+    qr = segno.make(payload, error="m")
+    # Matrix width in modules including a 2-module quiet zone per side; the
+    # white card around the raster supplies the rest of the quiet zone.
+    border_modules = 2
+    matrix_px, _ = qr.symbol_size(scale=1, border=border_modules)
+    scale = max(1, target_px // matrix_px)
+    buffer = io.BytesIO()
+    qr.save(buffer, kind="png", scale=scale, border=border_modules, dark="#000000", light="#ffffff")
+    buffer.seek(0)
+    return Image.open(buffer).convert("RGB")
+
+
+def _sync_pairing(
+    canvas: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+    theme: Theme,
+) -> None:
+    """Render the full-screen iPhone pairing QR card (plan 050).
+
+    Layout: title ("iPhone pairing") under the status bar, the QR centred
+    on a white rounded card in the body, and a one-line "Scan with
+    InstantLink app" caption above the hint bar. The status pill already
+    says "Pairing", so the body copy stays non-redundant.
+    """
+
+    lang = snapshot.language
+    title = t("iPhone pairing", lang)
+    _center_lines(draw, [title], _QR_TITLE_Y, fonts["body"], theme.label_primary)
+
+    payload = snapshot.sync_qr_payload
+    if payload:
+        qr_image = _sync_pairing_qr_image(payload, _QR_TARGET_PX)
+        card_side = qr_image.width + 2 * _QR_CARD_PAD
+        card_x = 120 - card_side // 2
+        card_y = _QR_AREA_TOP + (_QR_AREA_BOTTOM - _QR_AREA_TOP - card_side) // 2
+        # White card regardless of theme: the QR needs a bright quiet zone
+        # for scanner contrast even in dark mode.
+        draw.rounded_rectangle(
+            (card_x, card_y, card_x + card_side, card_y + card_side),
+            radius=8,
+            fill="#ffffff",
+        )
+        qr_x = 120 - qr_image.width // 2
+        qr_y = card_y + (card_side - qr_image.height) // 2
+        canvas.paste(qr_image, (qr_x, qr_y))
+    else:
+        # Defensive: the controller always stamps a payload before entering
+        # SYNC_PAIRING; if it is missing, say so instead of a blank body.
+        _center_lines(
+            draw,
+            [t("Pairing unavailable", lang)],
+            110,
+            fonts["body"],
+            theme.label_secondary,
+        )
+
+    _center_lines(
+        draw,
+        [t("Scan with InstantLink app", lang)],
+        _QR_CAPTION_Y,
+        fonts["small"],
+        theme.label_secondary,
+    )
+
+    hints = _mode_hints(snapshot)
+    draw_hint_bar(draw, hints, fonts["hint"], theme)
+
+
 def _pairing(
     draw: ImageDraw.ImageDraw,
     snapshot: UiSnapshot,
@@ -2855,6 +2981,9 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
         return (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
     if snapshot.mode is UiMode.PAIRING:
         return (("", "Scanning", "KEY2 Back"),)
+    if snapshot.mode is UiMode.SYNC_PAIRING:
+        # QR card (plan 050): KEY2 is the only binding; centre it.
+        return (("", "KEY2 Back", ""),)
     if snapshot.mode is UiMode.AWAITING_CONFIRM:
         if snapshot.preview_tool == "crop":
             return (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
@@ -3576,9 +3705,46 @@ def printer_ready(snapshot: UiSnapshot) -> bool:
     )
 
 
-def can_accept_images(snapshot: UiSnapshot) -> bool:
-    """Return whether FTP receive and printer are healthy enough to accept images."""
+def sync_enabled(snapshot: UiSnapshot) -> bool:
+    """Return whether the iPhone sync destination is active (plan 050)."""
 
+    return snapshot.sync_destination in {"iphone", "both"}
+
+
+def sync_print_paused_note(snapshot: UiSnapshot) -> str | None:
+    """Return the paused-print line for the READY card in "both" mode.
+
+    Only "both" needs it: in iphone-only mode the printer is irrelevant and
+    in print-only mode printer trouble owns the full screen. The note is the
+    single cause-style line the plan-050 surface shows instead of demoting
+    the READY sync card to NO_FILM / PRINTER_SEARCHING.
+    """
+
+    if snapshot.sync_destination != "both":
+        return None
+    if printer_ready(snapshot):
+        return None
+    if (
+        snapshot.paired_printer is not None
+        and snapshot.printer_status_fresh
+        and snapshot.film_remaining is not None
+        and snapshot.film_remaining <= 0
+        and not snapshot.allow_print_without_film
+    ):
+        return "No film · photos sync only"
+    return "Printer off · photos sync only"
+
+
+def can_accept_images(snapshot: UiSnapshot) -> bool:
+    """Return whether the bridge can usefully accept an FTP upload.
+
+    Destination-aware (plan 050): with iPhone sync enabled ("iphone" or
+    "both") the sync spool is always available, so only an FTP receive path
+    is required; print-only keeps the printer gate.
+    """
+
+    if sync_enabled(snapshot):
+        return camera_link_ready(snapshot)
     return camera_link_ready(snapshot) and printer_ready(snapshot)
 
 
@@ -3624,6 +3790,11 @@ def readiness_cause_texts(snapshot: UiSnapshot) -> list[str]:
     causes: list[str] = []
     if not camera_link_ready(snapshot):
         causes.append(_cause_text(snapshot.camera_status_message or "Choose FTP Wi-Fi"))
+    if sync_enabled(snapshot):
+        # Printer causes never block a sync destination (plan 050):
+        # iphone-only ignores the printer entirely, and "both" reports
+        # printer trouble via sync_print_paused_note on the READY card.
+        return causes
     if snapshot.paired_printer is None:
         causes.append("Find printer")
     elif snapshot.mode is UiMode.PRINTER_OFFLINE:

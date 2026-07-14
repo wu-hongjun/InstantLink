@@ -10,7 +10,7 @@ from instantlink_bridge import app, system_info
 from instantlink_bridge.ble.client import DiscoveredPrinter
 from instantlink_bridge.ble.instax import NoFilmError
 from instantlink_bridge.camera.ftp import ReceivedImage
-from instantlink_bridge.config import BridgeConfig
+from instantlink_bridge.config import BridgeConfig, SyncConfig, SyncDestination
 from instantlink_bridge.imaging.pipeline import (
     ImagePipelineError,
     ImageTooLargeError,
@@ -18,8 +18,9 @@ from instantlink_bridge.imaging.pipeline import (
     UnsupportedImageError,
 )
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
+from instantlink_bridge.sync.outbox import SyncOutbox
 from instantlink_bridge.system_info import SystemInfo
-from instantlink_bridge.ui.models import PairedPrinter
+from instantlink_bridge.ui.models import PairedPrinter, UiMode, UiSnapshot
 
 
 @pytest.mark.asyncio
@@ -280,6 +281,252 @@ async def test_queue_status_hooks_are_optional_and_report_shape(tmp_path: Path) 
 
 
 @pytest.mark.asyncio
+async def test_dispatch_print_destination_runs_print_flow_without_spooling(
+    tmp_path: Path,
+) -> None:
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=False)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="print"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+
+    assert outbox.depth() == 0
+    assert ui.events == ["received:image.jpg", "confirm:5.0"]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_iphone_destination_spools_and_skips_print_flow(
+    tmp_path: Path,
+) -> None:
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=True)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="iphone"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+
+    assert outbox.depth() == 1
+    assert ui.events == ["sync_outbox:1"]
+    # Spooling must never mutate the received source file.
+    assert received.path.read_bytes() == b"jpg"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_both_destination_spools_before_print_flow(tmp_path: Path) -> None:
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=False)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="both"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+
+    assert outbox.depth() == 1
+    assert ui.events == ["sync_outbox:1", "received:image.jpg", "confirm:5.0"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "snapshot_kwargs",
+    [
+        {"paired_printer": None, "mode": UiMode.NEEDS_PAIRING, "printer_status_fresh": False},
+        {"mode": UiMode.PRINTER_OFFLINE, "printer_status_fresh": False},
+        {"printer_status_fresh": False},
+        {"film_remaining": 0},
+    ],
+)
+async def test_dispatch_both_destination_skips_print_when_printer_unready(
+    tmp_path: Path,
+    snapshot_kwargs: dict[str, object],
+) -> None:
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=True)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="both", **snapshot_kwargs),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+
+    # Spooled quietly, no print flow and no error screens.
+    assert outbox.depth() == 1
+    assert ui.events == ["sync_outbox:1"]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_outbox_failure_does_not_break_print_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=False)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+
+    def failing_add(_source: Path, *, remote_ip: str = "") -> None:
+        _ = remote_ip
+        raise OSError("disk full")
+
+    monkeypatch.setattr(outbox, "add", failing_add)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="both"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+
+    assert outbox.depth() == 0
+    assert ui.events == ["received:image.jpg", "confirm:5.0"]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_survives_missing_outbox(tmp_path: Path) -> None:
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=True)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="iphone"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=None,
+        printer_sender=_unused_sender,
+    )
+
+    assert ui.events == []
+
+
+@pytest.mark.asyncio
+async def test_dispatch_reads_destination_per_item(tmp_path: Path) -> None:
+    """A runtime destination flip applies to the next dequeued item, no restart."""
+
+    received = _write_received_image(tmp_path)
+    ui = SyncAwarePrintUi(should_print=False)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="print"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+    await app.dispatch_received_image(
+        received,
+        snapshot=_make_snapshot(sync_destination="iphone"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([]),
+        outbox=outbox,
+        printer_sender=_unused_sender,
+    )
+
+    assert outbox.depth() == 1
+    assert ui.events == [
+        "received:image.jpg",
+        "confirm:5.0",
+        "sync_outbox:1",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_sync_hooks_are_optional_and_report_shape() -> None:
+    ui = SyncAwarePrintUi(should_print=False)
+
+    await app.notify_sync_outbox_changed(ui, depth=3)
+    await app.notify_sync_client_seen(ui)
+    await app.notify_sync_outbox_changed(object(), depth=1)
+    await app.notify_sync_client_seen(object())
+
+    assert ui.events == ["sync_outbox:3", "sync_client_seen"]
+
+
+@pytest.mark.asyncio
+async def test_apply_sync_destination_change_starts_service_when_sync_enabled() -> None:
+    service = FakeSyncService()
+
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.IPHONE),
+        service=service,
+    )
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.BOTH),
+        service=service,
+    )
+
+    assert service.events == ["start", "start"]
+
+
+@pytest.mark.asyncio
+async def test_apply_sync_destination_change_stops_service_when_print_only() -> None:
+    service = FakeSyncService()
+
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.PRINT),
+        service=service,
+    )
+
+    assert service.events == ["stop"]
+
+
+@pytest.mark.asyncio
+async def test_apply_sync_destination_change_survives_start_failure_and_no_service() -> None:
+    service = FakeSyncService(fail_start=True)
+
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.IPHONE),
+        service=service,
+    )
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.IPHONE),
+        service=None,
+    )
+
+    assert service.events == []
+
+
+@pytest.mark.asyncio
+async def test_stop_sync_service_guarded_swallows_stop_failure() -> None:
+    service = FakeSyncService(fail_stop=True)
+
+    await app.stop_sync_service_guarded(service, reason="shutdown")
+
+    assert service.events == []
+
+
+@pytest.mark.asyncio
 async def test_resolve_print_target_derives_ios_endpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -498,6 +745,54 @@ class QueueAwarePrintUi(FakePrintUi):
         max_size: int,
     ) -> None:
         self.events.append(f"overflow:{received.path.name}:{depth}/{max_size}")
+
+
+class SyncAwarePrintUi(FakePrintUi):
+    """FakePrintUi that also records the plan-050 sync hooks."""
+
+    async def sync_outbox_changed(self, depth: int) -> None:
+        self.events.append(f"sync_outbox:{depth}")
+
+    async def sync_client_seen(self) -> None:
+        self.events.append("sync_client_seen")
+
+
+class FakeSyncService:
+    """Records start/stop transitions like app.py drives SyncService."""
+
+    def __init__(self, *, fail_start: bool = False, fail_stop: bool = False) -> None:
+        self.events: list[str] = []
+        self._fail_start = fail_start
+        self._fail_stop = fail_stop
+
+    async def start(self) -> None:
+        if self._fail_start:
+            raise RuntimeError("bind failed")
+        self.events.append("start")
+
+    async def stop(self) -> None:
+        if self._fail_stop:
+            raise RuntimeError("cleanup failed")
+        self.events.append("stop")
+
+
+def _write_received_image(tmp_path: Path) -> ReceivedImage:
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"jpg")
+    return ReceivedImage(path=image_path, remote_ip="192.168.8.10")
+
+
+def _make_snapshot(**kwargs: object) -> UiSnapshot:
+    defaults: dict[str, object] = dict(
+        mode=UiMode.READY,
+        ftp_host="192.168.8.1",
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=10,
+        allow_print_without_film=False,
+    )
+    defaults.update(kwargs)
+    return UiSnapshot(**defaults)  # type: ignore[arg-type]
 
 
 class FailingPreviewUi(FakePrintUi):

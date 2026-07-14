@@ -18,6 +18,8 @@ from instantlink_bridge.config import (
     PowerBackend,
     PowerConfig,
     PrinterConfig,
+    SyncConfig,
+    SyncDestination,
     WorkflowConfig,
     load_config,
 )
@@ -45,6 +47,7 @@ from instantlink_bridge.ui.controller import (
     RENDER_TICK_S,
     RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
+    SYNC_CLIENT_RECENT_TTL_S,
     BridgeUi,
     _auto_rebond_key,
     _wifi_mode_for_ftp_receive_mode,
@@ -1802,17 +1805,19 @@ async def test_settings_network_page_shows_connection_info() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
-    #   5 FTP PIN  6 Diagnostics  7 Bluetooth  8 Same Wi-Fi adv  9 USB IP
-    #   10 Reset credentials. The Diagnostics divider at index 6 separates
-    # the camera-setup credentials block from the read-only status rows
-    # (plan 034 item 9).
+    #   5 FTP PIN  6 iPhone pairing  7 Diagnostics  8 Bluetooth
+    #   9 Same Wi-Fi adv  10 USB IP  11 Reset credentials. The Diagnostics
+    # divider separates the camera-setup credentials block from the
+    # read-only status rows (plan 034 item 9); iPhone pairing (plan 050)
+    # sits with the setup block just above it.
     rows = display.snapshots[-1].settings_rows
-    assert rows[7].label == "Bluetooth"
-    assert rows[7].value == "connected"
-    assert rows[8].label == "Same Wi-Fi adv"
-    assert rows[8].value == "192.168.5.149"
-    assert rows[9].label == "USB IP"
-    assert rows[9].value == "192.168.7.1"
+    assert rows[6].label == "iPhone pairing"
+    assert rows[8].label == "Bluetooth"
+    assert rows[8].value == "connected"
+    assert rows[9].label == "Same Wi-Fi adv"
+    assert rows[9].value == "192.168.5.149"
+    assert rows[10].label == "USB IP"
+    assert rows[10].value == "192.168.7.1"
 
 
 @pytest.mark.asyncio
@@ -1834,12 +1839,13 @@ async def test_settings_network_page_reports_admin_usb_without_camera_wording() 
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
-    # NETWORK (with Diagnostics divider at 6): 0 Wi-Fi Mode  1 SSID
-    #   2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN  6 Diagnostics
-    #   7 Bluetooth  8 Same Wi-Fi adv  9 USB IP  10 Reset credentials.
+    # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
+    #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
+    #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
+    #   10 USB IP  11 Reset credentials.
     rows = display.snapshots[-1].settings_rows
-    assert rows[9].label == "USB IP"
-    assert rows[9].value == "no IP"
+    assert rows[10].label == "USB IP"
+    assert rows[10].value == "no IP"
 
 
 @pytest.mark.asyncio
@@ -2423,11 +2429,12 @@ async def test_bluetooth_settings_do_not_claim_connected_while_searching() -> No
 
     ui._show_settings(page=SettingsPage.NETWORK)
 
-    # NETWORK (with Diagnostics divider at 6): 0 Wi-Fi Mode  1 SSID
-    #   2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN  6 Diagnostics
-    #   7 Bluetooth  8 Same Wi-Fi adv  9 USB IP  10 Reset credentials.
-    assert display.snapshots[-1].settings_rows[7].label == "Bluetooth"
-    assert display.snapshots[-1].settings_rows[7].value == "searching"
+    # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
+    #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
+    #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
+    #   10 USB IP  11 Reset credentials.
+    assert display.snapshots[-1].settings_rows[8].label == "Bluetooth"
+    assert display.snapshots[-1].settings_rows[8].value == "searching"
 
 
 @pytest.mark.asyncio
@@ -4777,10 +4784,10 @@ async def test_nav_skips_section_header_forward() -> None:
 
     ui, _display = _make_settings_ui(BridgeConfig())
     ui._show_settings(page=SettingsPage.NETWORK)
-    # NETWORK rows: 5 = FTP_PASSWORD_INFO, 6 = NETWORK_DIAGNOSTICS_HEADER,
-    # 7 = NETWORK_BLUETOOTH_INFO. Position the cursor at 5 and press DOWN.
-    ui._settings_indices[SettingsPage.NETWORK] = 5
-    ui._snapshot = replace(ui._snapshot, selected_index=5)
+    # NETWORK rows: 6 = SYNC_PAIRING, 7 = NETWORK_DIAGNOSTICS_HEADER,
+    # 8 = NETWORK_BLUETOOTH_INFO. Position the cursor at 6 and press DOWN.
+    ui._settings_indices[SettingsPage.NETWORK] = 6
+    ui._snapshot = replace(ui._snapshot, selected_index=6)
 
     await ui._handle_settings_action(UiAction.DOWN)
 
@@ -4796,15 +4803,15 @@ async def test_nav_skips_section_header_backward() -> None:
 
     ui, _ = _make_settings_ui(BridgeConfig())
     ui._show_settings(page=SettingsPage.NETWORK)
-    # Start on the row after the divider (NETWORK_BLUETOOTH_INFO, index 7).
-    ui._settings_indices[SettingsPage.NETWORK] = 7
-    ui._snapshot = replace(ui._snapshot, selected_index=7)
+    # Start on the row after the divider (NETWORK_BLUETOOTH_INFO, index 8).
+    ui._settings_indices[SettingsPage.NETWORK] = 8
+    ui._snapshot = replace(ui._snapshot, selected_index=8)
 
     await ui._handle_settings_action(UiAction.UP)
 
     keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
     new_index = ui._snapshot.selected_index
-    assert keys[new_index] is SettingKey.FTP_PASSWORD_INFO
+    assert keys[new_index] is SettingKey.SYNC_PAIRING
     assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
 
 
@@ -5394,3 +5401,342 @@ async def test_forget_printer_uses_destructive_confirm_label() -> None:
 
     assert ui._snapshot.confirmation_confirm_label == "Forget"
     assert ui._snapshot.confirmation_destructive is True
+
+
+# ---------------------------------------------------------------------------
+# Plan 050: iPhone sync — Send to picker, pairing QR, status surfaces
+# ---------------------------------------------------------------------------
+
+
+def _test_system_info() -> SystemInfo:
+    return SystemInfo(
+        device_id="IB-1234ABCD",
+        app_version="0.1.0",
+        python_version="3.11.9",
+        bluez_version="5.82",
+        os_version="Debian GNU/Linux 13 (trixie)",
+    )
+
+
+@pytest.mark.asyncio
+async def test_send_to_row_opens_picker_with_explicit_options() -> None:
+    ui, display = _make_settings_ui(BridgeConfig())
+    ui._show_settings(page=SettingsPage.PRINT)
+
+    # PRINT hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print
+    #   4 Send to (plan 050).
+    assert display.snapshots[-1].settings_rows[4].label == "Send to"
+    assert display.snapshots[-1].settings_rows[4].value == "Print"
+    for _ in range(4):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.RIGHT)
+
+    # Explicit option list per the no-blind-cycling rule.
+    assert display.snapshots[-1].settings_title == "Send to"
+    assert [row.label for row in display.snapshots[-1].settings_rows] == [
+        "Print",
+        "iPhone",
+        "Both",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_send_to_persists_fires_callback_and_stamps_snapshot(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("", encoding="utf-8")
+    applied_sync: list[SyncConfig] = []
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        sync_config_applied_callback=applied_sync.append,
+    )
+    assert ui._snapshot.sync_destination == "print"
+
+    ui._show_settings(page=SettingsPage.PRINT)
+    for _ in range(4):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.RIGHT)
+    # Picker opens on the current value (Print, index 0); one DOWN → iPhone.
+    await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+
+    assert ui.config.sync.destination is SyncDestination.IPHONE
+    assert load_config(config_path).sync.destination is SyncDestination.IPHONE
+    assert applied_sync == [ui.config.sync]
+    assert ui._snapshot.sync_destination == "iphone"
+    assert display.snapshots[-1].settings_message == "Saved"
+    # The row value reflects the new destination back on the Print hub.
+    assert display.snapshots[-1].settings_rows[4].value == "iPhone"
+
+
+@pytest.mark.asyncio
+async def test_iphone_pairing_row_enters_qr_mode_with_payload(tmp_path: Path) -> None:
+    token_path = tmp_path / "sync.token"
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(token_path=token_path)),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    # Same-Wi-Fi path active, hotspot down: the QR must carry the Wi-Fi host
+    # and omit the hotspot join credentials.
+    ui._wifi_host = "192.168.5.149"
+    ui._hotspot_host = None
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    payload = ui._snapshot.sync_qr_payload
+    assert payload is not None
+    assert payload.startswith("instantlink://pair?v=1")
+    assert "&device=IB-1234ABCD" in payload
+    assert "&host=192.168.5.149" in payload
+    assert "&port=8721" in payload
+    token = token_path.read_text(encoding="utf-8").strip()
+    assert f"&token={token}" in payload
+    assert "&ssid=" not in payload
+    assert "&psk=" not in payload
+
+
+@pytest.mark.asyncio
+async def test_iphone_pairing_payload_carries_urlencoded_hotspot_credentials(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ssid_file = tmp_path / "hotspot.ssid"
+    psk_file = tmp_path / "hotspot.psk"
+    ssid_file.write_text("Instant Link\n", encoding="utf-8")
+    psk_file.write_text("12345678\n", encoding="utf-8")
+    monkeypatch.setenv("INSTANTLINK_BRIDGE_HOTSPOT_SSID_FILE", str(ssid_file))
+    monkeypatch.setenv("INSTANTLINK_BRIDGE_HOTSPOT_PSK_FILE", str(psk_file))
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    ui._hotspot_host = "192.168.8.1"
+    ui._wifi_host = "192.168.5.149"
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+
+    payload = ui._snapshot.sync_qr_payload
+    assert payload is not None
+    # Hotspot is the active FTP path: it wins the host slot and the join
+    # credentials ride along, URL-encoded ("Instant Link" → %20).
+    assert "&host=192.168.8.1" in payload
+    assert "&ssid=Instant%20Link" in payload
+    assert "&psk=12345678" in payload
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    # Non-exit keys are no-ops so a stray press can't dismiss mid-scan.
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    await ui._handle_action(UiAction.BACK)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert display.snapshots[-1].settings_title == "Network"
+    assert ui._snapshot.sync_qr_payload is None
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_token_failure_shows_settings_toast(tmp_path: Path) -> None:
+    # A directory at the token path makes load_or_create_sync_token raise.
+    token_path = tmp_path / "token-dir"
+    token_path.mkdir()
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(token_path=token_path)),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert display.snapshots[-1].settings_message == "Pairing unavailable"
+
+
+@pytest.mark.asyncio
+async def test_sync_outbox_changed_stamps_depth_and_renders() -> None:
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+
+    await ui.sync_outbox_changed(3)
+
+    assert ui._snapshot.sync_outbox_depth == 3
+    assert display.snapshots[-1].sync_outbox_depth == 3
+
+
+@pytest.mark.asyncio
+async def test_sync_client_seen_records_activity_and_ttl_ages_out() -> None:
+    activity_calls = {"n": 0}
+
+    async def record_activity() -> None:
+        activity_calls["n"] += 1
+
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        power_activity_callback=record_activity,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+
+    fake_now = {"t": 1000.0}
+    ui._monotonic = lambda: fake_now["t"]  # type: ignore[method-assign]
+
+    await ui.sync_client_seen()
+    assert activity_calls["n"] == 1
+    assert ui._snapshot.sync_client_recent
+
+    tick_task = asyncio.create_task(ui._run_render_tick())
+    try:
+        # Within the TTL the chip stays on.
+        fake_now["t"] = 1000.0 + SYNC_CLIENT_RECENT_TTL_S - 1.0
+        await asyncio.sleep(RENDER_TICK_S * 2)
+        assert ui._snapshot.sync_client_recent
+
+        # Past the TTL the render tick ages the chip back off.
+        fake_now["t"] = 1000.0 + SYNC_CLIENT_RECENT_TTL_S + 1.0
+        for _ in range(50):
+            if not ui._snapshot.sync_client_recent:
+                break
+            await asyncio.sleep(RENDER_TICK_S)
+        assert not ui._snapshot.sync_client_recent
+
+        # A fresh authed request turns it back on.
+        await ui.sync_client_seen()
+        assert ui._snapshot.sync_client_recent
+    finally:
+        tick_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await tick_task
+
+
+@pytest.mark.asyncio
+async def test_iphone_destination_skips_printer_and_lands_ready() -> None:
+    pairer = _FakePairer([])
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=pairer,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    await ui.refresh_printer_status()
+
+    # No printer paired, no BLE lookup: the sync surface is READY on its own.
+    assert ui._snapshot.mode is UiMode.READY
+    assert pairer.list_calls == 0
+    assert ui._status_task is None
+
+
+@pytest.mark.asyncio
+async def test_both_destination_keeps_ready_surface_without_printer() -> None:
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+
+    await ui.refresh_printer_status()
+
+    assert ui._snapshot.mode is UiMode.READY
+
+
+@pytest.mark.asyncio
+async def test_both_destination_no_film_does_not_block_ready_surface() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=_FakeStatusProvider(
+            snapshot=PrinterStatusSnapshot(
+                film_remaining=0,
+                battery=70,
+                is_charging=False,
+                model=PrinterModel.SQUARE,
+                message="Ready",
+            )
+        ),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+
+    assert await ui._refresh_printer_status_in_background(printer)
+
+    # Print-only would show the NO_FILM full screen; both-mode keeps the
+    # READY sync surface and reports film via the paused-print line.
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.film_remaining == 0
+
+
+@pytest.mark.asyncio
+async def test_both_destination_printer_searching_keeps_ready_surface() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=_FakeStatusProvider(),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = replace(
+        ui._build_snapshot(mode=UiMode.READY, paired_printer=printer, film_remaining=8),
+        printer_status_fresh=True,
+    )
+
+    ui._apply_printer_searching(printer, "Searching Printer")
+
+    assert ui._snapshot.mode is UiMode.READY
+    assert not ui._snapshot.printer_status_fresh
+    assert ui._snapshot.printer_status_message == "Searching Printer"

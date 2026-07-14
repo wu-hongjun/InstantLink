@@ -25,6 +25,7 @@ from instantlink_bridge.manager.auth import (
     encode_base64url,
     public_key_text,
 )
+from instantlink_bridge.manager.config_payload import ALLOWED_FIELDS
 from instantlink_bridge.manager.schema import build_adjustments_schema
 from instantlink_bridge.manager.update_flow import ManagerEnvironment
 from instantlink_bridge.ui.settings import (
@@ -125,9 +126,7 @@ def test_adjustments_schema_includes_all_dataclass_fields() -> None:
     schema_keys = {cast(str, field["key"]) for field in schema["fields"]}
     dataclass_keys = {f.name for f in dataclasses.fields(AdjustmentsConfig)}
     missing = dataclass_keys - schema_keys
-    assert not missing, (
-        f"AdjustmentsConfig fields not represented in the schema: {sorted(missing)}"
-    )
+    assert not missing, f"AdjustmentsConfig fields not represented in the schema: {sorted(missing)}"
 
 
 def test_adjustments_schema_preset_options_include_builtins_and_custom_slots() -> None:
@@ -205,6 +204,22 @@ def test_adjustments_schema_slider_ranges_and_displays() -> None:
     vignette = fields["vignette"]
     assert vignette["range"] == {"min": 0, "max": 100, "step": 10}
     assert vignette["display"] == "unsigned_percent"
+
+
+def test_sync_section_exposes_only_destination_to_the_mac() -> None:
+    """Plan 050: sync.destination flows through the typed config surface.
+
+    Like printer.fit and ftp.mode, the sync destination is declared in
+    ``ALLOWED_FIELDS`` + serialize/apply rather than the generic
+    adjustments schema. Port, paths, and the outbox budget are
+    provisioning-level and must never become Mac-editable.
+    """
+
+    assert ALLOWED_FIELDS["sync"] == frozenset({"destination"})
+    # The adjustments schema stays scoped to AdjustmentsConfig fields.
+    schema = build_adjustments_schema()
+    schema_keys = {cast(str, field["key"]) for field in schema["fields"]}
+    assert "destination" not in schema_keys
 
 
 # --- endpoint --------------------------------------------------------------

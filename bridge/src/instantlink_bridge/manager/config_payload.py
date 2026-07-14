@@ -34,6 +34,8 @@ from instantlink_bridge.config import (
     FtpConfig,
     PowerConfig,
     PrinterConfig,
+    SyncConfig,
+    SyncDestination,
     UiAppearance,
     UiConfig,
     UiLanguage,
@@ -41,6 +43,7 @@ from instantlink_bridge.config import (
     parse_datestamp_format,
     parse_font_size,
     parse_ftp_receive_mode,
+    parse_sync_destination,
     parse_ui_appearance,
     parse_ui_language,
 )
@@ -103,6 +106,13 @@ ALLOWED_FIELDS: dict[str, frozenset[str]] = {
             "watermark_text",
         }
     ),
+    # Only the destination is runtime-adjustable; port, paths, and the
+    # outbox disk budget are provisioning-level (plan 050).
+    "sync": frozenset(
+        {
+            "destination",
+        }
+    ),
 }
 
 
@@ -133,6 +143,7 @@ def serialize_config(config: BridgeConfig) -> dict[str, Any]:
         "power": _serialize_power(config.power),
         "ui": _serialize_ui(config.ui),
         "adjustments": _serialize_adjustments(config.adjustments),
+        "sync": _serialize_sync(config.sync),
     }
 
 
@@ -150,6 +161,7 @@ def apply_config_diff(current: BridgeConfig, diff: dict[str, Any]) -> BridgeConf
     new_power = current.power
     new_ui = current.ui
     new_adjustments = current.adjustments
+    new_sync = current.sync
 
     for section, body in diff.items():
         if section not in ALLOWED_FIELDS:
@@ -196,6 +208,8 @@ def apply_config_diff(current: BridgeConfig, diff: dict[str, Any]) -> BridgeConf
             cast(dict[str, Any], diff["adjustments"]),
             field_errors,
         )
+    if "sync" in diff:
+        new_sync = _apply_sync(current.sync, cast(dict[str, Any], diff["sync"]), field_errors)
 
     if field_errors:
         raise ConfigValidationError(field_errors)
@@ -208,6 +222,7 @@ def apply_config_diff(current: BridgeConfig, diff: dict[str, Any]) -> BridgeConf
         firmware=current.firmware,
         ui=new_ui,
         adjustments=new_adjustments,
+        sync=new_sync,
     )
 
 
@@ -259,6 +274,12 @@ def _serialize_ui(ui: UiConfig) -> dict[str, Any]:
         "appearance": ui.appearance.value,
         "font_size": ui.font_size.value,
         "language": ui.language.value,
+    }
+
+
+def _serialize_sync(sync: SyncConfig) -> dict[str, Any]:
+    return {
+        "destination": sync.destination.value,
     }
 
 
@@ -467,6 +488,20 @@ def _apply_ui(
         except ValueError as exc:
             field_errors["ui.language"] = str(exc)
     return replace(current, appearance=appearance, font_size=font_size, language=language)
+
+
+def _apply_sync(
+    current: SyncConfig,
+    body: dict[str, Any],
+    field_errors: dict[str, str],
+) -> SyncConfig:
+    destination: SyncDestination = current.destination
+    if "destination" in body:
+        try:
+            destination = parse_sync_destination(body["destination"])
+        except ValueError as exc:
+            field_errors["sync.destination"] = str(exc)
+    return replace(current, destination=destination)
 
 
 def _apply_adjustments(

@@ -140,3 +140,38 @@ def test_hue_help_zh_hans_has_no_trailing_full_stop() -> None:
     translated = t("Tint. Left toward orange, right toward blue", Language.ZH_HANS)
     assert translated == "色调。左偏橙色，右偏蓝色"  # noqa: RUF001
     assert not translated.endswith("。")
+
+
+# ---------------------------------------------------------------------------
+# Plan 050: iPhone sync strings — Send to picker, pairing QR, readiness copy
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("Send to", "发送到"),
+        ("Where received photos go", "接收照片的去向"),
+        ("Both", "两者"),
+        ("iPhone pairing", "iPhone 配对"),
+        ("Show a QR code to pair your iPhone", "显示二维码以配对 iPhone"),
+        ("Scan with InstantLink app", "请用 InstantLink App 扫码"),
+        ("Pairing unavailable", "配对不可用"),
+        ("Sync to iPhone", "同步到 iPhone"),
+        ("Printer off · photos sync only", "打印机已关闭 · 仅同步照片"),
+        ("No film · photos sync only", "无相纸 · 仅同步照片"),
+        ("pending", "张待传"),
+        ("connected", "已连接"),
+    ],
+)
+def test_zh_hans_iphone_sync_strings(source: str, expected: str) -> None:
+    """Plan 050: every new sync-surface string carries a zh-Hans entry."""
+
+    assert t(source, Language.ZH_HANS) == expected
+
+
+def test_zh_hans_iphone_brand_stays_latin() -> None:
+    """The "iPhone" brand identifier intentionally falls through
+    untranslated, matching the i18n doctrine for Wi-Fi / FTP / INSTAX."""
+
+    assert t("iPhone", Language.ZH_HANS) == "iPhone"

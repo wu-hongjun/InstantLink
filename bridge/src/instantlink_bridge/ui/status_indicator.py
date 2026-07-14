@@ -186,7 +186,9 @@ def derive_status(snapshot: UiSnapshot) -> StatusState:
             return _NOT_READY_SOLID
         return _SEARCHING_BREATH
 
-    if mode in {UiMode.BOOTING, UiMode.PAIRING, UiMode.VALIDATION}:
+    if mode in {UiMode.BOOTING, UiMode.PAIRING, UiMode.VALIDATION, UiMode.SYNC_PAIRING}:
+        # SYNC_PAIRING (plan 050) reuses the PAIRING treatment: a neutral
+        # in-progress state while the user scans the QR.
         return _SEARCHING_BREATH
 
     # Defensive default: an unknown mode is treated as "not ready" rather than
@@ -197,6 +199,10 @@ def derive_status(snapshot: UiSnapshot) -> StatusState:
 def _settings_inherit(snapshot: UiSnapshot) -> StatusState:
     """Infer the underlying health while the SETTINGS overlay is open."""
 
+    if _sync_enabled(snapshot):
+        # iPhone sync destinations (plan 050): the printer never gates the
+        # underlying health — an FTP receive path alone means ready.
+        return _READY_SOLID if snapshot.camera_receive_ready else _NOT_READY_SOLID
     if snapshot.paired_printer is None:
         return _NOT_READY_SOLID
     if snapshot.film_remaining == 0 and not snapshot.allow_print_without_film:
@@ -225,16 +231,26 @@ def _is_waiting_for_user(message: str | None) -> bool:
     return message is not None and message in _WAITING_FOR_USER_MESSAGES
 
 
+def _sync_enabled(snapshot: UiSnapshot) -> bool:
+    """Mirror of ``render.sync_enabled`` without the circular import."""
+
+    return snapshot.sync_destination in {"iphone", "both"}
+
+
 def _can_accept(snapshot: UiSnapshot) -> bool:
     """Mirror of ``render.can_accept_images`` without the circular import.
 
-    The bar must agree with the READY body about whether prints can be sent:
-    both an FTP receive path and a healthy printer with film are required.
-    Kept in lockstep with ``render.printer_ready`` + ``render.camera_link_ready``.
+    The bar must agree with the READY body about whether uploads can be
+    accepted: with iPhone sync enabled ("iphone" or "both", plan 050) an FTP
+    receive path alone is enough; print-only additionally requires a healthy
+    printer with film. Kept in lockstep with ``render.printer_ready`` +
+    ``render.camera_link_ready`` + ``render.sync_enabled``.
     """
 
     if not snapshot.camera_receive_ready:
         return False
+    if _sync_enabled(snapshot):
+        return True
     if snapshot.paired_printer is None:
         return False
     if not snapshot.printer_status_fresh:

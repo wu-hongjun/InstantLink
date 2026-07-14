@@ -11,6 +11,7 @@ from instantlink_bridge.config import (
     DatestampFormat,
     FontSize,
     FtpReceiveMode,
+    SyncDestination,
     UiAppearance,
     UiLanguage,
 )
@@ -91,6 +92,10 @@ class SettingKey(StrEnum):
     APPEARANCE = "appearance"
     REFRESH_STATUS = "refresh_status"
     RESET_CREDENTIALS = "reset_credentials"
+    # iPhone sync (plan 050): delivery-destination picker on the Print hub
+    # and the QR pairing action on the Network page.
+    SYNC_DESTINATION = "sync_destination"
+    SYNC_PAIRING = "sync_pairing"
 
 
 class SettingsPage(StrEnum):
@@ -148,6 +153,9 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.OPEN_ADJUSTMENTS,
         SettingKey.OPEN_TRANSFORM,
         SettingKey.OPEN_AUTO_PRINT,
+        # Delivery destination (plan 050): a page-level routing decision, so
+        # it sits below the four sub-page openers rather than inside one.
+        SettingKey.SYNC_DESTINATION,
     ),
     # PRINTER: pairing actions and model selection.
     # PAIR_PRINTER is the single pair/re-pair surface: when no printer is
@@ -212,6 +220,9 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.FTP_HOST_INFO,
         SettingKey.FTP_USERNAME_INFO,
         SettingKey.FTP_PASSWORD_INFO,
+        # iPhone pairing QR (plan 050) — an onboarding action, so it lives
+        # with the camera-setup block above the read-only diagnostics.
+        SettingKey.SYNC_PAIRING,
         SettingKey.NETWORK_DIAGNOSTICS_HEADER,
         SettingKey.NETWORK_BLUETOOTH_INFO,
         SettingKey.NETWORK_WIFI_INFO,
@@ -336,6 +347,8 @@ ACTION_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.RESET_CREDENTIALS,
         # Preset save action (plan 035 phase 5).
         SettingKey.ADJUST_SAVE_CUSTOM,
+        # iPhone pairing QR screen (plan 050).
+        SettingKey.SYNC_PAIRING,
     }
 )
 
@@ -367,6 +380,8 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.ADJUST_DATESTAMP_FORMAT,
         # Preset picker (plan 035 phase 5).
         SettingKey.ADJUST_PRESET,
+        # iPhone sync delivery destination (plan 050).
+        SettingKey.SYNC_DESTINATION,
     }
 )
 
@@ -445,6 +460,13 @@ APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
 # Total scan period options. The minimum (5s) equals the active-scan window, so it scans
 # continuously (0 gap); larger values insert an idle gap between scans to save power.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
+# Delivery destinations for received camera images (plan 050). Explicit option
+# list per the no-blind-cycling rule; default stays PRINT.
+SYNC_DESTINATION_OPTIONS: tuple[SyncDestination, ...] = (
+    SyncDestination.PRINT,
+    SyncDestination.IPHONE,
+    SyncDestination.BOTH,
+)
 
 # Datestamp format presets (plan 037 phase 4). Labels mirror the macOS app's
 # DateStampPreset names so the two surfaces speak the same vocabulary. The Pi
@@ -577,6 +599,9 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.APPEARANCE: "Auto: light 07-19, dark overnight",
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
+    # iPhone sync (plan 050).
+    SettingKey.SYNC_DESTINATION: "Where received photos go",
+    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone",
     # Separator rows — info-only, no interactive action.
     SettingKey.NETWORK_DIAGNOSTICS_HEADER: "Read-only connection diagnostics",
     SettingKey.PRINT_ADVANCED_HEADER: "Power-user polling intervals",
@@ -646,6 +671,11 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         # The controller passes user_preset_names when it calls setting_options
         # indirectly; direct callers see the minimal set.
         return preset_options()
+    if key is SettingKey.SYNC_DESTINATION:
+        return tuple(
+            SettingOption(sync_destination_label(value), value)
+            for value in SYNC_DESTINATION_OPTIONS
+        )
     return ()
 
 
@@ -733,6 +763,8 @@ def config_with_setting_value(
         return replace(config, adjustments=replace(config.adjustments, watermark=value))
     if key is SettingKey.ADJUST_PRESET and isinstance(value, str):
         return replace(config, adjustments=replace(config.adjustments, preset=value))
+    if key is SettingKey.SYNC_DESTINATION and isinstance(value, SyncDestination):
+        return replace(config, sync=replace(config.sync, destination=value))
     return config
 
 
@@ -772,6 +804,21 @@ def ftp_receive_mode_label(mode: FtpReceiveMode) -> str:
         FtpReceiveMode.PEER: "Client",
     }
     return labels[mode]
+
+
+def sync_destination_label(destination: SyncDestination) -> str:
+    """Return compact LCD label for a sync delivery destination.
+
+    "iPhone" stays Latin (brand identifier); "Print"/"Both" pick up i18n at
+    the render boundary like every other option label.
+    """
+
+    labels = {
+        SyncDestination.PRINT: "Print",
+        SyncDestination.IPHONE: "iPhone",
+        SyncDestination.BOTH: "Both",
+    }
+    return labels[destination]
 
 
 def seconds_label(value: float | None) -> str:
@@ -831,6 +878,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.adjustments.watermark
     if key is SettingKey.ADJUST_PRESET:
         return config.adjustments.preset
+    if key is SettingKey.SYNC_DESTINATION:
+        return config.sync.destination
     return None
 
 

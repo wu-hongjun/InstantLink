@@ -12,6 +12,8 @@ from instantlink_bridge.config import (
     PowerBackend,
     PowerConfig,
     PrinterConfig,
+    SyncConfig,
+    SyncDestination,
     WorkflowConfig,
     ipv4_24_network,
     ipv4_in_24_subnet,
@@ -292,7 +294,7 @@ def test_printer_keepalive_must_be_finite(tmp_path: Path) -> None:
 
 def test_printer_search_interval_defaults_and_override(tmp_path: Path) -> None:
     default_path = tmp_path / "default.toml"
-    default_path.write_text("[printer]\nmodel = \"square\"\n", encoding="utf-8")
+    default_path.write_text('[printer]\nmodel = "square"\n', encoding="utf-8")
     assert load_config(default_path).printer.search_interval_s == 5.0
 
     override_path = tmp_path / "override.toml"
@@ -448,3 +450,114 @@ def test_watermark_text_round_trips_custom_value(tmp_path: Path) -> None:
     round_tripped = load_config(config_path)
     assert round_tripped.adjustments.watermark_text == "Hello"
     assert round_tripped.adjustments.datestamp_format is DatestampFormat.QUARTZ_DATE
+
+
+# ---------------------------------------------------------------------------
+# Plan 050: [sync] section for iPhone auto-sync
+# ---------------------------------------------------------------------------
+
+
+def test_sync_defaults_when_section_missing(tmp_path: Path) -> None:
+    """A config file without a [sync] table yields the print-only defaults."""
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[printer]\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.sync.destination is SyncDestination.PRINT
+    assert config.sync.port == 8721
+    assert config.sync.outbox_dir == Path("/var/lib/InstantLinkBridge/sync-outbox")
+    assert config.sync.outbox_budget_mb == 2048
+    assert config.sync.token_path == Path("/etc/InstantLinkBridge/sync.token")
+    assert not config.sync.sync_enabled
+    assert config.sync.print_enabled
+
+
+def test_sync_destination_enables_expected_pipelines() -> None:
+    """sync_enabled / print_enabled derive from the destination value."""
+
+    print_only = SyncConfig(destination=SyncDestination.PRINT)
+    assert not print_only.sync_enabled
+    assert print_only.print_enabled
+
+    iphone_only = SyncConfig(destination=SyncDestination.IPHONE)
+    assert iphone_only.sync_enabled
+    assert not iphone_only.print_enabled
+
+    both = SyncConfig(destination=SyncDestination.BOTH)
+    assert both.sync_enabled
+    assert both.print_enabled
+
+
+def test_sync_destination_round_trip_toml(tmp_path: Path) -> None:
+    """Each sync destination survives a write/load cycle as the same enum value."""
+
+    for destination in SyncDestination:
+        config_path = tmp_path / f"{destination.value}.toml"
+        config = BridgeConfig(sync=SyncConfig(destination=destination))
+        write_config(config, config_path)
+        round_tripped = load_config(config_path)
+        assert round_tripped.sync.destination is destination, (
+            f"{destination.value} did not round-trip"
+        )
+
+
+def test_write_config_round_trips_sync_settings(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config = BridgeConfig(
+        sync=SyncConfig(
+            destination=SyncDestination.BOTH,
+            port=9000,
+            outbox_dir=Path("/var/lib/InstantLinkBridge/outbox-alt"),
+            outbox_budget_mb=512,
+            token_path=Path("/etc/InstantLinkBridge/alt.token"),
+        )
+    )
+
+    write_config(config, config_path)
+    round_tripped = load_config(config_path)
+
+    assert round_tripped.sync.destination is SyncDestination.BOTH
+    assert round_tripped.sync.port == 9000
+    assert round_tripped.sync.outbox_dir == Path("/var/lib/InstantLinkBridge/outbox-alt")
+    assert round_tripped.sync.outbox_budget_mb == 512
+    assert round_tripped.sync.token_path == Path("/etc/InstantLinkBridge/alt.token")
+
+
+def test_sync_destination_must_be_known(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[sync]\ndestination = "android"\n', encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[sync].destination" in str(exc)
+    else:
+        raise AssertionError("expected unknown sync destination to fail")
+
+
+def test_sync_port_must_be_in_range(tmp_path: Path) -> None:
+    for invalid in ("0", "65536", "-1"):
+        config_path = tmp_path / f"port-{invalid}.toml"
+        config_path.write_text(f"[sync]\nport = {invalid}\n", encoding="utf-8")
+
+        try:
+            load_config(config_path)
+        except ValueError as exc:
+            assert "[sync].port" in str(exc)
+        else:
+            raise AssertionError(f"expected port {invalid} to fail")
+
+
+def test_sync_outbox_budget_must_be_positive(tmp_path: Path) -> None:
+    for invalid in ("0", "-1"):
+        config_path = tmp_path / f"budget-{invalid}.toml"
+        config_path.write_text(f"[sync]\noutbox_budget_mb = {invalid}\n", encoding="utf-8")
+
+        try:
+            load_config(config_path)
+        except ValueError as exc:
+            assert "[sync].outbox_budget_mb" in str(exc)
+        else:
+            raise AssertionError(f"expected outbox budget {invalid} to fail")

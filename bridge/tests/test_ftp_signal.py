@@ -56,7 +56,7 @@ def _make_service(snap: UiSnapshot | None) -> FtpReceiveService:
 
 _REPLY_TEXTS = [
     "451 Bridge starting, try again in a moment.",
-    "501 Bridge not paired. Pair from the Mac app.",
+    "501 Bridge not paired. Pair or use iPhone sync.",
     "451 {name} offline. Power on printer.",  # name up to 15 chars
     "552 No film. Load film and retry.",
     "450 Printer busy, try again.",

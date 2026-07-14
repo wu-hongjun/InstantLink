@@ -12,7 +12,12 @@ from threading import Event, Lock, Thread
 from types import TracebackType
 from typing import Protocol
 
-from instantlink_bridge.config import FtpConfig, FtpSourceDecision, ftp_config_source_decision
+from instantlink_bridge.config import (
+    FtpConfig,
+    FtpSourceDecision,
+    SyncDestination,
+    ftp_config_source_decision,
+)
 from instantlink_bridge.net.addresses import detect_ipv4_addresses_for_interface
 from instantlink_bridge.net.health import DEFAULT_WIFI_INTERFACE, FtpActivityTracker
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
@@ -68,6 +73,28 @@ def _printer_reachable(snap: UiSnapshot) -> bool:
         UiMode.ERROR,
     }
     return snap.mode not in unreachable_modes
+
+
+def printer_usable_for_print(snap: UiSnapshot) -> bool:
+    """Return True when a print job could plausibly start right now.
+
+    Single shared readiness predicate (plan 050) between the FTP STOR
+    preflight (print-only destination) and the app dequeue fan-out
+    (both-mode print skip): paired + fresh status + reachable mode +
+    film available (or the no-film test override).
+    """
+
+    if snap.paired_printer is None:
+        return False
+    if not _printer_reachable(snap):
+        return False
+    if (
+        snap.film_remaining is not None
+        and snap.film_remaining <= 0
+        and not snap.allow_print_without_film
+    ):
+        return False
+    return True
 
 
 class FtpReceiveService:
@@ -356,6 +383,12 @@ class FtpReceiveService:
         (booting, not paired, printer offline, no film), then transient-busy last (printing).
         Returns None to fall through to the normal STOR handler on success.
 
+        Destination-aware (plan 050): when the sync destination is "iphone" or
+        "both" the upload always spools to the sync outbox, so only the BOOTING
+        gate applies — no printer checks and no PRINTING busy check (sync
+        spooling is not serialized by printing). "both" accepts whenever either
+        path could take the file, and post-boot sync always can.
+
         Gracefully degrades to None when no bridge_snapshot_provider is wired.
         """
         if self._bridge_snapshot_provider is None:
@@ -372,8 +405,11 @@ class FtpReceiveService:
             )
             return reply
 
+        if snap.sync_destination != SyncDestination.PRINT.value:
+            return None
+
         if snap.paired_printer is None:
-            reply = "501 Bridge not paired. Pair from the Mac app."
+            reply = "501 Bridge not paired. Pair or use iPhone sync."
             LOGGER.info(
                 "ftp.preflight_rejected reply=%r remote_ip=%s",
                 reply,

@@ -113,6 +113,19 @@ class UiLanguage(StrEnum):
     ZH_HANS = "zh-Hans"
 
 
+class SyncDestination(StrEnum):
+    """Where a received camera image is routed (plan 050).
+
+    ``PRINT`` keeps the classic print-only pipeline. ``IPHONE`` spools the
+    original into the sync outbox for the iOS app and skips printing.
+    ``BOTH`` fans out to the printer and the outbox.
+    """
+
+    PRINT = "print"
+    IPHONE = "iphone"
+    BOTH = "both"
+
+
 class StatusSinkKind(StrEnum):
     """Where the unified status signal is published.
 
@@ -305,6 +318,34 @@ class WorkflowConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class SyncConfig:
+    """iPhone sync configuration (plan 050).
+
+    ``destination`` is the only runtime-adjustable field; port, paths, and
+    the outbox disk budget are provisioning-level and stay out of the
+    schema-driven settings surface.
+    """
+
+    destination: SyncDestination = SyncDestination.PRINT
+    port: int = 8721
+    outbox_dir: Path = Path("/var/lib/InstantLinkBridge/sync-outbox")
+    outbox_budget_mb: int = 2048
+    token_path: Path = Path("/etc/InstantLinkBridge/sync.token")
+
+    @property
+    def sync_enabled(self) -> bool:
+        """Whether received images are spooled to the iPhone sync outbox."""
+
+        return self.destination in {SyncDestination.IPHONE, SyncDestination.BOTH}
+
+    @property
+    def print_enabled(self) -> bool:
+        """Whether received images continue into the print pipeline."""
+
+        return self.destination in {SyncDestination.PRINT, SyncDestination.BOTH}
+
+
+@dataclass(frozen=True, slots=True)
 class PowerConfig:
     """Bridge battery and idle power configuration."""
 
@@ -465,6 +506,7 @@ class BridgeConfig:
     firmware: FirmwareUpdateConfig = FirmwareUpdateConfig()
     ui: UiConfig = UiConfig()
     adjustments: AdjustmentsConfig = AdjustmentsConfig()
+    sync: SyncConfig = SyncConfig()
 
 
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
@@ -481,6 +523,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
         firmware=_load_firmware_config(data.get("firmware", {})),
         ui=_load_ui_config(data.get("ui", {})),
         adjustments=_load_adjustments_config(data.get("adjustments", {})),
+        sync=_load_sync_config(data.get("sync", {})),
     )
 
 
@@ -588,6 +631,13 @@ def render_config(config: BridgeConfig) -> str:
             f"watermark = {_toml_bool(config.adjustments.watermark)}",
             f"watermark_text = {_toml_string(config.adjustments.watermark_text)}",
             f"vignette = {config.adjustments.vignette}",
+            "",
+            "[sync]",
+            f"destination = {_toml_string(config.sync.destination.value)}",
+            f"port = {config.sync.port}",
+            f"outbox_dir = {_toml_string(str(config.sync.outbox_dir))}",
+            f"outbox_budget_mb = {config.sync.outbox_budget_mb}",
+            f"token_path = {_toml_string(str(config.sync.token_path))}",
             "",
         ]
     )
@@ -739,6 +789,7 @@ def _load_adjustments_config(data: object) -> AdjustmentsConfig:
     preset = _PRESET_MIGRATIONS.get(raw_preset, raw_preset)
     if preset not in _ADJUSTMENT_VALID_PRESET_NAMES:
         import logging as _logging
+
         _logging.getLogger(__name__).warning(
             "config.unknown_preset name=%r — falling back to Default", preset
         )
@@ -784,6 +835,26 @@ def _load_ui_config(data: object) -> UiConfig:
         status_sink=parse_status_sink(data.get("status_sink", StatusSinkKind.LCD.value)),
         language=parse_ui_language(data.get("language", UiLanguage.EN.value)),
         appearance=parse_ui_appearance(data.get("appearance", UiAppearance.LIGHT.value)),
+    )
+
+
+def _load_sync_config(data: object) -> SyncConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[sync] must be a TOML table")
+    port = int(data.get("port", 8721))
+    if not 1 <= port <= 65535:
+        raise ValueError("[sync].port must be between 1 and 65535")
+    outbox_budget_mb = int(data.get("outbox_budget_mb", 2048))
+    if outbox_budget_mb <= 0:
+        raise ValueError("[sync].outbox_budget_mb must be greater than 0")
+    return SyncConfig(
+        destination=parse_sync_destination(
+            data.get("destination", SyncDestination.PRINT.value),
+        ),
+        port=port,
+        outbox_dir=Path(str(data.get("outbox_dir", "/var/lib/InstantLinkBridge/sync-outbox"))),
+        outbox_budget_mb=outbox_budget_mb,
+        token_path=Path(str(data.get("token_path", "/etc/InstantLinkBridge/sync.token"))),
     )
 
 
@@ -873,6 +944,17 @@ def parse_power_backend(value: object) -> PowerBackend:
     except ValueError as exc:
         allowed = ", ".join(backend.value for backend in PowerBackend)
         raise ValueError(f"[power].backend must be one of: {allowed}") from exc
+
+
+def parse_sync_destination(value: object) -> SyncDestination:
+    """Parse a configured sync destination."""
+
+    text = str(value).strip().lower()
+    try:
+        return SyncDestination(text)
+    except ValueError as exc:
+        allowed = ", ".join(dest.value for dest in SyncDestination)
+        raise ValueError(f"[sync].destination must be one of: {allowed}") from exc
 
 
 def parse_datestamp_format(value: object) -> DatestampFormat:

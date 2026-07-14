@@ -575,6 +575,21 @@ _ZH_HANS: dict[str, str] = {
     "BT": "蓝牙",
     "USB": "USB",
     "Wi-Fi": "Wi-Fi",
+    # --- iPhone sync (plan 050) -------------------------------------------
+    # "iPhone" and "InstantLink" stay Latin per the brand doctrine; only the
+    # descriptors localise. 待传 mirrors Apple's transfer-pending vocabulary.
+    "Send to": "发送到",
+    "Where received photos go": "接收照片的去向",
+    "Both": "两者",
+    "iPhone pairing": "iPhone 配对",
+    "Show a QR code to pair your iPhone": "显示二维码以配对 iPhone",
+    "Scan with InstantLink app": "请用 InstantLink App 扫码",
+    "Pairing unavailable": "配对不可用",
+    "Sync to iPhone": "同步到 iPhone",
+    "Printer off · photos sync only": "打印机已关闭 · 仅同步照片",
+    "No film · photos sync only": "无相纸 · 仅同步照片",
+    "pending": "张待传",
+    "connected": "已连接",
 }
 
 _TRANSLATIONS: dict[Language, dict[str, str]] = {

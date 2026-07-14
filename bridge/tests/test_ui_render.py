@@ -1457,3 +1457,183 @@ def test_printer_searching_body_promotes_action_no_duplicate_title() -> None:
     # validation that "Searching" is omitted from the body is provided
     # by visual review on-device — the unit test simply pins the
     # snapshot mode path.
+
+
+# ---------------------------------------------------------------------------
+# Plan 050: iPhone sync — SYNC_PAIRING QR screen + destination-aware readiness
+# ---------------------------------------------------------------------------
+
+_QR_PAYLOAD = (
+    "instantlink://pair?v=1&device=IB-1234ABCD&host=192.168.8.1&port=8721"
+    "&token=0123456789abcdef0123456789abcdef&ssid=InstantLink-AB12&psk=12345678"
+)
+
+
+def test_render_sync_pairing_qr_on_white_card() -> None:
+    image = render_snapshot(
+        UiSnapshot(
+            mode=UiMode.SYNC_PAIRING,
+            ftp_host="192.168.7.1",
+            sync_qr_payload=_QR_PAYLOAD,
+        )
+    )
+
+    assert image.size == (240, 240)
+    # The QR sits centred between the status bar (36 px) and hint bar
+    # (200 px) on a WHITE card with dark modules — sample the middle of the
+    # QR area and require both pure white and pure black pixels so a themed
+    # (non-scannable) restyle regresses this test.
+    centre = image.crop((80, 80, 160, 155))
+    colours = {colour for _count, colour in centre.getcolors(80 * 75) or ()}
+    assert (255, 255, 255) in colours
+    assert (0, 0, 0) in colours
+
+
+def test_render_sync_pairing_dark_theme_keeps_white_quiet_zone() -> None:
+    image = render_snapshot(
+        UiSnapshot(
+            mode=UiMode.SYNC_PAIRING,
+            ftp_host="192.168.7.1",
+            appearance="dark",
+            sync_qr_payload=_QR_PAYLOAD,
+        )
+    )
+
+    centre = image.crop((80, 80, 160, 155))
+    colours = {colour for _count, colour in centre.getcolors(80 * 75) or ()}
+    assert (255, 255, 255) in colours
+    assert (0, 0, 0) in colours
+
+
+def test_render_sync_pairing_without_payload_does_not_crash() -> None:
+    image = render_snapshot(UiSnapshot(mode=UiMode.SYNC_PAIRING, ftp_host="192.168.7.1"))
+
+    assert image.size == (240, 240)
+
+
+def test_sync_pairing_footer_offers_key2_back_only() -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.SYNC_PAIRING,
+        ftp_host="192.168.7.1",
+        sync_qr_payload=_QR_PAYLOAD,
+    )
+
+    assert _footer_label_lines(snapshot) == (("", "KEY2 Back", ""),)
+
+
+def test_sync_pairing_status_word_reuses_pairing() -> None:
+    from instantlink_bridge.ui.render import status_bar_word
+
+    snapshot = UiSnapshot(
+        mode=UiMode.SYNC_PAIRING,
+        ftp_host="192.168.7.1",
+        sync_qr_payload=_QR_PAYLOAD,
+    )
+
+    assert status_bar_word(snapshot) == "Pairing"
+
+
+def test_iphone_only_ready_ignores_printer_state() -> None:
+    from instantlink_bridge.ui.render import status_bar_word
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        sync_destination="iphone",
+    )
+
+    # No printer paired, no film, no fresh status — the sync destination
+    # still accepts uploads whenever an FTP receive path is visible.
+    assert can_accept_images(snapshot)
+    assert status_bar_word(snapshot) == "Connected"
+    assert readiness_cause_texts(snapshot) == []
+    assert render_snapshot(snapshot).size == (240, 240)
+
+
+def test_iphone_only_without_ftp_path_reports_only_ftp_cause() -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+    )
+
+    assert not can_accept_images(snapshot)
+    causes = readiness_cause_texts(snapshot)
+    assert causes == ["Choose FTP Wi-Fi"]
+    # Printer causes ("Find printer", film) must not leak into sync mode.
+    assert render_snapshot(snapshot).size == (240, 240)
+
+
+def test_both_mode_printer_off_shows_paused_note_and_stays_ready() -> None:
+    from instantlink_bridge.ui.render import sync_print_paused_note
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        printer_status_fresh=False,
+        sync_destination="both",
+        sync_outbox_depth=3,
+        sync_client_recent=True,
+    )
+
+    assert can_accept_images(snapshot)
+    assert sync_print_paused_note(snapshot) == "Printer off · photos sync only"
+    assert render_snapshot(snapshot).size == (240, 240)
+
+
+def test_both_mode_no_film_downgrades_to_paused_note() -> None:
+    from instantlink_bridge.ui.render import sync_print_paused_note
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=0,
+        sync_destination="both",
+    )
+
+    assert can_accept_images(snapshot)
+    assert sync_print_paused_note(snapshot) == "No film · photos sync only"
+    assert render_snapshot(snapshot).size == (240, 240)
+
+
+def test_both_mode_healthy_printer_has_no_paused_note() -> None:
+    from instantlink_bridge.ui.render import sync_print_paused_note
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=8,
+        sync_destination="both",
+    )
+
+    assert sync_print_paused_note(snapshot) is None
+    assert can_accept_images(snapshot)
+
+
+def test_print_only_destination_keeps_printer_gate() -> None:
+    from instantlink_bridge.ui.render import sync_print_paused_note
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        sync_destination="print",
+    )
+
+    # Print-only: no printer means no readiness, and no paused note either
+    # (printer trouble owns the full screen in print mode).
+    assert not can_accept_images(snapshot)
+    assert sync_print_paused_note(snapshot) is None

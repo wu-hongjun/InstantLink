@@ -330,9 +330,7 @@ password = "originalsecret"
     await client.start_server()
     try:
         # Sending the masked sentinel must be a no-op on the password.
-        body = _json_body(
-            {"config": {"ftp": {"username": "newuser", "password": "__MASKED__"}}}
-        )
+        body = _json_body({"config": {"ftp": {"username": "newuser", "password": "__MASKED__"}}})
         path = "/v1/config"
         response = await client.put(
             path,
@@ -381,5 +379,116 @@ async def test_config_put_collects_multiple_field_errors(tmp_path: Path) -> None
         details = data["error"]["details"]["field_errors"]
         expected = {"printer.quality", "printer.keepalive_interval_s", "ui.appearance"}
         assert expected <= details.keys()
+    finally:
+        await client.close()
+
+
+# --- [sync] section (plan 050) ----------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_config_get_includes_sync_destination_default(tmp_path: Path) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "missing.toml"
+    app = _make_app(tmp_path, private_key, config_path)
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        path = "/v1/config"
+        response = await client.get(
+            path,
+            headers=signed_headers(private_key, method="GET", path=path),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        config = data["config"]
+        # Only the destination is exposed; port/paths/budget are
+        # provisioning-level and stay out of the settings surface.
+        assert config["sync"] == {"destination": "print"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_config_put_applies_sync_destination_and_preserves_provisioning(
+    tmp_path: Path,
+) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[sync]\nport = 9000\n", encoding="utf-8")
+    app = _make_app(tmp_path, private_key, config_path)
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        body = _json_body({"config": {"sync": {"destination": "both"}}})
+        path = "/v1/config"
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["sync"]["destination"] == "both"
+        on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        assert on_disk["sync"]["destination"] == "both"
+        # Provisioning-level fields survive a destination-only diff.
+        assert on_disk["sync"]["port"] == 9000
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_config_put_rejects_unknown_sync_destination(tmp_path: Path) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    app = _make_app(tmp_path, private_key, config_path)
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        body = _json_body({"config": {"sync": {"destination": "android"}}})
+        path = "/v1/config"
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 422, data
+        assert data["error_code"] == "config_validation_failed"
+        assert "sync.destination" in data["error"]["details"]["field_errors"]
+        assert not config_path.exists()
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_config_put_rejects_provisioning_sync_fields(tmp_path: Path) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    app = _make_app(tmp_path, private_key, config_path)
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        body = _json_body({"config": {"sync": {"port": 9999}}})
+        path = "/v1/config"
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 422, data
+        assert data["error_code"] == "config_validation_failed"
+        assert "sync.port" in data["error"]["details"]["field_errors"]
     finally:
         await client.close()

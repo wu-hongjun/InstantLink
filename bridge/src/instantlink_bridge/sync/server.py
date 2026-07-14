@@ -36,6 +36,11 @@ LOGGER = logging.getLogger(__name__)
 SERVICE_TYPE = "_instantlink._tcp.local."
 SYNC_PROTO_VERSION = 1
 DEFAULT_CONTENT_TYPE = "image/jpeg"
+# Re-detect advertised IPv4s on this cadence: registration can race the
+# hotspot coming up at boot, and the user can switch Wi-Fi modes from
+# Settings at runtime — a one-shot registration would keep advertising
+# stale addresses either way.
+ADVERTISE_REFRESH_INTERVAL_S = 30.0
 _TOKEN_PATTERN = re.compile(r"[0-9a-fA-F]{32}")
 _ADVERTISE_INTERFACES = ("wlan0", "usb0")
 
@@ -80,17 +85,21 @@ class SyncService:
         device_id: str,
         client_activity_callback: Callable[[], None] | None = None,
         enable_zeroconf: bool = True,
+        address_provider: Callable[[], list[str]] | None = None,
     ) -> None:
         self._outbox = outbox
         self._port = port
         self._device_id = device_id
         self._client_activity_callback = client_activity_callback
         self._enable_zeroconf = enable_zeroconf
+        self._address_provider = address_provider or _advertise_addresses
+        self._advertised_addresses: list[str] = []
         self._token = load_or_create_sync_token(token_path)
         self._last_client_seen: float | None = None
         self._runner: web.AppRunner | None = None
         self._zeroconf: AsyncZeroconf | None = None
         self._service_info: AsyncServiceInfo | None = None
+        self._zeroconf_refresh_task: asyncio.Task[None] | None = None
 
     @property
     def token(self) -> str:
@@ -117,10 +126,20 @@ class SyncService:
         LOGGER.info("sync.server_started port=%s device=%s", self._port, self._device_id)
         if self._enable_zeroconf:
             await self._register_zeroconf()
+            self._zeroconf_refresh_task = asyncio.create_task(
+                self._run_zeroconf_refresh(), name="sync-zeroconf-refresh"
+            )
 
     async def stop(self) -> None:
         """Unregister Bonjour and shut the HTTP listener down."""
 
+        if self._zeroconf_refresh_task is not None:
+            self._zeroconf_refresh_task.cancel()
+            try:
+                await self._zeroconf_refresh_task
+            except asyncio.CancelledError:
+                pass
+            self._zeroconf_refresh_task = None
         if self._zeroconf is not None:
             try:
                 if self._service_info is not None:
@@ -212,12 +231,52 @@ class SyncService:
             return _unknown_item_response(item_id)
         return web.json_response({"ok": True})
 
-    async def _register_zeroconf(self) -> None:
-        addresses = _advertise_addresses()
-        if not addresses:
-            LOGGER.warning("sync.zeroconf_skipped reason=no_ipv4_address")
+    async def refresh_zeroconf(self) -> None:
+        """Re-detect advertised addresses; register late or update in place.
+
+        Called by the periodic refresh task, and safe to call directly. A
+        boot-time race (hotspot not yet up) leaves the initial registration
+        with a partial address set, and runtime Wi-Fi mode switches change
+        it — both converge here.
+        """
+
+        if not self._enable_zeroconf:
             return
-        info = AsyncServiceInfo(
+        try:
+            addresses = self._address_provider()
+        except Exception:
+            LOGGER.warning("sync.zeroconf_address_lookup_failed", exc_info=True)
+            return
+        if not addresses:
+            # Keep advertising the last-known-good set rather than dropping
+            # the registration during a transient interface flap.
+            return
+        if self._zeroconf is None:
+            await self._register_zeroconf()
+            return
+        if addresses == self._advertised_addresses:
+            return
+        info = self._build_service_info(addresses)
+        try:
+            await self._zeroconf.async_update_service(info)
+        except Exception:
+            LOGGER.warning("sync.zeroconf_update_failed", exc_info=True)
+            return
+        LOGGER.info(
+            "sync.zeroconf_addresses_updated previous=%s current=%s",
+            ",".join(self._advertised_addresses),
+            ",".join(addresses),
+        )
+        self._service_info = info
+        self._advertised_addresses = addresses
+
+    async def _run_zeroconf_refresh(self) -> None:
+        while True:
+            await asyncio.sleep(ADVERTISE_REFRESH_INTERVAL_S)
+            await self.refresh_zeroconf()
+
+    def _build_service_info(self, addresses: list[str]) -> AsyncServiceInfo:
+        return AsyncServiceInfo(
             SERVICE_TYPE,
             f"InstantLink-{self._device_id}.{SERVICE_TYPE}",
             addresses=[socket.inet_aton(address) for address in addresses],
@@ -225,13 +284,24 @@ class SyncService:
             properties={"device": self._device_id, "proto": str(SYNC_PROTO_VERSION)},
             server=f"InstantLink-{self._device_id}.local.",
         )
+
+    async def _register_zeroconf(self) -> None:
+        try:
+            addresses = self._address_provider()
+        except Exception:
+            LOGGER.warning("sync.zeroconf_address_lookup_failed", exc_info=True)
+            return
+        if not addresses:
+            LOGGER.warning("sync.zeroconf_skipped reason=no_ipv4_address")
+            return
+        info = self._build_service_info(addresses)
         zeroconf: AsyncZeroconf | None = None
         try:
             zeroconf = AsyncZeroconf(ip_version=IPVersion.V4Only)
             await zeroconf.async_register_service(info)
         except Exception:
             # Never let discovery failures take the HTTP service down; the
-            # next start() retries registration.
+            # refresh task retries registration.
             LOGGER.warning("sync.zeroconf_register_failed", exc_info=True)
             if zeroconf is not None:
                 try:
@@ -241,6 +311,7 @@ class SyncService:
             return
         self._zeroconf = zeroconf
         self._service_info = info
+        self._advertised_addresses = addresses
         LOGGER.info(
             "sync.zeroconf_registered service=%s addresses=%s port=%s",
             info.name,

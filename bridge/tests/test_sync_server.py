@@ -269,3 +269,120 @@ async def test_start_and_stop_without_zeroconf(tmp_path: Path) -> None:
     await service.start()  # idempotent
     await service.stop()
     await service.stop()  # idempotent
+
+
+# --- zeroconf advertisement refresh ------------------------------------------
+
+
+def _install_fake_zeroconf(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[_FakeAsyncZeroconf]:
+    import instantlink_bridge.sync.server as sync_server
+
+    instances: list[_FakeAsyncZeroconf] = []
+
+    class _Bound(_FakeAsyncZeroconf):
+        def __init__(self, ip_version: object = None) -> None:
+            super().__init__(ip_version)
+            instances.append(self)
+
+    monkeypatch.setattr(sync_server, "AsyncZeroconf", _Bound)
+    return instances
+
+
+class _FakeAsyncZeroconf:
+    def __init__(self, ip_version: object = None) -> None:
+        self.registered: list[object] = []
+        self.updated: list[object] = []
+        self.closed = False
+
+    async def async_register_service(self, info: object) -> None:
+        self.registered.append(info)
+
+    async def async_update_service(self, info: object) -> None:
+        self.updated.append(info)
+
+    async def async_unregister_service(self, info: object) -> None:
+        pass
+
+    async def async_close(self) -> None:
+        self.closed = True
+
+
+def _make_refresh_service(
+    tmp_path: Path,
+    addresses: list[str],
+) -> SyncService:
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+    return SyncService(
+        outbox,
+        port=8721,
+        token_path=tmp_path / "sync.token",
+        device_id="IB-TEST",
+        enable_zeroconf=True,
+        address_provider=lambda: list(addresses),
+    )
+
+
+@pytest.mark.asyncio
+async def test_refresh_zeroconf_registers_when_addresses_appear(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import socket
+
+    instances = _install_fake_zeroconf(monkeypatch)
+    addresses: list[str] = []
+    service = _make_refresh_service(tmp_path, addresses)
+
+    await service.refresh_zeroconf()
+    assert instances == []  # nothing to advertise yet
+
+    addresses.append("192.168.8.1")
+    await service.refresh_zeroconf()
+    assert len(instances) == 1
+    assert len(instances[0].registered) == 1
+    info = instances[0].registered[0]
+    assert info.addresses == [socket.inet_aton("192.168.8.1")]
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_refresh_zeroconf_updates_when_addresses_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import socket
+
+    instances = _install_fake_zeroconf(monkeypatch)
+    addresses = ["192.168.7.1"]
+    service = _make_refresh_service(tmp_path, addresses)
+
+    await service.refresh_zeroconf()
+    assert len(instances) == 1
+    assert len(instances[0].registered) == 1
+
+    addresses.insert(0, "192.168.8.1")
+    await service.refresh_zeroconf()
+    assert len(instances) == 1  # same zeroconf instance, updated in place
+    assert len(instances[0].updated) == 1
+    info = instances[0].updated[0]
+    assert info.addresses == [
+        socket.inet_aton("192.168.8.1"),
+        socket.inet_aton("192.168.7.1"),
+    ]
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_refresh_zeroconf_noop_when_addresses_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    instances = _install_fake_zeroconf(monkeypatch)
+    addresses = ["192.168.8.1"]
+    service = _make_refresh_service(tmp_path, addresses)
+
+    await service.refresh_zeroconf()
+    await service.refresh_zeroconf()
+    assert len(instances) == 1
+    assert len(instances[0].registered) == 1
+    assert instances[0].updated == []
+    await service.stop()

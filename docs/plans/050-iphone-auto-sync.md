@@ -177,6 +177,23 @@ test: camera auto-FTP → outbox → iPhone save, and camera C1 → print unchan
   print-destination gating (sync-only should bypass the print queue entirely —
   it must not wait on `AWAITING_CONFIRM`).
 
+## Status (2026-07-14)
+
+Implemented and shipped the same day the plan landed:
+
+- **A1 + A2 done** (`7b4f35d`): sync module, `[sync]` config + manager payload, fan-out,
+  destination-aware FTP gate, Send to setting, QR pairing screen, readiness surfaces, zh-Hans.
+  Full bridge suite 1030+ tests green.
+- **B1 done** (`95a2651`, fix `3500352`): iOS scaffold builds clean for the iOS 26.5 simulator
+  (one strict-concurrency fix in `BridgeBrowser`). On-device signing/testing pending.
+- **Deployed + hardware-verified** on `riverps-rpi-zero-2w` as 0.1.17 with `destination = "both"`:
+  printer-less FTP upload → outbox → authenticated queue/download (sha256-identical) → Range 206 →
+  ack → drained. Details in `bridge/docs/current-context.md`.
+- **Post-deploy fix** (`8f24c4c`): Bonjour registration raced the hotspot at boot and went stale on
+  runtime Wi-Fi mode switches; SyncService now refreshes advertised addresses every 30 s.
+- Open: iPhone-on-hotspot field test (README checklist), live-printer both-mode test, UX audit of
+  the new LCD surfaces (queued), fold zeroconf/segno/ifaddr wheels into offline provisioning.
+
 ## Future: Wi-Fi Aware upgrade path (not scheduled)
 
 Tracked, not planned. Trigger to re-evaluate: **ESP-IDF v6.1 ships encrypted

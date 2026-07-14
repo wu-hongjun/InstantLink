@@ -45,6 +45,14 @@ InstantLink Rust FFI backend on BlueZ
 Fujifilm Instax Mini / Mini Link 3 / Square / Wide Link
 ```
 
+Since plan 050 the queue additionally fans out per `[sync].destination`
+(`print` | `iphone` | `both`): before any print handling, the received original
+is hard-linked into the sync outbox (`/var/lib/InstantLinkBridge/sync-outbox/`)
+and served to the iOS app over the bearer-token HTTP API on `:8721`
+(Bonjour `_instantlink._tcp`). `iphone`-only skips the print flow entirely;
+`both` prints only when the printer is currently usable and otherwise spools
+quietly.
+
 ## State Machine
 
 ```mermaid
@@ -87,6 +95,7 @@ The runtime should be one Python process with named tasks:
 | `ui_input` | gpiozero joystick/buttons, long-press KEY3 | Writes button/input events |
 | `power_monitor` | X306/no-telemetry power backend, optional PiSugar polling, idle timing | Writes battery/idle/shutdown events |
 | `watchdog` | sd_notify READY/WATCHDOG heartbeat | Reads health events, emits degraded status |
+| `sync_service` | iPhone pickup: bearer-token HTTP API on `:8721` over the sync outbox, Bonjour `_instantlink._tcp` advertisement with 30 s address refresh (plan 050) | Reads `SyncOutbox`, fires client-activity → UI/power |
 
 ## Power Management Foundation
 

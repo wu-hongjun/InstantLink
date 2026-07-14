@@ -1,6 +1,7 @@
 # InstantLink Bridge Current Context
 
-Last verified: 2026-06-12 on `riverps-rpi-zero-2w` (bridge state at commit `ad638be`, App layer at `596230d`).
+Last verified: 2026-07-14 on `riverps-rpi-zero-2w` (bridge 0.1.17 at commit `8f24c4c`; iPhone
+sync feature per plan 050, end-to-end verified over FTP + HTTP the same day).
 
 This file is the fast handoff for anyone opening the bridge code after the InstantLink port. The
 source of truth is the InstantLink repository under `bridge/`; the old standalone InstantBridge
@@ -41,6 +42,35 @@ for cameras and the bridge on an existing network.
 - USB admin address: `192.168.7.1/24`
 - FTP port: `21`
 - Native backend: `/opt/InstantLinkBridge/lib/libinstantlink_ffi.so`
+- Sync service (plan 050): HTTP `:8721`, Bonjour `_instantlink._tcp`, token at
+  `/etc/InstantLinkBridge/sync.token`, outbox at `/var/lib/InstantLinkBridge/sync-outbox/`
+- `[sync] destination = "both"` is set on `riverps-rpi-zero-2w` (photos spool for iPhone AND
+  print when a printer is ready; default for fresh installs remains `print`)
+
+## iPhone Sync (plan 050) — deployed 2026-07-14
+
+Bridge 0.1.17 added the iPhone-sync path: received camera photos spool to a disk outbox and are
+served to the iOS app over a bearer-token HTTP API (`/v1/status|queue|photos/{id}|photos/{id}/ack`)
+discovered via Bonjour. Verified end-to-end on the device with no printer involved:
+
+- FTP upload from a hotspot-subnet source was accepted with the printer absent (destination-aware
+  STOR preflight), spooled (`sync.outbox_added`), and print was skipped quietly
+  (`sync.print_skipped_printer_unready`).
+- From the deploy host over USB admin: 401 without token; queue listed the item; the download was
+  sha256-identical to the upload; `Range` returned 206; ack drained the outbox to depth 0.
+- Bonjour initially advertised only `192.168.7.1` because registration raced the hotspot at boot —
+  fixed in `8f24c4c` (30 s address refresh, also covers runtime Wi-Fi mode switches); the journal
+  now shows `addresses=192.168.8.1,192.168.7.1`.
+
+New runtime deps `zeroconf`/`segno`/`ifaddr` are pinned in `requirements/constraints.txt`. The Pi
+had no outbound internet, so the aarch64/cp313 wheels were downloaded on the deploy host
+(`pip download --platform manylinux_2_17_aarch64 --only-binary :all:`), scp'd over, and installed
+into `/opt/InstantLinkBridge/.venv` before the source deploy. Fold them into the provisioning
+offline-deps bundle for fresh devices.
+
+Remaining hardware validation: pair an iPhone via Settings ▸ Network ▸ iPhone pairing (QR) with a
+signed build of the iOS app (`ios/`, simulator-green as of `3500352`), and re-test both-mode with a
+live printer. A UX audit of the new surfaces is queued as the next work item.
 
 The old `/opt/InstantBridge` install, `/etc/InstantBridge` config, and `instantbridge.*` unit files
 are legacy. They were removed from `riverps-rpi-zero-2w` on 2026-05-25 with
@@ -82,6 +112,7 @@ Run these after every device deploy:
 systemctl status instantlink-bridge.service --no-pager -l
 /opt/InstantLinkBridge/.venv/bin/instantlink-bridge --version
 sudo ss -ltnp sport = :21
+sudo ss -ltnp sport = :8721
 ip -br addr
 nmcli -t -f NAME,TYPE,DEVICE,STATE con show --active
 journalctl -u instantlink-bridge.service --since "5 minutes ago" --no-pager

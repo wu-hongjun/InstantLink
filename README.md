@@ -16,7 +16,8 @@ The InstantLink project ships two end-user products and the shared Rust core the
 | Component | Description |
 |-------|-------------|
 | **App** (`InstantLink.app`) | Native macOS app — image editor, camera capture, BLE printing, Bridge management |
-| **Bridge** (`bridge/`) | Raspberry Pi Zero 2 W appliance — accepts FTP uploads from anything (cameras, scripts) and relays them to a paired Instax printer over BLE |
+| **Bridge** (`bridge/`) | Raspberry Pi Zero 2 W appliance — accepts FTP uploads from anything (cameras, scripts) and relays them to a paired Instax printer over BLE and/or syncs them to the iOS app |
+| **iOS app** (`ios/`) | SwiftUI iPhone app — pairs with the Bridge via QR + hotspot join and pulls camera photos into the Photos library (plan 050; on-device testing pending) |
 | **CLI** (`instantlink` binary, crate `instantlink-cli`) | Command-line tool to scan, query, and print |
 | **instantlink-core / instantlink-ffi** | Rust core library (BLE protocol, image processing) and C FFI bindings used by the App and Bridge |
 
@@ -94,6 +95,7 @@ The printer model is auto-detected after connecting.
   - Localized in 12 languages
 - C FFI (22 exported functions: see `docs/reference/ffi.md`) for building native UIs, including connection-stage callbacks
 - Raspberry Pi bridge appliance for receiving camera FTP uploads over a local hotspot and printing through the InstantLink FFI backend
+- iPhone auto-sync from the Bridge: photos spool to a disk outbox and an iOS app pulls them over a token-authed local HTTP API with Bonjour discovery — print, sync, or both per photo destination setting
 
 ## Project Structure
 
@@ -107,6 +109,7 @@ InstantLink/
 │   ├── instantlink-cli/           # CLI binary
 │   └── instantlink-ffi/           # C FFI
 ├── bridge/                        # Raspberry Pi camera FTP appliance
+├── ios/                          # iPhone sync app (SwiftUI, plan 050)
 └── macos/                        # Native macOS app (SwiftUI)
     └── InstantLink/
 ```

@@ -39,3 +39,30 @@ targets:
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         SUPPORTS_MACCATALYST: NO
+  InstantLink-iOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: InstantLinkTests
+    dependencies:
+      - target: InstantLink-iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.instantlink.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        # XcodeGen derives TEST_HOST from the target name, but the app's
+        # PRODUCT_NAME is "InstantLink" — point at the real executable.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/InstantLink.app/InstantLink"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  InstantLink-iOS:
+    build:
+      targets:
+        InstantLink-iOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - InstantLink-iOSTests

@@ -39,6 +39,9 @@ final class PairingStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let stored = defaults.stringArray(forKey: Key.syncedItemIDs) ?? []
+        self.orderedSyncedItemIDs = stored
+        self.syncedItemIDs = Set(stored)
     }
 
     // MARK: - Pairing
@@ -80,22 +83,41 @@ final class PairingStore {
             defaults.removeObject(forKey: key)
         }
         syncedItemIDs = []
+        orderedSyncedItemIDs = []
     }
 
     // MARK: - Synced item ids
 
+    /// Upper bound on the persisted synced-id history, so UserDefaults never
+    /// grows unbounded. Ids are pruned oldest-first; anything old enough to
+    /// be pruned was acked long ago, so the Bridge no longer offers it and
+    /// forgetting it cannot cause a re-download.
+    static let maxSyncedItemIDs = 5000
+
     /// Item ids already saved to Photos and acked; re-offered queue entries
     /// with these ids are skipped.
-    private(set) lazy var syncedItemIDs: Set<String> =
-        Set(defaults.stringArray(forKey: Key.syncedItemIDs) ?? [])
+    private(set) var syncedItemIDs: Set<String>
+
+    /// The same ids in insertion order (oldest first) — the pruning order and
+    /// the persisted representation.
+    private var orderedSyncedItemIDs: [String]
 
     func isSynced(_ itemID: String) -> Bool {
         syncedItemIDs.contains(itemID)
     }
 
     func markSynced(_ itemID: String) {
+        guard !syncedItemIDs.contains(itemID) else { return }
         syncedItemIDs.insert(itemID)
-        defaults.set(Array(syncedItemIDs).sorted(), forKey: Key.syncedItemIDs)
+        orderedSyncedItemIDs.append(itemID)
+        let overflow = orderedSyncedItemIDs.count - Self.maxSyncedItemIDs
+        if overflow > 0 {
+            for dropped in orderedSyncedItemIDs.prefix(overflow) {
+                syncedItemIDs.remove(dropped)
+            }
+            orderedSyncedItemIDs.removeFirst(overflow)
+        }
+        defaults.set(orderedSyncedItemIDs, forKey: Key.syncedItemIDs)
     }
 
     // MARK: - Keychain

@@ -7,6 +7,8 @@ import SwiftUI
 struct OnboardingView: View {
     @EnvironmentObject private var model: SyncViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var isEnteringLinkManually = false
+    @State private var manualLink = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -52,8 +54,32 @@ struct OnboardingView: View {
                     .frame(width: 240, height: 240)
 
                 Spacer()
-                Spacer()
+
+                // Fallback for when the camera can't scan (e.g. a broken
+                // camera): the pairing link drives the exact same pipeline
+                // as a scanned QR code.
+                Button("Enter pairing link instead") {
+                    manualLink = ""
+                    isEnteringLinkManually = true
+                }
+                .font(.subheadline.weight(.medium))
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .background(.thinMaterial, in: Capsule())
+                .padding(.bottom, 24)
             }
+        }
+        .alert("Enter pairing link", isPresented: $isEnteringLinkManually) {
+            TextField("instantlink://pair?…", text: $manualLink)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Pair") {
+                let link = manualLink.trimmingCharacters(in: .whitespacesAndNewlines)
+                Task { await model.completePairing(scannedCode: link) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("If scanning isn't possible, paste the Bridge's pairing link — the same instantlink://pair address its QR code encodes.")
         }
     }
 

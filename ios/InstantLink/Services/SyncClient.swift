@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os
 
 enum SyncClientError: LocalizedError {
     case unauthorized
@@ -32,9 +33,9 @@ final class SyncClient {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    private static let writeChunkSize = 64 * 1024
-
-    init(host: String, port: Int, token: String) {
+    /// - Parameter protocolClasses: test hook — `URLProtocol` stubs installed
+    ///   on the session configuration; nil in production.
+    init(host: String, port: Int, token: String, protocolClasses: [AnyClass]? = nil) {
         var components = URLComponents()
         components.scheme = "http"
         components.host = host
@@ -50,6 +51,9 @@ final class SyncClient {
         configuration.timeoutIntervalForRequest = 10
         configuration.timeoutIntervalForResource = 600
         configuration.waitsForConnectivity = false
+        if let protocolClasses {
+            configuration.protocolClasses = protocolClasses
+        }
         self.session = URLSession(configuration: configuration)
 
         let decoder = JSONDecoder()
@@ -83,7 +87,10 @@ final class SyncClient {
     /// If a partial file already exists at `destination` (from an interrupted
     /// earlier attempt) a `Range` request resumes from its end; a 200 reply
     /// means the Bridge ignored the range, so the download restarts cleanly.
-    /// Verifies the queue entry's `sha256` over the completed file.
+    /// The body streams to disk in whole `Data` chunks via a per-task
+    /// delegate — no per-byte `AsyncBytes` iteration, which was far too slow
+    /// for 100 MP camera files. Verifies the queue entry's `sha256` over the
+    /// completed file (streamed in 1 MiB chunks).
     func downloadPhoto(
         _ item: PendingPhoto,
         to destination: URL,
@@ -102,10 +109,11 @@ final class SyncClient {
             request.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range")
         }
 
-        let (bytes, response) = try await session.bytes(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw SyncClientError.invalidResponse
-        }
+        let delegate = ChunkedDownloadDelegate()
+        let task = session.dataTask(with: request)
+        task.delegate = delegate
+
+        let http = try await delegate.start(task)
         switch http.statusCode {
         case 200:
             // Full body: either no partial existed or the range was ignored.
@@ -114,8 +122,10 @@ final class SyncClient {
         case 206:
             break // Appending to the existing partial.
         case 401, 403:
+            task.cancel()
             throw SyncClientError.unauthorized
         default:
+            task.cancel()
             throw SyncClientError.httpStatus(http.statusCode)
         }
 
@@ -129,23 +139,18 @@ final class SyncClient {
             defer { try? handle.close() }
             try handle.seekToEnd()
 
-            var buffer = Data()
-            buffer.reserveCapacity(Self.writeChunkSize)
-            for try await byte in bytes {
-                buffer.append(byte)
-                if buffer.count >= Self.writeChunkSize {
-                    try handle.write(contentsOf: buffer)
-                    received += Int64(buffer.count)
-                    buffer.removeAll(keepingCapacity: true)
-                    progress(received)
-                }
-            }
-            if !buffer.isEmpty {
-                try handle.write(contentsOf: buffer)
-                received += Int64(buffer.count)
+            for try await chunk in delegate.chunks {
+                try handle.write(contentsOf: chunk)
+                received += Int64(chunk.count)
+                delegate.consumed(byteCount: chunk.count)
                 progress(received)
             }
         }
+
+        // A cancelled sync pass ends the chunk stream without throwing; bail
+        // out before the checksum pass so the partial survives for a Range
+        // resume on the next pass.
+        try Task.checkCancellation()
 
         try Self.verifyChecksum(of: destination, expected: item.sha256)
     }
@@ -190,6 +195,118 @@ final class SyncClient {
         let actual = hasher.finalize().map { String(format: "%02x", $0) }.joined()
         guard actual == expected.lowercased() else {
             throw SyncClientError.checksumMismatch(expected: expected.lowercased(), actual: actual)
+        }
+    }
+}
+
+// MARK: - Chunked download plumbing
+
+/// Per-task URLSession delegate exposing a data task's body as an
+/// `AsyncThrowingStream` of whole `Data` chunks.
+///
+/// Watermark backpressure keeps memory bounded: the task suspends when the
+/// consumer trails the network by `highWaterMark` buffered bytes and resumes
+/// once the consumer drains to half of that. `URLSessionTask.suspend()` /
+/// `.resume()` are always called while holding the state lock so the two
+/// sides cannot interleave into a stuck double-suspend.
+private final class ChunkedDownloadDelegate: NSObject, URLSessionDataDelegate {
+    private static let highWaterMark = 4 << 20 // 4 MiB buffered ahead of the file writer
+
+    private struct State {
+        var task: URLSessionDataTask?
+        var responseContinuation: CheckedContinuation<HTTPURLResponse, Error>?
+        var chunkContinuation: AsyncThrowingStream<Data, Error>.Continuation?
+        var bufferedBytes = 0
+        var isSuspended = false
+    }
+
+    private let state: OSAllocatedUnfairLock<State>
+
+    /// Body chunks in arrival order. Finishes when the task completes and
+    /// throws the task's error on failure. Abandoning iteration (including
+    /// consumer-side cancellation) cancels the underlying task.
+    let chunks: AsyncThrowingStream<Data, Error>
+
+    override init() {
+        var continuation: AsyncThrowingStream<Data, Error>.Continuation!
+        self.chunks = AsyncThrowingStream { continuation = $0 }
+        let state = OSAllocatedUnfairLock(initialState: State(chunkContinuation: continuation))
+        self.state = state
+        super.init()
+        continuation.onTermination = { _ in
+            // Cancelling an already-finished task is a no-op.
+            state.withLock { $0.task }?.cancel()
+        }
+    }
+
+    /// Resumes `task` and suspends until its HTTP response header arrives.
+    func start(_ task: URLSessionDataTask) async throws -> HTTPURLResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            state.withLock {
+                $0.task = task
+                $0.responseContinuation = continuation
+            }
+            task.resume()
+        }
+    }
+
+    /// The consumer calls this after handling a chunk so backpressure can
+    /// track how far it trails the network.
+    func consumed(byteCount: Int) {
+        state.withLock { state in
+            state.bufferedBytes -= byteCount
+            guard state.isSuspended, state.bufferedBytes <= Self.highWaterMark / 2 else { return }
+            state.isSuspended = false
+            state.task?.resume()
+        }
+    }
+
+    // MARK: URLSessionDataDelegate
+
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
+        let continuation = state.withLock { state -> CheckedContinuation<HTTPURLResponse, Error>? in
+            defer { state.responseContinuation = nil }
+            return state.responseContinuation
+        }
+        guard let http = response as? HTTPURLResponse else {
+            continuation?.resume(throwing: SyncClientError.invalidResponse)
+            completionHandler(.cancel)
+            return
+        }
+        continuation?.resume(returning: http)
+        completionHandler(.allow)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        state.withLock { state in
+            state.bufferedBytes += data.count
+            state.chunkContinuation?.yield(data)
+            guard state.bufferedBytes >= Self.highWaterMark, !state.isSuspended else { return }
+            state.isSuspended = true
+            dataTask.suspend()
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let (responseContinuation, chunkContinuation) = state.withLock { state in
+            defer {
+                state.responseContinuation = nil
+                state.chunkContinuation = nil
+            }
+            return (state.responseContinuation, state.chunkContinuation)
+        }
+        // Still pending only when the task died before its header arrived
+        // (connection refused, early cancel, ...).
+        responseContinuation?.resume(throwing: error ?? SyncClientError.invalidResponse)
+        if let error {
+            chunkContinuation?.finish(throwing: error)
+        } else {
+            chunkContinuation?.finish()
         }
     }
 }

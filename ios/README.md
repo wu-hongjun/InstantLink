@@ -10,12 +10,14 @@ native macOS app under `macos/`). It shares no code with the App yet.
 Implements phase **B1** of `docs/plans/050-iphone-auto-sync.md` (onboarding +
 sync pull + save to Photos), plus the foreground auto-poll loop from B2.
 
-## Status: unbuilt scaffold
+## Status: builds clean, unit-tested in the simulator
 
-This code was written on a machine **without Xcode or an iOS SDK**. It has
-never been compiled, run, or tested. Treat it as a structured starting point:
-expect a round of compiler fixes on first build, and see the reconciliation
-notes below before testing against a real Bridge.
+The project builds warning-free with Xcode 26 and the pure logic (pairing URL
+parsing, sync API models, SyncClient HTTP behavior, pairing persistence) is
+covered by unit tests that run in the iOS simulator. The end-to-end flows
+(hotspot join, Bonjour discovery against real hardware, Photos save,
+camera-in-the-loop) still need the on-device checklist below with a physical
+Bridge and iPhone.
 
 ## Generating the project
 
@@ -31,6 +33,26 @@ open InstantLink-iOS.xcodeproj
 
 Requirements: Xcode 16+ (iOS 17 SDK), Swift 5.9+. No third-party package
 dependencies.
+
+## Running the tests
+
+The `InstantLink-iOSTests` unit-test target (defined in `project.yml`, hosted
+in the app) covers PairingInfo parsing, the sync API model decoding against
+the Bridge's exact JSON, SyncClient behavior (bearer auth, 401 mapping, Range
+resume, restart-on-200, sha256 verification, ack) via an in-process
+`URLProtocol` stub, and PairingStore persistence/pruning. No Bridge or network
+is needed; everything runs in the simulator:
+
+```sh
+cd ios
+xcodegen generate
+xcodebuild test -project InstantLink-iOS.xcodeproj -scheme InstantLink-iOS \
+  -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO
+```
+
+(Substitute any simulator from `xcrun simctl list devices available`.) The
+keychain-backed save/load round trip skips itself with a note if the test host
+cannot use the keychain.
 
 ## Signing and entitlements
 
@@ -52,7 +74,7 @@ requires the **Hotspot Configuration** capability
 
 ```
 ios/
-  project.yml                        XcodeGen spec (app target InstantLink-iOS, iOS 17.0)
+  project.yml                        XcodeGen spec (app target InstantLink-iOS + unit tests, iOS 17.0)
   InstantLink/
     InstantLinkApp.swift             @main; RootView switches onboarding <-> sync on pairing
     Models/
@@ -67,12 +89,17 @@ ios/
     ViewModels/
       SyncViewModel.swift            @MainActor orchestration: onboarding pipeline + poll loop
     Views/
-      OnboardingView.swift           QR scan (AVFoundation) + join/discover/paired progress
+      OnboardingView.swift           QR scan (AVFoundation) or manual pairing-link entry
       SyncView.swift                 status card, live transfer list, synced count, Sync now
       SettingsView.swift             pairing details, re-pair, forget bridge
     Resources/
       Info.plist                     usage strings, NSBonjourServices, ATS local networking
       InstantLink.entitlements       Hotspot Configuration
+  InstantLinkTests/
+    PairingInfoTests.swift           pairing URL parsing/validation
+    SyncModelsTests.swift            Bridge JSON decoding fixtures
+    SyncClientTests.swift            HTTP behavior via a URLProtocol stub
+    PairingStoreTests.swift          synced-id persistence + pruning
 ```
 
 ## How it works
@@ -82,7 +109,10 @@ ios/
    If `ssid` is present, join that WPA2 network via `NEHotspotConfiguration`
    (persistent). Then browse Bonjour for `_instantlink._tcp` matching the
    device id, falling back to the QR's `host`, and verify the token against
-   `GET /v1/status`.
+   `GET /v1/status`. When the camera can't scan (broken camera, or the iOS
+   simulator, which has none), "Enter pairing link instead" on the scanner
+   screen accepts the same `instantlink://pair` URL pasted as text and drives
+   the identical parse → join → discover → verify pipeline.
 2. **Sync** — while foregrounded, every ~4 s: `GET /v1/queue`, skip ids already
    synced (persisted), then per item `GET /v1/photos/{id}` (resuming partial
    downloads with a `Range` header, verifying `sha256`), save to Photos
@@ -140,17 +170,20 @@ Do these on a real iPhone — none of this is simulator-testable end to end:
 10. Forget bridge: token, Wi-Fi configuration, and synced-id history are gone;
     re-pairing from Settings works.
 
-## Known gaps / open items (needs Xcode)
+## Known gaps / open items
 
-- First compile pass: expect small fixes (typed throws around
-  `withCheckedThrowingContinuation`, `NWTXTRecord.dictionary` availability,
-  Sendable warnings under strict concurrency).
-- `SyncClient.downloadPhoto` iterates the response byte-by-byte
-  (`URLSession.AsyncBytes`); profile on-device — 100 MP files may want a
-  delegate-based download for throughput.
+- ~~First compile pass: expect small fixes.~~ Resolved — builds warning-free
+  with Xcode 26.
+- ~~`SyncClient.downloadPhoto` iterates the response byte-by-byte
+  (`URLSession.AsyncBytes`).~~ Resolved — the body now streams to disk in
+  whole `Data` chunks via a per-task `URLSessionDataDelegate` with watermark
+  backpressure; Range resume and streamed sha256 verification are unchanged
+  (covered by `SyncClientTests`). Still worth a throughput sanity check on
+  device with a 100 MP file.
 - Per-photo thumbnails in the transfer list after save (plan B2 polish).
-- Skipped-because-already-synced items are never pruned from UserDefaults;
-  fine for v1 volumes, revisit if the set grows unbounded.
+- ~~Skipped-because-already-synced items are never pruned from
+  UserDefaults.~~ Resolved — `PairingStore` caps the persisted history at the
+  most recent 5000 ids, pruned oldest-first in insertion order.
 - No app icon or launch styling yet.
 - Update the terminology table in the repo `CLAUDE.md` ("the iOS app") when
   this lands, per the plan.

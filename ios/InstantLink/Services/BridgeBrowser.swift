@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 
 /// A Bridge advertisement resolved to a concrete host/port for URLSession.
 struct ResolvedBridge: Equatable {
@@ -77,13 +78,17 @@ final class BridgeBrowser {
         let deviceID = Self.txtDeviceID(of: result)
         return await withCheckedContinuation { continuation in
             let connection = NWConnection(to: result.endpoint, using: .tcp)
-            var didResume = false
             // stateUpdateHandler calls are serialised on the connection queue,
-            // so the didResume guard is race-free.
+            // but the compiler can't prove that — a lock keeps the
+            // single-resume guard valid under Swift 6 strict concurrency.
+            let didResume = OSAllocatedUnfairLock(initialState: false)
             connection.stateUpdateHandler = { state in
                 let complete: (ResolvedBridge?) -> Void = { value in
-                    guard !didResume else { return }
-                    didResume = true
+                    let alreadyResumed = didResume.withLock { resumed in
+                        defer { resumed = true }
+                        return resumed
+                    }
+                    guard !alreadyResumed else { return }
                     connection.cancel()
                     continuation.resume(returning: value)
                 }

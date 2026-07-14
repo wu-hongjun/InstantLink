@@ -1892,6 +1892,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pass-1-outcome-2026-07-14-tdd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pass 1 outcome (2026-07-14, TDD)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2004,6 +2015,33 @@ sub-states instead of giving sync its own readiness rendering.</p>
 <li><strong>Pass 2:</strong> P2.3 service-state honesty, P2.6 footer, P2.7 discoverability,
   then the doc updates above reflecting as-built behavior.</li>
 <li><strong>Pass 3:</strong> P3 items alongside the iPhone field test.</li>
+</ul>
+<h2 id="pass-1-outcome-2026-07-14-tdd">Pass 1 outcome (2026-07-14, TDD)<a class="headerlink" href="#pass-1-outcome-2026-07-14-tdd" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>P1.1 — did not reproduce; finding was stale.</strong> <code>_ready</code> has had a
+  <code>can_accept_images</code> → <code>_validation</code> fallback since <code>c43f5bd5</code> (2026-05-29):
+  iphone-only with no FTP path already renders "Setup needed" + causes, and
+  the controller comment the audit called false is accurate. The surface was
+  previously untested, so the two renders (negative + positive) are now
+  regression-pinned in <code>test_ui_render.py</code>.</li>
+<li><strong>P1.2 — confirmed, fixed.</strong> <code>SyncService</code> gained a keyword-only
+  <code>outbox_changed_callback</code>; <code>_handle_ack</code> notifies the new depth
+  (exception-guarded), wired in <code>app.py</code> to the existing
+  <code>notify_sync_outbox_changed</code> task pattern. The chip now decrements as the
+  iPhone drains the queue.</li>
+<li><strong>P2.4 — confirmed by failing test, fixed.</strong> <code>image_received</code> suppresses the
+  mode switch while <code>SYNC_PAIRING</code> is up (logs
+  <code>ui.image_received_suppressed</code>); queue/outbox chips still update. Settles
+  the audit's open question. <strong>New Pass-2 item:</strong> in both-mode with a usable
+  printer, the auto-print preview (<code>_show_print_preview</code>/<code>printing_started</code>)
+  can still switch away from the QR — fold into Pass 2.</li>
+<li><strong>P2.5 — confirmed, fixed.</strong> Non-ACTIVE idle-stage events arriving during
+  <code>SYNC_PAIRING</code> are converted into power activity instead of applied
+  (<code>ui.sync_pairing_idle_exempted</code>), so the QR never dims/blanks mid-scan;
+  <code>SHUTDOWN_REQUESTED</code> (critical battery) is deliberately not exempted.
+  Normal idle behavior resumes on exit (key press = real activity).</li>
+<li>Verification: full bridge suite 1013 passed; ruff + <code>mypy --strict</code> clean on
+  touched files.</li>
 </ul>
 
 

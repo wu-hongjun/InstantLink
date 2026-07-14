@@ -1921,6 +1921,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#status-2026-07-14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status (2026-07-14)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#future-wi-fi-aware-upgrade-path-not-scheduled" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2117,6 +2128,22 @@ test: camera auto-FTP → outbox → iPhone save, and camera C1 → print unchan
   the a7C II auto-upload setting plays well with the 100-deep queue and
   print-destination gating (sync-only should bypass the print queue entirely —
   it must not wait on <code>AWAITING_CONFIRM</code>).</li>
+</ul>
+<h2 id="status-2026-07-14">Status (2026-07-14)<a class="headerlink" href="#status-2026-07-14" title="Permanent link">&para;</a></h2>
+<p>Implemented and shipped the same day the plan landed:</p>
+<ul>
+<li><strong>A1 + A2 done</strong> (<code>7b4f35d</code>): sync module, <code>[sync]</code> config + manager payload, fan-out,
+  destination-aware FTP gate, Send to setting, QR pairing screen, readiness surfaces, zh-Hans.
+  Full bridge suite 1030+ tests green.</li>
+<li><strong>B1 done</strong> (<code>95a2651</code>, fix <code>3500352</code>): iOS scaffold builds clean for the iOS 26.5 simulator
+  (one strict-concurrency fix in <code>BridgeBrowser</code>). On-device signing/testing pending.</li>
+<li><strong>Deployed + hardware-verified</strong> on <code>riverps-rpi-zero-2w</code> as 0.1.17 with <code>destination = "both"</code>:
+  printer-less FTP upload → outbox → authenticated queue/download (sha256-identical) → Range 206 →
+  ack → drained. Details in <code>bridge/docs/current-context.md</code>.</li>
+<li><strong>Post-deploy fix</strong> (<code>8f24c4c</code>): Bonjour registration raced the hotspot at boot and went stale on
+  runtime Wi-Fi mode switches; SyncService now refreshes advertised addresses every 30 s.</li>
+<li>Open: iPhone-on-hotspot field test (README checklist), live-printer both-mode test, UX audit of
+  the new LCD surfaces (queued), fold zeroconf/segno/ifaddr wheels into offline provisioning.</li>
 </ul>
 <h2 id="future-wi-fi-aware-upgrade-path-not-scheduled">Future: Wi-Fi Aware upgrade path (not scheduled)<a class="headerlink" href="#future-wi-fi-aware-upgrade-path-not-scheduled" title="Permanent link">&para;</a></h2>
 <p>Tracked, not planned. Trigger to re-evaluate: <strong>ESP-IDF v6.1 ships encrypted

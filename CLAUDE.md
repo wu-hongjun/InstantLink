@@ -13,7 +13,8 @@ Use these terms consistently in code, docs, commit messages, and user-facing cop
 |---|---|
 | **InstantLink** (project) | The umbrella — GitHub repo and the family of components below. Used as the top-level brand in README and marketing. |
 | **App** | The native macOS app (`InstantLink.app`). When UI/docs say "the App", it always means the macOS app — never the Bridge, CLI, or core library. |
-| **Bridge** | The custom hardware appliance we built (Raspberry Pi Zero 2 W). Accepts FTP uploads from anything (cameras, scripts, etc.) and relays them to a paired Instax printer over BLE. Has its own UI, power management, and provisioning. |
+| **Bridge** | The custom hardware appliance we built (Raspberry Pi Zero 2 W). Accepts FTP uploads from anything (cameras, scripts, etc.) and relays them to a paired Instax printer over BLE and/or syncs them to the iOS app. Has its own UI, power management, and provisioning. |
+| **iOS app** | The SwiftUI iPhone app (`ios/`, scaffold — plan 050). Pairs with the Bridge via QR + hotspot join and pulls camera photos into the Photos library. Never call this "the App" (that's the macOS app). |
 | **Core / CLI / FFI** | Rust crates: `instantlink-core`, `instantlink-cli`, `instantlink-ffi`. Always lowercase in code identifiers. |
 | **Printer** | An Instax Link device (Mini / Square / Wide). Never call this "the Bridge". |
 

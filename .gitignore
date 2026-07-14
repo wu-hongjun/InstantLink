@@ -41,3 +41,6 @@ references/*/
 # OMC / Claude Code tooling state (machine-local, never committed)
 .claude/
 .omc/
+
+# XcodeGen output (regenerate with: cd ios && xcodegen generate)
+ios/InstantLink-iOS.xcodeproj/

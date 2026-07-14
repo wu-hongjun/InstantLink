@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>InstantLink</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>InstantLink uses the camera to scan the pairing QR code shown on the Bridge's screen.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>InstantLink finds your Bridge on the local network to sync camera photos to this iPhone.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_instantlink._tcp</string>
+	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>InstantLink saves photos synced from the Bridge into your photo library.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Sync transport is plain HTTP over the WPA2 hotspot in v1;
+		     TLS with a pinned certificate is a v1.5 item (plan 050). -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>

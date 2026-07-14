@@ -1,0 +1,41 @@
+# XcodeGen spec for the InstantLink iOS app (plan 050, phase B1).
+#
+# Generate the Xcode project from this directory:
+#   brew install xcodegen
+#   xcodegen generate
+#   open InstantLink-iOS.xcodeproj
+#
+# See README.md for signing prerequisites (Hotspot Configuration entitlement).
+name: InstantLink-iOS
+options:
+  bundleIdPrefix: com.instantlink
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    # Set your Apple Developer team id here, or pick a team in
+    # Xcode ▸ target ▸ Signing & Capabilities after generating.
+    DEVELOPMENT_TEAM: ""
+targets:
+  InstantLink-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: InstantLink
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/InstantLink.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.instantlink.ios
+        PRODUCT_NAME: InstantLink
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: InstantLink/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: InstantLink/Resources/InstantLink.entitlements
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SUPPORTS_MACCATALYST: NO

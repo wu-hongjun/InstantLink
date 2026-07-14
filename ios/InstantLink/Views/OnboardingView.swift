@@ -1,0 +1,257 @@
+import AVFoundation
+import SwiftUI
+
+/// Pairing flow: scan the QR on the Bridge LCD, then watch the join /
+/// discover / paired steps complete. Also presented as a sheet from Settings
+/// for re-pairing.
+struct OnboardingView: View {
+    @EnvironmentObject private var model: SyncViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            switch model.onboardingStep {
+            case .scanning:
+                scannerSection
+            case .joiningNetwork, .discovering:
+                PairingProgressView(step: model.onboardingStep)
+            case .paired(let deviceID):
+                pairedSection(deviceID: deviceID)
+            case .failed(let message):
+                failedSection(message)
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+
+    // MARK: - Scanner
+
+    private var scannerSection: some View {
+        ZStack {
+            QRScannerView { code in
+                Task { await model.completePairing(scannedCode: code) }
+            }
+            .ignoresSafeArea()
+
+            VStack {
+                VStack(spacing: 8) {
+                    Text("Pair with your Bridge")
+                        .font(.title2.bold())
+                    Text("On the Bridge, open Settings ▸ Network ▸ iPhone pairing, then scan the QR code on its screen.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .padding()
+
+                Spacer()
+
+                RoundedRectangle(cornerRadius: 24)
+                    .strokeBorder(.white.opacity(0.8), lineWidth: 3)
+                    .frame(width: 240, height: 240)
+
+                Spacer()
+                Spacer()
+            }
+        }
+    }
+
+    // MARK: - Result states
+
+    private func pairedSection(deviceID: String) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 64))
+                .foregroundStyle(.green)
+            Text("Paired with \(deviceID)")
+                .font(.title2.bold())
+            Text("Photos received by the Bridge will sync into your library while this app is open.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Spacer()
+            Button {
+                model.finishOnboarding()
+                dismiss() // No-op when not presented as a sheet.
+            } label: {
+                Text("Start syncing")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding()
+        }
+    }
+
+    private func failedSection(_ message: String) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 64))
+                .foregroundStyle(.orange)
+            Text("Pairing failed")
+                .font(.title2.bold())
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Spacer()
+            Button {
+                model.restartOnboarding()
+            } label: {
+                Text("Scan again")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding()
+        }
+    }
+}
+
+// MARK: - Progress steps
+
+private struct PairingProgressView: View {
+    let step: SyncViewModel.OnboardingStep
+
+    private enum RowState {
+        case pending, active, done
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Spacer()
+            row("Join Bridge network", state: joinState)
+            row("Find Bridge on the network", state: discoverState)
+            row("Paired", state: .pending)
+            Spacer()
+            Text("The Bridge network has no internet — that's expected while syncing.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 24)
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var joinState: RowState {
+        step == .joiningNetwork ? .active : .done
+    }
+
+    private var discoverState: RowState {
+        step == .discovering ? .active : .pending
+    }
+
+    private func row(_ title: String, state: RowState) -> some View {
+        HStack(spacing: 12) {
+            switch state {
+            case .pending:
+                Image(systemName: "circle")
+                    .foregroundStyle(.tertiary)
+            case .active:
+                ProgressView()
+            case .done:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+            Text(title)
+                .font(.body)
+                .foregroundStyle(state == .pending ? .secondary : .primary)
+        }
+    }
+}
+
+// MARK: - QR scanner
+
+/// AVFoundation QR scanner wrapped for SwiftUI. Reports each distinct payload
+/// once; the session keeps running so an invalid code can be re-scanned after
+/// the failure screen sends the user back.
+struct QRScannerView: UIViewControllerRepresentable {
+    let onCode: (String) -> Void
+
+    func makeUIViewController(context: Context) -> ScannerViewController {
+        let controller = ScannerViewController()
+        controller.onCode = onCode
+        return controller
+    }
+
+    func updateUIViewController(_ controller: ScannerViewController, context: Context) {
+        controller.onCode = onCode
+    }
+
+    final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
+        var onCode: ((String) -> Void)?
+
+        private let session = AVCaptureSession()
+        private let sessionQueue = DispatchQueue(label: "QRScannerView.session")
+        private var previewLayer: AVCaptureVideoPreviewLayer?
+        private var lastPayload: String?
+
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            view.backgroundColor = .black
+            configureSession()
+        }
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            lastPayload = nil
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                guard granted, let self else { return }
+                self.sessionQueue.async {
+                    if !self.session.isRunning { self.session.startRunning() }
+                }
+            }
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            sessionQueue.async { [session] in
+                if session.isRunning { session.stopRunning() }
+            }
+        }
+
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            previewLayer?.frame = view.bounds
+        }
+
+        private func configureSession() {
+            guard let device = AVCaptureDevice.default(for: .video),
+                  let input = try? AVCaptureDeviceInput(device: device),
+                  session.canAddInput(input)
+            else { return }
+            session.addInput(input)
+
+            let output = AVCaptureMetadataOutput()
+            guard session.canAddOutput(output) else { return }
+            session.addOutput(output)
+            output.setMetadataObjectsDelegate(self, queue: .main)
+            output.metadataObjectTypes = [.qr]
+
+            let layer = AVCaptureVideoPreviewLayer(session: session)
+            layer.videoGravity = .resizeAspectFill
+            view.layer.addSublayer(layer)
+            previewLayer = layer
+        }
+
+        func metadataOutput(
+            _ output: AVCaptureMetadataOutput,
+            didOutput metadataObjects: [AVMetadataObject],
+            from connection: AVCaptureConnection
+        ) {
+            guard let code = metadataObjects
+                .compactMap({ $0 as? AVMetadataMachineReadableCodeObject })
+                .first(where: { $0.type == .qr }),
+                let payload = code.stringValue,
+                payload != lastPayload
+            else { return }
+            lastPayload = payload
+            onCode?(payload)
+        }
+    }
+}

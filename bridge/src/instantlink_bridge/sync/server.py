@@ -73,6 +73,29 @@ def load_or_create_sync_token(path: Path) -> str:
     return token
 
 
+def rotate_sync_token(path: Path) -> str:
+    """Replace the sync bearer token with a freshly generated one.
+
+    Rotation is the revocation story for a photographed pairing QR (plan
+    051 P3.11): every previously paired iPhone loses access until it scans
+    a QR carrying the new token. Deleting the file first funnels creation
+    through :func:`load_or_create_sync_token` so format and permissions
+    (0640) stay identical to first-boot provisioning.
+
+    Note the running :class:`SyncService` enforces its in-memory copy —
+    app.py restarts it after rotation so :meth:`SyncService.start` re-reads
+    this file.
+    """
+
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+    token = load_or_create_sync_token(path)
+    LOGGER.info("sync.token_rotated path=%s", path)
+    return token
+
+
 class SyncService:
     """Bearer-token HTTP API over the outbox, advertised via Bonjour."""
 
@@ -99,6 +122,7 @@ class SyncService:
         self._enable_zeroconf = enable_zeroconf
         self._address_provider = address_provider or _advertise_addresses
         self._advertised_addresses: list[str] = []
+        self._token_path = token_path
         self._token = load_or_create_sync_token(token_path)
         self._last_client_seen: float | None = None
         self._runner: web.AppRunner | None = None
@@ -119,10 +143,18 @@ class SyncService:
         return self._last_client_seen
 
     async def start(self) -> None:
-        """Bind the HTTP listener and register the Bonjour service."""
+        """Bind the HTTP listener and register the Bonjour service.
+
+        The bearer token is re-read from disk on every (re)start: the
+        constructor's copy would otherwise pin the process to a token that
+        :func:`rotate_sync_token` has already revoked — app.py's rotation
+        flow is exactly a stop/start pair relying on this re-read (plan
+        051 P3.11). File IO runs off the event loop.
+        """
 
         if self._runner is not None:
             return
+        self._token = await asyncio.to_thread(load_or_create_sync_token, self._token_path)
         runner = web.AppRunner(self.build_app())
         await runner.setup()
         site = web.TCPSite(runner, host="0.0.0.0", port=self._port)

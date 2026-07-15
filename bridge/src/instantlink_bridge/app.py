@@ -225,6 +225,16 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         ui_event_tasks.add(task)
         task.add_done_callback(ui_event_tasks.discard)
 
+    def on_sync_token_rotated() -> None:
+        # The controller rotated the token file (plan 051 P3.11); restart
+        # the service so SyncService.start re-reads it. Scheduled as a task
+        # like the other UI-originated sync callbacks.
+        task = loop.create_task(
+            restart_sync_service_for_token_rotation(sync_service, enabled=sync_desired, ui=ui)
+        )
+        ui_event_tasks.add(task)
+        task.add_done_callback(ui_event_tasks.discard)
+
     def _build_sync_service_sync() -> tuple[SyncOutbox, SyncService]:
         # Import in the worker thread for the same startup-latency reason as
         # _setup_ftp_service_sync: aiohttp/zeroconf are heavy imports on a
@@ -268,6 +278,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         power_activity_callback=record_power_activity,
         ftp_config_applied_callback=apply_runtime_ftp_config,
         sync_config_applied_callback=apply_runtime_sync_config,
+        sync_token_rotated_callback=on_sync_token_rotated,
         ready_event=ready_event,
     )
     power_monitor = build_power_monitor(config, ui=ui)
@@ -616,6 +627,28 @@ async def apply_sync_destination_change(
         await start_sync_service_guarded(service, reason="config_applied", ui=ui)
     else:
         await stop_sync_service_guarded(service, reason="config_applied", ui=ui)
+
+
+async def restart_sync_service_for_token_rotation(
+    service: AsyncStartStopService | None,
+    *,
+    enabled: bool,
+    ui: object | None = None,
+) -> None:
+    """Restart the sync service so it re-reads a rotated bearer token.
+
+    Plan 051 P3.11. The stop leg deliberately does not notify the UI: the
+    controller already put the surface in the mild "starting" window when
+    it rotated the file, so only the start outcome matters — the state
+    flow reads "starting" → "listening" (or "unavailable" on a failed
+    rebind). With sync disabled there is nothing to restart; the rotated
+    file is picked up whenever the destination re-enables sync.
+    """
+
+    LOGGER.info("sync.token_rotation_restart enabled=%s", enabled)
+    await stop_sync_service_guarded(service, reason="token_rotated", ui=None)
+    if enabled:
+        await start_sync_service_guarded(service, reason="token_rotated", ui=ui)
 
 
 async def start_sync_service_guarded(

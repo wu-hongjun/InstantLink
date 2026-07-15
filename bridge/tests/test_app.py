@@ -883,3 +883,54 @@ async def test_sync_service_state_hook_is_optional() -> None:
     await app.stop_sync_service_guarded(FakeSyncService(), reason="shutdown", ui=None)
 
     assert ui.events == []
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P3.11: sync-token rotation restarts the service so it re-reads
+# the rotated bearer token. The stop leg is silent (the controller already
+# put the surface in "starting"); only the start outcome is reported, so
+# the UI flow reads "starting" → "listening" (or "unavailable" on failure).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_token_rotation_restart_restarts_service_and_reports_listening() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+    service = FakeSyncService()
+
+    await app.restart_sync_service_for_token_rotation(service, enabled=True, ui=ui)
+
+    assert service.events == ["stop", "start"]
+    assert ui.events == ["sync_listening:True"]
+
+
+@pytest.mark.asyncio
+async def test_token_rotation_restart_reports_failure_as_not_listening() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+    service = FakeSyncService(fail_start=True)
+
+    await app.restart_sync_service_for_token_rotation(service, enabled=True, ui=ui)
+
+    assert service.events == ["stop"]
+    assert ui.events == ["sync_listening:False"]
+
+
+@pytest.mark.asyncio
+async def test_token_rotation_restart_skips_start_when_sync_disabled() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+    service = FakeSyncService()
+
+    await app.restart_sync_service_for_token_rotation(service, enabled=False, ui=ui)
+
+    assert service.events == ["stop"]
+    assert ui.events == []
+
+
+@pytest.mark.asyncio
+async def test_token_rotation_restart_survives_missing_service() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+
+    await app.restart_sync_service_for_token_rotation(None, enabled=True, ui=ui)
+
+    # Nothing can listen this boot: report it rather than staying silent.
+    assert ui.events == ["sync_listening:False"]

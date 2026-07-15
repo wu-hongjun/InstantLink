@@ -193,9 +193,10 @@ _GENERIC_SEARCHING_MESSAGES = frozenset({"Searching Printer"})
 # shows a stale frame while a coroutine is busy. The `snapshot == last_rendered` short-circuit in
 # `_render` keeps this cheap and prevents render-spam.
 RENDER_TICK_S = 0.35
-# How long after the last authenticated iPhone sync request the "connected"
-# chip stays on the READY card (plan 050). Aged back to False by the render
-# tick, mirroring the printer_status_fresh TTL pattern.
+# How long after the last authenticated iPhone sync request the "active"
+# chip stays on the READY card (plan 050; renamed from "connected" in plan
+# 051 P3.9). Aged back to False by the render tick, mirroring the
+# printer_status_fresh TTL pattern.
 SYNC_CLIENT_RECENT_TTL_S = 20.0
 USB_STATUS_POLL_S = 1.0
 # Readiness freshness gate: "Ready to print" must be backed by a printer status that succeeded
@@ -224,6 +225,9 @@ WifiModeSetter = Callable[[WifiMode], Awaitable[str]]
 PowerActivityCallback = Callable[[], Awaitable[None]]
 FtpConfigAppliedCallback = Callable[[FtpConfig], None]
 SyncConfigAppliedCallback = Callable[[SyncConfig], None]
+# Fired after the sync bearer token file has been rotated (plan 051 P3.11);
+# app.py responds by restarting the sync service so it re-reads the file.
+SyncTokenRotatedCallback = Callable[[], None]
 PreviewTool = Literal["zoom", "crop", "rotate"]
 PREVIEW_TOOLS: tuple[PreviewTool, ...] = ("zoom", "crop", "rotate")
 STATUS_VISIBLE_MODES = {
@@ -355,6 +359,7 @@ class BridgeUi:
         power_activity_callback: PowerActivityCallback | None = None,
         ftp_config_applied_callback: FtpConfigAppliedCallback | None = None,
         sync_config_applied_callback: SyncConfigAppliedCallback | None = None,
+        sync_token_rotated_callback: SyncTokenRotatedCallback | None = None,
         system_info: SystemInfo | None = None,
         ready_event: asyncio.Event | None = None,
         status_sink: StatusSink | None = None,
@@ -389,6 +394,7 @@ class BridgeUi:
         self._power_activity_callback = power_activity_callback
         self._ftp_config_applied_callback = ftp_config_applied_callback
         self._sync_config_applied_callback = sync_config_applied_callback
+        self._sync_token_rotated_callback = sync_token_rotated_callback
         self._system_info = system_info
         # Live About-page stats: dedicated sampler (stateful — needs two reads
         # to compute CPU%) plus a small (3s) cache so repeat renders within
@@ -427,7 +433,7 @@ class BridgeUi:
         self._last_printer_status_ok_at: float = float("-inf")
         self._image_queue_depth = 0
         # iPhone sync surfaces (plan 050): outbox depth mirrors the sync
-        # spool; the seen-at clock backs the TTL-aged "connected" chip.
+        # spool; the seen-at clock backs the TTL-aged "active" chip.
         self._sync_outbox_depth = 0
         self._sync_client_seen_at: float = float("-inf")
         # Actual sync-service listener state (plan 051 P2.3), reported by
@@ -1182,7 +1188,7 @@ class BridgeUi:
         """Record an authenticated iPhone sync request (plan 050).
 
         Counts as power/idle activity (a transfer must not let the idle
-        stages dim the radio mid-sync) and turns on the "connected" chip;
+        stages dim the radio mid-sync) and turns on the "active" chip;
         the render tick ages it back off after ``SYNC_CLIENT_RECENT_TTL_S``.
         """
 
@@ -1641,6 +1647,9 @@ class BridgeUi:
         if action_key == "reset_credentials":
             await self._execute_reset_credentials()
             return
+        if action_key == "reset_sync_token":
+            await self._execute_reset_sync_token()
+            return
         if action_key == "reset_ble_link":
             await self._execute_reset_ble_link()
             return
@@ -1745,6 +1754,9 @@ class BridgeUi:
             return
         if key is SettingKey.RESET_CREDENTIALS:
             await self._confirm_or_reset_credentials()
+            return
+        if key is SettingKey.RESET_SYNC_TOKEN:
+            await self._confirm_or_reset_sync_token()
             return
         if key is SettingKey.ADJUST_SAVE_CUSTOM:
             await self._confirm_or_save_preset()
@@ -2619,6 +2631,59 @@ class BridgeUi:
 
         await self._reset_credentials()
 
+    async def _confirm_or_reset_sync_token(self) -> None:
+        """Open the Reset-sync-token confirmation dialog (plan 051 P3.11).
+
+        Mirrors the Reset-credentials pattern (plan 040): destructive
+        two-press confirm with honest blast-radius copy — rotating the
+        token unpairs every iPhone until it scans the new QR.
+        """
+
+        self._show_confirmation_dialog(
+            title="Reset sync token?",
+            message=(
+                "A new pairing token will be generated. All paired iPhones must scan the new QR."
+            ),
+            confirm_label="Reset",
+            destructive=True,
+            action_key="reset_sync_token",
+        )
+
+    async def _execute_reset_sync_token(self) -> None:
+        """Rotate the sync bearer token after the dialog confirms.
+
+        The file rotation happens here (off the event loop); the running
+        SyncService still enforces its in-memory copy, so the app-side
+        callback restarts it — ``SyncService.start`` re-reads the file.
+        While that restart is in flight the surface returns to the mild
+        "starting" window (P2.3 state flow) instead of claiming a listener
+        that still honours the revoked token.
+        """
+
+        from instantlink_bridge.sync.server import rotate_sync_token
+
+        token_path = self._config.sync.token_path
+        try:
+            await asyncio.to_thread(rotate_sync_token, token_path)
+        except Exception:
+            LOGGER.exception("ui.sync_token_rotation_failed path=%s", token_path)
+            self._show_settings("Token reset failed")
+            return
+        LOGGER.info("ui.sync_token_rotated path=%s", token_path)
+        if self._config.sync.sync_enabled:
+            self._sync_service_state = "starting"
+            self._snapshot = replace(self._snapshot, sync_service_state="starting")
+        self._notify_sync_token_rotated()
+        self._show_settings("Sync token reset")
+
+    def _notify_sync_token_rotated(self) -> None:
+        if self._sync_token_rotated_callback is None:
+            return
+        try:
+            self._sync_token_rotated_callback()
+        except Exception:
+            LOGGER.exception("ui.sync_token_rotated_callback_failed")
+
     def _atomic_write_credential_file(self, path: Path, contents: str) -> bool:
         """Write ``contents`` to ``path`` via temp-file + rename.
 
@@ -3077,6 +3142,10 @@ class BridgeUi:
         if key is SettingKey.SYNC_PAIRING:
             # Action row: value stays empty like Pair / Reconnect / Forget.
             return SettingsRow("iPhone pairing", "")
+        if key is SettingKey.RESET_SYNC_TOKEN:
+            # Destructive action row (plan 051 P3.11); empty value like
+            # Reset credentials — the two-press confirm carries the story.
+            return SettingsRow("Reset sync token", "")
         if key is SettingKey.NETWORK_DIAGNOSTICS_HEADER:
             # Info-only section divider — no value, no action.
             return SettingsRow("Diagnostics", "", is_header=True)
@@ -4351,7 +4420,7 @@ class BridgeUi:
             fresh = self._printer_status_is_fresh()
             if fresh != self._snapshot.printer_status_fresh:
                 self._snapshot = replace(self._snapshot, printer_status_fresh=fresh)
-            # Age out the iPhone "connected" chip the same way: once no authed
+            # Age out the iPhone "active" chip the same way: once no authed
             # sync request landed within the TTL the chip must leave the card
             # even though no explicit "client gone" event exists (plan 050).
             client_recent = self._sync_client_is_recent()

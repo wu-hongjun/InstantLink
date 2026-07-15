@@ -588,7 +588,15 @@ _ZH_HANS: dict[str, str] = {
     "Sync to iPhone": "同步到 iPhone",
     "Printer off · photos sync only": "打印机已关闭 · 仅同步照片",
     "No film · photos sync only": "无相纸 · 仅同步照片",
-    "pending": "张待传",
+    # READY-card chip: the pending count is a full template (plan 051 P3.10)
+    # so each language owns its spacing — idiomatic zh-Hans writes the count
+    # flush against the measure word ("3张待传"), EN keeps "3 pending".
+    "{n} pending": "{n}张待传",
+    # Chip recency marker (plan 051 P3.9): "active" (20 s TTL on the last
+    # authed app request), not "connected" — the HTTP pickup API has no
+    # persistent link to overstate. The lowercase "connected" below stays
+    # for the Bluetooth diagnostics row value.
+    "active": "活跃",
     "connected": "已连接",
     # --- iPhone sync pass 2 (plan 051) ------------------------------------
     # Sync-service honesty causes/notes/toasts, the sync-ready footer chips,
@@ -608,6 +616,18 @@ _ZH_HANS: dict[str, str] = {
     "Show a QR code to pair your iPhone · Send to: Print page": (
         "显示二维码以配对 iPhone · 发送到：打印页"
     ),
+    # --- iPhone sync pass 3 (plan 051 P3.11): token rotation ---------------
+    # "Reset sync token" mirrors the Reset-credentials vocabulary (还原);
+    # "令牌" is the standard zh term for a bearer token. Honest destructive
+    # copy: rotating unpairs every iPhone until it scans the new QR.
+    "Reset sync token": "还原同步令牌",
+    "Reset sync token?": "还原同步令牌？",
+    "A new pairing token will be generated. All paired iPhones must scan the new QR.": (
+        "将生成新的配对令牌，所有已配对的 iPhone 需重新扫码。"
+    ),
+    "Sync token reset": "同步令牌已还原",
+    "Token reset failed": "令牌还原失败",
+    "New pairing token; unpairs all iPhones": "生成新的配对令牌；所有 iPhone 需重新配对",
 }
 
 _TRANSLATIONS: dict[Language, dict[str, str]] = {

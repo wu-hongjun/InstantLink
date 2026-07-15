@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import stat
 from pathlib import Path
 
@@ -441,3 +442,63 @@ async def test_refresh_zeroconf_noop_when_addresses_unchanged(
     assert len(instances[0].registered) == 1
     assert instances[0].updated == []
     await service.stop()
+
+
+# --- token rotation (plan 051 P3.11) -----------------------------------------
+
+
+def test_rotate_sync_token_replaces_file_with_fresh_token(tmp_path: Path) -> None:
+    from instantlink_bridge.sync.server import rotate_sync_token
+
+    path = tmp_path / "sync.token"
+    old = load_or_create_sync_token(path)
+
+    new = rotate_sync_token(path)
+
+    assert new != old
+    assert re.fullmatch(r"[0-9a-f]{32}", new)
+    assert path.read_text(encoding="utf-8").strip() == new
+    assert (path.stat().st_mode & 0o777) == 0o640
+
+
+def test_rotate_sync_token_works_when_file_missing(tmp_path: Path) -> None:
+    from instantlink_bridge.sync.server import rotate_sync_token
+
+    path = tmp_path / "sync.token"
+
+    new = rotate_sync_token(path)
+
+    assert re.fullmatch(r"[0-9a-f]{32}", new)
+    assert path.read_text(encoding="utf-8").strip() == new
+
+
+@pytest.mark.asyncio
+async def test_start_reloads_rotated_token_from_disk(tmp_path: Path) -> None:
+    """SyncService caches the token in __init__; a restart must re-read the
+    file so app.py's rotation restart actually swaps the enforced token."""
+
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+    token_path = tmp_path / "sync.token"
+    token_path.write_text("aa" * 16 + "\n", encoding="utf-8")
+    service = SyncService(
+        outbox,
+        port=0,  # ephemeral port keeps the test hermetic
+        token_path=token_path,
+        device_id="IB-TEST",
+        enable_zeroconf=False,
+    )
+    assert service.token == "aa" * 16
+
+    token_path.write_text("bb" * 16 + "\n", encoding="utf-8")
+    await service.start()
+    try:
+        assert service.token == "bb" * 16
+    finally:
+        await service.stop()
+
+    token_path.write_text("cc" * 16 + "\n", encoding="utf-8")
+    await service.start()
+    try:
+        assert service.token == "cc" * 16
+    finally:
+        await service.stop()

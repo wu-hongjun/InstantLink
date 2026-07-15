@@ -190,6 +190,13 @@ state in v1.
   arriving images defer (no IMAGE_RECEIVED, no preview/print/NO_FILM mode switches) until it
   exits. Until the first authenticated iPhone request since boot, the READY card shows a
   one-time `Pair iPhone: …` nudge (P2.7).
+- Sync-token rotation (plan 051 P3.11): the pairing QR embeds a long-lived bearer token, so a
+  photographed screen is persistent access. Settings ▸ Network ▸ `Reset sync token` is the
+  revocation path — destructive two-press confirm, token file regenerated (0640), then app.py
+  restarts the sync service (`SyncService.start` re-reads the token file; the in-memory copy is
+  otherwise pinned from `__init__`). The LCD reflects the restart via the sync-service state
+  flow (`starting` → `listening`). The READY-card iPhone chip says `active` (20 s TTL on the
+  last authed request), never `connected` — the pull API holds no persistent link (P3.9).
 - Storage is ephemeral: incoming and processed images are cached only as needed for queueing, retry, and short-term diagnostics.
 - Camera inputs may be JPEG/HIF/ARW and may be as large as 100 MP. Decode paths must downsample before creating the Instax JPEG: JPEG uses `Image.draft`, HIF uses `heif-thumbnailer -s 1600`, and RAW uses embedded previews before any half-size rawpy fallback.
 - v1 is single-printer by default. Multi-printer pairing belongs in v1.5.

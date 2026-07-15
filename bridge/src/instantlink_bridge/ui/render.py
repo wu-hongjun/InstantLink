@@ -1032,11 +1032,13 @@ _DESTRUCTIVE_ACTION_LABELS: frozenset[str] = frozenset(
         "Forget",
         "Re-pair",
         "Reset credentials",
+        "Reset sync token",
         "Reset BLE link",
         # zh-Hans variants (matches i18n.py table).
         "忘记此设备",
         "重新配对",
         "还原凭据",
+        "还原同步令牌",
         "BLE 连接已还原",
     }
 )
@@ -1307,17 +1309,21 @@ def _ready(
         row_groups.append([(t("Queue", lang), f"{depth} {t('photos', lang)}")])
 
     # iPhone sync row (plan 050): pending outbox count while photos wait for
-    # the app, plus a "connected" marker while an authed client is active.
+    # the app, plus an "active" marker while an authed client was seen within
+    # the TTL (plan 051 P3.9 — the pull API has no persistent link, so
+    # "connected" would overstate; "active" states recent traffic honestly).
+    # The count is a per-language template (P3.10) so zh-Hans renders the
+    # numeral flush against the measure word ("3张待传", no space).
     # "iPhone" stays Latin per the i18n brand doctrine.
     if sync_enabled(snapshot):
         outbox_depth = snapshot.sync_outbox_depth
         if outbox_depth > 0:
-            sync_value = f"{outbox_depth} {t('pending', lang)}"
+            sync_value = t("{n} pending", lang).format(n=outbox_depth)
             if snapshot.sync_client_recent:
-                sync_value = f"{sync_value} · {t('connected', lang)}"
+                sync_value = f"{sync_value} · {t('active', lang)}"
             row_groups.append([("iPhone", sync_value)])
         elif snapshot.sync_client_recent:
-            row_groups.append([("iPhone", t("connected", lang))])
+            row_groups.append([("iPhone", t("active", lang))])
 
     if not row_groups:
         hints = _mode_hints(snapshot)
@@ -1341,12 +1347,26 @@ def _ready(
         label_y = ry + label_dy
 
         if len(group) == 1:
-            # Single full-width row — Type / Printer / Queue.
+            # Single full-width row — Type / Printer / Queue / iPhone.
             label, value = group[0]
             prefix = f"{label}: "
             lw = _text_width(draw, prefix, font_small)
             _text(draw, label_x_full, label_y, prefix, font_small, theme.label_secondary)
-            _text(draw, label_x_full + lw, label_y, value, font_small, theme.label_primary)
+            # Ellipsise into the remaining card width (16 px right inset,
+            # matching the hairline inset) so a wide value at font size
+            # LARGE — e.g. the "3 pending · active" sync chip (plan 051
+            # P3.10) — truncates gracefully instead of overhanging the
+            # card border. Values that fit render byte-identically.
+            value_x = label_x_full + lw
+            value_max = card_x + card_w - 16 - value_x
+            _text(
+                draw,
+                value_x,
+                label_y,
+                _fit_text_to_width(draw, value, font_small, value_max),
+                font_small,
+                theme.label_primary,
+            )
         else:
             # Split row: each cell takes a half-card with a vertical
             # hairline divider between them. Labels keep the trailing

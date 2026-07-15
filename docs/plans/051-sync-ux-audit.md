@@ -153,13 +153,18 @@ Port-bind failure honesty was verified on-device 2026-07-14 (squatted :8721 →
 ## Pass 3 goal (next session — start here, iPhone in hand)
 
 Software polish (no hardware needed):
-- [ ] **P3.10** zh-Hans chip drops the space before the measure word
-  ("3张待传", not "3 张待传"); pressure-test chip width at largest font.
-- [ ] **P3.9** "connected" chip → copy that matches the 20 s TTL ("active"),
-  or an app-heartbeat-driven definition; update ux-flows.md.
-- [ ] **P3.11** token-rotation story: "Reset sync token" action (Settings ▸
-  Network, confirmation dialog, invalidates paired iPhones) + re-key the
-  cached QR raster on host change while the screen is open.
+- [x] **P3.10** done — templated `{n} pending` / `{n}张待传` (no space);
+  the largest-font width pressure-test caught a real EN overflow, fixed via
+  `_fit_text_to_width` ellipsis on the card row.
+- [x] **P3.9** done — chip copy is now "active" / "活跃" (the 20 s TTL tracks
+  the app's ~4 s foreground polling; "connected" implied a persistent link
+  the pull API doesn't hold). TTL mechanism unchanged.
+- [x] **P3.11** done — `Reset sync token` action row (Settings ▸ Network,
+  destructive plan-040 dialog); `rotate_sync_token` + `SyncService.start()`
+  now re-reads the token from disk (it was pinned in `__init__` — a bare
+  restart would NOT have rotated it); app.py restarts silently so the UI
+  flows `starting → listening`. QR staleness pinned by tests (payload rebuilt
+  on every entry; raster cache keyed by payload).
 
 Hardware-gated (the reason this pass waits):
 - [ ] **iPhone field test** — `ios/README.md` checklist with a signed build on

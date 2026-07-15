@@ -1954,3 +1954,142 @@ def test_sync_pair_nudge_absent_after_client_ever_seen(
     drawn = _drawn_texts(monkeypatch, snapshot)
 
     assert "Pair iPhone: press KEY3" not in drawn
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 pass 3 (P3.10 + P3.9): the READY-card iPhone chip. The pending
+# count is a per-language template so zh-Hans controls measure-word spacing
+# ("3张待传", no space), EN keeps "3 pending" unchanged; the recency marker
+# says "active" (20 s TTL on the last authed request), not "connected".
+# ---------------------------------------------------------------------------
+
+
+def _sync_chip_snapshot(**overrides: object) -> UiSnapshot:
+    defaults: dict[str, object] = dict(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        sync_destination="both",
+        sync_service_state="listening",
+        sync_outbox_depth=3,
+        sync_client_recent=True,
+        sync_client_ever_seen=True,
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=8,
+    )
+    defaults.update(overrides)
+    return UiSnapshot(**defaults)  # type: ignore[arg-type]
+
+
+def test_ready_sync_chip_zh_hans_drops_space_before_measure_word(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P3.10: idiomatic zh-Hans writes the count flush against the measure
+    word — "3张待传", never "3 张待传"."""
+
+    drawn = _drawn_texts(monkeypatch, _sync_chip_snapshot(language="zh-Hans"))
+
+    assert "3张待传 · 活跃" in drawn
+    assert not any("3 张待传" in text for text in drawn)
+
+
+def test_ready_sync_chip_en_pending_copy_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The template refactor must not change the EN rendering."""
+
+    drawn = _drawn_texts(monkeypatch, _sync_chip_snapshot(language="en"))
+
+    assert "3 pending · active" in drawn
+    assert not any("connected" in text for text in drawn)
+
+
+def test_ready_sync_chip_depth_zero_says_active(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P3.9: with an empty outbox the chip reduces to the recency marker,
+    which must say "active" (the 20 s TTL tracks the app talking to us,
+    not a persistent link)."""
+
+    drawn_en = _drawn_texts(monkeypatch, _sync_chip_snapshot(sync_outbox_depth=0))
+    assert "active" in drawn_en
+    assert "connected" not in drawn_en
+
+    drawn_zh = _drawn_texts(
+        monkeypatch, _sync_chip_snapshot(sync_outbox_depth=0, language="zh-Hans")
+    )
+    assert "活跃" in drawn_zh
+
+
+@pytest.mark.parametrize("language", ["en", "zh-Hans"])
+def test_ready_sync_chip_widest_value_fits_card_at_largest_font(
+    monkeypatch: pytest.MonkeyPatch,
+    language: str,
+) -> None:
+    """P3.10 width pressure-test: the widest chip value ("3张待传 · 活跃" /
+    "3 pending · active") must stay inside the READY card at font size
+    LARGE — rendered flush or gracefully ellipsised, never overhanging the
+    card border."""
+
+    from PIL import ImageDraw
+
+    from instantlink_bridge.ui import render as render_module
+    from instantlink_bridge.ui.render import Font
+
+    snapshot = _sync_chip_snapshot(language=language, font_size="large")
+
+    drawn: list[tuple[int, str, Font]] = []
+    real_text = render_module._text
+
+    def record_text(
+        draw: ImageDraw.ImageDraw,
+        x: int,
+        y: int,
+        text: str,
+        font: Font,
+        fill: str,
+    ) -> None:
+        drawn.append((x, text, font))
+        real_text(draw, x, y, text, font, fill)
+
+    monkeypatch.setattr(render_module, "_text", record_text)
+    image = render_snapshot(snapshot)
+    draw = ImageDraw.Draw(image)
+
+    markers = ("待传", "pending", "活跃", "active")
+    chip_values = [entry for entry in drawn if any(m in entry[1] for m in markers)]
+    assert chip_values, "the iPhone sync chip value was not drawn"
+    # READY card spans x=12..228 with a 16 px content inset on each side.
+    card_right_inset = 12 + 216 - 16
+    for x, text, font in chip_values:
+        assert x + _text_width(draw, text, font) <= card_right_inset, (
+            f"chip value {text!r} overflows the READY card at font size large"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P3.11: the pairing-QR raster cache is keyed by payload, so a
+# rotated token can never be served a stale QR image.
+# ---------------------------------------------------------------------------
+
+
+def test_sync_pairing_qr_raster_rekeys_on_payload_change() -> None:
+    from instantlink_bridge.ui.render import _QR_TARGET_PX, _sync_pairing_qr_image
+
+    payload_old = "instantlink://pair?v=1&device=IB-1&host=192.168.8.1&port=8721&token=" + (
+        "aa" * 16
+    )
+    payload_new = "instantlink://pair?v=1&device=IB-1&host=192.168.8.1&port=8721&token=" + (
+        "bb" * 16
+    )
+
+    first = _sync_pairing_qr_image(payload_old, _QR_TARGET_PX)
+    rotated = _sync_pairing_qr_image(payload_new, _QR_TARGET_PX)
+    assert rotated.tobytes() != first.tobytes()
+
+    # Round-trip back to the old payload: the maxsize=1 cache re-encodes and
+    # yields the same raster as the original — the cache key is the payload.
+    again = _sync_pairing_qr_image(payload_old, _QR_TARGET_PX)
+    assert again.tobytes() == first.tobytes()

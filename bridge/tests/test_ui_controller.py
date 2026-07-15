@@ -1473,7 +1473,7 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
     await ui._handle_action(UiAction.SELECT)
     # NETWORK page row order: 0 Camera link  1 SSID  2 Wi-Fi PIN  3 FTP host
     #   4 FTP user  5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP
-    #   9 Reset credentials.
+    #   9 Reset sync token  10 Reset credentials.
     # Camera link is at row 0; RIGHT opens the picker immediately.
     await ui._handle_action(UiAction.RIGHT)
 
@@ -1806,7 +1806,8 @@ async def test_settings_network_page_shows_connection_info() -> None:
 
     # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
     #   5 FTP PIN  6 iPhone pairing  7 Diagnostics  8 Bluetooth
-    #   9 Same Wi-Fi adv  10 USB IP  11 Reset credentials. The Diagnostics
+    #   9 Same Wi-Fi adv  10 USB IP  11 Reset sync token  12 Reset
+    # credentials. The Diagnostics
     # divider separates the camera-setup credentials block from the
     # read-only status rows (plan 034 item 9); iPhone pairing (plan 050)
     # sits with the setup block just above it.
@@ -1842,7 +1843,7 @@ async def test_settings_network_page_reports_admin_usb_without_camera_wording() 
     # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
     #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
     #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
-    #   10 USB IP  11 Reset credentials.
+    #   10 USB IP  11 Reset sync token  12 Reset credentials.
     rows = display.snapshots[-1].settings_rows
     assert rows[10].label == "USB IP"
     assert rows[10].value == "no IP"
@@ -2426,7 +2427,7 @@ async def test_bluetooth_settings_do_not_claim_connected_while_searching() -> No
     # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
     #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
     #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
-    #   10 USB IP  11 Reset credentials.
+    #   10 USB IP  11 Reset sync token  12 Reset credentials.
     assert display.snapshots[-1].settings_rows[8].label == "Bluetooth"
     assert display.snapshots[-1].settings_rows[8].value == "searching"
 
@@ -6190,3 +6191,209 @@ async def test_sync_client_seen_sets_ever_seen_bit() -> None:
     ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
     assert ui._snapshot.sync_client_recent is False
     assert ui._snapshot.sync_client_ever_seen is True
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P3.11 — sync-token rotation. "Reset sync token" is an action row
+# on Settings ▸ Network mirroring the Reset-credentials pattern: destructive
+# confirmation dialog, file rotation, then an app-side service restart so
+# the running SyncService re-reads the token ("starting" → "listening").
+# ---------------------------------------------------------------------------
+
+
+def _sync_token_ui(
+    tmp_path: Path,
+    *,
+    destination: SyncDestination = SyncDestination.IPHONE,
+    rotations: list[int] | None = None,
+) -> tuple[BridgeUi, _FakeDisplay, Path]:
+    token_path = tmp_path / "sync.token"
+    display = _FakeDisplay()
+
+    def on_rotated() -> None:
+        if rotations is not None:
+            rotations.append(1)
+
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=destination, token_path=token_path)),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+        sync_token_rotated_callback=on_rotated,
+    )
+    return ui, display, token_path
+
+
+async def _walk_to_network_row(ui: BridgeUi, key: SettingKey) -> None:
+    """Enter Settings ▸ Network and move the selection onto ``key``."""
+
+    ui._show_settings(page=SettingsPage.NETWORK)
+    selectable = [k for k in SETTINGS_BY_PAGE[SettingsPage.NETWORK] if k not in SECTION_HEADER_KEYS]
+    for _ in range(selectable.index(key)):
+        await ui._handle_action(UiAction.DOWN)
+
+
+@pytest.mark.asyncio
+async def test_reset_sync_token_row_requires_confirmation(tmp_path: Path) -> None:
+    ui, display, token_path = _sync_token_ui(tmp_path)
+    token_path.write_text("aa" * 16 + "\n", encoding="utf-8")
+
+    await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
+    rows = display.snapshots[-1].settings_rows
+    assert rows[display.snapshots[-1].selected_index].label == "Reset sync token"
+
+    # First SELECT opens the destructive confirmation dialog, not execute.
+    await ui._handle_action(UiAction.SELECT)
+
+    assert display.snapshots[-1].mode is UiMode.CONFIRMATION_DIALOG
+    assert display.snapshots[-1].confirmation_title == "Reset sync token?"
+    assert display.snapshots[-1].confirmation_confirm_label == "Reset"
+    assert display.snapshots[-1].confirmation_destructive is True
+    assert display.snapshots[-1].confirmation_focus == "cancel"
+    assert ui._snapshot.confirmation_action_key == "reset_sync_token"
+    assert token_path.read_text(encoding="utf-8") == "aa" * 16 + "\n"
+
+
+@pytest.mark.asyncio
+async def test_reset_sync_token_confirm_rotates_file_and_requests_restart(
+    tmp_path: Path,
+) -> None:
+    rotations: list[int] = []
+    ui, display, token_path = _sync_token_ui(tmp_path, rotations=rotations)
+    token_path.write_text("aa" * 16 + "\n", encoding="utf-8")
+    # Reach the steady listening state first so the test proves the flow
+    # returns to the mild "starting" window during the restart.
+    await ui.sync_service_state_changed(True)
+
+    await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.RIGHT)  # focus Confirm
+    await ui._handle_action(UiAction.SELECT)
+
+    new_token = token_path.read_text(encoding="utf-8").strip()
+    assert new_token != "aa" * 16
+    import re
+
+    assert re.fullmatch(r"[0-9a-f]{32}", new_token)
+    assert (token_path.stat().st_mode & 0o777) == 0o640
+    assert rotations == [1]
+    # app.py restarts the service to pick the new token up; the surface
+    # reflects that via the P2.3 state flow ("starting" until the start
+    # concludes) instead of a stale "listening" claim with the old token.
+    assert ui._snapshot.sync_service_state == "starting"
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert display.snapshots[-1].settings_message == "Sync token reset"
+
+
+@pytest.mark.asyncio
+async def test_reset_sync_token_cancel_keeps_token(tmp_path: Path) -> None:
+    rotations: list[int] = []
+    ui, _display, token_path = _sync_token_ui(tmp_path, rotations=rotations)
+    token_path.write_text("aa" * 16 + "\n", encoding="utf-8")
+
+    await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.mode is UiMode.CONFIRMATION_DIALOG
+
+    await ui._handle_action(UiAction.BACK)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert ui._snapshot.confirmation_action_key is None
+    assert token_path.read_text(encoding="utf-8") == "aa" * 16 + "\n"
+    assert rotations == []
+
+
+@pytest.mark.asyncio
+async def test_reset_sync_token_failure_shows_toast_and_skips_restart(
+    tmp_path: Path,
+) -> None:
+    rotations: list[int] = []
+    ui, display, token_path = _sync_token_ui(tmp_path, rotations=rotations)
+    # A directory at the token path makes the rotation raise.
+    token_path.mkdir()
+    await ui.sync_service_state_changed(True)
+
+    await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.RIGHT)
+    await ui._handle_action(UiAction.SELECT)
+
+    assert display.snapshots[-1].settings_message == "Token reset failed"
+    assert rotations == []
+    # No restart requested — the state must not drop to "starting".
+    assert ui._snapshot.sync_service_state == "listening"
+
+
+@pytest.mark.asyncio
+async def test_reset_sync_token_while_sync_disabled_rotates_without_starting_claim(
+    tmp_path: Path,
+) -> None:
+    """Destination "print": the row still rotates the file (a photographed
+    QR should be revocable regardless of the current destination) and the
+    app callback still fires, but no restart window is claimed."""
+
+    rotations: list[int] = []
+    ui, display, token_path = _sync_token_ui(
+        tmp_path, destination=SyncDestination.PRINT, rotations=rotations
+    )
+    token_path.write_text("aa" * 16 + "\n", encoding="utf-8")
+    # Destination "print" means the service was stopped — the last app.py
+    # report is not-listening ("unavailable").
+    await ui.sync_service_state_changed(False)
+
+    await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.RIGHT)
+    await ui._handle_action(UiAction.SELECT)
+
+    assert token_path.read_text(encoding="utf-8").strip() != "aa" * 16
+    assert rotations == [1]
+    # No restart window is claimed: nothing is about to start while sync
+    # stays disabled, so the state is left untouched.
+    assert ui._snapshot.sync_service_state == "unavailable"
+    assert display.snapshots[-1].settings_message == "Sync token reset"
+
+
+@pytest.mark.asyncio
+async def test_reset_sync_token_key3_help(tmp_path: Path) -> None:
+    ui, display, _token_path = _sync_token_ui(tmp_path)
+
+    await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
+    await ui._handle_action(UiAction.HELP)
+
+    assert display.snapshots[-1].settings_message == ("New pairing token; unpairs all iPhones")
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_qr_payload_reflects_rotated_token(tmp_path: Path) -> None:
+    """QR staleness pin: `_show_sync_pairing` always loads the token file
+    fresh, so a QR opened after rotation carries the new token and can
+    never resurrect the revoked one."""
+
+    ui, _display, token_path = _sync_token_ui(tmp_path)
+    old_token = "ab" * 16
+    token_path.write_text(old_token + "\n", encoding="utf-8")
+    await ui.sync_service_state_changed(True)
+    ui._wifi_host = "192.168.5.149"
+
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    payload = ui._snapshot.sync_qr_payload
+    assert payload is not None and f"&token={old_token}" in payload
+    await ui._handle_action(UiAction.BACK)
+
+    await ui._execute_reset_sync_token()
+    new_token = token_path.read_text(encoding="utf-8").strip()
+    assert new_token != old_token
+    # The restart is in flight ("starting"); once app.py reports the
+    # listener back, the QR action is allowed again and must embed the
+    # rotated token.
+    await ui.sync_service_state_changed(True)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    payload = ui._snapshot.sync_qr_payload
+    assert payload is not None
+    assert f"&token={new_token}" in payload
+    assert old_token not in payload

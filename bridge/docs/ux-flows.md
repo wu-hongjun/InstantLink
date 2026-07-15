@@ -44,7 +44,11 @@ receive path is visible and the selected printer has a current status read with 
   `No film · photos sync only` — instead of demoting to the PRINTER_SEARCHING / NO FILM full
   screens. Uploads keep spooling to the sync outbox.
 - The READY card gains an `iPhone` row while sync is enabled: `N pending` (outbox depth) and/or
-  `connected` (an authenticated app request within the last 20 s).
+  `active` (an authenticated app request within the last 20 s — the iOS app polls every ~4 s
+  while foregrounded, so this tracks "the app is open and talking to us"; the word is `active`,
+  not `connected`, because the pull API holds no persistent link — plan 051 P3.9). The pending
+  count is a per-language template (P3.10): zh-Hans renders the numeral flush against the
+  measure word (`3张待传`), EN keeps `3 pending`.
 
 **Sync-service honesty (plan 051 P2.3).** The sync surfaces reflect the *actual* HTTP listener
 state reported by the app layer, not just config:
@@ -63,7 +67,7 @@ state reported by the app layer, not just config:
 *ever* connected since boot, the READY card shows a one-time discoverability line:
 `Pair iPhone: press KEY3` in iphone-only mode, `Pair iPhone: Settings > Network` in both-mode.
 It disappears permanently (for the boot) after the first authenticated app request and never
-returns when the 20 s `connected` chip ages out.
+returns when the 20 s `active` chip ages out.
 
 Power status is global UI chrome, not a separate workflow. The current X306 battery case exposes
 battery state through hardware LEDs only, so the LCD shows `Battery case` / `LED only` in System
@@ -146,6 +150,17 @@ in iphone-only mode (plan 051 P2.6).
   shows IMAGE_RECEIVED nor starts the preview/print flow: the queue consumer holds the image
   until the QR exits, then runs the normal flow (countdown restarted, NO FILM shown then if
   applicable). Nothing prints behind the QR; queue/outbox chips keep updating.
+- **Token rotation (plan 051 P3.11).** The QR embeds the long-lived bearer token (plus the
+  hotspot PSK), so a photograph of the screen is persistent access. The revocation story is
+  Settings ▸ Network ▸ `Reset sync token`: a destructive two-press confirm
+  (`Reset sync token?` / "A new pairing token will be generated. All paired iPhones must scan
+  the new QR.") regenerates the token file (0640, same format as first boot) and restarts the
+  sync service so it re-reads the file — every previously paired iPhone gets 401s until it
+  scans a fresh QR. The surface reflects the restart through the sync-service state flow
+  (`starting` → `listening`; a failed rebind degrades to `Sync failed · restart bridge`), and
+  the dead-port guard keeps the QR action blocked during the window. A QR opened afterwards
+  always carries the new token: the payload is rebuilt from the file on every entry, and the
+  raster cache is keyed by the payload, so a stale QR cannot be served.
 
 ### Boot Printer Setup Prompt
 
@@ -248,6 +263,10 @@ Setting details:
 - `iPhone pairing` (Network page, plan 050): action row that opens the SYNC_PAIRING QR screen
   (see template above). Its KEY3 help cross-references the destination row:
   `Show a QR code to pair your iPhone · Send to: Print page`.
+- `Reset sync token` (Network page, plan 051 P3.11): destructive action row next to
+  `Reset credentials` (escalation order — token first, full credentials last). Two-press
+  confirm, then rotates the pairing token and restarts the sync service; see "Token rotation"
+  in the SYNC_PAIRING section. KEY3 help: `New pairing token; unpairs all iPhones`.
 - `Forget printer`: removes the selected printer record and matching BlueZ cache entries.
 - `Device ID`: shows a stable `IB-XXXXXXXX` identifier derived from the target machine ID for
   support and multi-device setup.

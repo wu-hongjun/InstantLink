@@ -96,6 +96,9 @@ class SettingKey(StrEnum):
     # and the QR pairing action on the Network page.
     SYNC_DESTINATION = "sync_destination"
     SYNC_PAIRING = "sync_pairing"
+    # Sync-token rotation (plan 051 P3.11): destructive action row on the
+    # Network page, next to RESET_CREDENTIALS.
+    RESET_SYNC_TOKEN = "reset_sync_token"
 
 
 class SettingsPage(StrEnum):
@@ -212,7 +215,9 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     # NETWORK_DIAGNOSTICS_HEADER row acts as a visual separator before the
     # read-only diagnostic rows (Bluetooth, Same Wi-Fi adv, USB IP) so they
     # read as status info, not credentials to enter (plan 034 item 9).
-    # RESET_CREDENTIALS is last — destructive escape hatch.
+    # The two destructive escape hatches close the page in escalation
+    # order: RESET_SYNC_TOKEN (unpairs iPhones) then RESET_CREDENTIALS
+    # (regenerates Wi-Fi + FTP credentials) last.
     SettingsPage.NETWORK: (
         SettingKey.FTP_RECEIVE_MODE,
         SettingKey.NETWORK_HOTSPOT_SSID_INFO,
@@ -227,6 +232,9 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.NETWORK_BLUETOOTH_INFO,
         SettingKey.NETWORK_WIFI_INFO,
         SettingKey.NETWORK_ETHERNET_INFO,
+        # Sync-token rotation (plan 051 P3.11): revokes a photographed
+        # pairing QR without touching the Wi-Fi/FTP credentials.
+        SettingKey.RESET_SYNC_TOKEN,
         SettingKey.RESET_CREDENTIALS,
     ),
     # SYSTEM holds operational rows AND personalisation knobs after the
@@ -349,6 +357,8 @@ ACTION_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.ADJUST_SAVE_CUSTOM,
         # iPhone pairing QR screen (plan 050).
         SettingKey.SYNC_PAIRING,
+        # Sync-token rotation (plan 051 P3.11).
+        SettingKey.RESET_SYNC_TOKEN,
     }
 )
 
@@ -603,6 +613,9 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     # cross-references the other (plan 051 P2.7).
     SettingKey.SYNC_DESTINATION: "Where received photos go · Pair iPhone: Network page",
     SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Send to: Print page",
+    # Token rotation (plan 051 P3.11) — honest about the blast radius: every
+    # paired iPhone loses access until it scans the new QR.
+    SettingKey.RESET_SYNC_TOKEN: "New pairing token; unpairs all iPhones",
     # Separator rows — info-only, no interactive action.
     SettingKey.NETWORK_DIAGNOSTICS_HEADER: "Read-only connection diagnostics",
     SettingKey.PRINT_ADVANCED_HEADER: "Power-user polling intervals",

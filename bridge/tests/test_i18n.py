@@ -160,7 +160,9 @@ def test_hue_help_zh_hans_has_no_trailing_full_stop() -> None:
         ("Sync to iPhone", "同步到 iPhone"),
         ("Printer off · photos sync only", "打印机已关闭 · 仅同步照片"),
         ("No film · photos sync only", "无相纸 · 仅同步照片"),
-        ("pending", "张待传"),
+        # The lowercase "connected" key stays for the Bluetooth diagnostics
+        # row value; the READY-card sync chip now uses "active" (plan 051
+        # P3.9) and the templated "{n} pending" (P3.10) below.
         ("connected", "已连接"),
     ],
 )
@@ -206,3 +208,49 @@ def test_zh_hans_iphone_brand_stays_latin() -> None:
 )
 def test_zh_hans_sync_pass2_strings(source: str, expected: str) -> None:
     assert t(source, Language.ZH_HANS) == expected
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 pass 3: sync-chip copy (P3.9 / P3.10) and the token-rotation
+# flow (P3.11). Every new user-visible string carries a zh-Hans entry; the
+# pending count is a full template so each language owns its own spacing
+# (zh-Hans drops the space before the measure word).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("{n} pending", "{n}张待传"),
+        ("active", "活跃"),
+        ("Reset sync token", "还原同步令牌"),
+        ("Reset sync token?", "还原同步令牌？"),  # noqa: RUF001
+        (
+            "A new pairing token will be generated. All paired iPhones must scan the new QR.",
+            "将生成新的配对令牌，所有已配对的 iPhone 需重新扫码。",  # noqa: RUF001
+        ),
+        ("Sync token reset", "同步令牌已还原"),
+        ("Token reset failed", "令牌还原失败"),
+        (
+            "New pairing token; unpairs all iPhones",
+            "生成新的配对令牌；所有 iPhone 需重新配对",  # noqa: RUF001
+        ),
+    ],
+)
+def test_zh_hans_sync_pass3_strings(source: str, expected: str) -> None:
+    assert t(source, Language.ZH_HANS) == expected
+
+
+def test_pending_measure_word_template_renders_without_space() -> None:
+    """P3.10: the zh-Hans pending template must yield "3张待传" (count flush
+    against the measure word) while EN keeps the space."""
+
+    assert t("{n} pending", Language.ZH_HANS).format(n=3) == "3张待传"
+    assert t("{n} pending", Language.EN).format(n=3) == "3 pending"
+
+
+def test_lowercase_pending_key_removed_from_table() -> None:
+    """The old concatenation key ("pending" → "张待传") is retired; only the
+    templated form remains so no caller can rebuild the mis-spaced chip."""
+
+    assert "pending" not in translatable_strings(Language.ZH_HANS)

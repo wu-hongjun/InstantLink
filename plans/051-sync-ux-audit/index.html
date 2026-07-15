@@ -1914,6 +1914,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pass-3-goal-next-session-start-here-iphone-in-hand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pass 3 goal (next session — start here, iPhone in hand)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2081,9 +2092,29 @@ sub-states instead of giving sync its own readiness rendering.</p>
 <li>Verification: full suite 1052 passed; ruff/format clean; mypy --strict clean
   on touched sources.</li>
 </ul>
-<p>Remaining (Pass 3, with hardware): P3 items + on-device smoke of the new
-surfaces (largest-font render of nudge/unavailable lines, real port-bind
-failure), iPhone field test.</p>
+<p>Port-bind failure honesty was verified on-device 2026-07-14 (squatted :8721 →
+<code>sync.service_start_failed</code> + <code>state=unavailable</code>; freed → <code>state=listening</code>).</p>
+<h2 id="pass-3-goal-next-session-start-here-iphone-in-hand">Pass 3 goal (next session — start here, iPhone in hand)<a class="headerlink" href="#pass-3-goal-next-session-start-here-iphone-in-hand" title="Permanent link">&para;</a></h2>
+<p>Software polish (no hardware needed):
+- [ ] <strong>P3.10</strong> zh-Hans chip drops the space before the measure word
+  ("3张待传", not "3 张待传"); pressure-test chip width at largest font.
+- [ ] <strong>P3.9</strong> "connected" chip → copy that matches the 20 s TTL ("active"),
+  or an app-heartbeat-driven definition; update ux-flows.md.
+- [ ] <strong>P3.11</strong> token-rotation story: "Reset sync token" action (Settings ▸
+  Network, confirmation dialog, invalidates paired iPhones) + re-key the
+  cached QR raster on host change while the screen is open.</p>
+<p>Hardware-gated (the reason this pass waits):
+- [ ] <strong>iPhone field test</strong> — <code>ios/README.md</code> checklist with a signed build on
+  a physical iPhone; first item is hotspot tolerance (does iOS hold the
+  internet-less Bridge network through a multi-minute idle+sync?). Full loop:
+  LCD QR → scan → join → discover → pull/save/ack; confirm the READY nudge
+  clears, the chip decrements, and Photos saves land.
+- [ ] <strong>Live-printer both-mode run</strong> — pair a powered Instax, verify
+  spool-AND-print per upload, "photos sync only" degradation with the printer
+  off, and QR-deferral of the print preview. Also closes the long-standing
+  physical print validation on <code>riverps-rpi-zero-2w</code>.</p>
+<p>All five are mirrored in the session task list; device state as of today:
+Pi runs <code>b80d61f</code> with <code>destination = "both"</code>, sync listening, outbox empty.</p>
 
 
 

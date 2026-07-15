@@ -147,6 +147,30 @@ sub-states instead of giving sync its own readiness rendering.
 - Verification: full suite 1052 passed; ruff/format clean; mypy --strict clean
   on touched sources.
 
-Remaining (Pass 3, with hardware): P3 items + on-device smoke of the new
-surfaces (largest-font render of nudge/unavailable lines, real port-bind
-failure), iPhone field test.
+Port-bind failure honesty was verified on-device 2026-07-14 (squatted :8721 →
+`sync.service_start_failed` + `state=unavailable`; freed → `state=listening`).
+
+## Pass 3 goal (next session — start here, iPhone in hand)
+
+Software polish (no hardware needed):
+- [ ] **P3.10** zh-Hans chip drops the space before the measure word
+  ("3张待传", not "3 张待传"); pressure-test chip width at largest font.
+- [ ] **P3.9** "connected" chip → copy that matches the 20 s TTL ("active"),
+  or an app-heartbeat-driven definition; update ux-flows.md.
+- [ ] **P3.11** token-rotation story: "Reset sync token" action (Settings ▸
+  Network, confirmation dialog, invalidates paired iPhones) + re-key the
+  cached QR raster on host change while the screen is open.
+
+Hardware-gated (the reason this pass waits):
+- [ ] **iPhone field test** — `ios/README.md` checklist with a signed build on
+  a physical iPhone; first item is hotspot tolerance (does iOS hold the
+  internet-less Bridge network through a multi-minute idle+sync?). Full loop:
+  LCD QR → scan → join → discover → pull/save/ack; confirm the READY nudge
+  clears, the chip decrements, and Photos saves land.
+- [ ] **Live-printer both-mode run** — pair a powered Instax, verify
+  spool-AND-print per upload, "photos sync only" degradation with the printer
+  off, and QR-deferral of the print preview. Also closes the long-standing
+  physical print validation on `riverps-rpi-zero-2w`.
+
+All five are mirrored in the session task list; device state as of today:
+Pi runs `b80d61f` with `destination = "both"`, sync listening, outbox empty.

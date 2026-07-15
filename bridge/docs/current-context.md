@@ -1,7 +1,8 @@
 # InstantLink Bridge Current Context
 
-Last verified: 2026-07-14 on `riverps-rpi-zero-2w` (bridge 0.1.17 at commit `8f24c4c`; iPhone
-sync feature per plan 050, end-to-end verified over FTP + HTTP the same day).
+Last verified: 2026-07-15 on `riverps-rpi-zero-2w` (bridge 0.1.17 at commit `502a3bf`; iPhone
+sync feature per plan 050 + UX audit 051 + virtual LCD 054-A, exercised on-device with a real
+iPhone the same day).
 
 This file is the fast handoff for anyone opening the bridge code after the InstantLink port. The
 source of truth is the InstantLink repository under `bridge/`; the old standalone InstantBridge
@@ -43,7 +44,11 @@ for cameras and the bridge on an existing network.
 - FTP port: `21`
 - Native backend: `/opt/InstantLinkBridge/lib/libinstantlink_ffi.so`
 - Sync service (plan 050): HTTP `:8721`, Bonjour `_instantlink._tcp`, token at
-  `/etc/InstantLinkBridge/sync.token`, outbox at `/var/lib/InstantLinkBridge/sync-outbox/`
+  `/etc/InstantLinkBridge/sync.token`, outbox at `/var/lib/InstantLinkBridge/sync-outbox/`.
+  Full API in `docs/reference/sync-api.md`.
+- Virtual LCD (plan 054-A): `GET /v1/screen` (live 240×240 PNG) + `POST /v1/input` on the same
+  port, gated by `[sync].remote_ui` (default true). Handy for headless debugging — a screenshot
+  of the current LCD is one authed `curl` away.
 - `[sync] destination = "both"` is set on `riverps-rpi-zero-2w` (photos spool for iPhone AND
   print when a printer is ready; default for fresh installs remains `print`)
 
@@ -68,9 +73,31 @@ had no outbound internet, so the aarch64/cp313 wheels were downloaded on the dep
 into `/opt/InstantLinkBridge/.venv` before the source deploy. Fold them into the provisioning
 offline-deps bundle for fresh devices.
 
-Remaining hardware validation: pair an iPhone via Settings ▸ Network ▸ iPhone pairing (QR) with a
-signed build of the iOS app (`ios/`, simulator-green as of `3500352`), and re-test both-mode with a
-live printer. A UX audit of the new surfaces is queued as the next work item.
+### On-device iPhone session (2026-07-15)
+
+Ran the real iOS app (free-team signed) against the Bridge. Two bugs found and fixed by driving the
+actual hardware, both in `502a3bf`:
+
+- **`.HIF` never saved.** Sony writes HEIF stills as `.HIF`, an extension iOS maps to no image
+  type, so `PHPhotoLibrary` rejected every save and the app re-downloaded the 6.4 MB file each
+  poll. `PhotoSaver` now sets the UTI explicitly (`.HIF`→HEIF, `.ARW`→Sony RAW).
+- **Retry loop on complete staging.** Once a full file was staged (from the failed save), the
+  resume logic requested `bytes=<size>-` forever (a 416). `downloadPhoto` now verifies the staged
+  bytes against the item sha and goes straight to save when complete; corrupt/oversized partials
+  restart from zero.
+- **Outbox chip stale after restart.** The spool index reloads on boot but the LCD chip started at
+  a stale 0 until the next add/ack — startup now announces the reloaded depth
+  (`announce_initial_outbox_depth`). Verified live via `GET /v1/screen` showing `iPhone: 1 pending`.
+
+Diagnostics that worked well: `GET /v1/screen` for a live LCD screenshot, `tcpdump` on `wlan0`
+port 8721 for the request/`Range` pattern, and `devicectl … process launch --console` for the
+app's own logs. Free-team friction: iOS re-prompts to trust the developer profile on every
+reinstall (Settings ▸ General ▸ VPN & Device Management), and drops the internet-less hotspot when
+idle — both disappear with a paid membership.
+
+Remaining hardware validation: confirm `.HIF` now lands in Photos (the fixed build was installed
+but awaited a profile re-trust at session end); run the hotspot-tolerance soak; and re-test
+both-mode with a live printer.
 
 The old `/opt/InstantBridge` install, `/etc/InstantBridge` config, and `instantbridge.*` unit files
 are legacy. They were removed from `riverps-rpi-zero-2w` on 2026-05-25 with

@@ -174,11 +174,21 @@ int32_t instantlink_led_off(void);
 
 - `pattern`: `0 = solid`, `1 = blink`, `2 = breathe`
 
+### Keepalive
+
+```c
+int32_t instantlink_keepalive(void);
+int32_t instantlink_set_keepalive_interval(int32_t seconds);
+```
+
+- `instantlink_keepalive` sends one status/keepalive request to the connected printer (`0` on success)
+- `instantlink_set_keepalive_interval` configures the background keepalive: `0` disables it, positive values are seconds; a negative value returns `-5`
+
 ## Swift Usage
 
 The macOS app loads the dylib via `dlopen` and resolves the exported symbols in `InstantLinkFFI.swift` (located at `macos/InstantLink/InstantLinkFFI.swift`). This file demonstrates:
 
-- Bridging the 22 C FFI functions into Swift async/await methods
+- Bridging the C FFI functions into Swift async/await methods
 - Using `instantlink_connect_named_with_progress_ctx` with a boxed Swift closure to deliver connection-stage updates
 - Using `instantlink_print_with_progress_ctx` with a boxed Swift closure to deliver print-progress updates
 - Dispatching FFI calls onto a dedicated serial queue to prevent race conditions

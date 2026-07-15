@@ -93,9 +93,10 @@ The printer model is auto-detected after connecting.
   - Experimental in-app LED diagnostics in Settings
   - Auto-update via GitHub releases
   - Localized in 12 languages
-- C FFI (22 exported functions: see `docs/reference/ffi.md`) for building native UIs, including connection-stage callbacks
+- C FFI (24 exported functions: see `docs/reference/ffi.md`) for building native UIs, including connection-stage callbacks
 - Raspberry Pi bridge appliance for receiving camera FTP uploads over a local hotspot and printing through the InstantLink FFI backend
 - iPhone auto-sync from the Bridge: photos spool to a disk outbox and an iOS app pulls them over a token-authed local HTTP API with Bonjour discovery — print, sync, or both per photo destination setting
+- Virtual LCD on the Bridge: the same sync API serves the live 240x240 screen and accepts input actions, so the Bridge UI can be viewed and driven from the iOS app with no extra hardware (plan 054)
 
 ## Project Structure
 

@@ -106,6 +106,10 @@ src/instantlink_bridge/
   net/
     gadget.py       # usb0 admin/diagnostics verification
     wizard.py       # captive portal app
+  sync/             # iPhone sync (plan 050) + virtual LCD (plan 054-A)
+    outbox.py       # SyncOutbox: disk spool + budget eviction
+    server.py       # SyncService: bearer-token aiohttp API on :8721, Bonjour, /v1/screen + /v1/input
+    models.py       # sync payload/queue shapes
   watchdog.py       # sd_notify heartbeat
   config.py         # /etc/InstantLinkBridge/config.toml schema
 ```
@@ -141,7 +145,10 @@ state in v1.
   Wide rotates portrait sources before center-crop. Explicit `crop` never rotates.
 - KEY1 / joystick press opens Settings from normal status screens. Settings persists
   `/etc/InstantLinkBridge/config.toml` and covers printer pairing/forget, Wi-Fi mode, printer type,
-  fit, JPEG quality, auto-print mode/delay, and keepalive.
+  fit, JPEG quality, auto-print mode/delay, keepalive, and the photo destination
+  (`[sync].destination` — `Send to`: Print / iPhone / Both, plan 050). The remaining `[sync]`
+  fields (`port`, `outbox_dir`, `outbox_budget_mb`, `token_path`, `remote_ui`) are
+  provisioning-level and not editable from the LCD.
 - `workflow.allow_print_without_film` is a testing-only escape hatch exposed as `No-film test`.
   Default is `false`; when enabled, do not block preview/print transfer at `0/10` film.
 - KEY2 cancels during `AWAITING_CONFIRM`.
@@ -235,6 +242,13 @@ state in v1.
   low-battery shutdown unless a telemetry-capable backend such as PiSugar is explicitly configured.
 - X306 automatic idle poweroff defaults off. It may be enabled from Settings > System, but dim and
   screen-off are the normal idle behavior.
+- The virtual LCD (plan 054-A) is not a separate renderer: `GET /v1/screen` re-encodes the SAME
+  `ui.snapshot` frame the physical LCD draws, and `POST /v1/input` injects abstract `UiAction`s into
+  the same controller input queue as GPIO. So a phone drives the real state machine — there is no
+  second UI to keep in sync, but any input path (GPIO or remote) can change modes underneath you.
+  Both endpoints are gated by `[sync] remote_ui` (default `true`); with it off they 404. A phone
+  polling `/v1/screen` counts as sync client activity (wakes/keeps-awake the idle timer) and is
+  rate-limited to `SCREEN_MIN_RENDER_INTERVAL_S` so it can't spin the Pi CPU.
 
 ## BMAD Development Workflow
 

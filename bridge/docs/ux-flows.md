@@ -2,6 +2,12 @@
 
 Display: 240x240 LCD, event-driven render loop, 1-2 fps maximum unless an animation needs a short burst.
 
+Virtual LCD (plan 054-A): every screen below is also phone-renderable. The sync service serves the
+live 240x240 frame over `GET /v1/screen` and accepts the same abstract `UiAction`s (up/down/left/
+right/select/back/help/pair) over `POST /v1/input`, so the InstantLink iOS app can mirror and drive
+the physical LCD. It renders the identical `ui.snapshot` frame and injects into the same controller
+input queue as GPIO — there is no separate phone UI. Gated by `[sync] remote_ui` (default on).
+
 ## Screen Templates
 
 ### Splash

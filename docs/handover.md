@@ -191,7 +191,7 @@ Keywords worth sweeping any time you change a UX string, a config default, or a 
 - Bridge "what's deployed today": `bridge/docs/current-context.md`.
 - Plan archive (audits + implementations): `docs/plans/001–048`. The Photos-style editor
   rebuild is documented end-to-end in 047 (audit) + 048 (implementation).
-- FFI reference: `docs/reference/ffi.md` (canonical export list; 22 Rust exports, 20 wired by
+- FFI reference: `docs/reference/ffi.md` (canonical export list; 24 Rust exports, 20 wired by
   Swift).
 - BLE protocol notes: `docs/reference/protocol.md` and `bridge/docs/printer-protocol-notes.md`.
 

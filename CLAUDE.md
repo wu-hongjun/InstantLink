@@ -62,7 +62,7 @@ Rules:
   - `Features/` for Camera, Main, Editor, and Settings UI
   - `Support/` for shared preview and panel components
 - Compiled with `swiftc` directly (no Xcode project)
-- FFI loaded via `dlopen`/`dlsym` from `InstantLinkFFI.swift` (20 functions wired; see `docs/reference/ffi.md` for the canonical 22-export list — `instantlink_init` and the non-progress `instantlink_print` are not wrapped by the App)
+- FFI loaded via `dlopen`/`dlsym` from `InstantLinkFFI.swift` (20 functions wired; see `docs/reference/ffi.md` for the canonical 24-export list — `instantlink_init`, the non-progress `instantlink_print`, and the two `instantlink_keepalive` / `instantlink_set_keepalive_interval` exports are not wrapped by the App)
 - Features: image editor (crop/contain/stretch, rotation, overlays), camera capture with self-timer (2s/10s), film orientation toggle, film border preview (`FilmFrameView`), printer profile management, auto-updates
 - Localization: 12 languages in `macos/Resources/{lang}.lproj/Localizable.strings`
 - `L()` helper in `Localization.swift` wraps `NSLocalizedString`

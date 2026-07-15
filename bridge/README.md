@@ -5,6 +5,13 @@ printing. It receives selected JPEG/HIF/RAW-capable stills from any FTP-capable 
 prepares them for the detected printer format, and prints through the parent repository's
 `instantlink-ffi` backend with a small LCD/joystick interface.
 
+Since plan 050 the Bridge can also fan received photos out to an iPhone. The `[sync]`
+`destination` setting (`print` | `iphone` | `both`) controls delivery: images are hard-linked
+into a disk outbox and served to the InstantLink iOS app over a bearer-token HTTP API on
+`:8721`, advertised via Bonjour `_instantlink._tcp`. The same service exposes an optional
+virtual LCD (`GET /v1/screen` + `POST /v1/input`, gated by `[sync] remote_ui`, default on) so
+the 240x240 UI can be viewed and driven from the phone.
+
 This folder contains the Pi service code, tests, setup docs, system configuration, and deployment
 helpers for the current vertical slice.
 
@@ -36,9 +43,11 @@ helpers for the current vertical slice.
 - Last verified on hardware: 2026-05-25, runtime baseline
   `fa9d969c7d2c98161a74fd7d452d4a97d0c08378`.
 - The Pi service starts the LCD UI, Bridge Wi-Fi FTP, advanced Same Wi-Fi FTP,
-  printer discovery/status keepalive, and the FTP-received-image auto-print flow.
-- The LCD Settings menu can pair/forget a printer, explicitly choose Wi-Fi mode options, and persist
-  printer, image-prep, keepalive, and auto-print settings.
+  printer discovery/status keepalive, the FTP-received-image auto-print flow, and the iPhone
+  sync service (outbox pickup API + Bonjour advertisement + virtual LCD on `:8721`).
+- The LCD Settings menu can pair/forget a printer, explicitly choose Wi-Fi mode options, choose the
+  photo destination (`Send to`: Print / iPhone / Both), open the iPhone pairing QR, reset the sync
+  token, and persist printer, image-prep, keepalive, auto-print, and sync-destination settings.
 - The runtime supports model-specific Mini, Mini Link 3, Square, and Wide image preparation.
 - Provisioning and deployment helpers are tracked in `scripts/`, `config/`, `systemd/`, and `udev/`.
 - Legacy standalone InstantBridge installs are removed with

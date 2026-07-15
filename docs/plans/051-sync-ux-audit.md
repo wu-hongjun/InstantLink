@@ -179,3 +179,21 @@ Hardware-gated (the reason this pass waits):
 
 All five are mirrored in the session task list; device state as of today:
 Pi runs `b80d61f` with `destination = "both"`, sync listening, outbox empty.
+
+## Roadmap beyond the audit
+
+The iPhone-sync work opened a coherent plan sequence, all gated on one
+hardware spike (Bridge BLE advertise-while-printing coexistence on the
+Zero 2 W radio):
+
+- **052 — AccessorySetupKit pairing:** DJI-style one-tap picker; BLE GATT
+  carries the same pairing payload as the QR.
+- **053 — seamless background sync:** BLE wakes the suspended app, background
+  `URLSession` pulls over Wi-Fi, Live Activity / Dynamic Island shows
+  progress. Requires the paid membership.
+- **054 — headless budget SKU:** no LCD HAT; the phone is the screen via the
+  virtual-LCD endpoints (054-A, shipped). USB-to-iPhone gate passed
+  (ECM gadget). First-contact via BLE + a boxed QR card.
+
+052 → buy membership → 053 → ship; 054 rides alongside. The QR + foreground
+sync path (plan 050) stays functional at every step.

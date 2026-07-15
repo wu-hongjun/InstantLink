@@ -53,6 +53,12 @@ and served to the iOS app over the bearer-token HTTP API on `:8721`
 `both` prints only when the printer is currently usable and otherwise spools
 quietly.
 
+The same sync service also carries a remote-UI control path (plan 054-A, gated by
+`[sync] remote_ui`): the iOS app polls `GET /v1/screen` for the live 240x240 LCD frame
+and posts abstract `UiAction`s to `POST /v1/input`, which are injected into the UI
+controller's input queue exactly as GPIO joystick/button events would be. This makes the
+LCD screens below viewable and drivable from the phone without extra hardware.
+
 ## State Machine
 
 ```mermaid
@@ -74,11 +80,17 @@ stateDiagram-v2
     ERROR_BLE --> BT_SCANNING: retry/backoff
 ```
 
-The 10 primary states are `BOOTING`, `BT_SCANNING`, `BT_CONNECTING`, `BT_CONNECTED`, `IDLE`, `IMAGE_RECEIVED`, `AWAITING_CONFIRM`, `PRINTING`, `PRINT_COMPLETE`, and `ERROR_BLE`. `SETTINGS` is a UI overlay/menu reachable from normal status screens; it does not stop FTP receive or BLE status polling. `LOW_BATTERY` is a global overlay/guard because it can occur over any state. USB gadget attach/loss is diagnostics/admin status only and must not gate camera readiness in v1.
+The diagram above is a simplified conceptual model. The shipped LCD state set is the `UiMode`
+enum in `ui/models.py` (source of truth), which uses different names and has grown past the
+original "10 primary states" spec — it now includes `NEEDS_PAIRING`, `PAIRING`, `PAIR_FAILED`,
+`PRINTER_SEARCHING`, `PRINTER_OFFLINE`, `VALIDATION`, `READY`, `NO_FILM`, and the iPhone-sync
+`SYNC_PAIRING` (plan 050) full-screen QR mode alongside the print-flow and overlay states.
+`SETTINGS` is a UI overlay/menu reachable from normal status screens; it does not stop FTP receive or BLE status polling. `LOW_BATTERY` is a global overlay/guard because it can occur over any state. USB gadget attach/loss is diagnostics/admin status only and must not gate camera readiness in v1.
 
 Runtime settings that are safe to change from the 240x240 UI are persisted to
 `/etc/InstantLinkBridge/config.toml`: printer model override, image fit, JPEG quality, auto-print
-mode/delay, and BLE keepalive interval. Wi-Fi mode switching is a side-effecting
+mode/delay, BLE keepalive interval, and the sync photo destination (`[sync].destination` —
+`Send to`: Print / iPhone / Both, plan 050). Wi-Fi mode switching is a side-effecting
 action routed through the root-owned `/usr/local/sbin/instantlink-bridge-wifi-mode` helper.
 
 ## Asyncio Task Topology
@@ -95,7 +107,7 @@ The runtime should be one Python process with named tasks:
 | `ui_input` | gpiozero joystick/buttons, long-press KEY3 | Writes button/input events |
 | `power_monitor` | X306/no-telemetry power backend, optional PiSugar polling, idle timing | Writes battery/idle/shutdown events |
 | `watchdog` | sd_notify READY/WATCHDOG heartbeat | Reads health events, emits degraded status |
-| `sync_service` | iPhone pickup: bearer-token HTTP API on `:8721` over the sync outbox, Bonjour `_instantlink._tcp` advertisement with 30 s address refresh (plan 050) | Reads `SyncOutbox`, fires client-activity → UI/power |
+| `sync_service` | iPhone pickup: bearer-token HTTP API on `:8721` over the sync outbox, Bonjour `_instantlink._tcp` advertisement with 30 s address refresh (plan 050). Also serves the virtual LCD (plan 054-A): `GET /v1/screen` renders the live 240x240 frame from `ui.snapshot` and `POST /v1/input` injects one of the 8 `UiAction`s into the controller queue, both gated by `[sync] remote_ui` (default on) and behind the same bearer token. `SyncService.start` re-reads the token file, so token rotation restarts the service (plan 051) | Reads `SyncOutbox`, fires client-activity → UI/power; reads UI snapshot, writes UI action queue |
 
 ## Power Management Foundation
 

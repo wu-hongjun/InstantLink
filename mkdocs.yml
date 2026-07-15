@@ -40,6 +40,7 @@ nav:
       - CLI: reference/cli.md
       - Protocol: reference/protocol.md
       - FFI: reference/ffi.md
+      - Bridge Sync API: reference/sync-api.md
   - Development:
       - Architecture: development/architecture.md
       - Bridge Firmware Release: development/bridge-firmware-release.md
@@ -76,6 +77,32 @@ nav:
       - Plan 028 Sparkle 2 Migration: plans/028-sparkle-2-migration.md
       - Plan 029 Bridge Control Panel: plans/029-bridge-control-panel.md
       - Plan 030 Bridge Secure Management and Updates: plans/030-bridge-secure-management-updates.md
+      - Plan 031 Bridge Printer Connection Recovery: plans/031-bridge-printer-connection-recovery.md
+      - Plan 032 Bridge Startup and Power: plans/032-bridge-startup-and-power.md
+      - Plan 033 Bridge UX and Headless: plans/033-bridge-ux-and-headless.md
+      - Plan 034 Bridge UX Polish Audit Pass: plans/034-bridge-ux-polish-audit-pass.md
+      - Plan 035 Print Settings Restructure and Postprocessing Pipeline: plans/035-print-settings-restructure-and-postprocessing-pipeline.md
+      - Plan 036 Adjustments Live Preview and Sliders: plans/036-adjustments-live-preview-and-sliders.md
+      - Plan 037 Settings Audit Cleanup: plans/037-settings-audit-cleanup.md
+      - Plan 038 Bridge USB Experience Audit: plans/038-bridge-usb-experience-audit.md
+      - Plan 039 Schema-Driven Settings Sync: plans/039-schema-driven-settings-sync.md
+      - Plan 040 Server-Driven Request Timestamps: plans/040-server-driven-request-timestamps.md
+      - Plan 041 App UX Optimization: plans/041-app-ux-optimization.md
+      - Plan 042 Main Window Banner Stack Audit: plans/042-main-window-banner-stack-audit.md
+      - Plan 043 Main Window Banner Stack Implementation: plans/043-main-window-banner-stack-implementation.md
+      - Plan 044 Image Editor Audit: plans/044-image-editor-audit.md
+      - Plan 045 Desktop Disconnected Printer Audit: plans/045-desktop-disconnected-printer-audit.md
+      - Plan 046 Desktop Disconnected Printer Implementation: plans/046-desktop-disconnected-printer-implementation.md
+      - Plan 047 Photos-Style Editor Audit: plans/047-photos-style-editor-audit.md
+      - Plan 048 Photos-Style Editor Implementation: plans/048-photos-style-editor-implementation.md
+      - Plan 049 Editor UI Photos Parity: plans/049-editor-ui-photos-parity.md
+      - Plan 050 iPhone Auto-Sync: plans/050-iphone-auto-sync.md
+      - Plan 051 Sync UX Audit: plans/051-sync-ux-audit.md
+      - Plan 052 AccessorySetupKit Pairing: plans/052-accessorysetupkit-pairing.md
+      - Plan 053 Seamless Background Sync: plans/053-seamless-background-sync.md
+      - Plan 054 Headless Budget Bridge: plans/054-headless-budget-bridge.md
+  - Research:
+      - Wi-Fi Aware iPhone Feasibility: research/wifi-aware-iphone-feasibility.md
 
 plugins:
   - search

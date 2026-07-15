@@ -11,7 +11,8 @@ The Instax Link BLE protocol was reverse-engineered by the open-source community
 | **instantlink-core** | BLE protocol, image processing, model detection, device communication |
 | **instantlink-cli** | Command-line interface with progress output and JSON for `scan`, `info`, and `status` |
 | **instantlink-ffi** | C FFI bindings for Swift and other native frontends |
-| **bridge** | Raspberry Pi camera FTP appliance using `instantlink-ffi` for printer transport |
+| **bridge** | Raspberry Pi camera FTP appliance using `instantlink-ffi` for printer transport, with optional iPhone photo sync (plan 050) |
+| **ios** | SwiftUI iPhone app that pairs with the Bridge and pulls camera photos into the Photos library (plan 050) |
 
 ## Supported Printers
 
@@ -31,8 +32,9 @@ The Instax Link BLE protocol was reverse-engineered by the open-source community
 - Battery, film remaining, charging, and print-count queries
 - LED color control with solid, blink, and breathe patterns
 - Native macOS app with camera capture, queue-based editing, film simulation, overlays for text/QR/timestamp/image/location, stage-aware reconnect UI, and experimental LED diagnostics in Settings
-- C FFI with 20 exported functions for native app integrations, including connect-stage progress callbacks
+- C FFI with 24 exported functions for native app integrations, including connect-stage progress callbacks
 - Bridge firmware bundles for Raspberry Pi appliances, published by CI and staged into the macOS app for the future Bridge control panel updater
+- Raspberry Pi Bridge appliance with optional iPhone sync: received camera photos can print, sync to the iOS app over a token-authed local HTTP API (Bonjour discovery), or both, plus a virtual LCD that mirrors and drives the Bridge screen from the phone (plans 050 / 054)
 
 ## Architecture
 

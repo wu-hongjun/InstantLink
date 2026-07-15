@@ -2096,13 +2096,18 @@ sub-states instead of giving sync its own readiness rendering.</p>
 <code>sync.service_start_failed</code> + <code>state=unavailable</code>; freed → <code>state=listening</code>).</p>
 <h2 id="pass-3-goal-next-session-start-here-iphone-in-hand">Pass 3 goal (next session — start here, iPhone in hand)<a class="headerlink" href="#pass-3-goal-next-session-start-here-iphone-in-hand" title="Permanent link">&para;</a></h2>
 <p>Software polish (no hardware needed):
-- [ ] <strong>P3.10</strong> zh-Hans chip drops the space before the measure word
-  ("3张待传", not "3 张待传"); pressure-test chip width at largest font.
-- [ ] <strong>P3.9</strong> "connected" chip → copy that matches the 20 s TTL ("active"),
-  or an app-heartbeat-driven definition; update ux-flows.md.
-- [ ] <strong>P3.11</strong> token-rotation story: "Reset sync token" action (Settings ▸
-  Network, confirmation dialog, invalidates paired iPhones) + re-key the
-  cached QR raster on host change while the screen is open.</p>
+- [x] <strong>P3.10</strong> done — templated <code>{n} pending</code> / <code>{n}张待传</code> (no space);
+  the largest-font width pressure-test caught a real EN overflow, fixed via
+  <code>_fit_text_to_width</code> ellipsis on the card row.
+- [x] <strong>P3.9</strong> done — chip copy is now "active" / "活跃" (the 20 s TTL tracks
+  the app's ~4 s foreground polling; "connected" implied a persistent link
+  the pull API doesn't hold). TTL mechanism unchanged.
+- [x] <strong>P3.11</strong> done — <code>Reset sync token</code> action row (Settings ▸ Network,
+  destructive plan-040 dialog); <code>rotate_sync_token</code> + <code>SyncService.start()</code>
+  now re-reads the token from disk (it was pinned in <code>__init__</code> — a bare
+  restart would NOT have rotated it); app.py restarts silently so the UI
+  flows <code>starting → listening</code>. QR staleness pinned by tests (payload rebuilt
+  on every entry; raster cache keyed by payload).</p>
 <p>Hardware-gated (the reason this pass waits):
 - [ ] <strong>iPhone field test</strong> — <code>ios/README.md</code> checklist with a signed build on
   a physical iPhone; first item is hotspot tolerance (does iOS hold the

@@ -1,0 +1,2364 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
+      
+      
+      
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/052-accessorysetupkit-pairing/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>052 — AccessorySetupKit one-tap Bridge pairing (iOS 18+) - InstantLink</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#052-accessorysetupkit-one-tap-bridge-pairing-ios-18" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="InstantLink" class="md-header__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InstantLink
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              052 — AccessorySetupKit one-tap Bridge pairing (iOS 18+)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="white"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../001-full-stack-scaffold/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plans
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InstantLink" class="md-nav__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InstantLink
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bridge-firmware-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Firmware Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/reverse-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reverse Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plans
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plans
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../001-full-stack-scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 001 Full-Stack Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../002-ci-cd-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 002 CI/CD Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 003 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../004-app-bundle-and-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 004 App Bundle and Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../005-mock-transport-device-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 005 Mock Transport Device Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-overlay-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 006 Overlay System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-ui-ux-pass-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 007 UI/UX Pass 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../008-ui-ux-pass-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 008 UI/UX Pass 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../009-repo-simplification-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 009 Repo Simplification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../010-ui-ux-pass-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 010 UI/UX Pass 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../013-ffi-connection-stage-callbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 013 FFI Connection Stage Callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../014-printer-led-print-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 014 Printer LED Print Phase Feedback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../018-auto-update-signature-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 018 Auto-Update Signature Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../019-packet-assembler-error-surfacing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 019 Packet Assembler Error Surfacing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../020-notification-listener-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 020 Notification Listener Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../021-print-flow-deduplication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 021 Print Flow Deduplication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../022-ffi-device-guard-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 022 FFI Device Guard Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../023-ffi-unsafe-block-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 023 FFI Unsafe Block Discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../024-protocol-build-packet-bounds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 024 Protocol Build Packet Bounds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../025-rand-dependency-upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 025 Rand Dependency Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../026-docs-ffi-symbol-count-and-context-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 026 Docs FFI Symbol Count and Context Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../027-docs-protocol-mini-link-3-flip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 027 Docs Protocol Mini Link 3 Flip
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../028-sparkle-2-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 028 Sparkle 2 Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../029-bridge-control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 029 Bridge Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../030-bridge-secure-management-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 030 Bridge Secure Management and Updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#product-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Product shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discovery-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discovery design
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discovery design">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#instantlink-pairing-service-uuid-new-generated-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InstantLink pairing service UUID (new, generated 2026-07-15)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gate-0-centralperipheral-coexistence-spike-blocks-everything" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gate 0 — central+peripheral coexistence spike (blocks everything)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bridge-changes-phase-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge changes (phase A)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ios-changes-phase-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iOS changes (phase B)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wi-fi-aware-convergence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wi-Fi Aware convergence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phases-milestones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phases / milestones
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risks-open-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risks / open questions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="052-accessorysetupkit-one-tap-bridge-pairing-ios-18">052 — AccessorySetupKit one-tap Bridge pairing (iOS 18+)<a class="headerlink" href="#052-accessorysetupkit-one-tap-bridge-pairing-ios-18" title="Permanent link">&para;</a></h1>
+<h2 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h2>
+<p>Plan 050 shipped iPhone sync with QR onboarding: point the phone at the Bridge
+LCD, scan <code>instantlink://pair?...</code>, join the hotspot, done. It works, but it is
+a two-device dance (wake the Bridge screen, navigate to the QR, aim the phone),
+and the iOS side pays two blanket privacy prompts (local network, plus camera
+for the scanner). DJI/Sonos-class accessories do this with one tap instead:
+open the app near the device → the system accessory picker pops with a branded
+card → tap → paired.</p>
+<p>That picker is <strong>AccessorySetupKit</strong> (ASK, iOS 18+). What it buys us:</p>
+<ul>
+<li><strong>One-tap pairing.</strong> App foreground near the Bridge → <code>ASAccessorySession</code>
+  picker shows an "InstantLink Bridge (IB-XXXX)" card with a product image →
+  one tap authorizes and pairs. No LCD interaction, no camera, no typing.</li>
+<li><strong>Per-accessory privacy.</strong> ASK scopes Bluetooth (and Wi-Fi) access to the
+  picked accessory. No blanket "InstantLink would like to use Bluetooth"
+  prompt, and the accessory appears in <strong>Settings ▸ Accessories</strong> with
+  per-device rename/forget — the system owns the accessory lifecycle.</li>
+<li><strong>Future alignment.</strong> ASK is Apple's designated pairing UI for Wi-Fi Aware
+  accessories (§ Wi-Fi Aware convergence) — this is the stepping stone for the
+  2027 co-processor path, not a detour.</li>
+</ul>
+<p>Honest ceiling, stated up front: the AirPods-style popup that appears while the
+app is <strong>not</strong> running is Apple-first-party only. Third-party ASK requires the
+app to be foreground and to explicitly activate the picker. Our UX target is
+"open the iOS app near the Bridge, tap once" — same foreground constraint the
+whole sync product already has (plan 050 / the Wi-Fi Aware research).</p>
+<p>QR and manual-link entry <strong>remain</strong> as first-class fallbacks: iOS 17 devices,
+broken cameras, and ASK-off Bridges all keep working. ASK augments, never
+replaces.</p>
+<h2 id="product-shape">Product shape<a class="headerlink" href="#product-shape" title="Permanent link">&para;</a></h2>
+<ul>
+<li>User opens the iOS app (fresh install or Settings ▸ Add bridge) within BLE
+  range of a powered Bridge with sync enabled. The system picker appears with
+  the Bridge's card; one tap pairs.</li>
+<li>After the tap: the app reads the pairing payload over BLE GATT (same fields
+  the QR carries today), then runs the <strong>existing</strong> pipeline unchanged —
+  hotspot join → Bonjour discover → token verify → sync screen.</li>
+<li>Bridge side is zero-interaction: it advertises whenever sync is listening
+  and <code>ble_pairing</code> is on. The LCD pairing screen gains one hint line: the QR
+  plus "or pair from the InstantLink app".</li>
+<li>Settings ▸ Accessories shows "InstantLink Bridge"; removing it there revokes
+  the app's BLE access (the app detects this via <code>ASAccessoryEvent</code> and falls
+  back to its own forget flow).</li>
+</ul>
+<h2 id="discovery-design">Discovery design<a class="headerlink" href="#discovery-design" title="Permanent link">&para;</a></h2>
+<p>Two ASK descriptor options considered:</p>
+<ol>
+<li><strong>BLE service-UUID advertisement (recommended primary).</strong> The Bridge
+   advertises a 128-bit InstantLink service UUID; the app's
+   <code>ASDiscoveryDescriptor.bluetoothServiceUUID</code> matches it. Works regardless
+   of Wi-Fi state — hotspot up or down, Same Wi-Fi mode, mid-provisioning —
+   and BLE advertising is cheap on the radio. This is the only signal that
+   also carries the pairing payload (GATT), so it must exist anyway.</li>
+<li><strong>Wi-Fi SSID-prefix descriptor</strong> (<code>ssidPrefix = "InstantLink-"</code> — the
+   hotspot SSID format from <code>system_info.default_hotspot_ssid()</code>). Only valid
+   while the hotspot is broadcasting (useless in Same Wi-Fi mode), and it
+   cannot deliver the token — the phone would still need GATT or the QR.
+   Keep as a <strong>second display item evaluated in B1</strong> (Apple's docs are
+   ambiguous on AND/OR semantics when one descriptor sets both properties;
+   don't bet the flow on it). Its real value is the Wi-Fi Aware convergence
+   later, and declaring <code>WiFi</code> support in the plist now costs nothing.</li>
+</ol>
+<p><strong>Decision: BLE descriptor is the v1 matching signal; SSID prefix is declared
+but optional.</strong></p>
+<h3 id="instantlink-pairing-service-uuid-new-generated-2026-07-15">InstantLink pairing service UUID (new, generated 2026-07-15)<a class="headerlink" href="#instantlink-pairing-service-uuid-new-generated-2026-07-15" title="Permanent link">&para;</a></h3>
+<p>Following the Instax convention (<code>docs/reference/protocol.md</code>) of a base UUID
+with the first block incremented per characteristic:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>UUID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>InstantLink Pairing Service</td>
+<td><code>a7a6cdd5-6228-4508-808e-121d76f324b1</code></td>
+</tr>
+<tr>
+<td>Pairing Payload Characteristic (encrypted read)</td>
+<td><code>a7a6cdd6-6228-4508-808e-121d76f324b1</code></td>
+</tr>
+<tr>
+<td>Reserved (future status/Wi-Fi Aware handoff)</td>
+<td><code>a7a6cdd7-6228-4508-808e-121d76f324b1</code></td>
+</tr>
+</tbody>
+</table>
+<p>Document these in <code>docs/reference/protocol.md</code> next to the Instax UUIDs (new
+"InstantLink Pairing Service" section) when A1 lands. Lowercase in code
+identifiers, per repo convention.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Bridge (peripheral, new)                    iPhone (iOS 18+)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  BlueZ LEAdvertisingManager1                 ASAccessorySession.showPicker
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    adv: service a7a6cdd5-…, name              matches bluetoothServiceUUID
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>         &quot;InstantLink-XXXX&quot;          ──BLE──▶  branded card → user taps
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  BlueZ GattManager1                          CBCentralManager (ASK-scoped)
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    char a7a6cdd6-… [encrypt-read]   ◀─read──  connect → read triggers
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    payload = instantlink://pair?...           Just Works bond → payload
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                                                    │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                              existing plan-050 pipeline, unchanged:
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                              PairingInfo parse → NEHotspotConfiguration join
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>                              → NWBrowser → token verify → pull/save/ack
+</code></pre></div>
+<p>Key decisions:</p>
+<ul>
+<li><strong>The GATT payload is the exact <code>instantlink://pair?...</code> URL string</strong> the QR
+  encodes (built by the same controller helper): <code>v</code>, <code>device</code>, <code>host</code>,
+  <code>port</code>, <code>token</code>, plus <code>ssid</code>/<code>psk</code> only while the hotspot is active. One
+  payload builder on the Bridge, one parser (<code>PairingInfo</code>) on iOS, for both
+  QR and BLE. ~200 bytes; BlueZ serves long reads via read-blob automatically.</li>
+<li><strong>Security model:</strong> the characteristic is flagged <code>encrypt-read</code>, so a read
+  forces BLE pairing/bonding first. With no display/keyboard the Bridge is a
+  Just Works pairer — that is exactly what the existing <code>NoInputNoOutput</code>
+  agent (registered before first printer contact, <code>ble/agent.py</code>) negotiates,
+  and it already handles <em>incoming</em> SMP requests; the adapter must also be
+  <code>Pairable=true</code> while advertising (verify in the spike — the printer flow
+  never needed it). Just Works has no MITM protection, so
+  <code>encrypt-authenticated-read</code> is unreachable; the trust factor is
+  <strong>proximity + physical possession</strong>, the same factor as photographing the
+  QR screen. Revocation is the existing <code>Reset sync token</code> flow (plan 051
+  P3.11) — rotation invalidates every previously read payload, BLE or QR.
+  ASK's pairing tap is the user-consent gate on the phone side.</li>
+<li><strong>Advertise-when-ready:</strong> the advertiser runs iff <code>[sync]</code> destination
+  includes iPhone <strong>and</strong> the sync service is <code>listening</code> <strong>and</strong>
+  <code>ble_pairing = true</code>. Never advertise a payload pointing at a dead port
+  (same honesty rule the QR screen enforces, plan 051 P2.3).</li>
+</ul>
+<h2 id="gate-0-centralperipheral-coexistence-spike-blocks-everything">Gate 0 — central+peripheral coexistence spike (blocks everything)<a class="headerlink" href="#gate-0-centralperipheral-coexistence-spike-blocks-everything" title="Permanent link">&para;</a></h2>
+<p>The FFI (<code>libinstantlink_ffi.so</code> via btleplug) holds the adapter as a BLE
+<strong>central</strong> to the Printer: persistent connection + 10 s keepalive polls. The
+Pi Zero 2 W's BCM43436 is a single BLE 4.2 combo radio. BlueZ supports
+concurrent central+peripheral roles in principle; whether <em>this</em> chip/firmware
+does, under <em>our</em> FFI's connection pattern, is unproven.</p>
+<p>On-device spike (throwaway script, <code>dbus_fast</code> — already a dependency):</p>
+<ol>
+<li>Register an <code>LEAdvertisement1</code> (service UUID + local name) while the bridge
+   service runs with a paired, online Printer. Confirm <code>RegisterAdvertisement</code>
+   succeeds and the adv is visible from a phone (nRF Connect).</li>
+<li>Let the keepalive run ≥ 10 minutes; confirm no printer disconnects, no
+   btleplug errors, no watchdog trips.</li>
+<li>Print a real photo while advertising; confirm transfer time is not
+   materially degraded and the adv stays registered afterward.</li>
+<li>iPhone bonds + reads an <code>encrypt-read</code> test characteristic while the
+   printer connection is live.</li>
+</ol>
+<p><strong>Fallback decision tree (pre-committed):</strong></p>
+<ul>
+<li>All pass → full design.</li>
+<li>Fails only under active print traffic → pause advertising during
+  <code>PRINTING</code> (and optionally <code>IMAGE_RECEIVED</code>→<code>PRINT_COMPLETE</code>); pairing
+  during a print is rare and the picker simply won't match for those seconds.</li>
+<li>Adapter cannot advertise while the central link exists at all → advertise
+  only when no printer is connected (still covers the headline sync-only
+  widget case, where the printer poll is stopped) and keep QR primary for
+  both-mode; note it in README.</li>
+<li><code>RegisterAdvertisement</code> unusable on this BlueZ/kernel combo → kill phase A,
+  keep the ASK Wi-Fi descriptor as a discovery-only nicety, revisit with the
+  Wi-Fi Aware co-processor hardware.</li>
+</ul>
+<p>Record the outcome in <code>bridge/docs/current-context.md</code> before A1 starts.</p>
+<h2 id="bridge-changes-phase-a">Bridge changes (phase A)<a class="headerlink" href="#bridge-changes-phase-a" title="Permanent link">&para;</a></h2>
+<p>New module <code>bridge/src/instantlink_bridge/sync/ble_advertiser.py</code>:</p>
+<ul>
+<li><code>BlePairingAdvertiser</code> — owns two <code>dbus_fast.service.ServiceInterface</code>
+  object trees on the system bus, following the <code>ble/agent.py</code> pattern:</li>
+<li><code>LEAdvertisement1</code> (<code>org.bluez.LEAdvertisement1</code>): <code>Type="peripheral"</code>,
+    <code>ServiceUUIDs=[pairing service]</code>, <code>LocalName="InstantLink-XXXX"</code> (BlueZ
+    splits into scan response as needed), registered via
+    <code>LEAdvertisingManager1.RegisterAdvertisement</code> on <code>/org/bluez/hci0</code>.</li>
+<li><code>GattService1</code> + <code>GattCharacteristic1</code> (payload char, flags
+    <code>["encrypt-read"]</code>), registered via <code>GattManager1.RegisterApplication</code>.
+    <code>ReadValue</code> returns the current pairing URL bytes — built per-read via the
+    same payload callback the QR screen uses, so token rotation and
+    hotspot/Same-Wi-Fi switches are reflected without re-registration.</li>
+<li>Lifecycle mirrors <code>SyncService</code>: started/stopped from <code>app.py</code> next to the
+  sync service start/stop/apply paths, fire-and-forget with exception
+  guarding, never delays <code>bridge.ready</code>, holds no BLE locks shared with the
+  printer path. Stop = <code>UnregisterAdvertisement</code> + <code>UnregisterApplication</code>,
+  tolerant of an already-dead bus.</li>
+<li>Sets <code>Pairable=true</code> on the adapter while active if the spike shows it is
+  required; restores prior state on stop.</li>
+</ul>
+<p>Config (<code>config.py</code> + <code>manager/schema.py</code>, plan-039 schema-driven sync):</p>
+<ul>
+<li><code>[sync] ble_pairing = true | false</code> (default <code>true</code>). Effective only when
+  the sync destination includes iPhone; the advertiser tracks the sync
+  service state (<code>listening</code> → advertise, else stop).</li>
+</ul>
+<p>UI (<code>ui/</code>):</p>
+<ul>
+<li><code>SYNC_PAIRING</code> screen: add a one-line hint under the QR — "or pair from the
+  app" (EN + zh-Hans). No new screens; ASK needs nothing shown on the Bridge.</li>
+<li>No new readiness states: advertising failures log
+  (<code>sync.ble_advertise_failed</code>) and degrade silently to QR-only — the QR path
+  is always available on that screen, so no honesty gap on the LCD.</li>
+</ul>
+<p>Docs: <code>protocol.md</code> UUID section; <code>ux-flows.md</code> hint-line; note the security
+model (encrypt-read + Just Works + rotation) in <code>sync/server.py</code>'s module
+docstring or <code>bridge/docs/</code>.</p>
+<h2 id="ios-changes-phase-b">iOS changes (phase B)<a class="headerlink" href="#ios-changes-phase-b" title="Permanent link">&para;</a></h2>
+<p><strong>Deployment target decision: stay at iOS 17.0, dual-path.</strong> ASK code is
+gated <code>if #available(iOS 18, *)</code>; the QR/manual flow is the iOS 17 path and
+the universal fallback. Rationale: the fallback must exist regardless (broken
+camera → manual link already exists), so a hard 18 bump buys nothing except
+dropping working devices. Revisit a bump when ASK becomes the dominant
+observed path.</p>
+<ul>
+<li><strong>Info.plist</strong>: <code>NSAccessorySetupKitSupports = [Bluetooth, WiFi]</code>;
+  <code>NSAccessorySetupBluetoothServices = [a7a6cdd5-6228-4508-808e-121d76f324b1]</code>.
+  Note the ASK interaction: once these keys exist, blanket
+  <code>NSBluetoothAlwaysUsageDescription</code> prompts are replaced by per-accessory
+  authorization for ASK-managed peripherals.</li>
+<li><strong>Picker flow</strong> (<code>Services/AccessoryPairing.swift</code>, new):
+  <code>ASAccessorySession.activate</code> → <code>showPicker</code> with one
+  <code>ASPickerDisplayItem</code> (name "InstantLink Bridge", product image,
+  <code>ASDiscoveryDescriptor</code> with <code>bluetoothServiceUUID</code>). Handle
+  <code>ASAccessoryEvent</code> cases: <code>accessoryAdded</code> → proceed; <code>pickerDidPresent/
+  Dismiss</code> → UI state; <code>accessoryRemoved</code> (Settings ▸ Accessories forget) →
+  run the existing forget-bridge cleanup.</li>
+<li><strong>Product image asset (hard requirement).</strong> The picker card needs a real
+  1:1 image of the Bridge hardware (transparent-background render or photo of
+  the enclosed unit). This is a physical-product photography/render task —
+  schedule it with B1, it gates the picker looking shippable.</li>
+<li><strong>Post-pick handoff</strong>: CBCentralManager (now scoped to the picked
+  accessory) → retrieve/connect the peripheral → discover the pairing service
+  → read <code>a7a6cdd6-…</code>. The read triggers the system Just Works bond (no PIN
+  UI). Parse the bytes with the existing <code>PairingInfo</code> — from here the
+  plan-050 pipeline is <strong>unchanged</strong>: <code>NEHotspotConfiguration</code> join (when
+  <code>ssid</code> present) → <code>BridgeBrowser</code> → token verify → <code>PairingStore</code>.</li>
+<li><strong>Entitlement caveat (unchanged from 050/README):</strong> hotspot join still
+  requires the Hotspot Configuration capability, which free personal teams
+  cannot provision. Paid team = true one-tap end-to-end. Free team = ASK
+  discovery + payload read, then the existing manual-join screen (SSID/PSK
+  from the payload, "I've joined — continue"). ASK does not launder the
+  entitlement.</li>
+<li>Onboarding UI: iOS 18 shows "Pair automatically" (ASK) as the primary
+  button with "Scan QR instead" secondary; iOS 17 shows the current scanner.</li>
+</ul>
+<h2 id="wi-fi-aware-convergence">Wi-Fi Aware convergence<a class="headerlink" href="#wi-fi-aware-convergence" title="Permanent link">&para;</a></h2>
+<p>Per <code>docs/research/wifi-aware-iphone-feasibility.md</code>, ASK is Apple's
+designated pairing UI for Wi-Fi Aware accessories (WWDC25 session 228): the
+same picker pairs Bluetooth and Wi-Fi Aware together. When the ~2027
+ESP32-C5/C6 upgrade path unblocks (trigger: ESP-IDF v6.1 encrypted NDP + a
+demonstrated iOS pairing), the app-side change is a descriptor swap in the
+same <code>ASPickerDisplayItem</code> — the picker, the product image, the
+Settings ▸ Accessories integration, and the post-pick handoff all carry over.
+This plan is that stepping stone; nothing here is throwaway on the Wi-Fi
+Aware timeline, and the plan-050 transport (outbox + HTTP pull + ack) already
+swaps discovery/join layers by design.</p>
+<h2 id="phases-milestones">Phases / milestones<a class="headerlink" href="#phases-milestones" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Gate 0</strong> — coexistence spike on <code>riverps-rpi-zero-2w</code> (§ above). Output:
+  go / degraded-mode / no-go decision recorded in
+  <code>bridge/docs/current-context.md</code>. <strong>No A/B work before this.</strong></li>
+<li><strong>A1</strong> — <code>ble_advertiser.py</code> + <code>[sync] ble_pairing</code> config + manager schema
+  row + app.py lifecycle wiring. Tests: unit tests with a mocked
+  <code>dbus_fast</code> bus (the <code>ble/agent.py</code> test pattern) covering
+  register/unregister, payload freshness across token rotation, and
+  state-tracking (listening → advertise, unavailable → stop). On-device:
+  <code>journalctl</code> shows registration; nRF Connect sees the adv + name.</li>
+<li><strong>A2</strong> — GATT payload characteristic + <code>encrypt-read</code> security + pairing
+  hint line + i18n + protocol.md UUID docs. On-device: unprovisioned iPhone
+  bonds via nRF Connect, reads the URL, and the value changes after
+  <code>Reset sync token</code>; printer keepalive stays green throughout.</li>
+<li><strong>B1</strong> — iOS: plist keys, <code>AccessoryPairing</code> service, picker flow, product
+  image, post-pick GATT read → <code>PairingInfo</code> handoff, dual-path onboarding
+  UI. Simulator-testable: payload parsing reuse (existing <code>PairingInfoTests</code>
+  extended for BLE-sourced bytes); picker/ASK is device-only.</li>
+<li><strong>B2 / field test</strong> — extend the <code>ios/README.md</code> on-device checklist:</li>
+<li>ASK picker appears within ~10 s of opening the app near the Bridge;
+     card shows name + image.</li>
+<li>One tap → bond → payload read → hotspot join → first photo synced,
+     no prompts beyond the picker (paid team).</li>
+<li>Free-team build: picker + read work, manual-join screen prefilled.</li>
+<li>Settings ▸ Accessories: rename survives; remove → app detects
+     <code>accessoryRemoved</code> and forgets cleanly; re-pair works.</li>
+<li>Token rotation on the Bridge → old app install fails auth → re-pair via
+     picker succeeds.</li>
+<li>Coexistence in anger: pair a new iPhone while a print is in flight
+     (or observe the documented degraded behavior).</li>
+<li>iOS 17 device: no picker, QR flow unchanged.</li>
+</ul>
+<p>Each phase ends with the standard bridge checks (<code>ruff</code>, <code>mypy --strict</code>,
+<code>pytest</code>, suite green) or the iOS simulator test suite, plus the on-device
+items above per <code>bridge/docs/current-context.md</code> discipline.</p>
+<h2 id="risks-open-questions">Risks / open questions<a class="headerlink" href="#risks-open-questions" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>BLE central+peripheral coexistence</strong> (the big one): single BCM43436
+  radio, btleplug-held central link, keepalive every 10 s. Gate 0 exists
+  because this can kill phase A outright; the fallback tree is pre-committed
+  so a partial failure degrades instead of stalling.</li>
+<li><strong>BlueZ D-Bus API stability</strong>: <code>LEAdvertisingManager1</code>/<code>GattManager1</code> are
+  stable-ish but BlueZ 5.82 quirks (unregister races on shutdown, adv slots
+  exhausted after crashes) are real; the advertiser must be idempotent and
+  tolerant of <code>AlreadyExists</code>/<code>DoesNotExist</code> replies. <code>TimeoutStopSec=12</code>
+  already exists for BLE shutdown wedges — the advertiser must not add new
+  ones.</li>
+<li><strong>Just Works exposure</strong>: any phone in range can bond and read the payload
+  while advertising. Accepted: equivalent to photographing the QR; proximity
+  is the factor, rotation is the revocation. If field feedback objects,
+  option: advertise only while the LCD pairing screen is open (worse UX,
+  strictly safer) behind the existing <code>ble_pairing</code> toggle.</li>
+<li><strong>ASK picker matching latency</strong>: reports of multi-second discovery before
+  the card shows; measure in B2 item 1 and tune the adv interval (min
+  interval costs battery — the Bridge is battery-powered; pick interval
+  after measuring, likely 250 ms–1 s range).</li>
+<li><strong>Descriptor AND/OR semantics</strong> when combining <code>bluetoothServiceUUID</code> and
+  <code>ssidPrefix</code> in one <code>ASDiscoveryDescriptor</code> — resolve empirically in B1;
+  worst case ship BLE-only.</li>
+<li><strong>iOS 18 adoption cut</strong>: dual-path keeps 17 alive; the cost is two
+  onboarding code paths to test forever. Revisit target bump once ASK usage
+  dominates.</li>
+<li><strong>Product image requirement</strong>: needs a real render/photo of the enclosure;
+  a placeholder makes the flagship UX look broken. Gates B1's shippability,
+  not its code.</li>
+<li><strong><code>Pairable=true</code> scope</strong>: does flipping it adapter-wide affect the printer
+  bond or invite stray pairing attempts? Verify in Gate 0 step 4; scope to
+  advertising windows if concerning.</li>
+<li><strong>Adv payload budget</strong>: 128-bit UUID (18 B) + flags leaves no room for the
+  local name in the primary adv — confirm BlueZ puts <code>LocalName</code> in the scan
+  response and that ASK still displays it (fallback: shorten to product-image
+  card only; the card name comes from our <code>ASPickerDisplayItem</code> anyway).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

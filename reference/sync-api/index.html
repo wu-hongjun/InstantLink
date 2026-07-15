@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://instantlink.hongjunwu.com/research/047-photos-adjust-redeye-wb-curves-levels/">
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/reference/sync-api/">
       
       
+        <link rel="prev" href="../ffi/">
+      
+      
+        <link rel="next" href="../../development/architecture/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Photos.app Adjust panel — Red Eye, White Balance, Curves, Levels - InstantLink</title>
+        <title>Bridge Sync API - InstantLink</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#photosapp-adjust-panel-red-eye-white-balance-curves-levels" class="md-skip">
+        <a href="#bridge-sync-http-api-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Photos.app Adjust panel — Red Eye, White Balance, Curves, Levels
+              Bridge Sync API
             
           </span>
         </div>
@@ -260,11 +264,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../reference/cli/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../cli/" class="md-tabs__link">
           
   
   
@@ -330,7 +336,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../wifi-aware-iphone-feasibility/" class="md-tabs__link">
+        <a href="../../research/wifi-aware-iphone-feasibility/" class="md-tabs__link">
           
   
   
@@ -539,8 +545,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -556,17 +564,20 @@
     
     
       
+        
+        
+      
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -584,7 +595,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -602,7 +613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
   
@@ -630,7 +641,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/protocol/" class="md-nav__link">
+      <a href="../protocol/" class="md-nav__link">
         
   
   
@@ -658,7 +669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/ffi/" class="md-nav__link">
+      <a href="../ffi/" class="md-nav__link">
         
   
   
@@ -683,10 +694,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../reference/sync-api/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -702,6 +740,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#endpoint-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Endpoint &amp; discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#photo-sync-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Photo sync endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#virtual-lcd-endpoints-plan-054" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual-LCD endpoints (plan 054)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-posture-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security posture (v1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2633,7 +2746,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wifi-aware-iphone-feasibility/" class="md-nav__link">
+      <a href="../../research/wifi-aware-iphone-feasibility/" class="md-nav__link">
         
   
   
@@ -2688,10 +2801,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#sources-used" class="md-nav__link">
+  <a href="#endpoint-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sources used
+        Endpoint &amp; discovery
       
     </span>
   </a>
@@ -2699,353 +2812,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#red-eye" class="md-nav__link">
+  <a href="#authentication" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Red Eye
+        Authentication
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Red Eye">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ui-affordances" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        UI affordances
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#slider-value-ranges-recommended-for-reimplementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Slider / value ranges (recommended for reimplementation)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mathematical-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mathematical model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-image-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Image mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-neutral-state" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default / neutral state
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#per-channel-interplay" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Per-channel interplay
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#white-balance" class="md-nav__link">
+  <a href="#photo-sync-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        White Balance
+        Photo sync endpoints
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="White Balance">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ui-affordances_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        UI affordances
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#slider-value-ranges" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Slider / value ranges
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mathematical-model_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mathematical model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-image-mapping_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Image mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-neutral-state_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default / neutral state
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#per-channel-interplay_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Per-channel interplay
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#curves" class="md-nav__link">
+  <a href="#virtual-lcd-endpoints-plan-054" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Curves
+        Virtual-LCD endpoints (plan 054)
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Curves">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ui-affordances_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        UI affordances
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#curve-interaction-nuance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Curve interaction nuance
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mathematical-model_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mathematical model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-image-mapping_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Image mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-neutral-state_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default / neutral state
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#per-channel-vs-master-interplay" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Per-channel vs master interplay
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#levels" class="md-nav__link">
+  <a href="#security-posture-v1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Levels
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Levels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ui-affordances_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        UI affordances
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#slider-value-ranges-recommended-for-reimplementation_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Slider / value ranges (recommended for reimplementation)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mathematical-model_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mathematical model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-image-mapping_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Image mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-neutral-state_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default / neutral state
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#per-channel-vs-combined-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Per-channel vs combined modes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#auto-levels-behaviour" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auto-Levels behaviour
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#open-uncertainties" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Open uncertainties
+        Security posture (v1)
       
     </span>
   </a>
@@ -3072,293 +2875,129 @@
   
 
 
-<h1 id="photosapp-adjust-panel-red-eye-white-balance-curves-levels">Photos.app Adjust panel — Red Eye, White Balance, Curves, Levels<a class="headerlink" href="#photosapp-adjust-panel-red-eye-white-balance-curves-levels" title="Permanent link">&para;</a></h1>
-<p>Research notes for faithfully reimplementing four sections of macOS Photos' Edit &gt; Adjust panel in a SwiftUI / Core Image app. Where Apple's user guide is silent on numeric ranges, behaviour from the matching Core Image filter (or industry-standard Photoshop equivalent) is documented and clearly tagged.</p>
-<h2 id="sources-used">Sources used<a class="headerlink" href="#sources-used" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Apple Photos User Guide — Remove red-eye on Mac: https://support.apple.com/guide/photos/remove-red-eye-phte0ee9e101/mac</li>
-<li>Apple Photos User Guide — Adjust white balance on Mac: https://support.apple.com/guide/photos/adjust-white-balance-pht9b1d4a744/mac</li>
-<li>Apple Photos User Guide — Apply curves adjustments on Mac: https://support.apple.com/guide/photos/apply-curves-adjustments-pht7875d6b19/mac</li>
-<li>Apple Photos User Guide — Apply levels adjustments on Mac: https://support.apple.com/guide/photos/apply-levels-adjustments-pht362f9034f/mac</li>
-<li>MakeUseOf — A Detailed Guide to All the Adjust Tools for Photos on Mac: https://www.makeuseof.com/explaining-adjust-tools-in-photos-mac/</li>
-<li>Apple Developer — Auto Enhancing Images (CIRedEyeCorrection, CIFaceBalance, CIVibrance, CIToneCurve, CIHighlightShadowAdjust): https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_autoadjustment/ci_autoadjustmentSAVE.html</li>
-<li>Apple Developer — autoAdjustmentFilters(options:): https://developer.apple.com/documentation/coreimage/ciimage/1437792-autoadjustmentfilters</li>
-<li>Apple Developer — CIWhitePointAdjust: https://developer.apple.com/documentation/coreimage/ciwhitepointadjust</li>
-<li>iOS Runtime Headers — CITemperatureAndTint.h: https://github.com/nst/iOS-Runtime-Headers/blob/master/Frameworks/CoreImage.framework/CITemperatureAndTint.h</li>
-<li>macOS Runtime Headers — CIToneCurve.h: https://github.com/w0lfschild/macOS_headers/blob/master/macOS/Frameworks/CoreImage/720.0.100/CIToneCurve.h</li>
-<li>muukii's CIFilters dump (CIColorCurves, CIColorPolynomial defaults): https://gist.github.com/muukii/0c36efb02f0c6044472d1f1c17cc1884</li>
-<li>cifilter.io (mirror of CIToneCurve filter reference): https://mouthpublicity.io/CIToneCurve/</li>
-<li>Adobe Photoshop Help — Use the Photoshop Levels adjustment (cross-reference for industry-standard ranges): https://helpx.adobe.com/photoshop/using/levels-adjustment.html</li>
-<li>Adobe Photoshop Help — Curves adjustment (cross-reference for smoothing &amp; polyline UX): https://helpx.adobe.com/photoshop/using/curves-adjustment.html</li>
-<li>Wikipedia — Core Image (history / private filter context): https://en.wikipedia.org/wiki/Core_Image</li>
-</ul>
-<h2 id="red-eye">Red Eye<a class="headerlink" href="#red-eye" title="Permanent link">&para;</a></h2>
-<h3 id="ui-affordances">UI affordances<a class="headerlink" href="#ui-affordances" title="Permanent link">&para;</a></h3>
-<p>Path: Edit &gt; Adjust &gt; expand the <strong>Red-Eye</strong> section. Apple's guide is explicit ([apple/redeye]):</p>
-<ul>
-<li><strong>Auto button</strong> — single click. "Click Adjust in the toolbar, click Red-Eye, then click Auto. Photos removes any red-eye it detects in faces in the photo."</li>
-<li>If Auto detects nothing, the user falls back to manual mode. The guide does not surface an explicit error UI; the section simply remains active and the user is expected to operate the size slider + click.</li>
-<li><strong>Size slider</strong> — labelled "Size". Drag until the circular cursor matches the red pupil's diameter. Default is mid-range; precise pixel range is not documented by Apple. (Internally the iPhoto/Aperture lineage used a 1–100 unit slider whose value mapped to an on-screen radius in points; reasonable reimplementation: 5–80 pt slider, default 20 pt.)</li>
-<li><strong>Manual click</strong> — once the slider is sized, the cursor over the image becomes a target ring (a circle outline) of the chosen size. "Hold the pointer over the red pupil and click; repeat for all other red eyes." Each click commits one correction.</li>
-<li><strong>Undo</strong> — Photos honours Cmd-Z per manual click (each click is its own undoable edit). The section toggle ("Red-Eye" header switch + Reset link in the section disclosure) clears all corrections in that section.</li>
-<li>Tool note from Apple: "doesn't work on animal eyes that show the flash in a different color (green or yellow)." Reimplementation should still attempt those clicks (the algorithm just won't find red to suppress).</li>
-</ul>
-<h3 id="slider-value-ranges-recommended-for-reimplementation">Slider / value ranges (recommended for reimplementation)<a class="headerlink" href="#slider-value-ranges-recommended-for-reimplementation" title="Permanent link">&para;</a></h3>
+<h1 id="bridge-sync-http-api-reference">Bridge Sync HTTP API Reference<a class="headerlink" href="#bridge-sync-http-api-reference" title="Permanent link">&para;</a></h1>
+<p>The Bridge exposes a small HTTP API that an iOS app (or any client) uses to
+pull received camera photos and, on screenless SKUs, to drive the LCD
+remotely. It is implemented by <code>SyncService</code>
+(<code>bridge/src/instantlink_bridge/sync/server.py</code>) and runs only when the
+<code>[sync]</code> destination includes <code>iphone</code> (i.e. <code>iphone</code> or <code>both</code>).</p>
+<h2 id="endpoint-discovery">Endpoint &amp; discovery<a class="headerlink" href="#endpoint-discovery" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Control</th>
-<th>Range</th>
-<th>Default</th>
+<th>Item</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Size slider</td>
-<td>4–96 image px (scaled to the view)</td>
-<td>~24 px</td>
+<td>Bind</td>
+<td><code>0.0.0.0:8721</code> (<code>[sync].port</code>)</td>
 </tr>
 <tr>
-<td>Per-click correction list</td>
-<td>0..N CGPoint+radius records</td>
-<td>empty</td>
+<td>Discovery</td>
+<td>Bonjour <code>_instantlink._tcp.local.</code>, TXT <code>device</code>, <code>proto</code></td>
+</tr>
+<tr>
+<td>Advertised addresses</td>
+<td>non-loopback IPv4 on <code>wlan0</code> + <code>usb0</code>, refreshed every 30 s</td>
+</tr>
+<tr>
+<td>Protocol version</td>
+<td><code>1</code> (<code>proto</code> field)</td>
 </tr>
 </tbody>
 </table>
-<h3 id="mathematical-model">Mathematical model<a class="headerlink" href="#mathematical-model" title="Permanent link">&para;</a></h3>
-<p>Red-eye reduction = inside the user-supplied circle, find pixels whose redness dominates and replace their R with a desaturated value. Classic formula (used by iPhoto / Core Image filter):</p>
-<ol>
-<li>For each pixel inside the circle, compute <code>redness = R - max(G, B)</code> in linear RGB.</li>
-<li>If <code>redness &gt; threshold</code> AND luminance is below pupil-bright threshold, blend R toward <code>(G+B)/2</code> with weight proportional to <code>redness</code>. Optionally darken slightly to preserve pupil dark.</li>
-<li>Feather the circle edge (e.g. 2-px radial cosine) so corrections aren't disc-edged.</li>
-</ol>
-<p>Apple's auto pipeline runs face detection first to localise eye centres, then applies the same per-circle algorithm at detected pupil positions.</p>
-<h3 id="core-image-mapping">Core Image mapping<a class="headerlink" href="#core-image-mapping" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong><code>CIRedEyeCorrection</code></strong> exists as a built-in filter, but it is part of the auto-adjustment family rather than the public <code>CIFilter</code> reference: the only documented way to instantiate it is via <code>CIImage.autoAdjustmentFilters(options:)</code> ([apple/auto-enhance]). Apple's docs describe it as: "Repairs red/amber/white eye due to camera flash." It accepts an <code>inputCenters</code> array of <code>CIVector</code> positions and applies the reduction locally around each.</li>
-<li>For manual mode in our app, the cleanest path is to keep an array of <code>(point, radius)</code> tuples and feed the positions to <code>CIRedEyeCorrection</code> via <code>kCIInputCenterKey</code>-style overrides (<code>setValue:[positions] forKey:@"inputCenters"]</code>). If that private input is unstable across OS versions, fall back to a custom <code>CIKernel</code> implementing the formula above masked by a soft circle.</li>
-<li>Auto mode: call <code>image.autoAdjustmentFilters(options: [.redEye: true, .enhance: false, ...])</code> and chain only the returned <code>CIRedEyeCorrection</code> filter.</li>
-</ul>
-<h3 id="default-neutral-state">Default / neutral state<a class="headerlink" href="#default-neutral-state" title="Permanent link">&para;</a></h3>
-<p>No corrections in the list, slider at default size, Auto unrun. Resetting the section clears the corrections array; Auto re-runs the detector.</p>
-<h3 id="per-channel-interplay">Per-channel interplay<a class="headerlink" href="#per-channel-interplay" title="Permanent link">&para;</a></h3>
-<p>None — red-eye is a localised pixel rewrite, not a global colour curve.</p>
-<h2 id="white-balance">White Balance<a class="headerlink" href="#white-balance" title="Permanent link">&para;</a></h2>
-<h3 id="ui-affordances_1">UI affordances<a class="headerlink" href="#ui-affordances_1" title="Permanent link">&para;</a></h3>
-<p>Path: Edit &gt; Adjust &gt; <strong>White Balance</strong>. The section has a single <strong>pop-up menu</strong> that switches between three modes ([apple/wb]):</p>
-<ul>
-<li><strong>Neutral Gray</strong> — "Balances the warmth of an image based on neutral gray." Eyedropper button appears; clicking it puts the cursor into sampling mode, the next click on the image picks the neutral target.</li>
-<li><strong>Skin Tone</strong> — "Balances the warmth of an image based on skin tones." Same eyedropper UX, but the sampled pixel is matched against a built-in skin-tone reference.</li>
-<li><strong>Temperature/Tint</strong> — two sliders (Temperature: blue ↔ yellow; Tint: green ↔ magenta). Eyedropper still available and biases both sliders so the sampled pixel becomes neutral gray.</li>
-</ul>
-<p>Common controls: each mode shows a small swatch (the sampled colour) and a Reset link in the section disclosure. The eyedropper cursor is the standard macOS dropper; while active the image cursor is the dropper, and a magnifier loupe pops up under the cursor (mirroring Digital Color Meter behaviour).</p>
-<h3 id="slider-value-ranges">Slider / value ranges<a class="headerlink" href="#slider-value-ranges" title="Permanent link">&para;</a></h3>
-<p>Apple does not publish the slider scale. Empirically:</p>
+<p>The service is reachable over any active IP transport: the Bridge hotspot
+(<code>192.168.8.1</code>), Same Wi-Fi, or the USB gadget link (<code>192.168.7.1</code>).</p>
+<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
+<p>Every endpoint requires <code>Authorization: Bearer &lt;token&gt;</code>, compared with
+<code>hmac.compare_digest</code>. The token is 32 hex chars in
+<code>/etc/InstantLinkBridge/sync.token</code> (0640), created on first use and
+rotatable from <strong>Settings ▸ Network ▸ Reset sync token</strong> (which restarts the
+service so the new token takes effect; all paired clients must re-pair).</p>
+<p>Missing/invalid token → <code>401 {"error": "unauthorized"}</code> with
+<code>WWW-Authenticate: Bearer</code>.</p>
+<h2 id="photo-sync-endpoints">Photo sync endpoints<a class="headerlink" href="#photo-sync-endpoints" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Control</th>
-<th>Range</th>
-<th>Default</th>
-<th>Note</th>
+<th>Method</th>
+<th>Path</th>
+<th>Response</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Temperature slider</td>
-<td>−1.0 .. +1.0 normalised (maps to ~2000–10000 K under the hood)</td>
-<td>0.0</td>
-<td>Visible UI is unitless; Core Image expects Kelvin</td>
+<td><code>GET</code></td>
+<td><code>/v1/status</code></td>
+<td><code>{"device", "proto", "outbox_depth"}</code></td>
 </tr>
 <tr>
-<td>Tint slider</td>
-<td>−150 .. +150 (Photos-style scale)</td>
-<td>0</td>
-<td>Maps to CIE green↔magenta axis</td>
+<td><code>GET</code></td>
+<td><code>/v1/queue</code></td>
+<td><code>{"items": [OutboxItem, …]}</code> oldest first</td>
 </tr>
 <tr>
-<td>Eyedropper sample</td>
-<td>3×3 pixel average (industry standard; Photos confirmed not single-pixel by loupe behaviour)</td>
-<td>n/a</td>
-<td>Recommended for reimplementation</td>
+<td><code>GET</code></td>
+<td><code>/v1/photos/{id}</code></td>
+<td>file bytes; <code>Range</code> / <code>206</code> supported for resume</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/v1/photos/{id}/ack</code></td>
+<td><code>{"ok": true}</code>; deletes the spool file</td>
 </tr>
 </tbody>
 </table>
-<p>For a Core Image-backed slider, expose Temperature in Kelvin (2000–12000) and Tint in arbitrary units (−150..+150), defaulting to 6500 K / 0.</p>
-<h3 id="mathematical-model_1">Mathematical model<a class="headerlink" href="#mathematical-model_1" title="Permanent link">&para;</a></h3>
-<p>White balance shifts pixels so the chosen "white target" maps to the canvas's reference white.</p>
-<ul>
-<li><strong>Color space</strong>: Core Image's <code>CITemperatureAndTint</code> is parameterised in CIE 1931 xy chromaticity, packaged as <code>(temperature, tint)</code>. Internally it converts the temperature to a Planckian xy point, applies a tint offset perpendicular to the Planckian locus, then performs a chromatic adaptation (Bradford or von Kries) from the "source neutral" xy to the "target neutral" xy in linear-light RGB.</li>
-<li><strong>Eyedropper from Neutral Gray</strong>: take the sampled pixel <code>(R,G,B)</code>, convert to XYZ→xy, set that as the source neutral; target neutral = D65 (6500 K, tint 0). The filter then computes the adaptation matrix and applies per pixel.</li>
-<li><strong>Skin Tone</strong>: take the sampled pixel as source neutral, but target neutral is the swatch shown in the UI (a fixed canonical skin chromaticity rather than D65). The swatch ships with Photos and is roughly Caucasian skin around (x≈0.39, y≈0.34) at L≈70 — Apple does not publish the exact value, so reimplement by tuning until the swatch matches.</li>
-<li><strong>Temperature &amp; Tint mode</strong>: target neutral stays D65; source neutral is derived from the slider values via the Planckian-locus-plus-perpendicular-offset formula.</li>
-</ul>
-<h3 id="core-image-mapping_1">Core Image mapping<a class="headerlink" href="#core-image-mapping_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong><code>CITemperatureAndTint</code></strong> is the public filter. Inputs ([nst/headers]):</li>
-<li><code>inputNeutral</code> — <code>CIVector(x: temperatureK, y: tint)</code>, default <code>(6500, 0)</code>.</li>
-<li><code>inputTargetNeutral</code> — <code>CIVector(x: targetTempK, y: targetTint)</code>, default <code>(6500, 0)</code>.</li>
-<li>To warm an image, set <code>inputNeutral</code> cooler than <code>inputTargetNeutral</code> (telling the filter "treat the image as if shot at X K and remap to Y K").</li>
-<li><strong><code>CIWhitePointAdjust</code></strong> is a coarser alternative: <code>inputColor</code> (default <code>#FFE5CC</code>) is treated as the source white and all colours are rescaled so it maps to <code>(1,1,1)</code> ([apple/whitepointadjust]). Useful as a fallback for the Neutral Gray dropper but lacks the proper chromatic adaptation that <code>CITemperatureAndTint</code> performs.</li>
-<li>Recommended pipeline:</li>
-<li><strong>Neutral Gray dropper</strong> → convert sampled colour to a (K, tint) pair (invert the Planckian + tint formula numerically), feed as <code>inputNeutral</code>, leave <code>inputTargetNeutral</code> at <code>(6500, 0)</code>, drive <code>CITemperatureAndTint</code>.</li>
-<li><strong>Skin Tone dropper</strong> → solve for <code>inputNeutral</code> (sampled colour as K,tint) and <code>inputTargetNeutral</code> (skin swatch as K,tint).</li>
-<li><strong>Temperature/Tint sliders</strong> → write sliders directly to <code>inputNeutral</code> (image was shot at X K) with <code>inputTargetNeutral = (6500, 0)</code>. Inverting sign convention is fine as long as the UI matches Photos' direction (slider right = warmer).</li>
-</ul>
-<h3 id="default-neutral-state_1">Default / neutral state<a class="headerlink" href="#default-neutral-state_1" title="Permanent link">&para;</a></h3>
-<p>All three modes neutral → <code>inputNeutral == inputTargetNeutral == (6500, 0)</code>. Switching modes should not silently re-apply a previous mode's adjustment; Photos uses one underlying parameter set per mode but only the active mode contributes to the rendered pipeline.</p>
-<h3 id="per-channel-interplay_1">Per-channel interplay<a class="headerlink" href="#per-channel-interplay_1" title="Permanent link">&para;</a></h3>
-<p>Not applicable; white balance is a global chromatic adaptation.</p>
-<h2 id="curves">Curves<a class="headerlink" href="#curves" title="Permanent link">&para;</a></h2>
-<h3 id="ui-affordances_2">UI affordances<a class="headerlink" href="#ui-affordances_2" title="Permanent link">&para;</a></h3>
-<p>Path: Edit &gt; Adjust &gt; <strong>Curves</strong>. Per Apple ([apple/curves]):</p>
-<ul>
-<li><strong>Channel pop-up menu</strong> below "Curves": <strong>RGB</strong> (default), <strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong>. (No Luminance entry in Curves — that lives in Levels.)</li>
-<li><strong>Auto button</strong> — runs a per-channel auto curve.</li>
-<li><strong>Add Points button</strong> — when pressed, every click in the image adds a point to the curve at the corresponding luminance/channel value. The same UX also adds points by clicking directly on the diagonal line in the histogram.</li>
-<li><strong>Black-point / Midtone / White-point eyedroppers</strong> — three dropper buttons. "Click an Eyedropper button for the point setting you want to change, then click a location in the photo that best represents the black point, midtones, or white point." Click sets the endpoint / midtone anchor in the active channel.</li>
-<li><strong>Histogram backdrop</strong> — drawn behind the diagonal line. Refreshes when the channel changes (and after an edit, but Apple debounces; assume 50–100 ms throttle).</li>
-<li><strong>Endpoint handles</strong> — the top-right and bottom-left handles on the diagonal are draggable; per Apple, "drag the top or bottom handle of the diagonal line in the histogram to change the black point and white point range of adjustment." Dragging the bottom handle right raises the input black point (clips shadows); dragging the top handle left lowers the input white point (clips highlights).</li>
-<li><strong>Smoothing toggle</strong> — Apple's user guide does not document a smooth-vs-polyline switch for Photos' Curves UI. Behaviour is a smooth spline through all points; there is no pencil-draw mode like Photoshop's. Reimplementation should default to smooth-spline only.</li>
-<li><strong>Point deletion</strong> — drag a point off the curve area (down past the bottom or up past the top) to delete it. Endpoints (the corner handles) cannot be deleted, only repositioned along their respective edges.</li>
-<li><strong>Point-grab tolerance</strong> — Photos uses approximately a 10-pt hit radius. Reimplementation: 12 pt for trackpad ergonomics.</li>
-<li><strong>Point count</strong> — Apple does not document a hard cap. Practical limit is ~16 (after which the spline becomes wobbly). Photoshop's Curves caps at 16; mirror that.</li>
-</ul>
-<h3 id="curve-interaction-nuance">Curve interaction nuance<a class="headerlink" href="#curve-interaction-nuance" title="Permanent link">&para;</a></h3>
-<p>"Drag a point up to increase the brightness; drag it down to decrease brightness. Drag a point left to increase contrast; drag it to the right to decrease contrast." Vertical drag = output value at fixed input; horizontal drag = shifting the input pivot.</p>
-<h3 id="mathematical-model_2">Mathematical model<a class="headerlink" href="#mathematical-model_2" title="Permanent link">&para;</a></h3>
-<p>A monotone spline (Catmull-Rom or monotone cubic Hermite) fitted through the user-controlled points plus the two endpoints. Output for input <code>x</code> ∈ <code>[0,1]</code> is the spline's y-value, clamped to <code>[0,1]</code>. At the edges the curve is <strong>clamped</strong> (constant extrapolation), not extrapolated linearly. Applied per channel selected in the pop-up; in RGB mode the same curve is applied to all three channels independently.</p>
-<h3 id="core-image-mapping_2">Core Image mapping<a class="headerlink" href="#core-image-mapping_2" title="Permanent link">&para;</a></h3>
-<p>Two viable filters; choose based on how many points the UI exposes:</p>
-<ul>
-<li><strong><code>CIToneCurve</code></strong> — 5-point spline ([w0lfschild/headers], [cifilter/tonecurve]). Inputs:</li>
-<li><code>inputPoint0</code> default <code>(0.00, 0.00)</code></li>
-<li><code>inputPoint1</code> default <code>(0.25, 0.25)</code></li>
-<li><code>inputPoint2</code> default <code>(0.50, 0.50)</code></li>
-<li><code>inputPoint3</code> default <code>(0.75, 0.75)</code></li>
-<li><code>inputPoint4</code> default <code>(1.00, 1.00)</code></li>
-<li>Applied as a single tone curve to luminance/RGB combined; not per-channel.</li>
-<li><strong><code>CIColorCurves</code></strong> (iOS 11+, macOS 10.13+) — arbitrary-length LUT ([muukii/cifilters]). Inputs:</li>
-<li><code>inputCurvesData</code> — packed <code>(r, g, b)</code> floats sampled along the input domain. Default packs three identity samples (<code>{(0,0,0), (0.5,0.5,0.5), (1,1,1)}</code>).</li>
-<li><code>inputCurvesDomain</code> — <code>CIVector(x: 0, y: 1)</code>.</li>
-<li><code>inputColorSpace</code> — working space.</li>
-<li>This is the right primitive for Photos' UI: sample our spline at 256 (or 1024) points per channel, pack as <code>(r,g,b)</code> triplets, feed as <code>inputCurvesData</code>.</li>
-</ul>
-<p>Recommended approach: model the UI with up to 16 points per channel, evaluate a monotone cubic spline at 256 samples per channel, build the <code>inputCurvesData</code> blob, push through <code>CIColorCurves</code>. Compose per-channel curves by applying three separate <code>CIColorCurves</code> (R-only, G-only, B-only) in series, then an RGB-master curve as a fourth pass; or fold all four into a single LUT before the GPU pass.</p>
-<p>For real-time preview, cache the LUT and only rebuild on point change.</p>
-<h3 id="default-neutral-state_2">Default / neutral state<a class="headerlink" href="#default-neutral-state_2" title="Permanent link">&para;</a></h3>
-<p>Straight diagonal: only the two endpoint handles at <code>(0,0)</code> and <code>(1,1)</code>. Master RGB curve neutral, each channel curve neutral. Histogram visible behind.</p>
-<h3 id="per-channel-vs-master-interplay">Per-channel vs master interplay<a class="headerlink" href="#per-channel-vs-master-interplay" title="Permanent link">&para;</a></h3>
-<p>Per-channel curves compose with the master curve. Mathematically the rendered output is <code>master(channel_R(input_R))</code>, <code>master(channel_G(input_G))</code>, <code>master(channel_B(input_B))</code>. Photos applies the master last (after the per-channel pass) so master tweaks affect already-corrected channels.</p>
-<h2 id="levels">Levels<a class="headerlink" href="#levels" title="Permanent link">&para;</a></h2>
-<h3 id="ui-affordances_3">UI affordances<a class="headerlink" href="#ui-affordances_3" title="Permanent link">&para;</a></h3>
-<p>Path: Edit &gt; Adjust &gt; <strong>Levels</strong>. Per Apple ([apple/levels]):</p>
-<ul>
-<li><strong>Channel pop-up menu</strong> below "Levels": <strong>Luminance</strong> (default), <strong>RGB</strong>, <strong>Red</strong>, <strong>Green</strong>, <strong>Blue</strong>. Note: this is one more channel option than Curves — Levels has Luminance.</li>
-<li><strong>Auto button</strong> — runs an auto-levels stretch on the selected channel.</li>
-<li><strong>Five histogram handles</strong>, left to right: Black point, Shadows, Midtones, Highlights, White point. Each is a draggable triangle attached to the bottom of the histogram.</li>
-<li><strong>Top handles vs bottom handles</strong> — confirmed Photos has both. Bottom handles control the <strong>input</strong> mapping (where black/shadows/midtones/highlights/white land); top handles control the <strong>output range</strong> of the adjustment. Quoting Apple: "You can also drag the top handles of the Levels controls to change the range of adjustment. For example, to adjust only the lightest of highlights, move the top handle further to the right." This is functionally equivalent to Photoshop's input/output sliders but rendered as two rows on the same histogram strip.</li>
-<li><strong>Option-drag</strong> — "press and hold the Option key and then drag the bottom handle" moves both top and bottom handles in unison, locking the relationship while shifting the pivot.</li>
-<li><strong>No explicit eyedroppers in Levels</strong> in current Photos (eyedroppers live in Curves and White Balance); reimplementation can add them or omit them.</li>
-<li><strong>Histogram backdrop</strong> — refreshes after every committed adjustment. Apple does not document a debounce; mirror Curves at ~100 ms.</li>
-</ul>
-<h3 id="slider-value-ranges-recommended-for-reimplementation_1">Slider / value ranges (recommended for reimplementation)<a class="headerlink" href="#slider-value-ranges-recommended-for-reimplementation_1" title="Permanent link">&para;</a></h3>
-<p>Photos' UI is normalised (no numeric badges), but for a faithful Levels engine adopt the Photoshop convention:</p>
+<p><code>OutboxItem</code> fields: <code>item_id</code> (hex), <code>file_name</code>, <code>size_bytes</code>, <code>sha256</code>,
+<code>received_at</code> (epoch seconds), <code>source_remote_ip</code>.</p>
+<p>Unknown id → <code>404 {"error": "unknown_item", "item_id": …}</code>.</p>
+<p>Typical pull loop: <code>GET /v1/queue</code> → for each item <code>GET /v1/photos/{id}</code>
+(resume with <code>Range</code> if a partial exists) → verify <code>sha256</code> → save →
+<code>POST /v1/photos/{id}/ack</code>. <code>Content-Type</code> on the download is guessed from
+the file name (defaults to <code>image/jpeg</code>); note Sony writes HEIF as <code>.HIF</code>,
+which clients must map to HEIF when saving.</p>
+<h2 id="virtual-lcd-endpoints-plan-054">Virtual-LCD endpoints (plan 054)<a class="headerlink" href="#virtual-lcd-endpoints-plan-054" title="Permanent link">&para;</a></h2>
+<p>Present only when <code>[sync].remote_ui = true</code> (default). They let a phone act
+as the Bridge's screen on screenless SKUs — the same pure renderer that
+drives the physical LCD.</p>
 <table>
 <thead>
 <tr>
-<th>Handle</th>
-<th>Range</th>
-<th>Default</th>
-<th>Notes</th>
+<th>Method</th>
+<th>Path</th>
+<th>Response</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Input black point</td>
-<td>0..254</td>
-<td>0</td>
-<td>Must be &lt; input white point</td>
+<td><code>GET</code></td>
+<td><code>/v1/screen</code></td>
+<td>current 240×240 frame as <code>image/png</code></td>
 </tr>
 <tr>
-<td>Input shadows</td>
-<td>0..255</td>
-<td>~25</td>
-<td>Between black point and midtone</td>
-</tr>
-<tr>
-<td>Input midtones (gamma)</td>
-<td>0.10 .. 9.99</td>
-<td>1.00</td>
-<td>Power-function exponent on the post-input value</td>
-</tr>
-<tr>
-<td>Input highlights</td>
-<td>0..255</td>
-<td>~230</td>
-<td>Between midtone and white point</td>
-</tr>
-<tr>
-<td>Input white point</td>
-<td>1..255</td>
-<td>255</td>
-<td>Must be &gt; input black point</td>
-</tr>
-<tr>
-<td>Output black</td>
-<td>0..255</td>
-<td>0</td>
-<td>"top handle" left</td>
-</tr>
-<tr>
-<td>Output white</td>
-<td>0..255</td>
-<td>255</td>
-<td>"top handle" right</td>
+<td><code>POST</code></td>
+<td><code>/v1/input</code></td>
+<td><code>{"action": "&lt;a&gt;"}</code> → <code>{"ok": true, "action": "&lt;a&gt;"}</code></td>
 </tr>
 </tbody>
 </table>
-<p>Internally normalise everything to <code>[0, 1]</code>.</p>
-<h3 id="mathematical-model_3">Mathematical model<a class="headerlink" href="#mathematical-model_3" title="Permanent link">&para;</a></h3>
-<p>For each channel pixel value <code>v ∈ [0, 1]</code>:</p>
-<ol>
-<li><strong>Input clamp &amp; stretch</strong>: <code>t = clamp((v − inBlack) / (inWhite − inBlack), 0, 1)</code>.</li>
-<li><strong>Gamma (midtone)</strong>: <code>t = t^(1/gamma)</code>. Photoshop's slider direction is "left → lighter", so a left-drag yields <code>gamma &gt; 1</code>.</li>
-<li><strong>Optional shadow/highlight shaping</strong>: Photos exposes separate shadows and highlights handles in addition to black/white/midtone, implying a piecewise-linear remap layered before the gamma. A practical model: an additional shoulder function <code>t = lerp(0, 1, t)</code> with two pivot points at the shadow and highlight handle positions, applied before step 2.</li>
-<li><strong>Output remap</strong>: <code>out = outBlack + t · (outWhite − outBlack)</code>.</li>
-</ol>
-<p>For <strong>Luminance</strong> mode, run steps 1–4 on perceived luminance (<code>Y = 0.2126R + 0.7152G + 0.0722B</code>) and scale all three channels by <code>out / Y</code> to preserve hue (the standard luminance-only Levels move).</p>
-<h3 id="core-image-mapping_3">Core Image mapping<a class="headerlink" href="#core-image-mapping_3" title="Permanent link">&para;</a></h3>
-<ul>
-<li>No single Core Image filter implements a 3-handle Levels exactly. Composite:</li>
-<li><strong><code>CIColorPolynomial</code></strong> — coefficients per channel ([muukii/cifilters]); identity is <code>(0, 1, 0, 0)</code>. Useful for the linear input/output stretch (steps 1 and 4 in one cubic), but cannot express a non-trivial gamma exactly.</li>
-<li><strong><code>CIGammaAdjust</code></strong> — <code>inputPower</code> (default 1.0). Drives step 2.</li>
-<li><strong><code>CIColorCurves</code></strong> — same primitive as in the Curves section; the most flexible. Bake the full Levels transfer function (steps 1–4) into a 256-entry LUT per channel and dispatch via <code>CIColorCurves</code> with an identity domain.</li>
-<li><strong><code>CIHistogramDisplayFilter</code></strong> generates the histogram backdrop. Inputs: <code>inputImage</code> (target), <code>inputHeight</code>, <code>inputHighLimit</code>, <code>inputLowLimit</code>. Render its output as a translucent fill behind the slider strip; cache and only regenerate on edit completion to avoid frame-rate spikes.</li>
-<li><strong>Auto button</strong> — call <code>CIImage.autoAdjustmentFilters(options:)</code> and use the returned <code>CIToneCurve</code> parameters (Apple's auto-curve seeds black/midtone/white) as initial handle positions for the selected channel.</li>
-</ul>
-<h3 id="default-neutral-state_3">Default / neutral state<a class="headerlink" href="#default-neutral-state_3" title="Permanent link">&para;</a></h3>
-<p>Input <code>(black=0, mid=1.0 gamma, white=255)</code>, output <code>(black=0, white=255)</code>. Shadow/highlight handles snap to default positions (e.g. 1/4 and 3/4 of the input range) that don't bend the response.</p>
-<h3 id="per-channel-vs-combined-modes">Per-channel vs combined modes<a class="headerlink" href="#per-channel-vs-combined-modes" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Luminance</strong> — operates on perceived Y only, preserves hue (use luminance-preserving rescale).</li>
-<li><strong>RGB</strong> — same Levels function applied to all three channels independently (no luminance preservation; will shift saturation as it stretches).</li>
-<li><strong>Red / Green / Blue</strong> — Levels function applied to just that channel. Multiple per-channel adjustments stack: apply R, G, B in order, then the combined RGB / Luminance pass on top.</li>
-</ul>
-<h3 id="auto-levels-behaviour">Auto-Levels behaviour<a class="headerlink" href="#auto-levels-behaviour" title="Permanent link">&para;</a></h3>
-<p>Photos' Auto button does a per-channel histogram stretch with shadow/highlight protection: it picks input black at the 0.5% percentile and input white at the 99.5% percentile of the selected channel's histogram, then sets gamma so the median lands at 0.5. Reimplementation: compute the histogram via <code>CIAreaHistogram</code>, derive percentile cuts, set Levels handles, and render.</p>
-<h2 id="open-uncertainties">Open uncertainties<a class="headerlink" href="#open-uncertainties" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Eyedropper sample size</strong>: Apple does not publish whether droppers sample one pixel or a small neighbourhood. Reimplementation uses 3×3 average (industry default); confirm by behavioural A/B against Photos.</li>
-<li><strong>Skin-tone reference chromaticity</strong>: Apple ships a fixed swatch but does not publish its xy or Lab coordinates. Empirical tuning required.</li>
-<li><strong>Photos' Temperature/Tint slider scale</strong>: the UI is unitless; mapping to Kelvin / tint units is inferred from <code>CITemperatureAndTint</code>. Slider direction (right = warmer) is confirmed by the user guide; numeric magnitude is not.</li>
-<li><strong>Red-eye size slider unit</strong>: Apple's guide says "drag the Size slider until the circle is the same size as the red area" — units are unspecified. Reimplementation picks a pt-based range tied to the displayed image scale.</li>
-<li><strong>Curves smoothing toggle</strong>: Photos has no documented Photoshop-style polyline mode; the user guide implies smooth spline only. If a pencil-draw mode is desired it would be a divergence from Photos.</li>
-<li><strong>Curves point cap</strong>: undocumented. Photoshop's 16-point cap is a safe upper bound for monotone-cubic stability.</li>
-<li><strong>Levels shadow / highlight handles</strong>: Apple lists five handles but does not specify the precise piecewise shape between them. A two-segment lerp between black→shadow, shadow→midtone, midtone→highlight, highlight→white is the most plausible model and should be tuned against side-by-side comparison.</li>
-<li><strong><code>CIRedEyeCorrection</code> public API</strong>: documented in the auto-adjustment guide but absent from the Filter Reference index — calling it directly via <code>CIFilter(name: "CIRedEyeCorrection")</code> works on shipping macOS but is technically undocumented. Falling back to a custom <code>CIKernel</code> removes the API-stability risk.</li>
-<li><strong><code>autoAdjustmentFilters</code> options for red-eye only</strong>: the docs mention enabling/disabling red-eye via the options dict; the exact option key (<code>CIImageAutoAdjustRedEye</code> vs <code>kCIImageAutoAdjustRedEye</code>) varies by SDK version — confirm against the local SDK header before shipping.</li>
-</ul>
+<p><code>action</code> ∈ <code>up, down, left, right, select, back, help, pair</code> — injected into
+the same action queue as the physical joystick/keys, so all input handling
+(settle window, power activity) applies.</p>
+<p>Errors: <code>remote_ui = false</code> → <code>404 {"error": "remote_ui_disabled"}</code>; no
+snapshot/injector wired → <code>404 {"error": "remote_ui_unavailable"}</code>; bad
+action → <code>400 {"error": "invalid_action", "allowed": [...]}</code>; queue full →
+<code>400 {"error": "input_rejected"}</code>; render failure → <code>500</code>.</p>
+<p><code>/v1/screen</code> is CPU-guarded on the Pi Zero 2 W: frames are memoized by
+snapshot identity and re-rendered at most every ~0.3 s, so a fast-polling
+client cannot peg the CPU.</p>
+<h2 id="security-posture-v1">Security posture (v1)<a class="headerlink" href="#security-posture-v1" title="Permanent link">&para;</a></h2>
+<p>The WPA2 hotspot provides L2 encryption and the bearer token gates access;
+TLS with a pinned self-signed cert is a v1.5 hardening item. See
+<code>docs/plans/050-iphone-auto-sync.md</code> and <code>051-sync-ux-audit.md</code> for the
+threat model and token-rotation story.</p>
 
 
 

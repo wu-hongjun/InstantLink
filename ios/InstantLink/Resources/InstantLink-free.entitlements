@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Entitlements for FREE personal signing teams, which Apple does not allow
+     to hold the Hotspot Configuration capability. Built with this file, the
+     app cannot join the Bridge Wi-Fi programmatically; onboarding falls back
+     to the manual-join screen (join in iOS Settings, then continue).
+     Paid teams should build with the default InstantLink.entitlements. -->
+<plist version="1.0">
+<dict/>
+</plist>

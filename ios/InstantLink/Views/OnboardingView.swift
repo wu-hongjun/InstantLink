@@ -17,6 +17,8 @@ struct OnboardingView: View {
                 scannerSection
             case .joiningNetwork, .discovering:
                 PairingProgressView(step: model.onboardingStep)
+            case .manualJoinNeeded(let ssid, let psk):
+                manualJoinSection(ssid: ssid, psk: psk)
             case .paired(let deviceID):
                 pairedSection(deviceID: deviceID)
             case .failed(let message):
@@ -80,6 +82,64 @@ struct OnboardingView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("If scanning isn't possible, paste the Bridge's pairing link — the same instantlink://pair address its QR code encodes.")
+        }
+    }
+
+    // MARK: - Manual network join
+
+    /// Shown when the in-app hotspot join is unavailable (free personal
+    /// signing teams can't hold the Hotspot Configuration entitlement) or
+    /// fails: the user joins the Bridge Wi-Fi in iOS Settings using the
+    /// credentials from the QR, then resumes pairing.
+    private func manualJoinSection(ssid: String, psk: String?) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "wifi")
+                .font(.system(size: 56))
+                .foregroundStyle(.tint)
+            Text("Join the Bridge Wi-Fi")
+                .font(.title2.bold())
+            Text("This build can't join Wi-Fi for you. Open Settings ▸ Wi-Fi and join the network below, then come back and continue.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            VStack(spacing: 8) {
+                LabeledContent("Network", value: ssid)
+                if let psk {
+                    LabeledContent("Password") {
+                        Text(psk)
+                            .font(.body.monospaced().bold())
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+            .padding()
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 32)
+
+            Text("iOS may warn that this network has no internet — that's expected; stay joined.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Spacer()
+
+            Button {
+                Task { await model.continueAfterManualJoin() }
+            } label: {
+                Text("I've joined — continue")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal)
+
+            Button("Cancel") {
+                model.restartOnboarding()
+            }
+            .padding(.bottom, 24)
         }
     }
 

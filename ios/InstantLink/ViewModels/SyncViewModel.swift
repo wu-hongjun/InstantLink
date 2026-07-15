@@ -16,6 +16,10 @@ final class SyncViewModel: ObservableObject {
     enum OnboardingStep: Equatable {
         case scanning
         case joiningNetwork
+        /// The in-app hotspot join is unavailable (e.g. free personal teams
+        /// can't hold the Hotspot Configuration entitlement) or failed — the
+        /// user joins the Bridge Wi-Fi in iOS Settings, then resumes.
+        case manualJoinNeeded(ssid: String, psk: String?)
         case discovering
         case paired(deviceID: String)
         case failed(String)
@@ -63,6 +67,9 @@ final class SyncViewModel: ObservableObject {
     private let browser = BridgeBrowser()
     private var client: SyncClient?
     private var pollTask: Task<Void, Never>?
+    /// Parsed pairing held across the manual-join detour so the pipeline can
+    /// resume at discovery once the user has joined the network themselves.
+    private var pendingInfo: PairingInfo?
 
     init(store: PairingStore = PairingStore()) {
         self.store = store
@@ -82,14 +89,44 @@ final class SyncViewModel: ObservableObject {
     /// `finishOnboarding()` so the "Paired" confirmation screen is visible;
     /// the pairing itself is already on disk by then.
     func completePairing(scannedCode: String) async {
+        let info: PairingInfo
         do {
-            let info = try PairingInfo.parse(scannedCode)
+            info = try PairingInfo.parse(scannedCode)
+        } catch {
+            onboardingStep = .failed(error.localizedDescription)
+            return
+        }
+        pendingInfo = info
 
-            if let ssid = info.ssid, let psk = info.psk {
-                onboardingStep = .joiningNetwork
+        if let ssid = info.ssid, let psk = info.psk {
+            onboardingStep = .joiningNetwork
+            do {
                 try await hotspotJoiner.join(ssid: ssid, passphrase: psk)
+            } catch {
+                // NEHotspotConfiguration is entitlement-gated (unavailable on
+                // free personal teams) and can fail for other reasons; either
+                // way the network itself is fine — hand the join to the user
+                // and resume the pipeline afterwards.
+                onboardingStep = .manualJoinNeeded(ssid: ssid, psk: info.psk)
+                return
             }
+        }
 
+        await discoverAndVerify(info)
+    }
+
+    /// Called from the manual-join screen once the user has joined the
+    /// Bridge Wi-Fi in iOS Settings; resumes the pipeline at discovery.
+    func continueAfterManualJoin() async {
+        guard let info = pendingInfo else {
+            onboardingStep = .scanning
+            return
+        }
+        await discoverAndVerify(info)
+    }
+
+    private func discoverAndVerify(_ info: PairingInfo) async {
+        do {
             onboardingStep = .discovering
             let resolved = await browser.discover(
                 deviceID: info.deviceID,
@@ -106,6 +143,7 @@ final class SyncViewModel: ObservableObject {
             client = candidate
             bridgeStatus = status
             isBridgeReachable = true
+            pendingInfo = nil
             onboardingStep = .paired(deviceID: info.deviceID)
         } catch {
             onboardingStep = .failed(error.localizedDescription)
@@ -122,6 +160,7 @@ final class SyncViewModel: ObservableObject {
 
     /// Returns to the scanner after a failed attempt.
     func restartOnboarding() {
+        pendingInfo = nil
         onboardingStep = .scanning
     }
 

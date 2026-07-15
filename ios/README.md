@@ -63,10 +63,27 @@ requires the **Hotspot Configuration** capability
 
 - Select a development team in Xcode ▸ target ▸ Signing & Capabilities (or set
   `DEVELOPMENT_TEAM` in `project.yml` and regenerate).
-- A paid Apple Developer team definitely supports the capability. Free
-  personal teams may refuse to provision it — if automatic signing fails on
-  the entitlement, that's why; test Same Wi-Fi mode (QR without `ssid`/`psk`,
-  no entitlement needed at runtime) or use a paid team.
+- A paid Apple Developer team supports the capability. **Free personal teams
+  do not** — Apple refuses to provision it ("Personal development teams …
+  do not support the Hotspot capability", verified 2026-07-15). Free-team
+  builds work by swapping in the empty entitlements file; onboarding then
+  falls back to the manual-join screen (join the Bridge Wi-Fi in iOS
+  Settings using the SSID/password shown from the QR, tap "I've joined —
+  continue"):
+
+  ```bash
+  xcodebuild -project InstantLink-iOS.xcodeproj -scheme InstantLink-iOS \
+    -destination 'platform=iOS,id=<device-udid>' -allowProvisioningUpdates \
+    DEVELOPMENT_TEAM=<team-id> \
+    CODE_SIGN_ENTITLEMENTS=InstantLink/Resources/InstantLink-free.entitlements \
+    build
+  ```
+
+  The first build against the physical-device destination auto-registers the
+  phone with the team (a `generic/platform=iOS` build fails with "team has no
+  devices"). Install/launch via `xcrun devicectl device install app` /
+  `… process launch`; the first launch requires trusting the developer
+  profile on the phone (Settings ▸ General ▸ VPN & Device Management).
 - Camera, local network, Bonjour (`_instantlink._tcp`), and add-only Photos
   usage strings are declared in `InstantLink/Resources/Info.plist`.
 

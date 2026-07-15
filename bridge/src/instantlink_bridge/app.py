@@ -65,12 +65,14 @@ from instantlink_bridge.system_info import (
     read_device_id,
 )
 from instantlink_bridge.ui.controller import BridgeUi
-from instantlink_bridge.ui.models import PairedPrinter, UiSnapshot
+from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiSnapshot
 from instantlink_bridge.ui.pairing import BluetoothctlPrinterPairer, PrinterPairer
 from instantlink_bridge.ui.status import scan_bluez_instax_printers, status_target_for_visible_match
 from instantlink_bridge.watchdog import WatchdogNotifier, run_watchdog_heartbeat
 
 if TYPE_CHECKING:
+    from PIL import Image
+
     from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
     from instantlink_bridge.sync.outbox import SyncOutbox
     from instantlink_bridge.sync.server import SyncService
@@ -250,6 +252,13 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             device_id=read_device_id(),
             client_activity_callback=on_sync_client_activity,
             outbox_changed_callback=on_sync_outbox_changed,
+            # Virtual LCD (plan 054 phase A): screen frames come from the
+            # live snapshot via the pure renderer; input rides the same
+            # action queue as GPIO. `[sync] remote_ui = false` 404s both
+            # endpoints without unwiring anything.
+            screen_provider=make_remote_screen_provider(lambda: ui.snapshot),
+            input_injector=make_remote_input_injector(ui.inject_action),
+            remote_ui_enabled=config.sync.remote_ui,
         )
         return outbox, built
 
@@ -608,6 +617,61 @@ async def notify_sync_service_state(ui: object, *, listening: bool) -> None:
     """Notify UI implementations that opt in to sync-service state (plan 051 P2.3)."""
 
     await call_optional_ui_hook(ui, "sync_service_state_changed", listening)
+
+
+def make_remote_screen_provider(
+    snapshot_provider: Callable[[], UiSnapshot],
+) -> Callable[[], Image.Image | None]:
+    """Build the virtual-LCD frame source for SyncService (plan 054 phase A).
+
+    Renders the live :class:`UiSnapshot` through the pure renderer. While
+    the snapshot compares equal to the previous one (snapshots are frozen;
+    equality is the same dedup the controller's ``_render`` uses for SPI
+    traffic) the SAME frame object is returned, which lets SyncService key
+    its encoded-PNG cache on frame identity — an idle screen polled at
+    3 fps costs one render, ever. SyncService calls the provider from a
+    worker thread and serializes calls behind a lock, so the closure state
+    needs no locking of its own.
+    """
+
+    from instantlink_bridge.ui.render import render_snapshot
+
+    last_snapshot: UiSnapshot | None = None
+    last_frame: Image.Image | None = None
+
+    def provide() -> Image.Image | None:
+        nonlocal last_snapshot, last_frame
+        snapshot = snapshot_provider()
+        if last_frame is not None and snapshot == last_snapshot:
+            return last_frame
+        frame = render_snapshot(snapshot)
+        last_snapshot = snapshot
+        last_frame = frame
+        return frame
+
+    return provide
+
+
+def make_remote_input_injector(
+    inject: Callable[[UiAction], bool],
+) -> Callable[[str], bool]:
+    """Map virtual-LCD action strings onto ``BridgeUi.inject_action`` (plan 054).
+
+    The sync server validates strings against its own allowlist before
+    calling this, so the ``ValueError`` guard only matters if the two
+    action vocabularies ever drift — it degrades to a 400 instead of a
+    crashed request.
+    """
+
+    def injector(action: str) -> bool:
+        try:
+            ui_action = UiAction(action)
+        except ValueError:
+            LOGGER.warning("sync.remote_input_unknown action=%s", action)
+            return False
+        return inject(ui_action)
+
+    return injector
 
 
 async def apply_sync_destination_change(

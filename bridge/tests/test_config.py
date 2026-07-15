@@ -561,3 +561,51 @@ def test_sync_outbox_budget_must_be_positive(tmp_path: Path) -> None:
             assert "[sync].outbox_budget_mb" in str(exc)
         else:
             raise AssertionError(f"expected outbox budget {invalid} to fail")
+
+
+# ---------------------------------------------------------------------------
+# Plan 054: [sync] remote_ui — virtual-LCD endpoints toggle
+# ---------------------------------------------------------------------------
+
+
+def test_sync_remote_ui_defaults_true(tmp_path: Path) -> None:
+    """remote_ui defaults ON: token-authed, and the only control path for
+    headless devices (plan 054 phase A supersedes the drafted off-default)."""
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[printer]\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.sync.remote_ui is True
+    assert SyncConfig().remote_ui is True
+
+
+def test_sync_remote_ui_round_trips_toml(tmp_path: Path) -> None:
+    for value in (True, False):
+        config_path = tmp_path / f"remote-ui-{value}.toml"
+        config = BridgeConfig(sync=SyncConfig(remote_ui=value))
+        write_config(config, config_path)
+        round_tripped = load_config(config_path)
+        assert round_tripped.sync.remote_ui is value, f"remote_ui={value} did not round-trip"
+
+
+def test_sync_remote_ui_parses_from_toml(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[sync]\nremote_ui = false\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.sync.remote_ui is False
+
+
+def test_sync_remote_ui_must_be_boolean(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[sync]\nremote_ui = "maybe"\n', encoding="utf-8")
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "[sync].remote_ui" in str(exc)
+    else:
+        raise AssertionError("expected non-boolean remote_ui to fail")

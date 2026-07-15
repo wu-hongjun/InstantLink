@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import io
 import re
 import stat
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
+from PIL import Image
 
 from instantlink_bridge.sync.outbox import SyncOutbox
 from instantlink_bridge.sync.server import SyncService, load_or_create_sync_token
@@ -25,6 +28,9 @@ def _make_service(
     *,
     client_activity_callback: object = None,
     outbox_changed_callback: object = None,
+    screen_provider: Callable[[], Image.Image | None] | None = None,
+    input_injector: Callable[[str], bool] | None = None,
+    remote_ui_enabled: bool = True,
 ) -> tuple[SyncOutbox, SyncService]:
     outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
     callback = client_activity_callback if callable(client_activity_callback) else None
@@ -37,6 +43,9 @@ def _make_service(
         client_activity_callback=callback,
         outbox_changed_callback=depth_callback,
         enable_zeroconf=False,
+        screen_provider=screen_provider,
+        input_injector=input_injector,
+        remote_ui_enabled=remote_ui_enabled,
     )
     return outbox, service
 
@@ -502,3 +511,307 @@ async def test_start_reloads_rotated_token_from_disk(tmp_path: Path) -> None:
         assert service.token == "cc" * 16
     finally:
         await service.stop()
+
+
+# --- virtual LCD (plan 054): GET /v1/screen + POST /v1/input -------------------
+
+
+def _lcd_frame(color: tuple[int, int, int] = (12, 34, 56)) -> Image.Image:
+    return Image.new("RGB", (240, 240), color)
+
+
+@pytest.mark.asyncio
+async def test_screen_and_input_require_token(tmp_path: Path) -> None:
+    _, service = _make_service(
+        tmp_path,
+        screen_provider=_lcd_frame,
+        input_injector=lambda action: True,
+    )
+    client = await _start_client(service)
+    try:
+        response = await client.get("/v1/screen")
+        assert response.status == 401
+        response = await client.post("/v1/input", json={"action": "up"})
+        assert response.status == 401
+        assert service.last_client_seen_monotonic is None
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_returns_current_frame_as_png(tmp_path: Path) -> None:
+    _, service = _make_service(tmp_path, screen_provider=lambda: _lcd_frame((200, 10, 10)))
+    client = await _start_client(service)
+    try:
+        response = await client.get("/v1/screen", headers=_auth(service))
+        assert response.status == 200
+        assert response.headers["Content-Type"] == "image/png"
+        decoded = Image.open(io.BytesIO(await response.read()))
+        assert decoded.format == "PNG"
+        assert decoded.size == (240, 240)
+        assert decoded.convert("RGB").getpixel((120, 120)) == (200, 10, 10)
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_without_provider_is_404(tmp_path: Path) -> None:
+    _, service = _make_service(tmp_path)
+    client = await _start_client(service)
+    try:
+        response = await client.get("/v1/screen", headers=_auth(service))
+        assert response.status == 404
+        assert (await response.json()) == {"error": "remote_ui_unavailable"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_provider_returning_none_is_404(tmp_path: Path) -> None:
+    _, service = _make_service(tmp_path, screen_provider=lambda: None)
+    client = await _start_client(service)
+    try:
+        response = await client.get("/v1/screen", headers=_auth(service))
+        assert response.status == 404
+        assert (await response.json()) == {"error": "remote_ui_unavailable"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_remote_ui_disabled_by_config_is_404(tmp_path: Path) -> None:
+    """[sync] remote_ui = false must 404 both endpoints even when wired."""
+
+    injected: list[str] = []
+
+    def _inject(action: str) -> bool:
+        injected.append(action)
+        return True
+
+    _, service = _make_service(
+        tmp_path,
+        screen_provider=_lcd_frame,
+        input_injector=_inject,
+        remote_ui_enabled=False,
+    )
+    client = await _start_client(service)
+    try:
+        response = await client.get("/v1/screen", headers=_auth(service))
+        assert response.status == 404
+        assert (await response.json()) == {"error": "remote_ui_disabled"}
+        response = await client.post("/v1/input", json={"action": "up"}, headers=_auth(service))
+        assert response.status == 404
+        assert (await response.json()) == {"error": "remote_ui_disabled"}
+        assert injected == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_rapid_requests_render_once(tmp_path: Path) -> None:
+    """CPU protection: a fast-polling client must hit the encoded-PNG cache
+    (minimum re-render interval) instead of re-rendering per request."""
+
+    calls: list[int] = []
+    frame = _lcd_frame()
+
+    def _count_and_render() -> Image.Image:
+        calls.append(1)
+        return frame
+
+    _, service = _make_service(tmp_path, screen_provider=_count_and_render)
+    client = await _start_client(service)
+    try:
+        first = await client.get("/v1/screen", headers=_auth(service))
+        second = await client.get("/v1/screen", headers=_auth(service))
+        assert first.status == 200
+        assert second.status == 200
+        assert (await first.read()) == (await second.read())
+        assert len(calls) == 1
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_rerenders_after_min_interval(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import instantlink_bridge.sync.server as sync_server
+
+    monkeypatch.setattr(sync_server, "SCREEN_MIN_RENDER_INTERVAL_S", 0.0)
+    calls: list[int] = []
+
+    def _fresh_frame() -> Image.Image:
+        calls.append(1)
+        return _lcd_frame((0, len(calls), 0))
+
+    _, service = _make_service(tmp_path, screen_provider=_fresh_frame)
+    client = await _start_client(service)
+    try:
+        await client.get("/v1/screen", headers=_auth(service))
+        await client.get("/v1/screen", headers=_auth(service))
+        assert len(calls) == 2
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_unchanged_frame_skips_reencode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An identical frame object (unchanged snapshot upstream) must reuse the
+    cached PNG bytes instead of re-encoding."""
+
+    import instantlink_bridge.sync.server as sync_server
+
+    monkeypatch.setattr(sync_server, "SCREEN_MIN_RENDER_INTERVAL_S", 0.0)
+    encodes: list[int] = []
+    real_encode = sync_server._encode_png
+
+    def _counting_encode(image: Image.Image) -> bytes:
+        encodes.append(1)
+        return real_encode(image)
+
+    monkeypatch.setattr(sync_server, "_encode_png", _counting_encode)
+    frame = _lcd_frame()
+    provider_calls: list[int] = []
+
+    def _same_frame() -> Image.Image:
+        provider_calls.append(1)
+        return frame
+
+    _, service = _make_service(tmp_path, screen_provider=_same_frame)
+    client = await _start_client(service)
+    try:
+        await client.get("/v1/screen", headers=_auth(service))
+        await client.get("/v1/screen", headers=_auth(service))
+        assert len(provider_calls) == 2
+        assert len(encodes) == 1
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_screen_provider_failure_is_500(tmp_path: Path) -> None:
+    def _boom() -> Image.Image:
+        raise RuntimeError("render exploded")
+
+    _, service = _make_service(tmp_path, screen_provider=_boom)
+    client = await _start_client(service)
+    try:
+        response = await client.get("/v1/screen", headers=_auth(service))
+        assert response.status == 500
+        assert (await response.json()) == {"error": "screen_render_failed"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_input_injects_action(tmp_path: Path) -> None:
+    injected: list[str] = []
+
+    def _inject(action: str) -> bool:
+        injected.append(action)
+        return True
+
+    _, service = _make_service(tmp_path, input_injector=_inject)
+    client = await _start_client(service)
+    try:
+        response = await client.post("/v1/input", json={"action": "select"}, headers=_auth(service))
+        assert response.status == 200
+        assert (await response.json()) == {"ok": True, "action": "select"}
+        assert injected == ["select"]
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_input_accepts_all_eight_actions(tmp_path: Path) -> None:
+    injected: list[str] = []
+
+    def _inject(action: str) -> bool:
+        injected.append(action)
+        return True
+
+    _, service = _make_service(tmp_path, input_injector=_inject)
+    client = await _start_client(service)
+    try:
+        actions = ["up", "down", "left", "right", "select", "back", "help", "pair"]
+        for action in actions:
+            response = await client.post(
+                "/v1/input", json={"action": action}, headers=_auth(service)
+            )
+            assert response.status == 200
+        assert injected == actions
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_input_invalid_action_is_400(tmp_path: Path) -> None:
+    injected: list[str] = []
+
+    def _inject(action: str) -> bool:
+        injected.append(action)
+        return True
+
+    _, service = _make_service(tmp_path, input_injector=_inject)
+    client = await _start_client(service)
+    try:
+        for body in ({"action": "jump"}, {"action": 7}, {"other": "up"}, {}):
+            response = await client.post("/v1/input", json=body, headers=_auth(service))
+            assert response.status == 400
+            assert (await response.json())["error"] == "invalid_action"
+        response = await client.post("/v1/input", data=b"not-json", headers=_auth(service))
+        assert response.status == 400
+        assert (await response.json())["error"] == "invalid_action"
+        assert injected == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_input_without_injector_is_404(tmp_path: Path) -> None:
+    _, service = _make_service(tmp_path)
+    client = await _start_client(service)
+    try:
+        response = await client.post("/v1/input", json={"action": "up"}, headers=_auth(service))
+        assert response.status == 404
+        assert (await response.json()) == {"error": "remote_ui_unavailable"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_input_rejected_by_injector_is_400(tmp_path: Path) -> None:
+    _, service = _make_service(tmp_path, input_injector=lambda action: False)
+    client = await _start_client(service)
+    try:
+        response = await client.post("/v1/input", json={"action": "up"}, headers=_auth(service))
+        assert response.status == 400
+        assert (await response.json()) == {"error": "input_rejected"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_remote_ui_routes_fire_activity_callback(tmp_path: Path) -> None:
+    """The auth middleware wraps every route, so the virtual-LCD endpoints
+    must count as client activity with no extra plumbing."""
+
+    calls: list[int] = []
+    _, service = _make_service(
+        tmp_path,
+        client_activity_callback=lambda: calls.append(1),
+        screen_provider=_lcd_frame,
+        input_injector=lambda action: True,
+    )
+    client = await _start_client(service)
+    try:
+        await client.get("/v1/screen", headers=_auth(service))
+        assert len(calls) == 1
+        await client.post("/v1/input", json={"action": "back"}, headers=_auth(service))
+        assert len(calls) == 2
+        assert service.last_client_seen_monotonic is not None
+    finally:
+        await client.close()

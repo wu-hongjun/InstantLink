@@ -520,6 +520,28 @@ class BridgeUi:
         """
         return self._snapshot
 
+    def inject_action(self, action: UiAction) -> bool:
+        """Inject a UI action from a remote surface (virtual LCD, plan 054).
+
+        Feeds the SAME queue GpioUiInput populates, so everything
+        ``_run_actions`` does for physical buttons — power-activity
+        recording, the startup settle window, per-mode handling — applies
+        to remote input unchanged. Returns ``False`` when the queue is
+        full (a burst-tapping client just loses the extra presses, exactly
+        like a bouncing physical button would).
+
+        Must be called on the event loop thread: ``put_nowait`` on an
+        asyncio queue is not thread-safe. The sync server's aiohttp
+        handlers satisfy that by construction.
+        """
+
+        try:
+            self._actions.put_nowait(action)
+        except asyncio.QueueFull:
+            LOGGER.warning("ui.remote_input_dropped action=%s reason=queue_full", action)
+            return False
+        return True
+
     async def start(self) -> None:
         """Start rendering and input handling."""
 

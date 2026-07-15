@@ -6397,3 +6397,63 @@ async def test_sync_pairing_qr_payload_reflects_rotated_token(tmp_path: Path) ->
     assert payload is not None
     assert f"&token={new_token}" in payload
     assert old_token not in payload
+
+
+# ---------------------------------------------------------------------------
+# Plan 054 phase A: remote input injection (virtual LCD)
+# ---------------------------------------------------------------------------
+
+
+def _remote_input_ui() -> tuple[BridgeUi, _FakeDisplay]:
+    display = _FakeDisplay()
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    return ui, display
+
+
+def test_inject_action_enqueues_onto_the_gpio_action_queue() -> None:
+    """Remote input must ride the same queue as GPIO so power-activity,
+    settle-window, and mode handling all apply unchanged."""
+
+    ui, _display = _remote_input_ui()
+
+    assert ui.inject_action(UiAction.SELECT) is True
+    assert ui._actions.get_nowait() is UiAction.SELECT
+
+
+def test_inject_action_reports_queue_full() -> None:
+    ui, _display = _remote_input_ui()
+    while True:
+        try:
+            ui._actions.put_nowait(UiAction.UP)
+        except asyncio.QueueFull:
+            break
+
+    assert ui.inject_action(UiAction.SELECT) is False
+
+
+@pytest.mark.asyncio
+async def test_injected_actions_respect_startup_settle_window(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Because injection targets the shared queue, the startup settle window
+    in _run_actions discards remote input exactly like GPIO input."""
+
+    ui, _display = _remote_input_ui()
+    loop = asyncio.get_running_loop()
+    ui._ignore_actions_until = loop.time() + 60.0
+    task = asyncio.create_task(ui._run_actions())
+    try:
+        with caplog.at_level(logging.INFO, logger="instantlink_bridge.ui.controller"):
+            assert ui.inject_action(UiAction.SELECT) is True
+            await ui._actions.join()
+        assert "ui.input_ignored" in caplog.text
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task

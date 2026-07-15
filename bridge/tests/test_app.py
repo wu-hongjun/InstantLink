@@ -934,3 +934,46 @@ async def test_token_rotation_restart_survives_missing_service() -> None:
 
     # Nothing can listen this boot: report it rather than staying silent.
     assert ui.events == ["sync_listening:False"]
+
+
+# ---------------------------------------------------------------------------
+# Plan 054 phase A: virtual-LCD wiring helpers
+# ---------------------------------------------------------------------------
+
+
+def test_make_remote_screen_provider_renders_and_caches_per_snapshot() -> None:
+    """The provider renders the live snapshot and reuses the frame object
+    while the snapshot is unchanged, so SyncService's identity-keyed PNG
+    cache holds across polls of an idle screen."""
+
+    snapshot = UiSnapshot(mode=UiMode.READY, ftp_host="192.168.8.1")
+    snapshots = [snapshot]
+    provider = app.make_remote_screen_provider(lambda: snapshots[0])
+
+    first = provider()
+    assert first is not None
+    assert first.size == (240, 240)
+    assert provider() is first  # unchanged snapshot -> cached frame object
+
+    snapshots[0] = UiSnapshot(mode=UiMode.SETTINGS, ftp_host="192.168.8.1")
+    second = provider()
+    assert second is not None
+    assert second is not first
+
+
+def test_make_remote_input_injector_maps_action_strings() -> None:
+    injected: list[object] = []
+
+    def _inject(action: object) -> bool:
+        injected.append(action)
+        return True
+
+    injector = app.make_remote_input_injector(_inject)
+
+    from instantlink_bridge.ui.models import UiAction
+
+    assert injector("select") is True
+    assert injector("pair") is True
+    assert injected == [UiAction.SELECT, UiAction.PAIR]
+    assert injector("jump") is False  # unknown strings never reach the queue
+    assert injected == [UiAction.SELECT, UiAction.PAIR]

@@ -324,6 +324,13 @@ class SyncConfig:
     ``destination`` is the only runtime-adjustable field; port, paths, and
     the outbox disk budget are provisioning-level and stay out of the
     schema-driven settings surface.
+
+    ``remote_ui`` gates the virtual-LCD endpoints (``GET /v1/screen`` +
+    ``POST /v1/input``, plan 054 phase A). Default ON — the endpoints sit
+    behind the same bearer token as the rest of the sync API, and on the
+    headless SKU they are the product's only control surface, so shipping
+    them dark would strand factory-fresh devices. (Plan 054 drafted
+    off-by-default; phase A supersedes that with default-on.)
     """
 
     destination: SyncDestination = SyncDestination.PRINT
@@ -331,6 +338,7 @@ class SyncConfig:
     outbox_dir: Path = Path("/var/lib/InstantLinkBridge/sync-outbox")
     outbox_budget_mb: int = 2048
     token_path: Path = Path("/etc/InstantLinkBridge/sync.token")
+    remote_ui: bool = True
 
     @property
     def sync_enabled(self) -> bool:
@@ -638,6 +646,7 @@ def render_config(config: BridgeConfig) -> str:
             f"outbox_dir = {_toml_string(str(config.sync.outbox_dir))}",
             f"outbox_budget_mb = {config.sync.outbox_budget_mb}",
             f"token_path = {_toml_string(str(config.sync.token_path))}",
+            f"remote_ui = {_toml_bool(config.sync.remote_ui)}",
             "",
         ]
     )
@@ -855,6 +864,7 @@ def _load_sync_config(data: object) -> SyncConfig:
         outbox_dir=Path(str(data.get("outbox_dir", "/var/lib/InstantLinkBridge/sync-outbox"))),
         outbox_budget_mb=outbox_budget_mb,
         token_path=Path(str(data.get("token_path", "/etc/InstantLinkBridge/sync.token"))),
+        remote_ui=_parse_bool(data.get("remote_ui", True), "[sync].remote_ui"),
     )
 
 

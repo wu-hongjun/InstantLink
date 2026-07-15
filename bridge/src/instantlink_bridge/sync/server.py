@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import io
 import logging
 import mimetypes
 import re
@@ -23,6 +24,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aiohttp import web
 from zeroconf import IPVersion
@@ -30,6 +32,9 @@ from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 from instantlink_bridge.net.addresses import detect_ipv4_addresses_for_interface
 from instantlink_bridge.sync.outbox import SyncOutbox
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +46,14 @@ DEFAULT_CONTENT_TYPE = "image/jpeg"
 # Settings at runtime — a one-shot registration would keep advertising
 # stale addresses either way.
 ADVERTISE_REFRESH_INTERVAL_S = 30.0
+# Virtual-LCD CPU guard (plan 054 phase A): a phone polling GET /v1/screen
+# faster than this serves the cached PNG without touching the renderer —
+# a tight curl loop must not peg the Zero 2 W. ~3 fps is the plan's target
+# poll rate and stays comfortably inside the budget.
+SCREEN_MIN_RENDER_INTERVAL_S = 0.3
+# The 8 abstract UiActions (ui/models.py UiAction values). Kept as string
+# literals so the sync layer never imports the UI controller stack.
+REMOTE_INPUT_ACTIONS = frozenset({"up", "down", "left", "right", "select", "back", "help", "pair"})
 _TOKEN_PATTERN = re.compile(r"[0-9a-fA-F]{32}")
 _ADVERTISE_INTERFACES = ("wlan0", "usb0")
 
@@ -110,11 +123,31 @@ class SyncService:
         outbox_changed_callback: Callable[[int], None] | None = None,
         enable_zeroconf: bool = True,
         address_provider: Callable[[], list[str]] | None = None,
+        screen_provider: Callable[[], Image.Image | None] | None = None,
+        input_injector: Callable[[str], bool] | None = None,
+        remote_ui_enabled: bool = True,
     ) -> None:
         self._outbox = outbox
         self._port = port
         self._device_id = device_id
         self._client_activity_callback = client_activity_callback
+        # Virtual LCD (plan 054 phase A). Both callables are injected by
+        # app.py so this module never imports the UI controller stack:
+        # ``screen_provider`` returns the current 240x240 frame (rendered
+        # from the live UiSnapshot; the SAME object while the snapshot is
+        # unchanged, which keys the PNG cache below), ``input_injector``
+        # feeds an action string into the controller's GPIO action queue
+        # and must be called on the event loop.
+        self._screen_provider = screen_provider
+        self._input_injector = input_injector
+        self._remote_ui_enabled = remote_ui_enabled
+        # Encoded-PNG cache: serialized by the lock so concurrent pollers
+        # never render twice; keyed by frame identity plus a minimum
+        # re-render interval (SCREEN_MIN_RENDER_INTERVAL_S).
+        self._screen_lock = asyncio.Lock()
+        self._screen_cache_png: bytes | None = None
+        self._screen_cache_frame: Image.Image | None = None
+        self._screen_cache_at = 0.0
         # Invoked with the new outbox depth after a successful ack so the
         # LCD chip decrements as the iPhone drains the queue (plan 051
         # P1.2); the spool-add side notifies from app.py.
@@ -216,6 +249,10 @@ class SyncService:
         app.router.add_get("/v1/queue", self._handle_queue)
         app.router.add_get("/v1/photos/{item_id}", self._handle_photo)
         app.router.add_post("/v1/photos/{item_id}/ack", self._handle_ack)
+        # Virtual LCD (plan 054 phase A). Behind the same auth middleware,
+        # so every poll/input counts as client activity automatically.
+        app.router.add_get("/v1/screen", self._handle_screen)
+        app.router.add_post("/v1/input", self._handle_input)
         return app
 
     def _is_authorized(self, request: web.Request) -> bool:
@@ -270,6 +307,73 @@ class SyncService:
         LOGGER.info("sync.photo_acked item=%s outbox_depth=%s", item_id, depth)
         self._notify_outbox_changed(depth)
         return web.json_response({"ok": True})
+
+    async def _handle_screen(self, request: web.Request) -> web.Response:
+        """Serve the current LCD frame as PNG (virtual LCD, plan 054).
+
+        Successful serves are deliberately not logged: at the ~3 fps poll
+        rate a per-request log line would drown the journal.
+        """
+
+        if not self._remote_ui_enabled:
+            LOGGER.info("sync.remote_ui_rejected reason=disabled endpoint=screen")
+            return _remote_ui_disabled_response()
+        provider = self._screen_provider
+        if provider is None:
+            LOGGER.info("sync.remote_ui_rejected reason=unwired endpoint=screen")
+            return _remote_ui_unavailable_response()
+        async with self._screen_lock:
+            now = time.monotonic()
+            if (
+                self._screen_cache_png is not None
+                and now - self._screen_cache_at < SCREEN_MIN_RENDER_INTERVAL_S
+            ):
+                return web.Response(body=self._screen_cache_png, content_type="image/png")
+            try:
+                frame = await asyncio.to_thread(provider)
+            except Exception:
+                LOGGER.exception("sync.screen_render_failed")
+                return web.json_response({"error": "screen_render_failed"}, status=500)
+            if frame is None:
+                return _remote_ui_unavailable_response()
+            if frame is not self._screen_cache_frame or self._screen_cache_png is None:
+                self._screen_cache_png = await asyncio.to_thread(_encode_png, frame)
+                self._screen_cache_frame = frame
+            self._screen_cache_at = now
+            return web.Response(body=self._screen_cache_png, content_type="image/png")
+
+    async def _handle_input(self, request: web.Request) -> web.Response:
+        """Inject one UiAction into the controller queue (virtual LCD)."""
+
+        if not self._remote_ui_enabled:
+            LOGGER.info("sync.remote_ui_rejected reason=disabled endpoint=input")
+            return _remote_ui_disabled_response()
+        injector = self._input_injector
+        if injector is None:
+            LOGGER.info("sync.remote_ui_rejected reason=unwired endpoint=input")
+            return _remote_ui_unavailable_response()
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = None
+        action = payload.get("action") if isinstance(payload, dict) else None
+        if not isinstance(action, str) or action not in REMOTE_INPUT_ACTIONS:
+            return web.json_response(
+                {"error": "invalid_action", "allowed": sorted(REMOTE_INPUT_ACTIONS)},
+                status=400,
+            )
+        # Called inline (not via to_thread): the injector is loop-affine —
+        # it put_nowait()s onto the controller's asyncio action queue.
+        try:
+            accepted = injector(action)
+        except Exception:
+            LOGGER.exception("sync.input_inject_failed action=%s", action)
+            return web.json_response({"error": "input_failed"}, status=500)
+        if not accepted:
+            LOGGER.warning("sync.input_rejected action=%s", action)
+            return web.json_response({"error": "input_rejected"}, status=400)
+        LOGGER.info("sync.input_injected action=%s", action)
+        return web.json_response({"ok": True, "action": action})
 
     def _notify_outbox_changed(self, depth: int) -> None:
         """Report a new outbox depth; guarded like the activity callback so
@@ -373,6 +477,22 @@ class SyncService:
 
 def _unknown_item_response(item_id: str) -> web.Response:
     return web.json_response({"error": "unknown_item", "item_id": item_id}, status=404)
+
+
+def _remote_ui_disabled_response() -> web.Response:
+    return web.json_response({"error": "remote_ui_disabled"}, status=404)
+
+
+def _remote_ui_unavailable_response() -> web.Response:
+    return web.json_response({"error": "remote_ui_unavailable"}, status=404)
+
+
+def _encode_png(image: Image.Image) -> bytes:
+    """Encode a PIL frame to PNG bytes (runs in a worker thread)."""
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def _advertise_addresses() -> list[str]:

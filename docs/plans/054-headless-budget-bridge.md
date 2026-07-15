@@ -60,17 +60,17 @@ with the SKU to avoid reflash-for-config-mistakes.
   section in Settings, DHCP hands the phone a `192.168.7.x` address, and the
   app reaches the same token-authed HTTP API (sync, virtual LCD, manager) as
   ordinary networking. Cable-config becomes "plug it in, open the app".
-- **Empirical gate (10 minutes, hardware on hand):** connect the Pi gadget
-  port to the iPhone Air; check Settings ▸ Ethernet appears; Safari to
-  `http://192.168.7.1:8721/v1/status` → a 401 JSON body proves the whole
-  chain. Record ECM vs NCM behavior and the iOS version. (The Sony-camera
-  USB-host failure documented in bridge/docs does not predict iPhone
-  behavior — the phone is a normal USB host like the Mac, which enumerates
-  this gadget fine.)
-- If the gate fails on ECM: try NCM gadget function (`g_ncm`/configfs) —
-  Apple's own gadget driver preference — before declaring USB-to-iPhone dead.
-  If it still fails, the SKU loses nothing essential: BLE + Wi-Fi cover all
-  flows; USB stays a computer-only admin path.
+- **Empirical gate: PASSED (2026-07-15).** iPhone Air (iOS 26.5.2) connected
+  to the Pi gadget port with the stock USB-C→micro-USB cable: Safari to
+  `http://192.168.7.1:8721/v1/status` returned the 401 unauthorized JSON —
+  enumeration, DHCP, and app-facing HTTP reachability all proven with the
+  existing `g_ether` (ECM) gadget, no NCM change needed. (The Sony-camera
+  USB-host failure in bridge/docs indeed did not predict iPhone behavior.)
+- **Product decision (same day):** BLE + Wi-Fi are the product path; USB to
+  iPhone ships as a zero-cost verified fallback (service/recovery, and a
+  "cable config" escape hatch) — no dedicated USB feature work is scheduled.
+  Bonjour already advertises `192.168.7.1`, so the app would discover the
+  Bridge over the cable with no code changes.
 
 ## What the screen/buttons do today → headless equivalent
 

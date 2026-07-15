@@ -4777,6 +4777,7 @@ async def test_nav_skips_section_header_forward() -> None:
     """Plan 037 #3 + #4: DOWN over a header skips to the next non-header row."""
 
     ui, _display = _make_settings_ui(BridgeConfig())
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     # NETWORK rows: 6 = SYNC_PAIRING, 7 = NETWORK_DIAGNOSTICS_HEADER,
     # 8 = NETWORK_BLUETOOTH_INFO. Position the cursor at 6 and press DOWN.
@@ -5473,13 +5474,16 @@ async def test_iphone_pairing_row_enters_qr_mode_with_payload(tmp_path: Path) ->
     token_path = tmp_path / "sync.token"
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(token_path=token_path)),
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE, token_path=token_path)),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    # The QR only renders while the sync service is actually listening
+    # (plan 051 P2.3).
+    await ui.sync_service_state_changed(True)
     # Same-Wi-Fi path active, hotspot down: the QR must carry the Wi-Fi host
     # and omit the hotspot join credentials.
     ui._wifi_host = "192.168.5.149"
@@ -5514,13 +5518,19 @@ async def test_iphone_pairing_payload_carries_urlencoded_hotspot_credentials(
     monkeypatch.setenv("INSTANTLINK_BRIDGE_HOTSPOT_PSK_FILE", str(psk_file))
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        BridgeConfig(
+            sync=SyncConfig(
+                destination=SyncDestination.IPHONE,
+                token_path=tmp_path / "sync.token",
+            )
+        ),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._hotspot_host = "192.168.8.1"
     ui._wifi_host = "192.168.5.149"
     ui._show_settings(page=SettingsPage.NETWORK)
@@ -5540,13 +5550,19 @@ async def test_iphone_pairing_payload_carries_urlencoded_hotspot_credentials(
 async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> None:
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        BridgeConfig(
+            sync=SyncConfig(
+                destination=SyncDestination.BOTH,
+                token_path=tmp_path / "sync.token",
+            )
+        ),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
@@ -5569,13 +5585,14 @@ async def test_sync_pairing_token_failure_shows_settings_toast(tmp_path: Path) -
     token_path.mkdir()
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(token_path=token_path)),
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE, token_path=token_path)),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
@@ -5761,6 +5778,7 @@ async def test_image_received_does_not_clobber_sync_pairing_qr(tmp_path: Path) -
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
@@ -5803,6 +5821,7 @@ async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     await ui.image_received(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.20"))
@@ -5848,7 +5867,12 @@ async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
 
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        BridgeConfig(
+            sync=SyncConfig(
+                destination=SyncDestination.BOTH,
+                token_path=tmp_path / "sync.token",
+            )
+        ),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
@@ -5856,6 +5880,7 @@ async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
         power_activity_callback=record_activity,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
@@ -5876,13 +5901,19 @@ async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
 async def test_leaving_sync_pairing_restores_normal_idle_behavior(tmp_path: Path) -> None:
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(token_path=tmp_path / "sync.token")),
+        BridgeConfig(
+            sync=SyncConfig(
+                destination=SyncDestination.BOTH,
+                token_path=tmp_path / "sync.token",
+            )
+        ),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
         system_info=_test_system_info(),
     )
+    await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     await ui.apply_power_event(_idle_event(IdleStage.DIM, 30.0))
@@ -5894,3 +5925,268 @@ async def test_leaving_sync_pairing_restores_normal_idle_behavior(tmp_path: Path
     await ui.apply_power_event(_idle_event(IdleStage.SCREEN_OFF, 90.0))
 
     assert display.idle_stages == ["screen_off"]
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.3: sync-service state honesty — app.py threads the actual
+# listener state into the snapshot; the QR action refuses to encode a dead
+# port; a destination change resets the state to "starting" while app.py
+# restarts the service.
+# ---------------------------------------------------------------------------
+
+
+def _sync_ui(
+    display: _FakeDisplay,
+    *,
+    destination: SyncDestination,
+    token_path: Path | None = None,
+    pairer: _FakePairer | None = None,
+) -> BridgeUi:
+    sync = (
+        SyncConfig(destination=destination)
+        if token_path is None
+        else SyncConfig(destination=destination, token_path=token_path)
+    )
+    return BridgeUi(
+        BridgeConfig(sync=sync),
+        display=display,
+        input_device=NullInput(),
+        pairer=pairer if pairer is not None else _FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        system_info=_test_system_info(),
+    )
+
+
+@pytest.mark.asyncio
+async def test_sync_service_state_changed_stamps_snapshot_and_renders() -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE)
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+    assert ui._snapshot.sync_service_state == "starting"
+
+    await ui.sync_service_state_changed(True)
+
+    assert ui._snapshot.sync_service_state == "listening"
+    assert display.snapshots[-1].sync_service_state == "listening"
+
+    await ui.sync_service_state_changed(False)
+
+    assert ui._snapshot.sync_service_state == "unavailable"
+    assert display.snapshots[-1].sync_service_state == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_destination_change_resets_sync_service_state_to_starting() -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.PRINT)
+    # A prior stop/start-failure left the service marked unavailable.
+    await ui.sync_service_state_changed(False)
+    assert ui._snapshot.sync_service_state == "unavailable"
+
+    updated = replace(ui.config, sync=replace(ui.config.sync, destination=SyncDestination.IPHONE))
+    await ui._set_config(updated, message="Saved")
+
+    # app.py is about to (re)start the service; until it confirms, the UI is
+    # back in the mild "starting" window rather than flashing a stale error.
+    assert ui._snapshot.sync_service_state == "starting"
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_row_blocked_when_destination_print(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.PRINT, token_path=tmp_path / "sync.token")
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert ui._snapshot.sync_qr_payload is None
+    assert display.snapshots[-1].settings_message == "Enable in Print > Send to"
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_row_blocked_while_service_unavailable(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
+    await ui.sync_service_state_changed(False)
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert ui._snapshot.sync_qr_payload is None
+    assert display.snapshots[-1].settings_message == "Sync failed · restart bridge"
+
+
+@pytest.mark.asyncio
+async def test_sync_pairing_row_blocked_while_service_starting(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
+    ui._show_settings(page=SettingsPage.NETWORK)
+
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+
+    assert ui._snapshot.mode is UiMode.SETTINGS
+    assert ui._snapshot.sync_qr_payload is None
+    assert display.snapshots[-1].settings_message == "Sync starting · try again"
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.6: KEY3 on the sync-ready home surface — iphone-only routes
+# both short and hold KEY3 to the iPhone pairing QR (and back to home);
+# both-mode without a printer routes short KEY3 to the printer scan the
+# "KEY3 Pair" chip advertises.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_key3_opens_iphone_pairing_from_home_in_iphone_only_mode(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
+    await ui.sync_service_state_changed(True)
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+
+    await ui._handle_action(UiAction.HELP)
+
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    assert ui._snapshot.sync_qr_payload is not None
+
+    await ui._handle_action(UiAction.BACK)
+
+    # Opened from the home surface, so BACK returns home — not to Settings.
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.sync_qr_payload is None
+
+
+@pytest.mark.asyncio
+async def test_hold_key3_opens_iphone_pairing_in_iphone_only_mode(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
+    await ui.sync_service_state_changed(True)
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+
+    await ui._handle_action(UiAction.PAIR)
+
+    # Hold-KEY3 must not start a pointless printer scan in iphone-only mode.
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+    assert ui._snapshot.sync_qr_payload is not None
+
+
+class _BlockingPairer(_FakePairer):
+    """Pairer whose scan never completes — pins the PAIRING screen."""
+
+    async def pair_first_available(self) -> PairedPrinter:
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+
+@pytest.mark.asyncio
+async def test_key3_starts_printer_pairing_in_both_mode_without_printer() -> None:
+    display = _FakeDisplay()
+    pairer = _BlockingPairer([])
+    ui = _sync_ui(display, destination=SyncDestination.BOTH, pairer=pairer)
+    await ui.sync_service_state_changed(True)
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+
+    await ui._handle_action(UiAction.HELP)
+
+    assert ui._snapshot.mode is UiMode.PAIRING
+
+    await ui._cancel_pairing()
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 pass-2 (from Pass 1): the auto-print preview must not steal the
+# QR screen. The whole confirmation flow (including the NO_FILM screen and
+# the immediate-print fast path) defers until the user exits SYNC_PAIRING.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "photo.jpg"
+    image_path.write_bytes(b"jpg")
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.BOTH, token_path=tmp_path / "sync.token")
+    await ui.sync_service_state_changed(True)
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    task = asyncio.create_task(
+        ui.await_print_confirmation(ReceivedImage(image_path, "192.168.8.10"), timeout_s=0)
+    )
+    await asyncio.sleep(0.3)
+
+    # Even the timeout=0 immediate-print path must wait: returning would let
+    # app.py's printing_started switch the mode away from the QR mid-scan.
+    assert not task.done()
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    await ui._handle_action(UiAction.BACK)
+
+    assert await asyncio.wait_for(task, timeout=2.0) == PrintEdit()
+
+
+@pytest.mark.asyncio
+async def test_deferred_no_film_screen_waits_for_qr_exit(tmp_path: Path) -> None:
+    image_path = tmp_path / "photo.jpg"
+    image_path.write_bytes(b"jpg")
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.BOTH, token_path=tmp_path / "sync.token")
+    await ui.sync_service_state_changed(True)
+    ui._show_settings(page=SettingsPage.NETWORK)
+    await ui._activate_setting(SettingKey.SYNC_PAIRING)
+    ui._snapshot = replace(ui._snapshot, film_remaining=0)
+
+    task = asyncio.create_task(
+        ui.await_print_confirmation(ReceivedImage(image_path, "192.168.8.10"), timeout_s=5.0)
+    )
+    await asyncio.sleep(0.3)
+
+    # The NO_FILM full screen must not replace the QR either.
+    assert not task.done()
+    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
+
+    await ui._handle_action(UiAction.BACK)
+
+    assert await asyncio.wait_for(task, timeout=2.0) is None
+    assert ui._snapshot.mode is UiMode.NO_FILM
+    ui._cancel_image_reset()
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.7: the split sync settings rows cross-reference each other.
+# ---------------------------------------------------------------------------
+
+
+def test_sync_settings_rows_cross_reference_each_other() -> None:
+    assert (
+        SETTING_HELP_TEXT[SettingKey.SYNC_DESTINATION]
+        == "Where received photos go · Pair iPhone: Network page"
+    )
+    assert (
+        SETTING_HELP_TEXT[SettingKey.SYNC_PAIRING]
+        == "Show a QR code to pair your iPhone · Send to: Print page"
+    )
+
+
+@pytest.mark.asyncio
+async def test_sync_client_seen_sets_ever_seen_bit() -> None:
+    display = _FakeDisplay()
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE)
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+    assert ui._snapshot.sync_client_ever_seen is False
+
+    await ui.sync_client_seen()
+
+    assert ui._snapshot.sync_client_ever_seen is True
+    # The "ever seen" bit survives the 20 s recency TTL: it is boot-scoped,
+    # not activity-scoped, so the pair-iPhone nudge never returns after the
+    # first successful connection.
+    ui._sync_client_seen_at = ui._monotonic() - (SYNC_CLIENT_RECENT_TTL_S + 1.0)
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
+    assert ui._snapshot.sync_client_recent is False
+    assert ui._snapshot.sync_client_ever_seen is True

@@ -201,8 +201,9 @@ def _settings_inherit(snapshot: UiSnapshot) -> StatusState:
 
     if _sync_enabled(snapshot):
         # iPhone sync destinations (plan 050): the printer never gates the
-        # underlying health — an FTP receive path alone means ready.
-        return _READY_SOLID if snapshot.camera_receive_ready else _NOT_READY_SOLID
+        # underlying health — an FTP receive path alone means ready (plus,
+        # for iphone-only, a bound sync service — plan 051 P2.3).
+        return _READY_SOLID if _can_accept(snapshot) else _NOT_READY_SOLID
     if snapshot.paired_printer is None:
         return _NOT_READY_SOLID
     if snapshot.film_remaining == 0 and not snapshot.allow_print_without_film:
@@ -250,6 +251,10 @@ def _can_accept(snapshot: UiSnapshot) -> bool:
     if not snapshot.camera_receive_ready:
         return False
     if _sync_enabled(snapshot):
+        if snapshot.sync_destination == "iphone":
+            # iphone-only additionally requires the sync service to be
+            # bound (plan 051 P2.3) — mirrors render.can_accept_images.
+            return snapshot.sync_service_state == "listening"
         return True
     if snapshot.paired_printer is None:
         return False

@@ -112,18 +112,17 @@ src/instantlink_bridge/
 
 ## State Machine
 
-The v1 state machine has exactly 10 user-visible states:
+The LCD modes are the `UiMode` enum in `ui/models.py`. (The original v1 spec said "exactly 10
+user-visible states"; the shipped machine grew — notably `SYNC_PAIRING` with plan 050 — so the
+enum is the source of truth.) Grouped:
 
-1. `BOOTING`
-2. `BT_SCANNING`
-3. `BT_CONNECTING`
-4. `BT_CONNECTED`
-5. `IDLE`
-6. `IMAGE_RECEIVED`
-7. `AWAITING_CONFIRM`
-8. `PRINTING`
-9. `PRINT_COMPLETE`
-10. `ERROR_BLE`
+- Status surfaces: `BOOTING`, `NEEDS_PAIRING`, `PAIRING`, `PAIR_FAILED`, `PRINTER_SEARCHING`,
+  `PRINTER_OFFLINE`, `VALIDATION`, `READY`, `NO_FILM`, `ERROR`
+- Print flow: `IMAGE_RECEIVED`, `AWAITING_CONFIRM`, `PRINTING`, `PRINT_COMPLETE`
+- Settings: `SETTINGS`, `ADJUSTMENT_EDIT`
+- iPhone sync (plan 050): `SYNC_PAIRING` — full-screen pairing QR; modal (only KEY2/LEFT exits),
+  exempt from idle dim/screen-off, and incoming images defer behind it (plan 051)
+- Overlays: `CONFIRMATION_DIALOG`, `HELP_DIALOG`
 
 `LOW_BATTERY` is a global overlay/guard condition rather than a primary state: warning at 20%, safe shutdown at 10%.
 USB gadget attach/loss is diagnostics/admin status only and must not become a camera readiness
@@ -163,12 +162,34 @@ state in v1.
   same state as chips, subtitles, and headlines.
 - Do not show `Ready to print` unless the printer is ready and at least one FTP receive path
   is visible on a supported camera path: Bridge Wi-Fi `192.168.8.1` or Same Wi-Fi.
+  Sync exception (plans 050/051): with `Send to` = `iPhone` or `Both` the printer does not gate
+  readiness. iphone-only shows `Sync to iPhone` and requires an FTP path **and** a listening
+  sync service; while the service is starting the surface shows the validation treatment with
+  `Sync starting`, and after a failed start it shows `Sync failed · restart bridge` — never a
+  sync-ready claim with nothing bound on the sync port. Both-mode keeps READY on an FTP path
+  alone and reports printer/sync trouble as one cause-style line on the card.
 - Keep the three FTP transport subnets distinct. Do not use `192.168.7.2` for Wi-Fi; the
   `192.168.7.0/24` subnet is reserved for the USB gadget admin/diagnostics link.
 - If film remaining is `0` and `No-film test` is off, show `NO FILM` / `No Film Left`; do not
   show `READY`.
 - If film is already known to be `0/10` when an FTP image arrives and `No-film test` is off, skip
   the BLE transfer and show `No Film Left`.
+- Sync exception to the two NO-FILM rules above (plan 050): with `Send to: Both`, empty film
+  shows as the `No film · photos sync only` line on the READY sync card instead of the NO FILM
+  full screen, and arriving images still spool to the sync outbox; `Send to: iPhone` ignores
+  film entirely.
+- Sync-ready footer (plan 051 P2.6): iphone-only home surfaces read
+  `KEY1 Setting · (blank) · KEY3 iPhone` — short and hold KEY3 both open the iPhone pairing QR,
+  and BACK from that QR returns home. Both-mode without a printer reads
+  `KEY1 Setting · KEY2 Refresh · KEY3 Pair` with short KEY3 starting the printer scan. Never
+  advertise `KEY2 Refresh` or a printer-scan hold in iphone-only mode (the printer poll is
+  stopped there).
+- iPhone pairing QR (plan 051): never show a QR while nothing listens on the sync port — the
+  action degrades to a Settings toast (`Enable in Print > Send to` / `Sync starting · try again`
+  / `Sync failed · restart bridge`). While the QR is up: idle dim/screen-off are exempted, and
+  arriving images defer (no IMAGE_RECEIVED, no preview/print/NO_FILM mode switches) until it
+  exits. Until the first authenticated iPhone request since boot, the READY card shows a
+  one-time `Pair iPhone: …` nudge (P2.7).
 - Storage is ephemeral: incoming and processed images are cached only as needed for queueing, retry, and short-term diagnostics.
 - Camera inputs may be JPEG/HIF/ARW and may be as large as 100 MP. Decode paths must downsample before creating the Instax JPEG: JPEG uses `Image.draft`, HIF uses `heif-thumbnailer -s 1600`, and RAW uses embedded previews before any half-size rawpy fallback.
 - v1 is single-printer by default. Multi-printer pairing belongs in v1.5.

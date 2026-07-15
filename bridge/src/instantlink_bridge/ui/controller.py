@@ -206,6 +206,12 @@ USB_STATUS_POLL_S = 1.0
 PRINTER_STATUS_FRESH_TTL_S = 30.0
 PREVIEW_BUILD_TIMEOUT_S = 20.0
 RETURN_HOME_DELAY_S = 2.0
+# Safety-net re-check cadence while an incoming image's print-confirmation
+# flow is deferred behind the SYNC_PAIRING QR card (plan 051 pass 2). The
+# normal wake-up is the exit event set by _exit_sync_pairing; the timeout
+# only covers abnormal exits that bypass it (e.g. the shutdown ERROR screen)
+# so the single-consumer queue can never hang on a mode that already left.
+SYNC_PAIRING_DEFER_POLL_S = 0.2
 WIFI_MODE_HELPER = Path(
     os.environ.get(
         "INSTANTLINK_BRIDGE_WIFI_MODE_HELPER",
@@ -424,8 +430,20 @@ class BridgeUi:
         # spool; the seen-at clock backs the TTL-aged "connected" chip.
         self._sync_outbox_depth = 0
         self._sync_client_seen_at: float = float("-inf")
+        # Actual sync-service listener state (plan 051 P2.3), reported by
+        # app.py via sync_service_state_changed. "starting" until the first
+        # start attempt concludes; see UiSnapshot.sync_service_state.
+        self._sync_service_state: str = "starting"
         # Settings page to return to when the SYNC_PAIRING QR screen exits.
         self._sync_pairing_return_page: SettingsPage | None = None
+        # True when the QR was opened from the home surface (KEY3 in
+        # iphone-only mode, plan 051 P2.6) — BACK returns home, not to
+        # Settings.
+        self._sync_pairing_return_home: bool = False
+        # Set when the QR card exits; wakes any print-confirmation flow
+        # deferred behind SYNC_PAIRING (plan 051 pass 2). One event per QR
+        # session — created on entry, set + cleared on exit.
+        self._sync_pairing_exit_event: asyncio.Event | None = None
         self._actions: asyncio.Queue[UiAction] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
@@ -697,6 +715,7 @@ class BridgeUi:
     ) -> PrintEdit | None:
         """Show preview/edit UI and return edits if the image should print."""
 
+        await self._defer_while_sync_pairing(received)
         self._cancel_image_reset()
         if self._preview_blocked_by_no_film(received):
             return None
@@ -755,6 +774,37 @@ class BridgeUi:
                 self._pending_print_result = None
                 self._preview_image = None
                 self._preview_received = None
+
+    async def _defer_while_sync_pairing(self, received: ReceivedImage) -> None:
+        """Hold the print-confirmation flow while the QR card is on screen.
+
+        Plan 051 pass 2 (from Pass 1's ``image_received`` suppression): in
+        both-mode with a usable printer the preview / NO_FILM / auto-print
+        transitions would otherwise steal the SYNC_PAIRING screen mid-scan.
+        Policy: the whole per-image flow is deferred — nothing prints or
+        switches modes behind the QR; the image proceeds through the normal
+        flow (countdown restarted) once the user exits with KEY2/LEFT.
+        Deferring (rather than printing silently behind the screen) keeps
+        auto-print-delay semantics intact, including the "off" mode that
+        requires an explicit KEY1 confirm. The single-consumer queue simply
+        pauses; key handling runs on its own task, so exit is never blocked
+        by this wait.
+        """
+
+        if self._snapshot.mode is not UiMode.SYNC_PAIRING:
+            return
+        LOGGER.info(
+            "ui.print_confirmation_deferred reason=sync_pairing image=%s",
+            received.path.name,
+        )
+        while self._snapshot.mode is UiMode.SYNC_PAIRING:
+            event = self._sync_pairing_exit_event
+            if event is None:
+                # Defensive: SYNC_PAIRING without an open session event —
+                # treat as already exited rather than risking a hang.
+                return
+            with suppress(TimeoutError):
+                await asyncio.wait_for(event.wait(), timeout=SYNC_PAIRING_DEFER_POLL_S)
 
     async def _build_preview_image(
         self,
@@ -1138,7 +1188,30 @@ class BridgeUi:
 
         await self._record_power_activity()
         self._sync_client_seen_at = self._monotonic()
-        self._snapshot = replace(self._snapshot, sync_client_recent=True)
+        self._snapshot = replace(
+            self._snapshot,
+            sync_client_recent=True,
+            sync_client_ever_seen=True,
+        )
+        if self._snapshot.mode in STATUS_VISIBLE_MODES:
+            self._render()
+
+    async def sync_service_state_changed(self, listening: bool) -> None:
+        """Record whether the sync HTTP service is actually bound (plan 051 P2.3).
+
+        Called by app.py after a successful start (True) and on start
+        failure / stop (False). Until the first call the state stays
+        "starting", which the surfaces render as the mild waiting treatment
+        rather than an error — the boot-time start is a fire-and-forget
+        task and takes a few seconds on a cold Pi Zero 2 W.
+        """
+
+        state = "listening" if listening else "unavailable"
+        if state == self._sync_service_state:
+            return
+        self._sync_service_state = state
+        LOGGER.info("ui.sync_service_state listening=%s state=%s", listening, state)
+        self._snapshot = replace(self._snapshot, sync_service_state=state)
         if self._snapshot.mode in STATUS_VISIBLE_MODES:
             self._render()
 
@@ -1285,6 +1358,12 @@ class BridgeUi:
                 await self._cancel_pairing()
             return
         if action is UiAction.PAIR:
+            if not self._config.sync.print_enabled:
+                # iphone-only (plan 051 P2.6): a printer scan is pointless
+                # with printing disabled — hold-KEY3 opens the iPhone
+                # pairing QR instead, matching the "KEY3 iPhone" chip.
+                await self._show_sync_pairing(return_home=True)
+                return
             await self._start_pairing()
             return
         if action is UiAction.HELP:
@@ -1298,8 +1377,19 @@ class BridgeUi:
                 # paired_printer is None (plan 034 item 2 — Option A).
                 await self._start_pairing()
                 return
+            if not self._config.sync.print_enabled:
+                # iphone-only home surfaces (plan 051 P2.6): short KEY3
+                # opens the iPhone pairing QR — the "KEY3 iPhone" chip.
+                await self._show_sync_pairing(return_home=True)
+                return
             if self._snapshot.paired_printer is not None:
                 self._show_settings("Wi-Fi + FTP credentials", page=SettingsPage.NETWORK)
+                return
+            if self._config.sync.sync_enabled:
+                # Both-mode without a printer sits on the READY sync surface
+                # instead of NEEDS_PAIRING; short KEY3 starts the printer
+                # scan the "KEY3 Pair" chip advertises (plan 051 P2.6).
+                await self._start_pairing()
                 return
             return
         if action is UiAction.BACK:
@@ -2311,6 +2401,12 @@ class BridgeUi:
         if config.ftp != previous_ftp:
             self._notify_ftp_config_applied(config.ftp)
         if config.sync != previous_sync:
+            if config.sync.sync_enabled and self._sync_service_state != "listening":
+                # app.py is about to (re)start the service for the new
+                # destination: return to the mild "starting" window instead
+                # of flashing a stale "unavailable" error until the start
+                # attempt concludes (plan 051 P2.3).
+                self._sync_service_state = "starting"
             self._notify_sync_config_applied(config.sync)
         if config.printer.keepalive_interval_s != previous_keepalive:
             await self._configure_printer_keepalive()
@@ -2322,6 +2418,7 @@ class BridgeUi:
             language=config.ui.language.value,
             appearance=config.ui.appearance.value,
             sync_destination=config.sync.destination.value,
+            sync_service_state=self._sync_service_state,
         )
         self._show_settings(message)
         return True
@@ -3281,13 +3378,41 @@ class BridgeUi:
             return f"Idle poweroff: {bool_label(self._config.power.idle_poweroff_enabled)}"
         return _info_message_for_setting(key)
 
-    async def _show_sync_pairing(self) -> None:
+    async def _show_sync_pairing(self, *, return_home: bool = False) -> None:
         """Open the full-screen iPhone pairing QR (plan 050).
 
         The bearer token is loaded (or created) off the event loop — it is
         file IO and may write a fresh token file. Failure degrades to a
         settings toast rather than an error screen; the row stays usable.
+
+        Plan 051 P2.3: the QR encodes host:port — showing it while nothing
+        listens on the sync port would send the iPhone to a dead endpoint,
+        so the action surfaces the actual problem instead: sync disabled
+        (destination "print"), a start still in flight, or a failed start.
+
+        ``return_home`` marks the QR as opened from the home surface (KEY3
+        in iphone-only mode, plan 051 P2.6) so BACK returns home rather
+        than to a Settings page.
         """
+
+        if not self._config.sync.sync_enabled:
+            LOGGER.info("ui.sync_pairing_blocked reason=sync_disabled")
+            self._show_settings("Enable in Print > Send to")
+            return
+        if self._sync_service_state != "listening":
+            reason = (
+                "service_unavailable"
+                if self._sync_service_state == "unavailable"
+                else "service_starting"
+            )
+            LOGGER.info("ui.sync_pairing_blocked reason=%s", reason)
+            message = (
+                "Sync failed · restart bridge"
+                if self._sync_service_state == "unavailable"
+                else "Sync starting · try again"
+            )
+            self._show_settings(message)
+            return
 
         from instantlink_bridge.sync.server import load_or_create_sync_token
 
@@ -3299,6 +3424,8 @@ class BridgeUi:
             return
         payload = self._sync_pairing_payload(token)
         self._cancel_image_reset()
+        self._sync_pairing_return_home = return_home
+        self._sync_pairing_exit_event = asyncio.Event()
         self._sync_pairing_return_page = self._settings_page
         self._snapshot = replace(
             self._snapshot,
@@ -3339,11 +3466,24 @@ class BridgeUi:
         return payload
 
     def _exit_sync_pairing(self) -> None:
-        """Leave the QR card and return to the originating settings page."""
+        """Leave the QR card and return where it was opened from.
 
+        Settings row → back to the originating settings page; KEY3 on the
+        home surface (plan 051 P2.6) → back to the cached home status.
+        """
+
+        self._snapshot = replace(self._snapshot, sync_qr_payload=None)
+        if self._sync_pairing_exit_event is not None:
+            # Wake any print-confirmation flow deferred behind the QR.
+            self._sync_pairing_exit_event.set()
+            self._sync_pairing_exit_event = None
+        if self._sync_pairing_return_home:
+            self._sync_pairing_return_home = False
+            self._sync_pairing_return_page = None
+            self._show_cached_home_status()
+            return
         page = self._sync_pairing_return_page or SettingsPage.NETWORK
         self._sync_pairing_return_page = None
-        self._snapshot = replace(self._snapshot, sync_qr_payload=None)
         self._show_settings(page=page)
 
     async def _refresh_status_from_settings(self) -> None:
@@ -3579,6 +3719,8 @@ class BridgeUi:
             sync_destination=self._config.sync.destination.value,
             sync_outbox_depth=self._sync_outbox_depth,
             sync_client_recent=self._sync_client_is_recent(),
+            sync_service_state=self._sync_service_state,
+            sync_client_ever_seen=self._sync_client_seen_at != float("-inf"),
         )
 
     def _cancel_image_reset(self) -> None:

@@ -119,3 +119,34 @@ sub-states instead of giving sync its own readiness rendering.
   Normal idle behavior resumes on exit (key press = real activity).
 - Verification: full bridge suite 1013 passed; ruff + `mypy --strict` clean on
   touched files.
+
+## Pass 2 outcome (2026-07-14, TDD — 27 new tests)
+
+- **P2.3 fixed.** `UiSnapshot.sync_service_state: "starting"|"listening"|"unavailable"`
+  (three states — a bool can't distinguish the async-start boot window from a
+  bind failure), stamped via `BridgeUi.sync_service_state_changed(listening)`
+  from all app.py start/stop/apply paths. iphone-only readiness now requires
+  listening ("Sync starting" / "Sync failed · restart bridge" causes);
+  both-mode stays un-gated (spool still works) but shows the failure note;
+  the QR action refuses to render a QR to a dead port (toast + log).
+- **P2.6 fixed.** iphone-only footer is now `KEY1 Setting / — / KEY3 iPhone`
+  with both short and hold KEY3 opening the pairing QR (BACK returns home);
+  both-mode-unpaired gets `KEY3 Pair` (printer scan, NEEDS_PAIRING precedent).
+- **P2.7 fixed.** Send to ↔ iPhone pairing help cross-links; new boot-scoped
+  `sync_client_ever_seen`; READY shows a "Pair iPhone" nudge (KEY3 /
+  Settings ▸ Network per mode) when sync is listening but never used.
+  Card note priority: unavailable > paused > nudge.
+- **Preview-vs-QR fixed (defer policy).** `await_print_confirmation` holds the
+  queue item while SYNC_PAIRING is up (event-driven wake + safety re-check);
+  preserves auto-print/explicit-confirm semantics, no deadlock, countdown
+  restarts after exit.
+- Docs updated as-built: ux-flows.md (READY carve-out, No-Film exception, new
+  rows + SYNC_PAIRING template, footer semantics, idle exemption) and
+  bridge/CLAUDE.md (state list rewritten from the UiMode enum; sync exceptions
+  on the Ready/NO-FILM rules).
+- Verification: full suite 1052 passed; ruff/format clean; mypy --strict clean
+  on touched sources.
+
+Remaining (Pass 3, with hardware): P3 items + on-device smoke of the new
+surfaces (largest-font render of nudge/unavailable lines, real port-bind
+failure), iPhone field test.

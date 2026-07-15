@@ -544,8 +544,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     ),
     # Vignette picker (plan 035 phase 6).
     SettingKey.ADJUST_VIGNETTE: (
-        "Corner darkening to mimic Instax film. 0 % = off, 100 % = strong "
-        "corners-dark fade."
+        "Corner darkening to mimic Instax film. 0 % = off, 100 % = strong corners-dark fade."
     ),
     # Adjustments overlay toggles (plan 035 phase 4).
     SettingKey.ADJUST_DATESTAMP: "Stamp the photo's date in the bottom-right corner",
@@ -599,9 +598,11 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.APPEARANCE: "Auto: light 07-19, dark overnight",
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
-    # iPhone sync (plan 050).
-    SettingKey.SYNC_DESTINATION: "Where received photos go",
-    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone",
+    # iPhone sync (plan 050). The two rows live on different Settings pages
+    # (Send to on Print, iPhone pairing on Network), so each help text
+    # cross-references the other (plan 051 P2.7).
+    SettingKey.SYNC_DESTINATION: "Where received photos go · Pair iPhone: Network page",
+    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Send to: Print page",
     # Separator rows — info-only, no interactive action.
     SettingKey.NETWORK_DIAGNOSTICS_HEADER: "Read-only connection diagnostics",
     SettingKey.PRINT_ADVANCED_HEADER: "Power-user polling intervals",

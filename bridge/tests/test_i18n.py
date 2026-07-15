@@ -175,3 +175,34 @@ def test_zh_hans_iphone_brand_stays_latin() -> None:
     untranslated, matching the i18n doctrine for Wi-Fi / FTP / INSTAX."""
 
     assert t("iPhone", Language.ZH_HANS) == "iPhone"
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 pass 2: sync-service honesty, footer, and discoverability strings
+# translate to zh-Hans (EN + _ZH_HANS required for every new user-visible
+# string).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("Sync starting", "同步启动中"),
+        ("Sync failed · restart bridge", "同步失败 · 请重启桥接"),
+        ("Sync starting · try again", "同步启动中 · 请稍后再试"),
+        ("Enable in Print > Send to", "请在 打印 > 发送到 中启用"),
+        ("Pair iPhone: press KEY3", "配对 iPhone：按 KEY3"),  # noqa: RUF001
+        ("Pair iPhone: Settings > Network", "配对 iPhone：设置 > 网络"),  # noqa: RUF001
+        ("KEY3 Pair", "KEY3 配对"),
+        (
+            "Where received photos go · Pair iPhone: Network page",
+            "接收照片的去向 · 配对 iPhone：网络页",  # noqa: RUF001
+        ),
+        (
+            "Show a QR code to pair your iPhone · Send to: Print page",
+            "显示二维码以配对 iPhone · 发送到：打印页",  # noqa: RUF001
+        ),
+    ],
+)
+def test_zh_hans_sync_pass2_strings(source: str, expected: str) -> None:
+    assert t(source, Language.ZH_HANS) == expected

@@ -219,7 +219,9 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     def apply_runtime_sync_config(sync_config: SyncConfig) -> None:
         nonlocal sync_desired
         sync_desired = sync_config.sync_enabled
-        task = loop.create_task(apply_sync_destination_change(sync_config, service=sync_service))
+        task = loop.create_task(
+            apply_sync_destination_change(sync_config, service=sync_service, ui=ui)
+        )
         ui_event_tasks.add(task)
         task.add_done_callback(ui_event_tasks.discard)
 
@@ -249,9 +251,13 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             sync_outbox, sync_service = await asyncio.to_thread(_build_sync_service_sync)
         except Exception:
             LOGGER.exception("sync.setup_failed outbox_dir=%s", config.sync.outbox_dir)
+            # Construction failure means nothing will ever listen this boot:
+            # tell the UI so it degrades instead of claiming sync-ready
+            # forever from the "starting" default (plan 051 P2.3).
+            await notify_sync_service_state(ui, listening=False)
             return
         if sync_desired:
-            await start_sync_service_guarded(sync_service, reason="startup")
+            await start_sync_service_guarded(sync_service, reason="startup", ui=ui)
 
     ready_event = asyncio.Event()
     ui = BridgeUi(
@@ -408,7 +414,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             sync_setup_task.cancel()
             with suppress(asyncio.CancelledError):
                 await sync_setup_task
-        await stop_sync_service_guarded(sync_service, reason="shutdown")
+        await stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
         await ui.stop()
         await close_default_instantlink_backend()
         if bluez_agent is not None:
@@ -587,10 +593,17 @@ async def notify_sync_client_seen(ui: object) -> None:
     await call_optional_ui_hook(ui, "sync_client_seen")
 
 
+async def notify_sync_service_state(ui: object, *, listening: bool) -> None:
+    """Notify UI implementations that opt in to sync-service state (plan 051 P2.3)."""
+
+    await call_optional_ui_hook(ui, "sync_service_state_changed", listening)
+
+
 async def apply_sync_destination_change(
     sync_config: SyncConfig,
     *,
     service: AsyncStartStopService | None,
+    ui: object | None = None,
 ) -> None:
     """Apply a runtime destination change to the sync service lifecycle."""
 
@@ -600,34 +613,47 @@ async def apply_sync_destination_change(
         sync_config.sync_enabled,
     )
     if sync_config.sync_enabled:
-        await start_sync_service_guarded(service, reason="config_applied")
+        await start_sync_service_guarded(service, reason="config_applied", ui=ui)
     else:
-        await stop_sync_service_guarded(service, reason="config_applied")
+        await stop_sync_service_guarded(service, reason="config_applied", ui=ui)
 
 
 async def start_sync_service_guarded(
     service: AsyncStartStopService | None,
     *,
     reason: str,
+    ui: object | None = None,
 ) -> None:
-    """Start the sync service; failures log an error but never propagate."""
+    """Start the sync service; failures log an error but never propagate.
+
+    The UI is told the actual outcome (plan 051 P2.3) so the LCD never
+    claims sync-ready while nothing listens on the sync port.
+    """
 
     if service is None:
         LOGGER.warning("sync.service_unavailable action=start reason=%s", reason)
+        await notify_sync_service_state(ui, listening=False)
         return
     try:
         await service.start()
         LOGGER.info("sync.service_start reason=%s", reason)
+        await notify_sync_service_state(ui, listening=True)
     except Exception:
         LOGGER.exception("sync.service_start_failed reason=%s", reason)
+        await notify_sync_service_state(ui, listening=False)
 
 
 async def stop_sync_service_guarded(
     service: AsyncStartStopService | None,
     *,
     reason: str,
+    ui: object | None = None,
 ) -> None:
-    """Stop the sync service within the shutdown budget; never propagate."""
+    """Stop the sync service within the shutdown budget; never propagate.
+
+    Whether the stop succeeds or times out, the service is no longer
+    reliable — the UI is told it is not listening (plan 051 P2.3).
+    """
 
     if service is None:
         return
@@ -636,6 +662,7 @@ async def stop_sync_service_guarded(
         LOGGER.info("sync.service_stop reason=%s", reason)
     except Exception:
         LOGGER.exception("sync.service_stop_failed reason=%s", reason)
+    await notify_sync_service_state(ui, listening=False)
 
 
 async def handle_received_image(

@@ -33,6 +33,38 @@ Display: 240x240 LCD, event-driven render loop, 1-2 fps maximum unless an animat
 The screen only says `READY` / `Ready to print` when both ends are healthy: at least one FTP
 receive path is visible and the selected printer has a current status read with film available.
 
+**Sync carve-out (plans 050/051).** With an iPhone sync destination enabled (`Send to` =
+`iPhone` or `Both`), the printer no longer gates readiness:
+
+- `Send to: iPhone` replaces the print framing with a `Sync to iPhone` headline and drops the
+  printer rows entirely. Readiness requires an FTP receive path **and** a listening sync service
+  (see "Sync-service honesty" below); the printer is irrelevant.
+- `Send to: Both` keeps the print card. When the printer cannot currently print, the card stays
+  READY with a single cause-style line — `Printer off · photos sync only` or
+  `No film · photos sync only` — instead of demoting to the PRINTER_SEARCHING / NO FILM full
+  screens. Uploads keep spooling to the sync outbox.
+- The READY card gains an `iPhone` row while sync is enabled: `N pending` (outbox depth) and/or
+  `connected` (an authenticated app request within the last 20 s).
+
+**Sync-service honesty (plan 051 P2.3).** The sync surfaces reflect the *actual* HTTP listener
+state reported by the app layer, not just config:
+
+- `starting` (boot window, or a `Send to` change queued a restart): iphone-only shows the
+  standard WAITING/validation treatment with the mild cause `Sync starting`; both-mode shows no
+  extra note (print path + disk spool still accept uploads).
+- `listening`: sync-ready claims and the pairing QR are allowed.
+- `unavailable` (start failed — port bind, construction): iphone-only degrades to the validation
+  body with the cause `Sync failed · restart bridge`; both-mode shows that same line as the
+  cause-style note on the READY card (it outranks the `photos sync only` note, which would be a
+  false claim). The status pill reads `Waiting`, and the status bar drops to not-ready in
+  iphone-only mode.
+
+**Pair-iPhone nudge (plan 051 P2.7).** While sync is enabled and listening but no client has
+*ever* connected since boot, the READY card shows a one-time discoverability line:
+`Pair iPhone: press KEY3` in iphone-only mode, `Pair iPhone: Settings > Network` in both-mode.
+It disappears permanently (for the boot) after the first authenticated app request and never
+returns when the 20 s `connected` chip ages out.
+
 Power status is global UI chrome, not a separate workflow. The current X306 battery case exposes
 battery state through hardware LEDs only, so the LCD shows `Battery case` / `LED only` in System
 settings rather than fake bridge battery percentage. It should not show the X306 SKU in the normal
@@ -73,6 +105,47 @@ pack`, and `Find printer`.
 | KEY1 Settings Hold K3|
 +----------------------+
 ```
+
+The NO FILM full screen applies to print-only mode. With `Send to: Both` an empty film pack is
+reported as the `No film · photos sync only` line on the READY card instead (see the sync
+carve-out above); `Send to: iPhone` ignores film entirely.
+
+### iPhone Pairing (SYNC_PAIRING)
+
+Opened from Settings ▸ Network ▸ `iPhone pairing`, or directly with KEY3 from the home surface
+in iphone-only mode (plan 051 P2.6).
+
+```text
++----------------------+
+| Pairing              |
+|    iPhone pairing    |
+|  +----------------+  |
+|  |   QR code on   |  |
+|  |  white card    |  |
+|  +----------------+  |
+| Scan with InstantLink app |
+|      KEY2 Back       |
++----------------------+
+```
+
+- The QR encodes `instantlink://pair?v=1&device=…&host=…&port=…&token=…` plus the hotspot
+  SSID/PSK when the bridge AP is the active FTP path. It renders black-on-white regardless of
+  theme (scanner contrast) and is LRU-cached.
+- Only KEY2/LEFT exits; every other key is ignored so a stray press cannot dismiss the code
+  mid-scan. Exit returns to the originating Settings page, or to the home surface when opened
+  with KEY3 from home.
+- **Dead-port guard (plan 051 P2.3).** The action never shows a QR encoding a port nothing
+  listens on. Instead it degrades to a Settings toast: `Enable in Print > Send to` when the
+  destination is `Print`, `Sync starting · try again` during the async-start window, and
+  `Sync failed · restart bridge` after a failed start.
+- **Idle exemption (plan 051 P2.5).** Aiming a phone at the LCD generates no GPIO/FTP events,
+  so DIM/SCREEN_OFF/deep-idle escalations are converted into power activity while the QR is up —
+  the screen never dims or blanks mid-scan. The critical-battery shutdown request is deliberately
+  NOT exempted. Normal idle behavior resumes on exit (the key press is real activity).
+- **Incoming images defer (plan 051 P2.4 + pass 2).** An FTP upload arriving mid-scan neither
+  shows IMAGE_RECEIVED nor starts the preview/print flow: the queue consumer holds the image
+  until the QR exits, then runs the normal flow (countdown restarted, NO FILM shown then if
+  applicable). Nothing prints behind the QR; queue/outbox chips keep updating.
 
 ### Boot Printer Setup Prompt
 
@@ -169,6 +242,12 @@ Setting details:
 - `No-film test`: opens `Off` and `On`. When `On`, InstantLink Bridge will still send a print job
   if the printer reports `0/10` film, for protocol and UX testing without a loaded pack.
 - `Keepalive`: opens `5s`, `10s`, `15s`, and `30s`.
+- `Send to` (Print page, plan 050): opens `Print`, `iPhone`, and `Both` — the delivery
+  destination for received photos. Its KEY3 help cross-references the pairing row:
+  `Where received photos go · Pair iPhone: Network page` (plan 051 P2.7).
+- `iPhone pairing` (Network page, plan 050): action row that opens the SYNC_PAIRING QR screen
+  (see template above). Its KEY3 help cross-references the destination row:
+  `Show a QR code to pair your iPhone · Send to: Print page`.
 - `Forget printer`: removes the selected printer record and matching BlueZ cache entries.
 - `Device ID`: shows a stable `IB-XXXXXXXX` identifier derived from the target machine ID for
   support and multi-device setup.
@@ -202,6 +281,18 @@ The UI is designed for the Waveshare 240x240 square LCD HAT, not touch input.
 | KEY3 press | 16 | Help for selected Settings row |
 | KEY3 hold | 16 | Start pair-printer scan outside Settings |
 
+Sync-destination footer semantics on the home/status surfaces (plan 051 P2.6):
+
+- `Send to: Print` (or paired printer in any mode): unchanged —
+  `KEY1 Setting · KEY2 Refresh · KEY3 Network` (paired) or `Hold KEY3` (unpaired, print-only).
+- `Send to: iPhone`: the printer poll is stopped, so the footer drops the dead `KEY2 Refresh`
+  chip (centre stays empty) and reads `KEY1 Setting · KEY3 iPhone`. Both short **and** hold
+  KEY3 open the iPhone pairing QR — a printer scan would be pointless with printing disabled.
+  BACK from a QR opened this way returns to the home surface, not Settings.
+- `Send to: Both` without a paired printer: the home surface is the READY sync card (not
+  NEEDS_PAIRING), and short KEY3 starts the printer scan the `KEY3 Pair` chip advertises
+  (hold KEY3 already did).
+
 Boot behavior:
 
 - If a selected printer is stored in `/var/lib/InstantLinkBridge/printer.json`, show `Searching` while
@@ -225,6 +316,9 @@ Boot behavior:
   do not show `Ready to print`.
 - If film remaining is `0` and `No-film test` is `Off`, show `NO FILM` / `No film left`; do not
   show `READY`. If `No-film test` is `On`, show ready/test status and allow print transfer.
+  Exception (plan 050): with `Send to: Both` the surface stays on the READY sync card with the
+  `No film · photos sync only` line instead of the NO FILM full screen; `Send to: iPhone`
+  ignores film entirely.
 - If no printer is found, show `Printer setup` with `Find printer` selected.
 - If a selected printer is not currently connected, run short Bleak discovery passes until it
   appears. The default pass is 0.5 seconds with a 1 second retry pause, and the slower BlueZ
@@ -253,8 +347,10 @@ Boot behavior:
 - Power idle stages are based on time since last activity: dim the LCD at 30 s, turn the screen off
   at 90 s, and enter deep idle at 5 min. Optional 10 min poweroff is user-configurable under
   Settings > System and defaults off on X306. GPIO input, camera Wi-Fi changes, FTP uploads,
-  settings navigation, and print workflow activity reset the timer and wake the UI to the active
-  brightness state.
+  settings navigation, print workflow activity, and authenticated iPhone sync requests reset the
+  timer and wake the UI to the active brightness state. The SYNC_PAIRING QR screen is exempt from
+  dim/screen-off escalations (plan 051 P2.5, see the iPhone Pairing template); the
+  critical-battery shutdown is not.
 
 ### Error Template
 
@@ -304,7 +400,12 @@ stateDiagram-v2
 - New uploads while waiting are queued by path and processed one by one after the current preview or
   print finishes. The runtime queue accepts up to `100` completed FTP uploads.
 - If the bridge already knows the selected printer has `0/10` film when an image arrives, it shows
-  `No film left` and skips BLE transfer.
+  `No film left` and skips BLE transfer. With `Send to: Both` the image still spools to the sync
+  outbox and the surface stays on the READY sync card (plan 050); with `Send to: iPhone` the
+  print path is skipped entirely.
+- While the SYNC_PAIRING QR is on screen, arriving images are held before the preview/no-film/
+  auto-print flow runs (plan 051 pass 2): nothing prints or switches modes behind the QR, and the
+  deferred image proceeds normally (timer restarted) once the user exits with KEY2/LEFT.
 
 ## Print Progress
 

@@ -177,3 +177,19 @@ class UiSnapshot:
     sync_outbox_depth: int = 0
     sync_client_recent: bool = False
     sync_qr_payload: str | None = None
+    # Actual sync-service listener state (plan 051 P2.3), threaded in from
+    # app.py via ``BridgeUi.sync_service_state_changed``:
+    #   "starting"    — no start attempt has concluded yet (boot window, or
+    #                   a destination change just queued a restart). Surfaces
+    #                   show the mild waiting/validation treatment.
+    #   "listening"   — the HTTP listener is bound; sync-ready claims and
+    #                   the pairing QR are allowed.
+    #   "unavailable" — a start attempt failed (port bind, construction);
+    #                   surfaces degrade to "Sync failed · restart bridge".
+    # A plain bool cannot distinguish the boot window from a failure, which
+    # is why this is a three-state string like ``idle_stage``.
+    sync_service_state: str = "starting"
+    # True once ANY authenticated sync request landed since boot — unlike
+    # ``sync_client_recent`` this never ages out (plan 051 P2.7): it gates
+    # the one-time "Pair iPhone" nudge on the ready surface.
+    sync_client_ever_seen: bool = False

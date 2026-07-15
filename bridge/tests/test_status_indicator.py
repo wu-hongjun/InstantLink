@@ -85,9 +85,7 @@ def test_print_complete_resolves_to_ready_solid() -> None:
 
 
 def test_no_film_resolves_to_warning_breathing() -> None:
-    state = derive_status(
-        _ready_snapshot(mode=UiMode.NO_FILM, film_remaining=0)
-    )
+    state = derive_status(_ready_snapshot(mode=UiMode.NO_FILM, film_remaining=0))
 
     assert state.signal is StatusSignal.WARNING
     assert state.pattern is StatusPattern.BREATHING
@@ -194,9 +192,7 @@ def test_settings_inherits_warning_when_no_film() -> None:
 def test_settings_inherits_searching_when_status_stale() -> None:
     """Status hasn't refreshed → searching yellow breathing in Settings too."""
 
-    state = derive_status(
-        _ready_snapshot(mode=UiMode.SETTINGS, printer_status_fresh=False)
-    )
+    state = derive_status(_ready_snapshot(mode=UiMode.SETTINGS, printer_status_fresh=False))
     assert state.signal is StatusSignal.SEARCHING
 
 
@@ -245,9 +241,7 @@ def test_foreground_is_white_on_green_and_red() -> None:
 
 
 def test_foreground_is_black_on_yellow() -> None:
-    yellow_state = StatusState(
-        StatusSignal.NOT_READY, StatusPattern.SOLID, (242, 193, 78)
-    )
+    yellow_state = StatusState(StatusSignal.NOT_READY, StatusPattern.SOLID, (242, 193, 78))
 
     assert yellow_state.foreground() == (0, 0, 0)
 
@@ -277,3 +271,56 @@ def test_gpio_status_sink_only_logs_on_state_change(
         record for record in caplog.records if record.message.startswith("status.sink_change")
     ]
     assert len(transitions) == 1
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.3: iphone-only readiness follows the actual sync-service
+# state — the bar must not glow green while nothing listens on the port.
+# ---------------------------------------------------------------------------
+
+
+def test_iphone_only_ready_not_listening_downgrades_to_not_ready() -> None:
+    state = derive_status(
+        _ready_snapshot(
+            sync_destination="iphone",
+            paired_printer=None,
+            printer_status_fresh=False,
+            printer_model=None,
+            film_remaining=None,
+        )
+    )
+
+    assert state.signal is StatusSignal.NOT_READY
+    assert state.pattern is StatusPattern.SOLID
+
+
+def test_iphone_only_ready_listening_shows_ready_solid() -> None:
+    state = derive_status(
+        _ready_snapshot(
+            sync_destination="iphone",
+            sync_service_state="listening",
+            paired_printer=None,
+            printer_status_fresh=False,
+            printer_model=None,
+            film_remaining=None,
+        )
+    )
+
+    assert state.signal is StatusSignal.READY
+    assert state.pattern is StatusPattern.SOLID
+
+
+def test_both_mode_ready_not_gated_on_sync_service() -> None:
+    # Both-mode still accepts uploads during the sync-start window (print
+    # path + disk spool), so the bar stays green on an FTP path alone.
+    state = derive_status(
+        _ready_snapshot(
+            sync_destination="both",
+            paired_printer=None,
+            printer_status_fresh=False,
+            printer_model=None,
+            film_remaining=None,
+        )
+    )
+
+    assert state.signal is StatusSignal.READY

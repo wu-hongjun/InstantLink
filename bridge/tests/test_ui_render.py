@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from instantlink_bridge.ble.models import PrinterModel
@@ -1542,6 +1544,9 @@ def test_iphone_only_ready_ignores_printer_state() -> None:
         camera_receive_ready=True,
         hotspot_host="192.168.8.1",
         sync_destination="iphone",
+        # iphone-only readiness additionally requires the sync service to
+        # be bound (plan 051 P2.3).
+        sync_service_state="listening",
     )
 
     # No printer paired, no film, no fresh status — the sync destination
@@ -1557,6 +1562,7 @@ def test_iphone_only_without_ftp_path_reports_only_ftp_cause() -> None:
         mode=UiMode.READY,
         ftp_host="192.168.7.1",
         sync_destination="iphone",
+        sync_service_state="listening",
     )
 
     assert not can_accept_images(snapshot)
@@ -1717,6 +1723,7 @@ def test_iphone_only_ready_with_ftp_path_shows_sync_headline(
         camera_receive_ready=True,
         hotspot_host="192.168.8.1",
         hotspot_ssid="InstantLink-AB12",
+        sync_service_state="listening",
     )
     assert can_accept_images(snapshot)
 
@@ -1724,3 +1731,226 @@ def test_iphone_only_ready_with_ftp_path_shows_sync_headline(
 
     assert "Sync to iPhone" in drawn
     assert "Setup needed" not in drawn
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.3: sync-service state honesty — the READY sync surfaces must
+# not claim sync-ready while nothing listens on the sync port. The snapshot
+# carries the actual service state ("starting" | "listening" | "unavailable")
+# threaded in from app.py.
+# ---------------------------------------------------------------------------
+
+
+def test_iphone_only_ready_while_sync_service_starting_shows_waiting_not_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """During the async-start window the surface must not claim sync-ready,
+    and must show the mild waiting/validation treatment — not a scary
+    restart-bridge error."""
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+    )
+    # Default state is "starting": nothing has confirmed a listener yet.
+    assert snapshot.sync_service_state == "starting"
+    assert not can_accept_images(snapshot)
+    assert "Sync starting" in readiness_cause_texts(snapshot)
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Sync to iPhone" not in drawn
+    assert "Sync starting" in drawn
+    assert "Sync failed · restart bridge" not in drawn
+
+
+def test_iphone_only_ready_while_sync_service_unavailable_shows_restart_cause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed sync-service start (port bind, construction) must degrade the
+    sync-ready claim to an actionable cause line."""
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        hotspot_host="192.168.8.1",
+        sync_service_state="unavailable",
+    )
+    assert not can_accept_images(snapshot)
+    assert "Sync failed · restart bridge" in readiness_cause_texts(snapshot)
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Sync to iPhone" not in drawn
+    assert "Sync failed · restart bridge" in drawn
+
+
+def test_iphone_only_ready_while_listening_claims_sync_ready() -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+    )
+
+    assert can_accept_images(snapshot)
+    assert readiness_cause_texts(snapshot) == []
+
+
+def test_both_mode_sync_unavailable_note_beats_paused_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both-mode keeps the READY print card, but a dead sync service must
+    surface as the actionable note — including over the "photos sync only"
+    claim, which would be false with nothing listening."""
+
+    from instantlink_bridge.ui.render import sync_unavailable_note
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="both",
+        camera_receive_ready=True,
+        sync_service_state="unavailable",
+    )
+    assert sync_unavailable_note(snapshot) == "Sync failed · restart bridge"
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Sync failed · restart bridge" in drawn
+    assert "Printer off · photos sync only" not in drawn
+
+
+def test_both_mode_sync_note_absent_while_listening() -> None:
+    from instantlink_bridge.ui.render import sync_unavailable_note
+
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="both",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+    )
+
+    assert sync_unavailable_note(snapshot) is None
+    # Both-mode readiness is not gated on the sync service: the print path
+    # (and the disk spool) still accept uploads during the startup window.
+    assert can_accept_images(snapshot)
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.6: sync-ready footer honesty — iphone-only must not advertise
+# the dead printer-poll refresh or the printer-scan hold; KEY3 pairs the
+# iPhone instead. Both-mode without a printer advertises KEY3 printer pair.
+# ---------------------------------------------------------------------------
+
+
+def test_footer_iphone_only_offers_settings_and_iphone_pairing() -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+    )
+
+    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "", "KEY3 iPhone"),)
+
+
+def test_footer_both_mode_without_printer_offers_key3_pair() -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="both",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+    )
+
+    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Refresh", "KEY3 Pair"),)
+
+
+def test_footer_both_mode_with_printer_keeps_network_shortcut() -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="both",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+    )
+
+    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Refresh", "KEY3 Network"),)
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.7: discoverability — a "Pair iPhone" nudge on the ready surface
+# until the first authenticated client ever connects since boot.
+# ---------------------------------------------------------------------------
+
+
+def test_sync_pair_nudge_shown_until_first_client_ever() -> None:
+    from instantlink_bridge.ui.render import sync_pair_nudge
+
+    never_seen = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+    )
+    assert sync_pair_nudge(never_seen) == "Pair iPhone: press KEY3"
+
+    both_mode = replace(never_seen, sync_destination="both")
+    assert sync_pair_nudge(both_mode) == "Pair iPhone: Settings > Network"
+
+    seen_once = replace(never_seen, sync_client_ever_seen=True)
+    assert sync_pair_nudge(seen_once) is None
+
+    # No nudge while the service is not actually reachable — the QR flow
+    # would surface an error; the readiness causes own that story.
+    not_listening = replace(never_seen, sync_service_state="starting")
+    assert sync_pair_nudge(not_listening) is None
+
+    print_only = replace(never_seen, sync_destination="print")
+    assert sync_pair_nudge(print_only) is None
+
+
+def test_sync_pair_nudge_renders_on_iphone_only_ready_surface(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+        hotspot_host="192.168.8.1",
+    )
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Pair iPhone: press KEY3" in drawn
+
+
+def test_sync_pair_nudge_absent_after_client_ever_seen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        sync_destination="iphone",
+        camera_receive_ready=True,
+        sync_service_state="listening",
+        sync_client_ever_seen=True,
+        hotspot_host="192.168.8.1",
+    )
+
+    drawn = _drawn_texts(monkeypatch, snapshot)
+
+    assert "Pair iPhone: press KEY3" not in drawn

@@ -590,6 +590,24 @@ _ZH_HANS: dict[str, str] = {
     "No film · photos sync only": "无相纸 · 仅同步照片",
     "pending": "张待传",
     "connected": "已连接",
+    # --- iPhone sync pass 2 (plan 051) ------------------------------------
+    # Sync-service honesty causes/notes/toasts, the sync-ready footer chips,
+    # and the discoverability nudges + settings cross-links.
+    "Sync starting": "同步启动中",
+    "Sync failed · restart bridge": "同步失败 · 请重启桥接",
+    "Sync starting · try again": "同步启动中 · 请稍后再试",
+    "Enable in Print > Send to": "请在 打印 > 发送到 中启用",
+    "Pair iPhone: press KEY3": "配对 iPhone：按 KEY3",
+    "Pair iPhone: Settings > Network": "配对 iPhone：设置 > 网络",
+    "KEY3 Pair": "KEY3 配对",
+    # "KEY3 iPhone" needs no entry: KEY labels and the iPhone brand both
+    # stay Latin, so the zh-Hans string is the English source.
+    "Where received photos go · Pair iPhone: Network page": (
+        "接收照片的去向 · 配对 iPhone：网络页"
+    ),
+    "Show a QR code to pair your iPhone · Send to: Print page": (
+        "显示二维码以配对 iPhone · 发送到：打印页"
+    ),
 }
 
 _TRANSLATIONS: dict[Language, dict[str, str]] = {

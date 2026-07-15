@@ -868,9 +868,7 @@ def status_bar_word(snapshot: UiSnapshot) -> str:
         # the generic "Adjustments". Frees the card body for the preview
         # tile + slider + value badge and matches the macOS sheet's
         # title-at-top layout.
-        return _ADJUSTMENT_EDIT_KEY_TO_LABEL.get(
-            snapshot.adjustment_edit_key or "", "Adjustments"
-        )
+        return _ADJUSTMENT_EDIT_KEY_TO_LABEL.get(snapshot.adjustment_edit_key or "", "Adjustments")
     if mode is UiMode.HELP_DIALOG:
         # The dialog overlay carries its own title within the card body;
         # the status bar reflects the underlying surface so the dim
@@ -1222,11 +1220,19 @@ def _ready(
     title = "Sync to iPhone" if iphone_only else "Ready"
     _center_lines(draw, [t(title, lang)], 56, fonts["large"], theme.label_primary)
 
-    paused_note = sync_print_paused_note(snapshot)
-    if paused_note is not None:
+    # One cause-style line fits between the title and the card. Priority
+    # (plan 051): a dead sync service (the "photos sync only" claim would be
+    # false) > printer-paused note > the one-time pair-iPhone nudge.
+    note = sync_unavailable_note(snapshot) or sync_print_paused_note(snapshot)
+    if note is not None:
         # Cause-style single line between the title and the card: printing
-        # is paused but sync keeps accepting uploads.
-        _center_lines(draw, [t(paused_note, lang)], 84, font_small, theme.accent_yellow)
+        # is paused but sync keeps accepting uploads (or vice versa).
+        _center_lines(draw, [t(note, lang)], 84, font_small, theme.accent_yellow)
+    else:
+        nudge = sync_pair_nudge(snapshot)
+        if nudge is not None:
+            # Discoverability nudge, not a warning — secondary tint.
+            _center_lines(draw, [t(nudge, lang)], 84, font_small, theme.label_secondary)
 
     # Card spanning x=12..228, y=104..200
     card_x, card_y = 12, 104
@@ -2713,9 +2719,7 @@ def _confirmation_dialog(
     )
 
     confirm_text = t(confirm_label, lang)
-    confirm_font = (
-        button_cjk if button_cjk is not None and _has_cjk(confirm_text) else button_font
-    )
+    confirm_font = button_cjk if button_cjk is not None and _has_cjk(confirm_text) else button_font
     draw.text(
         (confirm_center_x, button_center_y),
         confirm_text,
@@ -2996,8 +3000,20 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
         if snapshot.paired_printer is not None:
             return (("KEY1 Setting", "Ejecting", "KEY3 Network"),)
         return (("KEY1 Setting", "Ejecting", "Hold KEY3"),)
+    if snapshot.sync_destination == "iphone":
+        # iphone-only status surfaces (plan 051 P2.6): the printer poll is
+        # stopped, so "KEY2 Refresh" would be a no-op and "Hold KEY3" would
+        # start a pointless printer scan. KEY3 (short or hold) opens the
+        # iPhone pairing QR instead; the centre chip stays empty rather
+        # than advertising a dead action.
+        return (("KEY1 Setting", "", "KEY3 iPhone"),)
     if snapshot.paired_printer is not None:
         return (("KEY1 Setting", "KEY2 Refresh", "KEY3 Network"),)
+    if sync_enabled(snapshot):
+        # Both-mode without a printer sits on the READY sync surface, not
+        # NEEDS_PAIRING — short KEY3 starts the printer scan there too, so
+        # the chip can say so honestly (matches the NEEDS_PAIRING chip).
+        return (("KEY1 Setting", "KEY2 Refresh", "KEY3 Pair"),)
     return (("KEY1 Setting", "KEY2 Refresh", "Hold KEY3"),)
 
 
@@ -3711,6 +3727,53 @@ def sync_enabled(snapshot: UiSnapshot) -> bool:
     return snapshot.sync_destination in {"iphone", "both"}
 
 
+def sync_service_listening(snapshot: UiSnapshot) -> bool:
+    """Return whether the sync HTTP service is actually bound (plan 051 P2.3)."""
+
+    return snapshot.sync_service_state == "listening"
+
+
+def sync_unavailable_note(snapshot: UiSnapshot) -> str | None:
+    """Return the sync-failure line for the READY card in "both" mode.
+
+    Only "both" needs the note form: iphone-only degrades the whole READY
+    body via ``can_accept_images`` + ``readiness_cause_texts`` instead. The
+    note outranks ``sync_print_paused_note`` because "photos sync only"
+    would be a false claim while nothing listens on the sync port.
+    """
+
+    if not sync_enabled(snapshot):
+        return None
+    if snapshot.sync_service_state != "unavailable":
+        # The brief async-start window shows no note: the print path and
+        # the disk spool still accept uploads, so READY is not a lie.
+        return None
+    return "Sync failed · restart bridge"
+
+
+def sync_pair_nudge(snapshot: UiSnapshot) -> str | None:
+    """Return the one-time "Pair iPhone" nudge line (plan 051 P2.7).
+
+    Shown on the ready surface while sync is enabled and reachable but no
+    client has EVER connected since boot. The copy matches the KEY3 binding
+    (plan 051 P2.6): iphone-only opens the QR directly on KEY3; both-mode
+    points at the Settings ▸ Network row instead (KEY3 is the printer key
+    there).
+    """
+
+    if not sync_enabled(snapshot):
+        return None
+    if not sync_service_listening(snapshot):
+        # The QR flow would only surface an error; the readiness causes /
+        # unavailable note own that story.
+        return None
+    if snapshot.sync_client_ever_seen:
+        return None
+    if snapshot.sync_destination == "iphone":
+        return "Pair iPhone: press KEY3"
+    return "Pair iPhone: Settings > Network"
+
+
 def sync_print_paused_note(snapshot: UiSnapshot) -> str | None:
     """Return the paused-print line for the READY card in "both" mode.
 
@@ -3740,10 +3803,17 @@ def can_accept_images(snapshot: UiSnapshot) -> bool:
 
     Destination-aware (plan 050): with iPhone sync enabled ("iphone" or
     "both") the sync spool is always available, so only an FTP receive path
-    is required; print-only keeps the printer gate.
+    is required; print-only keeps the printer gate. iphone-only additionally
+    requires the sync service to actually be listening (plan 051 P2.3):
+    with no print path and no reachable sync port an upload has nowhere
+    useful to go, so the surface must not claim sync-ready. "both" is NOT
+    gated on the service — the print path and the disk spool still accept
+    uploads while sync starts (or after it failed).
     """
 
     if sync_enabled(snapshot):
+        if snapshot.sync_destination == "iphone":
+            return camera_link_ready(snapshot) and sync_service_listening(snapshot)
         return camera_link_ready(snapshot)
     return camera_link_ready(snapshot) and printer_ready(snapshot)
 
@@ -3794,6 +3864,14 @@ def readiness_cause_texts(snapshot: UiSnapshot) -> list[str]:
         # Printer causes never block a sync destination (plan 050):
         # iphone-only ignores the printer entirely, and "both" reports
         # printer trouble via sync_print_paused_note on the READY card.
+        # iphone-only IS blocked by a dead sync service (plan 051 P2.3):
+        # the boot window shows the mild "Sync starting" cause; a failed
+        # start shows the actionable restart line.
+        if snapshot.sync_destination == "iphone" and not sync_service_listening(snapshot):
+            if snapshot.sync_service_state == "unavailable":
+                causes.append("Sync failed · restart bridge")
+            else:
+                causes.append("Sync starting")
         return causes
     if snapshot.paired_printer is None:
         causes.append("Find printer")

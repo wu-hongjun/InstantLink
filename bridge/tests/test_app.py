@@ -809,3 +809,77 @@ class FailingPreviewUi(FakePrintUi):
         _ = received
         self.events.append(f"confirm:{timeout_s}")
         raise self._error
+
+
+# ---------------------------------------------------------------------------
+# Plan 051 P2.3: the sync-service lifecycle reports its actual listener
+# state to the UI so the LCD never claims sync-ready while nothing is
+# bound on the sync port.
+# ---------------------------------------------------------------------------
+
+
+class SyncStateRecordingUi(SyncAwarePrintUi):
+    """SyncAwarePrintUi that also records service-state notifications."""
+
+    async def sync_service_state_changed(self, listening: bool) -> None:
+        self.events.append(f"sync_listening:{listening}")
+
+
+@pytest.mark.asyncio
+async def test_start_sync_service_guarded_reports_listening_state() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+
+    await app.start_sync_service_guarded(FakeSyncService(), reason="startup", ui=ui)
+    await app.start_sync_service_guarded(FakeSyncService(fail_start=True), reason="startup", ui=ui)
+    await app.start_sync_service_guarded(None, reason="startup", ui=ui)
+
+    assert ui.events == [
+        "sync_listening:True",
+        "sync_listening:False",
+        "sync_listening:False",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_stop_sync_service_guarded_reports_not_listening() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+
+    await app.stop_sync_service_guarded(FakeSyncService(), reason="config_applied", ui=ui)
+    # Even a failed stop leaves the service unreliable — report not-listening.
+    await app.stop_sync_service_guarded(
+        FakeSyncService(fail_stop=True), reason="config_applied", ui=ui
+    )
+
+    assert ui.events == ["sync_listening:False", "sync_listening:False"]
+
+
+@pytest.mark.asyncio
+async def test_apply_sync_destination_change_threads_ui_state() -> None:
+    ui = SyncStateRecordingUi(should_print=False)
+    service = FakeSyncService()
+
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.IPHONE),
+        service=service,
+        ui=ui,
+    )
+    await app.apply_sync_destination_change(
+        SyncConfig(destination=SyncDestination.PRINT),
+        service=service,
+        ui=ui,
+    )
+
+    assert service.events == ["start", "stop"]
+    assert ui.events == ["sync_listening:True", "sync_listening:False"]
+
+
+@pytest.mark.asyncio
+async def test_sync_service_state_hook_is_optional() -> None:
+    # A UI without the hook (or a bare object) must not break the lifecycle.
+    ui = SyncAwarePrintUi(should_print=False)
+
+    await app.start_sync_service_guarded(FakeSyncService(), reason="startup", ui=ui)
+    await app.start_sync_service_guarded(FakeSyncService(), reason="startup", ui=object())
+    await app.stop_sync_service_guarded(FakeSyncService(), reason="shutdown", ui=None)
+
+    assert ui.events == []

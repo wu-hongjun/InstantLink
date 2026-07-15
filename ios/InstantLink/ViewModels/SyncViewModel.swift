@@ -296,9 +296,11 @@ final class SyncViewModel: ObservableObject {
             updateTransfer(item.itemID) { $0.state = .waiting }
         } catch SyncClientError.checksumMismatch {
             // Corrupt bytes — do not resume from them.
+            print("sync.transfer_checksum_mismatch file=\(item.fileName)")
             try? FileManager.default.removeItem(at: stagingURL)
             updateTransfer(item.itemID) { $0.state = .failed("Integrity check failed; will retry") }
         } catch {
+            print("sync.transfer_failed file=\(item.fileName) error=\(String(describing: error))")
             updateTransfer(item.itemID) { $0.state = .failed(error.localizedDescription) }
         }
     }

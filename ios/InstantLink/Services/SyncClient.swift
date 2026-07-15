@@ -104,6 +104,22 @@ final class SyncClient {
             offset = size
         }
 
+        // Staging may already hold the complete file — e.g. an earlier pass
+        // downloaded everything but failed at the save stage (2026-07-15
+        // field test: a complete staging file made every retry request
+        // bytes=<size>-, a 416, forever). Verify what's on disk instead of
+        // refetching; only a corrupt file restarts the download.
+        if item.sizeBytes > 0, offset >= item.sizeBytes {
+            do {
+                try Self.verifyChecksum(of: destination, expected: item.sha256)
+                progress(item.sizeBytes)
+                return
+            } catch {
+                try? fileManager.removeItem(at: destination)
+                offset = 0
+            }
+        }
+
         var request = request("v1/photos/\(item.itemID)")
         if offset > 0 {
             request.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range")
@@ -124,6 +140,13 @@ final class SyncClient {
         case 401, 403:
             task.cancel()
             throw SyncClientError.unauthorized
+        case 416:
+            // Our offset is past the server's end of file (size drift or a
+            // stale partial): drop the partial so the next pass restarts
+            // from zero instead of looping on an unsatisfiable range.
+            task.cancel()
+            try? fileManager.removeItem(at: destination)
+            throw SyncClientError.httpStatus(http.statusCode)
         default:
             task.cancel()
             throw SyncClientError.httpStatus(http.statusCode)

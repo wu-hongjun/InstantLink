@@ -275,6 +275,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             # forever from the "starting" default (plan 051 P2.3).
             await notify_sync_service_state(ui, listening=False)
             return
+        await announce_initial_outbox_depth(ui, sync_outbox)
         if sync_desired:
             await start_sync_service_guarded(sync_service, reason="startup", ui=ui)
 
@@ -599,6 +600,25 @@ async def spool_image_to_sync_outbox(
     depth = await asyncio.to_thread(outbox.depth)
     await notify_sync_outbox_changed(ui, depth=depth)
     return True
+
+
+async def announce_initial_outbox_depth(ui: object, outbox: object) -> None:
+    """Push the outbox depth reloaded from disk to the UI at startup.
+
+    The spool index survives restarts but the controller's chip state does
+    not — without this the LCD shows a stale zero until the next add/ack
+    (found on-device 2026-07-15 via the remote screen).
+    """
+
+    depth_fn = getattr(outbox, "depth", None)
+    if not callable(depth_fn):
+        return
+    try:
+        depth = int(await asyncio.to_thread(depth_fn))
+    except Exception:
+        LOGGER.exception("sync.initial_depth_failed")
+        return
+    await notify_sync_outbox_changed(ui, depth=depth)
 
 
 async def notify_sync_outbox_changed(ui: object, *, depth: int) -> None:

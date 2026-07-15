@@ -474,6 +474,34 @@ async def test_sync_hooks_are_optional_and_report_shape() -> None:
 
 
 @pytest.mark.asyncio
+async def test_announce_initial_outbox_depth_restores_chip_after_restart(
+    tmp_path: Path,
+) -> None:
+    """The outbox reloads its disk index on boot, but the LCD chip previously
+    started at a stale 0 until the next add/ack (found on-device 2026-07-15
+    via the remote screen). Startup must push the reloaded depth to the UI.
+    """
+    from instantlink_bridge.sync.outbox import SyncOutbox
+
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=8)
+    source = tmp_path / "boot.jpg"
+    source.write_bytes(b"x" * 128)
+    outbox.add(source)
+
+    ui = SyncAwarePrintUi(should_print=False)
+    await app.announce_initial_outbox_depth(ui, outbox)
+    assert ui.events == ["sync_outbox:1"]
+
+    # Empty outbox still announces (a truthful zero), and a missing outbox
+    # (construction failed) is a quiet no-op.
+    empty = SyncOutbox(tmp_path / "outbox-empty", budget_mb=8)
+    await app.announce_initial_outbox_depth(ui, empty)
+    assert ui.events[-1] == "sync_outbox:0"
+    await app.announce_initial_outbox_depth(ui, None)
+    assert ui.events[-1] == "sync_outbox:0"
+
+
+@pytest.mark.asyncio
 async def test_apply_sync_destination_change_starts_service_when_sync_enabled() -> None:
     service = FakeSyncService()
 

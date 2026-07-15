@@ -204,6 +204,67 @@ final class SyncClientTests: XCTestCase {
         }
     }
 
+    // MARK: - Complete staging (2026-07-15 field-test bug)
+
+    func testDownloadWithCompleteStagingVerifiesWithoutRefetch() async throws {
+        let body = Self.patternData(count: 150_000)
+        let destination = stagingDirectory.appendingPathComponent("complete.jpg")
+        try body.write(to: destination)
+
+        StubURLProtocol.handler = { request in
+            XCTFail("verified-complete staging must not refetch, got \(request.url?.path ?? "?")")
+            return (Self.response(for: request, status: 500), Data())
+        }
+
+        let reported = OSAllocatedUnfairLock(initialState: [Int64]())
+        let item = Self.item("item-done", body: body)
+        try await client.downloadPhoto(item, to: destination) { received in
+            reported.withLock { $0.append(received) }
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), body)
+        XCTAssertEqual(reported.withLock { $0 }.last, Int64(body.count))
+    }
+
+    func testDownloadWithCorruptCompleteStagingRestartsFresh() async throws {
+        let body = Self.patternData(count: 120_000)
+        let destination = stagingDirectory.appendingPathComponent("corrupt.jpg")
+        // Full size, wrong bytes: must be discarded, then fetched from zero.
+        try Data(repeating: 0xAB, count: body.count).write(to: destination)
+
+        StubURLProtocol.handler = { request in
+            XCTAssertNil(
+                request.value(forHTTPHeaderField: "Range"),
+                "corrupt staging must restart from scratch"
+            )
+            return (Self.response(for: request, status: 200), body)
+        }
+
+        let item = Self.item("item-corrupt", body: body)
+        try await client.downloadPhoto(item, to: destination) { _ in }
+        XCTAssertEqual(try Data(contentsOf: destination), body)
+    }
+
+    func testDownload416DeletesStagingForFreshRetry() async throws {
+        let body = Self.patternData(count: 100_000)
+        let destination = stagingDirectory.appendingPathComponent("stale.jpg")
+        try body.prefix(40_000).write(to: destination)
+
+        StubURLProtocol.handler = { request in
+            (Self.response(for: request, status: 416), Data())
+        }
+
+        let item = Self.item("item-416", body: body)
+        do {
+            try await client.downloadPhoto(item, to: destination) { _ in }
+            XCTFail("expected 416 to throw")
+        } catch SyncClientError.httpStatus(416) {
+            XCTAssertFalse(
+                FileManager.default.fileExists(atPath: destination.path),
+                "stale partial must be deleted so the next pass restarts cleanly"
+            )
+        }
+    }
+
     // MARK: - Ack
 
     func testAckPostsAndSucceeds() async throws {

@@ -1903,6 +1903,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pass-2-outcome-2026-07-14-tdd-27-new-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pass 2 outcome (2026-07-14, TDD — 27 new tests)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2043,6 +2054,36 @@ sub-states instead of giving sync its own readiness rendering.</p>
 <li>Verification: full bridge suite 1013 passed; ruff + <code>mypy --strict</code> clean on
   touched files.</li>
 </ul>
+<h2 id="pass-2-outcome-2026-07-14-tdd-27-new-tests">Pass 2 outcome (2026-07-14, TDD — 27 new tests)<a class="headerlink" href="#pass-2-outcome-2026-07-14-tdd-27-new-tests" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>P2.3 fixed.</strong> <code>UiSnapshot.sync_service_state: "starting"|"listening"|"unavailable"</code>
+  (three states — a bool can't distinguish the async-start boot window from a
+  bind failure), stamped via <code>BridgeUi.sync_service_state_changed(listening)</code>
+  from all app.py start/stop/apply paths. iphone-only readiness now requires
+  listening ("Sync starting" / "Sync failed · restart bridge" causes);
+  both-mode stays un-gated (spool still works) but shows the failure note;
+  the QR action refuses to render a QR to a dead port (toast + log).</li>
+<li><strong>P2.6 fixed.</strong> iphone-only footer is now <code>KEY1 Setting / — / KEY3 iPhone</code>
+  with both short and hold KEY3 opening the pairing QR (BACK returns home);
+  both-mode-unpaired gets <code>KEY3 Pair</code> (printer scan, NEEDS_PAIRING precedent).</li>
+<li><strong>P2.7 fixed.</strong> Send to ↔ iPhone pairing help cross-links; new boot-scoped
+  <code>sync_client_ever_seen</code>; READY shows a "Pair iPhone" nudge (KEY3 /
+  Settings ▸ Network per mode) when sync is listening but never used.
+  Card note priority: unavailable &gt; paused &gt; nudge.</li>
+<li><strong>Preview-vs-QR fixed (defer policy).</strong> <code>await_print_confirmation</code> holds the
+  queue item while SYNC_PAIRING is up (event-driven wake + safety re-check);
+  preserves auto-print/explicit-confirm semantics, no deadlock, countdown
+  restarts after exit.</li>
+<li>Docs updated as-built: ux-flows.md (READY carve-out, No-Film exception, new
+  rows + SYNC_PAIRING template, footer semantics, idle exemption) and
+  bridge/CLAUDE.md (state list rewritten from the UiMode enum; sync exceptions
+  on the Ready/NO-FILM rules).</li>
+<li>Verification: full suite 1052 passed; ruff/format clean; mypy --strict clean
+  on touched sources.</li>
+</ul>
+<p>Remaining (Pass 3, with hardware): P3 items + on-device smoke of the new
+surfaces (largest-font render of nudge/unavailable lines, real port-bind
+failure), iPhone field test.</p>
 
 
 

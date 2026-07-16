@@ -177,6 +177,8 @@ struct MainView: View {
                             Button(L("Try Again")) {
                                 viewModel.startPairing()
                             }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.brandAccent)
                             .controlSize(.large)
                         } else {
                             InstaxPrinterGlyph(size: 54)

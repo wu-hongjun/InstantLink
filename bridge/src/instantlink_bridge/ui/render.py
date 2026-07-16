@@ -95,20 +95,6 @@ def _draw_preview_unavailable(
 # enum's `.value`.
 _OVERLAY_TOGGLE_EDIT_KEYS: frozenset[str] = frozenset({"adjust_datestamp", "adjust_watermark"})
 
-# ---------------------------------------------------------------------------
-# Legacy colour constants — kept as fallbacks; theme tokens take precedence
-# ---------------------------------------------------------------------------
-
-BG = "#101820"
-PANEL = "#172633"
-TEXT = "#f4f7fb"
-MUTED = "#a9b6c4"
-GREEN = "#00a676"
-YELLOW = "#f2c14e"
-RED = "#e15554"
-BLUE = "#3d8bfd"
-BLACK = "#05080c"
-
 # Vertical layout constants
 STATUS_BAR_H = 36  # top status bar — 6 px taller than v1 so the pill has
 # breathing room above + below (was 30 with pill almost touching the screen
@@ -3163,44 +3149,6 @@ def _text(
 def _font_height(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
     bbox = draw.textbbox((0, 0), text, font=font)
     return int(bbox[3] - bbox[1])
-
-
-def _mode_chrome(mode: UiMode) -> tuple[str, str]:
-    if mode is UiMode.SETTINGS:
-        return BLUE, "Settings"
-    if mode is UiMode.READY:
-        return GREEN, "Ready"
-    if mode is UiMode.VALIDATION:
-        return YELLOW, "Waiting"
-    if mode is UiMode.NO_FILM:
-        return RED, "Attention"
-    if mode is UiMode.PRINTER_SEARCHING:
-        return BLUE, "Searching"
-    if mode is UiMode.PRINTER_OFFLINE:
-        return YELLOW, "Attention"
-    if mode is UiMode.IMAGE_RECEIVED:
-        return BLUE, "Received"
-    if mode is UiMode.AWAITING_CONFIRM:
-        return BLUE, "Preview"
-    if mode is UiMode.PRINTING:
-        return BLUE, "Printing"
-    if mode is UiMode.PRINT_COMPLETE:
-        return GREEN, "Ejecting"
-    if mode is UiMode.PAIRING:
-        return YELLOW, "Finding"
-    if mode in {UiMode.PAIR_FAILED, UiMode.ERROR}:
-        return RED, "Error" if mode is UiMode.ERROR else "Attention"
-    if mode is UiMode.BOOTING:
-        return YELLOW, "Starting"
-    return BLUE, "Printer setup"
-
-
-def _snapshot_chrome(snapshot: UiSnapshot) -> tuple[str, str]:
-    if snapshot.mode is UiMode.SETTINGS:
-        return BLUE, snapshot.settings_title
-    if snapshot.mode is UiMode.READY and not can_accept_images(snapshot):
-        return YELLOW, "Waiting"
-    return _mode_chrome(snapshot.mode)
 
 
 # DejaVu / Arial have no CJK glyphs, so for Chinese we prefer Noto Sans CJK

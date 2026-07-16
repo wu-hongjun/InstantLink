@@ -124,7 +124,15 @@ LIGHT_THEME = Theme(
     label_inverse="#FFFFFF",
     accent_blue="#E0552B",  # brand safelight amber-red — interactive/selection accent
     accent_green="#34C759",  # systemGreen — ready/active (SEMANTIC success, not brand)
-    accent_yellow="#FFCC00",  # systemYellow — warning/searching (semantic, not the accent)
+    # Warning/searching amber (semantic, not the brand accent). Darkened from
+    # systemYellow #FFCC00 because that reads at only 1.35:1 as *text on the
+    # light ground* (#F2F2F7) — the caution lines it draws ("No film · photos
+    # sync only", "Do not power off", recovery hints) were effectively
+    # illegible in light mode. #9A5B00 is a dark amber at 4.86:1, still clearly
+    # a warm caution tone and distinct from the brand amber-red (accent_blue).
+    # The pill/dot status vocabulary uses status_indicator.py's own RGBs, so
+    # this darkening only affects on-ground text.
+    accent_yellow="#9A5B00",
     accent_red="#FF3B30",  # systemRed — error/destructive (semantic, not the accent)
     accent_orange="#FF9500",  # systemOrange
     accent_destructive="#FF3B30",  # systemRed — same as accent_red in light mode

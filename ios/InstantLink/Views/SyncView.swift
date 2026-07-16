@@ -14,13 +14,17 @@ struct SyncView: View {
 
             if let error = model.lastError {
                 Section {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
                         .font(.subheadline)
                 }
             }
 
-            if !model.transfers.isEmpty {
+            if model.transfers.isEmpty {
+                Section {
+                    emptyTransfers
+                }
+            } else {
                 Section("Transfers") {
                     ForEach(model.transfers) { transfer in
                         TransferRow(transfer: transfer)
@@ -72,13 +76,26 @@ struct SyncView: View {
             HStack {
                 statPill(
                     value: model.bridgeStatus.map { "\($0.outboxDepth)" } ?? "—",
-                    label: "waiting on Bridge"
+                    label: "waiting to sync"
                 )
                 Spacer()
                 statPill(value: "\(model.syncedCount)", label: "synced")
             }
         }
         .padding(.vertical, 4)
+    }
+
+    // MARK: - Empty transfers
+
+    private var emptyTransfers: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No photos yet")
+                .font(.subheadline.weight(.semibold))
+            Text("Photos your Bridge receives will appear here while the app is open.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 6)
     }
 
     private func statPill(value: String, label: String) -> some View {
@@ -154,7 +171,7 @@ private struct TransferRow: View {
                 .foregroundStyle(.green)
         case .failed(let message):
             Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(.red)
                 .accessibilityLabel(message)
         }
     }

@@ -35,7 +35,7 @@ struct SettingsView: View {
                     isForgetConfirmPresented = true
                 }
             } footer: {
-                Text("Forgetting removes the pairing token, the saved Wi-Fi configuration, and the sync history. Photos already in your library are not affected.")
+                Text("Forgetting removes this Bridge's pairing, its saved Wi-Fi network, and the sync history. Photos already in your library aren't affected.")
             }
         }
         .navigationTitle("Settings")

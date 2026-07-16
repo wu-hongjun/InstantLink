@@ -67,8 +67,8 @@ struct OnboardingView: View {
                     isEnteringLinkManually = true
                 }
                 .font(.subheadline.weight(.medium))
-                .padding(.vertical, 10)
-                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 20)
                 .background(.thinMaterial, in: Capsule())
                 .padding(.bottom, 24)
             }
@@ -141,7 +141,9 @@ struct OnboardingView: View {
             Button("Cancel") {
                 model.restartOnboarding()
             }
-            .padding(.bottom, 24)
+            .font(.body.weight(.medium))
+            .padding(.vertical, 12)
+            .padding(.bottom, 12)
         }
     }
 
@@ -179,7 +181,7 @@ struct OnboardingView: View {
             Spacer()
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 64))
-                .foregroundStyle(.orange)
+                .foregroundStyle(.red)
             Text("Pairing failed")
                 .font(.title2.bold())
             Text(message)

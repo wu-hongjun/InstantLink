@@ -1,0 +1,20 @@
+<svg width="1180" height="360" viewBox="0 0 1180 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InstantLink logo">
+  <!-- Horizontal lockup: mark + wordmark. The wordmark uses a system sans as
+       a stand-in; outline it to paths before external distribution so it
+       renders identically everywhere. "Link" carries the teal accent. -->
+  <!-- Mark (film frame + link) -->
+  <g transform="translate(20, 20)">
+    <rect x="118" y="96" width="276" height="332" rx="40" transform="scale(0.62)" fill="#F6FBFA"/>
+    <rect x="150" y="128" width="212" height="212" rx="24" transform="scale(0.62)" fill="#0E3A43"/>
+    <g transform="scale(0.62)">
+      <path d="M196 234 H316" stroke="#16B7A9" stroke-width="26" stroke-linecap="round"/>
+      <circle cx="196" cy="234" r="30" fill="#16B7A9"/>
+      <circle cx="316" cy="234" r="30" fill="#FFB020"/>
+      <circle cx="316" cy="234" r="12" fill="#0E3A43"/>
+    </g>
+  </g>
+  <!-- Wordmark -->
+  <text x="330" y="235" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="150" font-weight="700" letter-spacing="-4">
+    <tspan fill="#0E3A43">Instant</tspan><tspan fill="#0FA398">Link</tspan>
+  </text>
+</svg>

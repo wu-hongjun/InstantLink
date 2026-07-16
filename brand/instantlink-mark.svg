@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InstantLink mark">
+  <!-- InstantLink mark: an Instax-style instant-photo frame (thick bottom lip)
+       framing a link — two nodes joined by a bridge bar. Transparent bg;
+       use on any surface. Colours are brand tokens (see palette.md). -->
+  <!-- Film frame -->
+  <rect x="118" y="96" width="276" height="332" rx="40" fill="#F6FBFA"/>
+  <!-- Photo window (square), leaving the classic thick bottom lip -->
+  <rect x="150" y="128" width="212" height="212" rx="24" fill="#0E3A43"/>
+  <!-- Link: bridge bar between two nodes, inside the photo window -->
+  <g>
+    <path d="M196 234 H316" stroke="#16B7A9" stroke-width="26" stroke-linecap="round"/>
+    <circle cx="196" cy="234" r="30" fill="#16B7A9"/>
+    <circle cx="316" cy="234" r="30" fill="#FFB020"/>
+    <circle cx="316" cy="234" r="12" fill="#0E3A43"/>
+  </g>
+</svg>

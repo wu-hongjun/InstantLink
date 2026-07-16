@@ -1,0 +1,26 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InstantLink app icon">
+  <!-- Full-bleed app icon. iOS masks the corners, so the background is a
+       plain square. Teal gradient (evolves the Bridge's original #105060
+       splash) framing the instant-photo + link mark. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#17B6A7"/>
+      <stop offset="1" stop-color="#0B3A44"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="512" cy="430" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <!-- Film frame -->
+  <rect x="284" y="212" width="456" height="548" rx="72" fill="#F6FBFA"/>
+  <!-- Photo window (square) + thick bottom lip -->
+  <rect x="336" y="264" width="352" height="352" rx="44" fill="#0E3A43"/>
+  <!-- Link: bridge bar between two nodes -->
+  <path d="M412 440 H612" stroke="#16B7A9" stroke-width="44" stroke-linecap="round"/>
+  <circle cx="412" cy="440" r="50" fill="#16B7A9"/>
+  <circle cx="612" cy="440" r="50" fill="#FFB020"/>
+  <circle cx="612" cy="440" r="20" fill="#0E3A43"/>
+</svg>

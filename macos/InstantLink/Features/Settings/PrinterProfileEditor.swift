@@ -125,6 +125,7 @@ struct PrinterProfileEditorView: View {
                 Button(L("Save")) { saveAndDismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
+                    .tint(.brandAccent)
             }
         }
         .padding(24)

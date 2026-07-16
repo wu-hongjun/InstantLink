@@ -115,7 +115,7 @@ struct BridgeUpdateView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.brandAccent)
                     .imageScale(.large)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L("Update available"))

@@ -64,9 +64,9 @@ class StatusPattern(StrEnum):
 
 # Base RGB triplets at full intensity. Kept here (not imported from render.py)
 # so the GPIO driver can consume them without pulling in PIL.
-_GREEN_RGB: tuple[int, int, int] = (0, 166, 118)  # #00a676
-_YELLOW_RGB: tuple[int, int, int] = (242, 193, 78)  # #f2c14e
-_RED_RGB: tuple[int, int, int] = (225, 85, 84)  # #e15554
+_GREEN_RGB: tuple[int, int, int] = (0, 166, 118)  # #00a676 — semantic green (ready/active status)
+_YELLOW_RGB: tuple[int, int, int] = (242, 193, 78)  # #f2c14e — warning/searching (semantic)
+_RED_RGB: tuple[int, int, int] = (225, 85, 84)  # #e15554 — error (semantic)
 
 
 # Breath curve: 2 s cycle, intensity scaled 60 % → 100 %. Gentle enough to read

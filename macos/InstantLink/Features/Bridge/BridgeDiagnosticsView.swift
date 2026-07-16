@@ -116,9 +116,9 @@ struct BridgeDiagnosticsView: View {
                 .padding(.vertical, 3)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor.opacity(0.20) : Color.secondary.opacity(0.10))
+                        .fill(isSelected ? Color.brandAccent.opacity(0.20) : Color.secondary.opacity(0.10))
                 )
-                .foregroundColor(isSelected ? .accentColor : .secondary)
+                .foregroundColor(isSelected ? .brandAccent : .secondary)
         }
         .buttonStyle(.plain)
     }

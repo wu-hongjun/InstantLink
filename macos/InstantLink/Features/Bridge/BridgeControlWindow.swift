@@ -61,6 +61,7 @@ struct BridgeControlWindow: View {
             }
         }
         .frame(minWidth: 720, minHeight: 520)
+        .tint(.brandAccent)
         .onAppear {
             coordinator.onWindowVisibilityChanged(true)
         }
@@ -89,7 +90,7 @@ struct BridgeControlWindow: View {
         case .found(let device, _):
             title = "\(device.deviceID) — v\(device.softwareVersion)"
             icon = "antenna.radiowaves.left.and.right"
-            tint = .accentColor
+            tint = .brandAccent
         case .lost(let device, _):
             title = device.map { "\($0.deviceID) — \(L("Disconnected"))" } ?? L("Bridge disconnected")
             icon = "antenna.radiowaves.left.and.right.slash"

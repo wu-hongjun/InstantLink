@@ -88,11 +88,13 @@ class Theme:
     label_secondary: str  # subtitle / muted
     label_inverse: str  # text on a vibrant accent (always high-contrast)
 
-    # Accents — match iOS system colours
-    accent_blue: str  # primary actions, picker selection
-    accent_green: str  # ready / success
-    accent_yellow: str  # warning / searching
-    accent_red: str  # error / destructive
+    # Accents — brand safelight amber-red is the single interactive accent
+    # (non-status chrome). Status colours stay semantic: ready/success=green,
+    # warning=yellow, error=red. The brand accent is never a status signal.
+    accent_blue: str  # primary actions, picker selection — brand safelight #E0552B
+    accent_green: str  # ready / success — semantic systemGreen (NOT the brand accent)
+    accent_yellow: str  # warning / searching (semantic)
+    accent_red: str  # error / destructive (semantic)
     accent_orange: str  # secondary warnings
     accent_destructive: str  # two-press destructive-confirm toasts
 
@@ -120,18 +122,18 @@ LIGHT_THEME = Theme(
     label_primary="#000000",  # label
     label_secondary="#6B6B70",  # secondaryLabel
     label_inverse="#FFFFFF",
-    accent_blue="#007AFF",  # systemBlue
-    accent_green="#34C759",  # systemGreen
-    accent_yellow="#FFCC00",  # systemYellow
-    accent_red="#FF3B30",  # systemRed
+    accent_blue="#E0552B",  # brand safelight amber-red — interactive/selection accent
+    accent_green="#34C759",  # systemGreen — ready/active (SEMANTIC success, not brand)
+    accent_yellow="#FFCC00",  # systemYellow — warning/searching (semantic, not the accent)
+    accent_red="#FF3B30",  # systemRed — error/destructive (semantic, not the accent)
     accent_orange="#FF9500",  # systemOrange
     accent_destructive="#FF3B30",  # systemRed — same as accent_red in light mode
     # Frosted pill fills: 70 % accent blended with systemBackground (#FFFFFF) at 30 %
     # so the capsule reads as a translucent glass chip rather than a solid badge.
     # Formula: round(accent * 0.70 + 255 * 0.30)
-    pill_bg_green="#65D87C",   # #34C759 * 0.70 + #FFF * 0.30 → #65D87C
+    pill_bg_green="#71D989",  # systemGreen #34C759 * 0.70 + #FFF * 0.30 → #71D989
     pill_bg_yellow="#FFD833",  # #FFCC00 * 0.70 + #FFF * 0.30 → #FFD833
-    pill_bg_red="#FF6D65",     # #FF3B30 * 0.70 + #FFF * 0.30 → #FF6D65
+    pill_bg_red="#FF6D65",  # #FF3B30 * 0.70 + #FFF * 0.30 → #FF6D65
     hint_bg="#E5E5EA",
     hint_fg="#6B6B70",
     slider_thumb_fill="#FFFFFF",
@@ -149,19 +151,19 @@ DARK_THEME = Theme(
     label_primary="#FFFFFF",
     label_secondary="#A1A1A6",
     label_inverse="#000000",
-    accent_blue="#0A84FF",  # systemBlue (dark)
-    accent_green="#30D158",  # systemGreen (dark)
-    accent_yellow="#FFD60A",  # systemYellow (dark)
-    accent_red="#FF453A",  # systemRed (dark)
+    accent_blue="#F06A3E",  # brand safelight amber-red (dark, brightened) — interactive accent
+    accent_green="#30D158",  # systemGreen (dark) — ready/active (SEMANTIC success, not brand)
+    accent_yellow="#FFD60A",  # systemYellow (dark) — warning/searching (semantic, not the accent)
+    accent_red="#FF453A",  # systemRed (dark) — error/destructive (semantic, not the accent)
     accent_orange="#FF9F0A",
     accent_destructive="#FF453A",  # systemRed (dark) — same as accent_red in dark mode
     # Frosted pill fills: 82 % dark accent + 18 % dark surface (#1C1C1E = 28,28,30)
     # Dark mode needs less muting than light (already on dark bg) — 82/18 keeps
     # the accent vibrant but adds the frosted-glass tonal shift.
     # Formula: round(accent * 0.82 + surface * 0.18)
-    pill_bg_green="#2DB44E",   # #30D158 * 0.82 + #1C1C1E * 0.18 → #2DB44E
+    pill_bg_green="#2BB44E",  # systemGreen #30D158 * 0.82 + #1C1C1E * 0.18 → #2BB44E
     pill_bg_yellow="#E6B800",  # bumped from #D4B20D — plan 034 item 5a; warm yellow, not ochre
-    pill_bg_red="#D43A30",     # #FF453A * 0.82 + #1C1C1E * 0.18 → #D43A30
+    pill_bg_red="#D43A30",  # #FF453A * 0.82 + #1C1C1E * 0.18 → #D43A30
     hint_bg="#1C1C1E",
     hint_fg="#A1A1A6",
     slider_thumb_fill="#FFFFFF",

@@ -145,7 +145,7 @@ private struct TransferRow: View {
                 .foregroundStyle(.secondary)
         case .downloading:
             Image(systemName: "arrow.down.circle")
-                .foregroundStyle(.blue)
+                .foregroundStyle(Color.brandAccent)
         case .saving:
             ProgressView()
                 .controlSize(.small)

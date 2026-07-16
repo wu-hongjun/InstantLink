@@ -14,6 +14,7 @@ mkdir -p "$BUILD_DIR" "$MODULE_CACHE"
 
 SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Localization.swift"
+  "$REPO_ROOT/macos/InstantLink/Support/BrandColor.swift"
   "$REPO_ROOT/macos/InstantLink/OverlayModels.swift"
   "$REPO_ROOT/macos/InstantLink/InstantLinkFFI.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Editor/State/AdjustmentState.swift"

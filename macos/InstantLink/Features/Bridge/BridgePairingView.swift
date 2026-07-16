@@ -197,7 +197,7 @@ struct BridgePairingView: View {
     private func stepHeader(number: Int, title: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "\(number).circle.fill")
-                .foregroundColor(.accentColor)
+                .foregroundColor(.brandAccent)
             Text(title)
                 .font(.headline)
         }

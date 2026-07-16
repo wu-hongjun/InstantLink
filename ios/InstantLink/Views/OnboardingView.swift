@@ -38,14 +38,16 @@ struct OnboardingView: View {
             .ignoresSafeArea()
 
             VStack {
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
+                    BrandMark(size: 48)
                     Text("Pair with your Bridge")
                         .font(.title2.bold())
                     Text("On the Bridge, open Settings ▸ Network ▸ iPhone pairing, then scan the QR code on its screen.")
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
                 }
-                .padding()
+                .padding(20)
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
                 .padding()
 

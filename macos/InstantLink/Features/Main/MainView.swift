@@ -137,6 +137,7 @@ struct MainView: View {
                                         viewModel.reconnectSelectedPrinterOrScan()
                                     }
                                     .buttonStyle(.borderedProminent)
+                                    .tint(.brandAccent)
                                     .controlSize(.large)
 
                                     Button(L("Switch Printer")) {
@@ -192,6 +193,7 @@ struct MainView: View {
                                 viewModel.startPairing()
                             }
                             .buttonStyle(.borderedProminent)
+                            .tint(.brandAccent)
                             .controlSize(.large)
                         }
 
@@ -709,9 +711,9 @@ private struct PairingChecklistCard: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor.opacity(0.10))
+                        .fill(Color.brandAccent.opacity(0.10))
                         .frame(width: 34, height: 34)
-                    InstaxPrinterGlyph(size: 18, color: Color.accentColor)
+                    InstaxPrinterGlyph(size: 18, color: Color.brandAccent)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -797,7 +799,7 @@ private struct PairingChecklistRow: View {
         case .pending:
             return AnyShapeStyle(Color.clear)
         case .active:
-            return AnyShapeStyle(Color.accentColor.opacity(0.08))
+            return AnyShapeStyle(Color.brandAccent.opacity(0.08))
         case .completed:
             return AnyShapeStyle(Color.green.opacity(0.08))
         case .failed:
@@ -810,7 +812,7 @@ private struct PairingChecklistRow: View {
         case .pending:
             return Color.white.opacity(0.06)
         case .active:
-            return Color.accentColor.opacity(0.20)
+            return Color.brandAccent.opacity(0.20)
         case .completed:
             return Color.green.opacity(0.18)
         case .failed:

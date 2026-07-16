@@ -33,6 +33,10 @@ targets:
         PRODUCT_NAME: InstantLink
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: InstantLink/Resources/Info.plist
+        # Hand-written Info.plist has no CFBundleIcons keys, so the app icon
+        # is resolved from the asset catalog. Pin the names explicitly.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_ENTITLEMENTS: InstantLink/Resources/InstantLink.entitlements
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"

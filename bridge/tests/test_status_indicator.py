@@ -233,10 +233,13 @@ def test_breathing_tint_modulates_with_time() -> None:
 
 
 def test_foreground_is_white_on_green_and_red() -> None:
-    green_state = StatusState(StatusSignal.READY, StatusPattern.SOLID, (0, 166, 118))
+    # Ready base colour is now brand teal #16B7A9 (luma ~148 < 160 → white text),
+    # matching status_indicator._GREEN_RGB — semantic green (ready is a status
+    # signal, NOT the brand accent; brand safelight amber-red is chrome only).
+    ready_state = StatusState(StatusSignal.READY, StatusPattern.SOLID, (0, 166, 118))
     red_state = StatusState(StatusSignal.ERROR, StatusPattern.SOLID, (225, 85, 84))
 
-    assert green_state.foreground() == (255, 255, 255)
+    assert ready_state.foreground() == (255, 255, 255)
     assert red_state.foreground() == (255, 255, 255)
 
 

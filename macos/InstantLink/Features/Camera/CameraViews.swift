@@ -169,7 +169,7 @@ struct CameraActionsView: View {
                             Label(orientationTitle, systemImage: orientationSymbolName)
                         }
                         .buttonStyle(.bordered)
-                        .tint(viewModel.filmOrientation == "rotated" ? .accentColor : nil)
+                        .tint(viewModel.filmOrientation == "rotated" ? .brandAccent : nil)
                         .help(L("Film Orientation"))
 
                         Button {
@@ -178,7 +178,7 @@ struct CameraActionsView: View {
                             Label(L("Flip"), systemImage: "arrow.left.and.right")
                         }
                         .buttonStyle(.bordered)
-                        .tint(viewModel.isHorizontallyFlipped ? .accentColor : nil)
+                        .tint(viewModel.isHorizontallyFlipped ? .brandAccent : nil)
                         .help(L("Flip"))
                     }
                 }
@@ -221,6 +221,7 @@ struct CameraActionsView: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(.brandAccent)
                         .controlSize(.large)
                         .disabled(viewModel.captureSession == nil || !viewModel.isConnected || viewModel.isPrinting)
                     }
@@ -265,6 +266,7 @@ struct CameraActionsView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.brandAccent)
                     .controlSize(.large)
                     .disabled(!viewModel.isConnected || viewModel.isPrinting)
                 }

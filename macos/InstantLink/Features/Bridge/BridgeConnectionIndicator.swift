@@ -57,7 +57,7 @@ struct BridgeConnectionIndicator: View {
                 Text(L("Bridge"))
                     .font(.callout)
             }
-            .foregroundColor(.accentColor)
+            .foregroundColor(.brandAccent)
             .accessibilityLabel(Text(L("Bridge connected")))
         }
         .buttonStyle(.bordered)

@@ -12,7 +12,7 @@ struct MainPreviewView: View {
 
     private var panelChromeColor: Color {
         if viewModel.selectedImage == nil {
-            return isTargeted ? .accentColor.opacity(0.55) : .secondary.opacity(0.22)
+            return isTargeted ? .brandAccent.opacity(0.55) : .secondary.opacity(0.22)
         }
         return showsSimulatedFilmFrame ? .clear : .secondary.opacity(0.18)
     }
@@ -244,7 +244,7 @@ struct QueueThumbnailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
-                                .stroke(isSelected ? Color.accentColor.opacity(0.7) : Color.clear, lineWidth: 1.5)
+                                .stroke(isSelected ? Color.brandAccent.opacity(0.7) : Color.clear, lineWidth: 1.5)
                         )
                         .opacity(isDragging ? 0.5 : 1.0)
                 }
@@ -271,11 +271,11 @@ struct QueueThumbnailView: View {
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.10) : (isHovered ? Color.white.opacity(0.05) : Color.clear))
+                .fill(isSelected ? Color.brandAccent.opacity(0.10) : (isHovered ? Color.white.opacity(0.05) : Color.clear))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isSelected ? Color.accentColor.opacity(0.32) : Color.white.opacity(isHovered ? 0.10 : 0), lineWidth: 1)
+                .stroke(isSelected ? Color.brandAccent.opacity(0.32) : Color.white.opacity(isHovered ? 0.10 : 0), lineWidth: 1)
         )
         .frame(width: thumbnailWidth + 6, height: thumbnailHeight + 6)
         .onHover { hovered in
@@ -337,6 +337,7 @@ struct MainActionsView: View {
         if isProminent {
             Button(action: action, label: label)
                 .buttonStyle(.borderedProminent)
+                .tint(.brandAccent)
         } else {
             Button(action: action, label: label)
                 .buttonStyle(.bordered)
@@ -520,7 +521,7 @@ struct QuickPrintToolbarView: View {
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.roundedRectangle)
                 .controlSize(.regular)
-                .tint(isActive ? .accentColor : nil)
+                .tint(isActive ? .brandAccent : nil)
             }
         }
     }

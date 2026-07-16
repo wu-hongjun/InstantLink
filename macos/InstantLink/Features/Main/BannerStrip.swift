@@ -33,6 +33,7 @@ struct BannerStrip: View {
             Spacer(minLength: 4)
             if let progress {
                 ProgressView(value: progress)
+                    .tint(.brandAccent)
                     .frame(width: 60)
                 Text("\(Int(progress * 100))%")
                     .font(.caption)
@@ -43,6 +44,7 @@ struct BannerStrip: View {
                     SwiftUI.Button(primary.label, action: primary.onTap)
                         .font(.caption)
                         .buttonStyle(.borderedProminent)
+                        .tint(.brandAccent)
                         .controlSize(.small)
                 } else {
                     SwiftUI.Button(primary.label, action: primary.onTap)
@@ -69,7 +71,7 @@ struct BannerStrip: View {
         case .success: return .green
         case .warning: return .orange
         case .error: return .red
-        case .accent: return .accentColor
+        case .accent: return .brandAccent
         }
     }
 
@@ -79,7 +81,7 @@ struct BannerStrip: View {
         case .success: return Color.green.opacity(0.12)
         case .warning: return Color.orange.opacity(0.14)
         case .error: return Color.red.opacity(0.14)
-        case .accent: return Color.accentColor.opacity(0.10)
+        case .accent: return Color.brandAccent.opacity(0.10)
         }
     }
 }

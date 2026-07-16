@@ -47,3 +47,36 @@ tmp.unlink()
 print(f"wrote {ios_iconset / 'icon-1024.png'}")
 print(f"wrote {splash} ({len(out)} bytes)")
 PYEOF
+
+# 3) macOS app icon (.icns) — only where iconutil exists (macOS). Rasterizes
+# the SVG into a standard .iconset, then packs it. Retires the old hardcoded
+# scripts/generate-icon.py.
+if command -v iconutil >/dev/null 2>&1; then
+  ICONSET="$(mktemp -d)/InstantLink.iconset"
+  mkdir -p "${ICONSET}"
+  "${PY}" - "$ICON_SVG" "$ICONSET" <<'PYEOF'
+import sys
+from pathlib import Path
+import cairosvg
+
+icon_svg, iconset = sys.argv[1], Path(sys.argv[2])
+# name -> pixel size for the macOS .iconset convention.
+sizes = {
+    "icon_16x16": 16, "icon_16x16@2x": 32,
+    "icon_32x32": 32, "icon_32x32@2x": 64,
+    "icon_128x128": 128, "icon_128x128@2x": 256,
+    "icon_256x256": 256, "icon_256x256@2x": 512,
+    "icon_512x512": 512, "icon_512x512@2x": 1024,
+}
+for name, px in sizes.items():
+    cairosvg.svg2png(url=icon_svg, write_to=str(iconset / f"{name}.png"),
+                     output_width=px, output_height=px)
+print(f"rasterized {len(sizes)} macOS icon sizes")
+PYEOF
+  iconutil -c icns "${ICONSET}" -o "${ROOT}/macos/Resources/AppIcon.icns"
+  cp "${ICONSET}/icon_512x512@2x.png" "${ROOT}/macos/Resources/AppIcon.png"
+  rm -rf "$(dirname "${ICONSET}")"
+  echo "wrote ${ROOT}/macos/Resources/AppIcon.icns"
+else
+  echo "iconutil not found; skipped macOS .icns (run on macOS to regenerate)"
+fi

@@ -643,11 +643,11 @@ def draw_status_bar(
     Two surface modes depending on what the user is doing:
 
     - **Non-Settings modes** (READY, PRINTING, SEARCHING, …): a centered
-      vibrant pill carries the live status word ("Connected" / "Searching"
-      / "Printing" / "Ejecting" / …). The pill colour + breath modulation
-      tell the user *whether things are OK*; the word inside tells them
-      *what the device is doing*. This is the resting / operational
-      surface — the user mostly sees this.
+      vibrant pill carries the live status label ("Connected · Film 7/10" /
+      "Searching" / "Printing" / "Ejecting" / …). The pill colour tells the
+      user *whether things are OK*; the label inside tells them *what the
+      device is doing*. This is the resting / operational surface — the user
+      mostly sees this.
     - **Settings mode**: the pill collapses to its essence. The title
       text ("Print" / "Network" / "System" / …) takes over top-left,
       naming *where you are* in the menu. A small filled circle stays at
@@ -686,9 +686,9 @@ def _draw_status_bar_pill(
     now: float,
     theme: Theme,
 ) -> None:
-    """Operational status bar: centered pill with the live status word."""
+    """Operational status bar: centered pill with the live status label."""
 
-    word = t(status_bar_word(snapshot), snapshot.language)
+    word = status_bar_label(snapshot)
 
     pill_bg_rgb = _state_pill_bg(state)
     pill_bg_tinted = _apply_breath(state, pill_bg_rgb, now)
@@ -867,6 +867,26 @@ def status_bar_word(snapshot: UiSnapshot) -> str:
     ):
         return "Disconnected"
     return _MODE_STATUS_WORD.get(mode, "")
+
+
+def status_bar_label(snapshot: UiSnapshot) -> str:
+    """Return the localized operational status label.
+
+    A fresh printer reading proves the paired printer is currently connected.
+    Keep its film count in the persistent READY pill so the value stays visible
+    even when the body is showing camera setup or iPhone-sync information.
+    """
+
+    label = t(status_bar_word(snapshot), snapshot.language)
+    if (
+        snapshot.mode is not UiMode.READY
+        or snapshot.paired_printer is None
+        or not snapshot.printer_status_fresh
+        or snapshot.film_remaining is None
+    ):
+        return label
+    film = t("Film", snapshot.language)
+    return f"{label} · {film} {snapshot.film_remaining}/{snapshot.film_capacity}"
 
 
 # Map adjustment-edit key (SettingKey.value) → canonical axis label

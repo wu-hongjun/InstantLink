@@ -1,8 +1,9 @@
 # InstantLink Bridge Current Context
 
-Last verified: 2026-07-15 on `riverps-rpi-zero-2w` (bridge 0.1.17 at commit `502a3bf`; iPhone
-sync feature per plan 050 + UX audit 051 + virtual LCD 054-A, exercised on-device with a real
-iPhone the same day).
+Latest source deployment verified: 2026-07-18 on `riverps-rpi-zero-2w` (bridge 0.1.17 at commit
+`2fbe46e`; connected-status film counter deployed and service-smoked). The iPhone sync feature
+from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a real iPhone
+on 2026-07-15.
 
 This file is the fast handoff for anyone opening the bridge code after the InstantLink port. The
 source of truth is the InstantLink repository under `bridge/`; the old standalone InstantBridge
@@ -30,8 +31,16 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- Hardware-verified runtime baseline: bridge changes at commit `ad638be` (Main `596230d`).
-  - On-device verification 2026-06-12: LCD screen-off now drives GPIO 24 LOW after the configured
+- Deployed source baseline: commit `2fbe46e` on branch `agent/bridge-film-status`, recorded by the
+  deployment manifest with `dirty=false`.
+  - On-device verification 2026-07-18: `instantlink-bridge.service` restarted with `NRestarts=0`;
+    FTP `:21` and sync/virtual-LCD `:8721` were listening; `usb0` was up at `192.168.7.1/24` and
+    Bridge Wi-Fi at `192.168.8.1/24`; logs contained `ftp.server_started`,
+    `instantlink.library_loaded`, `sync.server_started`, and `bridge.ready` with no startup errors.
+  - The deployed renderer produced `Connected · Film 7/10` in a synthetic connected snapshot and
+    a 240x240 frame. The saved printer was not advertising during the deploy, so a live film poll
+    and physical-LCD observation with the printer connected remain to be verified.
+  - Prior on-device verification 2026-06-12: LCD screen-off drives GPIO 24 LOW after the configured
     idle threshold (was previously a silent no-op because `bl_power` was `root:root 0644` — see
     `bridge/udev/60-instantlink-bridge-backlight.rules` and the commit message).
 - Service: `instantlink-bridge.service`

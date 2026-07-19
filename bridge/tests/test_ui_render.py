@@ -31,6 +31,7 @@ from instantlink_bridge.ui.render import (
     printer_ready,
     readiness_cause_texts,
     render_snapshot,
+    status_bar_label,
     top_bar_status_text,
     usb_ftp_status_text,
     wifi_ftp_status_text,
@@ -98,6 +99,40 @@ def test_status_bar_word_resolves_per_mode() -> None:
     # PRINTER_OFFLINE is the explicit not-reachable mode — same vocabulary
     # as the passive-search case so the user learns one term for "unreachable".
     assert status_bar_word(UiSnapshot(mode=UiMode.PRINTER_OFFLINE, ftp_host="x")) == "Disconnected"
+
+
+def test_status_bar_label_shows_film_for_connected_printer() -> None:
+    connected = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=7,
+    )
+
+    assert status_bar_label(connected) == "Connected · Film 7/10"
+    assert status_bar_label(replace(connected, camera_receive_ready=False)) == (
+        "Waiting · Film 7/10"
+    )
+    assert status_bar_label(replace(connected, language="zh-Hans")) == "已连接 · 相纸 7/10"
+
+
+def test_status_bar_label_only_shows_film_from_fresh_printer_status() -> None:
+    paired = UiSnapshot(
+        mode=UiMode.READY,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
+        film_remaining=7,
+    )
+
+    assert status_bar_label(paired) == "Waiting"
+    assert status_bar_label(replace(paired, printer_status_fresh=True)) == ("Connected · Film 7/10")
+    assert (
+        status_bar_label(replace(paired, printer_status_fresh=True, film_remaining=None))
+        == "Waiting"
+    )
 
 
 def test_render_validation_screen_is_square_lcd_size() -> None:

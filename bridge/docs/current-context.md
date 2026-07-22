@@ -1,9 +1,9 @@
 # InstantLink Bridge Current Context
 
-Latest source deployment verified: 2026-07-18 on `riverps-rpi-zero-2w` (bridge 0.1.17 at commit
-`2fbe46e`; connected-status film counter deployed and service-smoked). The iPhone sync feature
-from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a real iPhone
-on 2026-07-15.
+Latest source deployment verified: 2026-07-22 on `riverps-rpi-zero-2w` (bridge 0.1.17 on `main`;
+Print/Sync mode behavior from commit `7a43570` deployed and service-smoked). The iPhone sync
+feature from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a real
+iPhone on 2026-07-15.
 
 This file is the fast handoff for anyone opening the bridge code after the InstantLink port. The
 source of truth is the InstantLink repository under `bridge/`; the old standalone InstantBridge
@@ -31,15 +31,20 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- Deployed source baseline: commit `2fbe46e` on branch `agent/bridge-film-status`, recorded by the
-  deployment manifest with `dirty=false`.
-  - On-device verification 2026-07-18: `instantlink-bridge.service` restarted with `NRestarts=0`;
-    FTP `:21` and sync/virtual-LCD `:8721` were listening; `usb0` was up at `192.168.7.1/24` and
-    Bridge Wi-Fi at `192.168.8.1/24`; logs contained `ftp.server_started`,
-    `instantlink.library_loaded`, `sync.server_started`, and `bridge.ready` with no startup errors.
-  - The deployed renderer produced `Connected · Film 7/10` in a synthetic connected snapshot and
-    a 240x240 frame. The saved printer was not advertising during the deploy, so a live film poll
-    and physical-LCD observation with the printer connected remain to be verified.
+- Deployed Print/Sync behavior baseline: commit `7a43570` on branch `main`, delivered through a
+  clean `git-archive` deployment with `dirty=false`.
+  - On-device verification 2026-07-22: `instantlink-bridge.service` and
+    `instantlink-bridge-manager.service` were both active with `NRestarts=0`; FTP `:21` and manager
+    `:8742` were listening; `usb0` was up at `192.168.7.1/24` and Bridge Wi-Fi at
+    `192.168.8.1/24`; logs contained `ftp.server_started`, `instantlink.library_loaded`, and
+    `bridge.ready` with no startup errors.
+  - The existing on-disk `destination = "both"` loaded as Print for backward compatibility.
+    Sync/virtual-LCD `:8721` was intentionally not listening in Print mode. Pressing KEY2 switches
+    to Sync and persists the new two-mode value; KEY2 switches back to Print from Sync.
+  - The saved Printer was not advertising during the deploy, so live printing, live film polling,
+    physical-LCD observation with a connected Printer, and a physical KEY2 mode switch remain to
+    be verified. The connected-film renderer path was previously verified with a synthetic
+    `Connected · Film 7/10` snapshot and a 240x240 frame on 2026-07-18.
   - Prior on-device verification 2026-06-12: LCD screen-off drives GPIO 24 LOW after the configured
     idle threshold (was previously a silent no-op because `bl_power` was `root:root 0644` — see
     `bridge/udev/60-instantlink-bridge-backlight.rules` and the commit message).
@@ -52,14 +57,14 @@ for cameras and the bridge on an existing network.
 - USB admin address: `192.168.7.1/24`
 - FTP port: `21`
 - Native backend: `/opt/InstantLinkBridge/lib/libinstantlink_ffi.so`
-- Sync service (plan 050): HTTP `:8721`, Bonjour `_instantlink._tcp`, token at
-  `/etc/InstantLinkBridge/sync.token`, outbox at `/var/lib/InstantLinkBridge/sync-outbox/`.
-  Full API in `docs/reference/sync-api.md`.
-- Virtual LCD (plan 054-A): `GET /v1/screen` (live 240×240 PNG) + `POST /v1/input` on the same
-  port, gated by `[sync].remote_ui` (default true). Handy for headless debugging — a screenshot
-  of the current LCD is one authed `curl` away.
-- `[sync] destination = "both"` is set on `riverps-rpi-zero-2w` (photos spool for iPhone AND
-  print when a printer is ready; default for fresh installs remains `print`)
+- Sync service (plan 050): active only in Sync mode; HTTP `:8721`, Bonjour
+  `_instantlink._tcp`, token at `/etc/InstantLinkBridge/sync.token`, outbox at
+  `/var/lib/InstantLinkBridge/sync-outbox/`. Full API in `docs/reference/sync-api.md`.
+- Virtual LCD (plan 054-A): in Sync mode, `GET /v1/screen` (live 240×240 PNG) + `POST /v1/input`
+  on the same port, gated by `[sync].remote_ui` (default true).
+- The device file still contains the retired `[sync] destination = "both"`; current code maps
+  this legacy value to Print. Fresh installs default to `print`, and the UI writes only `print` or
+  `iphone` (Sync).
 
 ## iPhone Sync (plan 050) — deployed 2026-07-14
 
@@ -105,8 +110,8 @@ reinstall (Settings ▸ General ▸ VPN & Device Management), and drops the inte
 idle — both disappear with a paid membership.
 
 Remaining hardware validation: confirm `.HIF` now lands in Photos (the fixed build was installed
-but awaited a profile re-trust at session end); run the hotspot-tolerance soak; and re-test
-both-mode with a live printer.
+but awaited a profile re-trust at session end); run the hotspot-tolerance soak; and exercise the
+physical Print/Sync switch with a live Printer and iPhone.
 
 The old `/opt/InstantBridge` install, `/etc/InstantBridge` config, and `instantbridge.*` unit files
 are legacy. They were removed from `riverps-rpi-zero-2w` on 2026-05-25 with
@@ -148,7 +153,7 @@ Run these after every device deploy:
 systemctl status instantlink-bridge.service --no-pager -l
 /opt/InstantLinkBridge/.venv/bin/instantlink-bridge --version
 sudo ss -ltnp sport = :21
-sudo ss -ltnp sport = :8721
+sudo ss -ltnp sport = :8721  # present only in Sync mode
 ip -br addr
 nmcli -t -f NAME,TYPE,DEVICE,STATE con show --active
 journalctl -u instantlink-bridge.service --since "5 minutes ago" --no-pager
@@ -161,6 +166,7 @@ Expected healthy state:
 - `wlan0` has `192.168.8.1/24` when Bridge Wi-Fi is active.
 - `usb0` has `192.168.7.1/24` when connected to an admin host.
 - FTP accepts the configured user on `192.168.8.1:21` in hotspot mode.
+- Sync/virtual-LCD `:8721` is absent in Print mode and listens in Sync mode.
 - Logs contain `ftp.server_started`, `bridge.ready`, and `instantlink.library_loaded`.
 - Offline-printer status warnings are rate-limited; do not reintroduce per-second warning spam while
   keeping the UI scan loop responsive.
@@ -174,26 +180,35 @@ Expected healthy state:
 - The Waveshare ST7789 display path is wired through the bridge UI and boot splash units.
 - The active UPS is a SupTronics/Geekworm X306 18650 shield. It has no host-readable fuel gauge, so
   the UI must not show fake battery percentage.
-- Latest on-device audit, 2026-05-25:
+- Latest on-device audit, 2026-07-22:
   - `instantlink-bridge.service` was active/enabled with `NRestarts=0`.
+  - `instantlink-bridge-manager.service` was active with `NRestarts=0`.
   - `/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --version` reported Python 3.13.5,
     BlueZ 5.82, Debian 13.
   - Hotspot mode was active on `wlan0` at `192.168.8.1/24`; USB admin was active on `usb0` at
-    `192.168.7.1/24`; FTP was listening on `0.0.0.0:21`.
+    `192.168.7.1/24`; FTP was listening on `0.0.0.0:21`, and manager HTTP was listening on both
+    device addresses at `:8742`.
+  - Legacy config value `both` parsed as Print, and `:8721` was correctly closed in that mode.
   - `/opt/InstantLinkBridge/lib/libinstantlink_ffi.so` loaded successfully.
-  - The old BlueZ bond for `INSTAX-52006924 (IOS)` was removed after native connects failed with
-    BlueZ `InProgress`, `le-connection-abort-by-local`, and `Timeout waiting for reply`.
-  - A 2026-05-25 follow-up saw both `INSTAX-52006924 (ANDROID)` and `INSTAX-52006924 (IOS)`, then
-    native connect reached GATT but failed with `write characteristic not found`. Commit `9a54b4f`
-    retries Linux BLE characteristic discovery; commit `8860be6` includes that fix plus display idle
-    defaults. Fresh ARM64 artifacts were deployed from `8860be6`.
-  - After the failed connect attempts, the printer stopped advertising in both InstantLink and
-    BlueZ scans. The LCD should show the no-printer/pairing flow until the printer is power-cycled
-    and paired again from the bridge.
-  - Runtime idle display timers were dropped in source defaults (commit `ad638be`):
-    dim after 30 s, screen off after 60 s, deep idle after 300 s, poweroff after 1800 s. The
-    earlier 30-min screen-off default was effectively "never" on battery; the new defaults
-    materialise the GPIO-24-LOW kill into observable power saving within the first minute of idle.
+  - The saved Printer `INSTAX-52006924` was not advertising, so the Bridge remained in its
+    printer-searching flow; the repeated scan progress was healthy and status warnings remained
+    rate-limited.
+  - Earlier Printer/BLE history:
+    - The old BlueZ bond for `INSTAX-52006924 (IOS)` was removed after native connects failed with
+      BlueZ `InProgress`, `le-connection-abort-by-local`, and `Timeout waiting for reply`.
+    - A 2026-05-25 follow-up saw both `INSTAX-52006924 (ANDROID)` and
+      `INSTAX-52006924 (IOS)`, then native connect reached GATT but failed with
+      `write characteristic not found`. Commit `9a54b4f` retries Linux BLE characteristic
+      discovery; commit `8860be6` includes that fix plus display idle defaults. Fresh ARM64
+      artifacts were deployed from `8860be6`.
+    - After the failed connect attempts, the Printer stopped advertising in both InstantLink and
+      BlueZ scans. The LCD should show the no-Printer/pairing flow until the Printer is
+      power-cycled and paired again from the Bridge.
+    - Runtime idle display timers were dropped in source defaults (commit `ad638be`): dim after
+      30 s, screen off after 60 s, deep idle after 300 s, poweroff after 1800 s. The earlier
+      30-minute screen-off default was effectively "never" on battery; the new defaults
+      materialise the GPIO-24-LOW kill into observable power saving within the first minute of
+      idle.
 - Physical printing is still the remaining hardware validation step after successful re-pairing.
 
 ## Local Development Checks

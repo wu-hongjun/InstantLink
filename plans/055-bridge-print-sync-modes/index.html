@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/020-notification-listener-lifecycle/">
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/055-bridge-print-sync-modes/">
       
       
-        <link rel="prev" href="../019-packet-assembler-error-surfacing/">
-      
-      
-        <link rel="next" href="../021-print-flow-deduplication/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Plan 020 Notification Listener Lifecycle - InstantLink</title>
+        <title>055 — Bridge Print and Sync modes - InstantLink</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#plan-020-notification-listener-lifecycle" class="md-skip">
+        <a href="#055-bridge-print-and-sync-modes" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Plan 020 Notification Listener Lifecycle
+              055 — Bridge Print and Sync modes
             
           </span>
         </div>
@@ -308,12 +304,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../001-full-stack-scaffold/" class="md-tabs__link">
           
   
@@ -903,10 +897,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1022,20 +1014,17 @@
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -1053,7 +1042,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1600,37 +1589,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Plan 020 Notification Listener Lifecycle
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../020-notification-listener-lifecycle/" class="md-nav__link">
         
   
   
@@ -1646,114 +1608,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Goal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#current-state" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Current State
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#proposed-solution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Proposed Solution
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#implementation-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implementation Scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#risks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Risks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rollout-order" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rollout Order
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exit-criteria" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Exit Criteria
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2834,10 +2688,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        Decision
       
     </span>
   </a>
@@ -2845,10 +2699,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#current-state" class="md-nav__link">
+  <a href="#interaction" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current State
+        Interaction
       
     </span>
   </a>
@@ -2856,65 +2710,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#proposed-solution" class="md-nav__link">
+  <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Proposed Solution
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#implementation-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implementation Scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#risks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Risks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rollout-order" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rollout Order
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exit-criteria" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Exit Criteria
+        Verification
       
     </span>
   </a>
@@ -2941,60 +2740,35 @@
   
 
 
-<h1 id="plan-020-notification-listener-lifecycle">Plan 020: Notification Listener Lifecycle<a class="headerlink" href="#plan-020-notification-listener-lifecycle" title="Permanent link">&para;</a></h1>
-<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
-<p>Make sure the <code>tokio::spawn</code>-ed BLE notification listener inside <code>BleTransport</code> actually shuts down when the transport disconnects, so reconnect cycles do not pile up orphaned tasks holding references to the peripheral and the unbounded mpsc sender.</p>
-<h2 id="current-state">Current State<a class="headerlink" href="#current-state" title="Permanent link">&para;</a></h2>
-<p><code>crates/instantlink-core/src/transport.rs:244-258</code></p>
+<h1 id="055-bridge-print-and-sync-modes">055 — Bridge Print and Sync modes<a class="headerlink" href="#055-bridge-print-and-sync-modes" title="Permanent link">&para;</a></h1>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>The Bridge exposes two mutually exclusive delivery modes:</p>
 <ul>
-<li>A listener task is spawned to forward <code>notification.value</code> into an <code>mpsc::Sender</code>.</li>
-<li>No <code>JoinHandle</code> is stored.</li>
-<li>The task only ends when the underlying notification stream returns <code>None</code>, which can lag well behind a logical <code>disconnect()</code>.</li>
-<li><code>BleTransport::disconnect()</code> (≈line 348) unsubscribes and disconnects the peripheral but never aborts or awaits the listener.</li>
-<li>During an aggressive reconnect-loop UX, multiple stale listener tasks can coexist, each pinning their own <code>Arc&lt;Peripheral&gt;</code> clone.</li>
+<li><strong>Print</strong> sends received camera photos to the selected Printer.</li>
+<li><strong>Sync</strong> stores received camera photos for the iOS app and never starts a print.</li>
 </ul>
-<h2 id="proposed-solution">Proposed Solution<a class="headerlink" href="#proposed-solution" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Store the <code>JoinHandle&lt;()&gt;</code> (and ideally a <code>CancellationToken</code>) inside <code>BleTransport</code>.</li>
-<li>In <code>disconnect()</code>:</li>
-<li>signal the cancellation token</li>
-<li>drop the peripheral notification subscription</li>
-<li><code>await</code> the join handle with a short timeout (e.g. 250 ms); if it does not finish, <code>abort()</code> it</li>
-<li>In <code>Drop for BleTransport</code> (or an explicit shutdown path), abort the handle as a last-resort safety net.</li>
-<li>Ensure the listener loop checks the cancellation token between <code>next()</code> calls so it cannot block forever on a stalled stream.</li>
-</ol>
-<h2 id="implementation-scope">Implementation Scope<a class="headerlink" href="#implementation-scope" title="Permanent link">&para;</a></h2>
-<p>Primary:</p>
+<p>Simultaneous <code>both</code> delivery is no longer a user-facing mode. Existing configuration files that
+contain <code>destination = "both"</code> remain readable and migrate to Print mode in memory, which is the
+safer default for an appliance that may already receive camera uploads automatically.</p>
+<h2 id="interaction">Interaction<a class="headerlink" href="#interaction" title="Permanent link">&para;</a></h2>
+<p>KEY2 switches modes directly from normal home/status surfaces:</p>
 <ul>
-<li><code>crates/instantlink-core/src/transport.rs</code> — add the handle/token, wire up cancellation</li>
-<li>new dev dependency on <code>tokio_util::sync::CancellationToken</code> (already part of <code>tokio-util</code>) if we choose tokens over a oneshot</li>
+<li>Print mode shows <code>KEY2 Sync</code>.</li>
+<li>Sync mode shows <code>KEY2 Print</code>.</li>
 </ul>
-<p>Optional follow-up:</p>
+<p>The switch is persisted immediately, starts or stops the sync service through the existing runtime
+configuration callback, and refreshes the home surface. Settings keeps a two-choice <code>Mode</code> picker
+as the slower, discoverable path. KEY3 remains contextual: Printer/network actions in Print mode,
+and the iPhone pairing QR in Sync mode.</p>
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Surface a <code>transport.listener_active()</code> introspection helper for tests.</li>
-</ul>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Unit test with a fake notification stream that never ends; the test verifies that calling <code>disconnect()</code> causes the listener task to exit within a bounded time.</li>
-<li>Stress test that reconnects many times in a loop and asserts the spawned-task count does not grow unbounded.</li>
-</ul>
-<h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Aborting a task that is mid-write to the channel can drop a notification — acceptable, since <code>disconnect()</code> already implies abandoning in-flight work.</li>
-<li>macOS CoreBluetooth occasionally takes its time before notifications stop emitting; the timeout-then-abort path handles that gracefully.</li>
-</ul>
-<h2 id="rollout-order">Rollout Order<a class="headerlink" href="#rollout-order" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Wire the cancellation token + join handle.</li>
-<li>Update <code>disconnect()</code> to use them.</li>
-<li>Add unit + stress tests.</li>
-<li>Manual hardware soak: 50 connect/disconnect cycles, watch for resource growth.</li>
-</ol>
-<h2 id="exit-criteria">Exit Criteria<a class="headerlink" href="#exit-criteria" title="Permanent link">&para;</a></h2>
-<ul>
-<li>After <code>disconnect()</code> returns, the listener task has either exited or been aborted.</li>
-<li>No measurable task or memory growth after sustained reconnect loops.</li>
-<li>Unit tests cover both the graceful and the abort path.</li>
+<li>Config parsing migrates legacy <code>both</code> to <code>print</code> and rejects unknown values.</li>
+<li>Controller tests cover home switching in both directions, persistence, callback notification,
+  status-poll cancellation, and first-boot access to Sync mode.</li>
+<li>Render tests cover KEY2 labels in Print and Sync modes.</li>
+<li>App, FTP, status-indicator, settings, and manager tests cover the two-mode contract.</li>
+<li>Affected files pass Ruff format; full Ruff lint, strict mypy, and the full Bridge pytest suite
+  pass.</li>
 </ul>
 
 

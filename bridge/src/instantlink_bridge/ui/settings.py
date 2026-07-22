@@ -470,12 +470,10 @@ APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
 # Total scan period options. The minimum (5s) equals the active-scan window, so it scans
 # continuously (0 gap); larger values insert an idle gap between scans to save power.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
-# Delivery destinations for received camera images (plan 050). Explicit option
-# list per the no-blind-cycling rule; default stays PRINT.
+# Mutually exclusive delivery modes for received camera images (plan 055).
 SYNC_DESTINATION_OPTIONS: tuple[SyncDestination, ...] = (
     SyncDestination.PRINT,
     SyncDestination.IPHONE,
-    SyncDestination.BOTH,
 )
 
 # Datestamp format presets (plan 037 phase 4). Labels mirror the macOS app's
@@ -608,11 +606,11 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.APPEARANCE: "Auto: light 07-19, dark overnight",
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
-    # iPhone sync (plan 050). The two rows live on different Settings pages
-    # (Send to on Print, iPhone pairing on Network), so each help text
+    # iPhone sync (plans 050/055). The two rows live on different Settings pages
+    # (Mode on Print, iPhone pairing on Network), so each help text
     # cross-references the other (plan 051 P2.7).
-    SettingKey.SYNC_DESTINATION: "Where received photos go · Pair iPhone: Network page",
-    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Send to: Print page",
+    SettingKey.SYNC_DESTINATION: "Print or sync received photos · Pair iPhone: Network page",
+    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Mode: Print page",
     # Token rotation (plan 051 P3.11) — honest about the blast radius: every
     # paired iPhone loses access until it scans the new QR.
     SettingKey.RESET_SYNC_TOKEN: "New pairing token; unpairs all iPhones",
@@ -821,16 +819,15 @@ def ftp_receive_mode_label(mode: FtpReceiveMode) -> str:
 
 
 def sync_destination_label(destination: SyncDestination) -> str:
-    """Return compact LCD label for a sync delivery destination.
+    """Return the compact LCD label for a Bridge delivery mode.
 
-    "iPhone" stays Latin (brand identifier); "Print"/"Both" pick up i18n at
-    the render boundary like every other option label.
+    The config parser migrates the legacy ``both`` string before it reaches
+    this display boundary.
     """
 
     labels = {
         SyncDestination.PRINT: "Print",
-        SyncDestination.IPHONE: "iPhone",
-        SyncDestination.BOTH: "Both",
+        SyncDestination.IPHONE: "Sync",
     }
     return labels[destination]
 

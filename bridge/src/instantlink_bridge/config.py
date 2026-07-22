@@ -114,16 +114,14 @@ class UiLanguage(StrEnum):
 
 
 class SyncDestination(StrEnum):
-    """Where a received camera image is routed (plan 050).
+    """Active Bridge delivery mode (plans 050 and 055).
 
     ``PRINT`` keeps the classic print-only pipeline. ``IPHONE`` spools the
     original into the sync outbox for the iOS app and skips printing.
-    ``BOTH`` fans out to the printer and the outbox.
     """
 
     PRINT = "print"
     IPHONE = "iphone"
-    BOTH = "both"
 
 
 class StatusSinkKind(StrEnum):
@@ -344,13 +342,13 @@ class SyncConfig:
     def sync_enabled(self) -> bool:
         """Whether received images are spooled to the iPhone sync outbox."""
 
-        return self.destination in {SyncDestination.IPHONE, SyncDestination.BOTH}
+        return self.destination is SyncDestination.IPHONE
 
     @property
     def print_enabled(self) -> bool:
         """Whether received images continue into the print pipeline."""
 
-        return self.destination in {SyncDestination.PRINT, SyncDestination.BOTH}
+        return self.destination is SyncDestination.PRINT
 
 
 @dataclass(frozen=True, slots=True)
@@ -957,13 +955,15 @@ def parse_power_backend(value: object) -> PowerBackend:
 
 
 def parse_sync_destination(value: object) -> SyncDestination:
-    """Parse a configured sync destination."""
+    """Parse a configured delivery mode, migrating legacy ``both`` to Print."""
 
     text = str(value).strip().lower()
+    if text == "both":
+        return SyncDestination.PRINT
     try:
         return SyncDestination(text)
     except ValueError as exc:
-        allowed = ", ".join(dest.value for dest in SyncDestination)
+        allowed = ", ".join(destination.value for destination in SyncDestination)
         raise ValueError(f"[sync].destination must be one of: {allowed}") from exc
 
 

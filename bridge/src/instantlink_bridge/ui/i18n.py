@@ -147,13 +147,15 @@ _ZH_HANS: dict[str, str] = {
     "4-way Pan": "四向平移",
     "Hold KEY3": "长按 KEY3",
     "KEY1 OK": "KEY1 确认",
+    "KEY1 Pair": "KEY1 配对",
     "KEY1 Print": "KEY1 打印",
     "KEY1 Retry": "KEY1 重试",
     "KEY1 Select": "KEY1 选择",
     "KEY1 Setting": "KEY1 设置",
     "KEY2 Back": "KEY2 返回",
     "KEY2 Cancel": "KEY2 取消",
-    "KEY2 Refresh": "KEY2 刷新",
+    "KEY2 Print": "KEY2 打印",
+    "KEY2 Sync": "KEY2 同步",
     "KEY3 Network": "KEY3 网络",
     "KEY3 Help": "KEY3 帮助",
     "KEY3 Retry": "KEY3 重试",
@@ -578,16 +580,13 @@ _ZH_HANS: dict[str, str] = {
     # --- iPhone sync (plan 050) -------------------------------------------
     # "iPhone" and "InstantLink" stay Latin per the brand doctrine; only the
     # descriptors localise. 待传 mirrors Apple's transfer-pending vocabulary.
-    "Send to": "发送到",
-    "Where received photos go": "接收照片的去向",
-    "Both": "两者",
+    "Mode": "模式",
+    "Sync": "同步",
     "iPhone pairing": "iPhone 配对",
     "Show a QR code to pair your iPhone": "显示二维码以配对 iPhone",
     "Scan with InstantLink app": "请用 InstantLink App 扫码",
     "Pairing unavailable": "配对不可用",
     "Sync to iPhone": "同步到 iPhone",
-    "Printer off · photos sync only": "打印机已关闭 · 仅同步照片",
-    "No film · photos sync only": "无相纸 · 仅同步照片",
     # READY-card chip: the pending count is a full template (plan 051 P3.10)
     # so each language owns its spacing — idiomatic zh-Hans writes the count
     # flush against the measure word ("3张待传"), EN keeps "3 pending".
@@ -604,17 +603,16 @@ _ZH_HANS: dict[str, str] = {
     "Sync starting": "同步启动中",
     "Sync failed · restart bridge": "同步失败 · 请重启桥接",
     "Sync starting · try again": "同步启动中 · 请稍后再试",
-    "Enable in Print > Send to": "请在 打印 > 发送到 中启用",
+    "Switch to Sync mode first": "请先切换到同步模式",
     "Pair iPhone: press KEY3": "配对 iPhone：按 KEY3",
-    "Pair iPhone: Settings > Network": "配对 iPhone：设置 > 网络",
     "KEY3 Pair": "KEY3 配对",
     # "KEY3 iPhone" needs no entry: KEY labels and the iPhone brand both
     # stay Latin, so the zh-Hans string is the English source.
-    "Where received photos go · Pair iPhone: Network page": (
-        "接收照片的去向 · 配对 iPhone：网络页"
+    "Print or sync received photos · Pair iPhone: Network page": (
+        "打印或同步接收的照片 · 配对 iPhone：网络页"
     ),
-    "Show a QR code to pair your iPhone · Send to: Print page": (
-        "显示二维码以配对 iPhone · 发送到：打印页"
+    "Show a QR code to pair your iPhone · Mode: Print page": (
+        "显示二维码以配对 iPhone · 模式：打印页"
     ),
     # --- iPhone sync pass 3 (plan 051 P3.11): token rotation ---------------
     # "Reset sync token" mirrors the Reset-credentials vocabulary (还原);

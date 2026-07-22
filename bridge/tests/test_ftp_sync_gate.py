@@ -60,7 +60,7 @@ def _make_service(snap: UiSnapshot) -> FtpReceiveService:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("destination", ["print", "iphone", "both"])
+@pytest.mark.parametrize("destination", ["print", "iphone"])
 def test_preflight_booting_rejects_for_all_destinations(destination: str) -> None:
     snap = _make_snap(
         mode=UiMode.BOOTING,
@@ -79,7 +79,7 @@ def test_preflight_booting_rejects_for_all_destinations(destination: str) -> Non
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("destination", ["print", "iphone", "both"])
+@pytest.mark.parametrize("destination", ["print", "iphone"])
 def test_preflight_ready_state_accepts_for_all_destinations(destination: str) -> None:
     snap = _make_snap(sync_destination=destination)
 
@@ -110,22 +110,20 @@ def test_preflight_print_destination_keeps_printer_rejections(
 
 
 # ---------------------------------------------------------------------------
-# iphone / both destinations: only BOOTING gates; printer faults all accept
+# Sync mode: only BOOTING gates; printer faults all accept
 # (sync spooling is not serialized by printing, so PRINTING accepts too)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("destination", ["iphone", "both"])
 @pytest.mark.parametrize(
     "snapshot_kwargs",
     [kwargs for kwargs, _prefix in _PRINTER_FAULTS.values()],
     ids=_PRINTER_FAULTS.keys(),
 )
 def test_preflight_sync_destinations_accept_despite_printer_faults(
-    destination: str,
     snapshot_kwargs: dict[str, object],
 ) -> None:
-    snap = _make_snap(sync_destination=destination, **snapshot_kwargs)
+    snap = _make_snap(sync_destination="iphone", **snapshot_kwargs)
 
     assert _make_service(snap)._ftp_preflight_reply() is None
 

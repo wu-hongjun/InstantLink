@@ -548,15 +548,6 @@ async def dispatch_received_image(
     if destination == SyncDestination.IPHONE.value:
         LOGGER.info("sync.print_skipped_destination path=%s", received.path)
         return
-    if destination == SyncDestination.BOTH.value and not _printer_usable_for_print(snapshot):
-        # No error screens on every upload while the printer is off: in
-        # both-mode the spool already succeeded, so skip quietly.
-        LOGGER.info(
-            "sync.print_skipped_printer_unready path=%s mode=%s",
-            received.path,
-            snapshot.mode.value,
-        )
-        return
     await ui.image_received(received)
     await handle_received_image(
         received,
@@ -569,16 +560,7 @@ async def dispatch_received_image(
     )
 
 
-_SYNC_SPOOL_DESTINATIONS = frozenset({SyncDestination.IPHONE.value, SyncDestination.BOTH.value})
-
-
-def _printer_usable_for_print(snapshot: UiSnapshot) -> bool:
-    # Lazy import for the same reason as _setup_ftp_service_sync: camera.ftp
-    # stays off app.py's module-import path. By dequeue time the module is
-    # already loaded, so this resolves from sys.modules.
-    from instantlink_bridge.camera.ftp import printer_usable_for_print
-
-    return printer_usable_for_print(snapshot)
+_SYNC_SPOOL_DESTINATIONS = frozenset({SyncDestination.IPHONE.value})
 
 
 async def spool_image_to_sync_outbox(

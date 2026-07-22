@@ -168,8 +168,8 @@ class UiSnapshot:
     # back to the underlying mode.
     help_dialog_title: str | None = None
     help_dialog_body: str | None = None
-    # iPhone sync state (plan 050). ``sync_destination`` mirrors
-    # ``[sync].destination`` ("print" | "iphone" | "both") so the FTP
+    # iPhone sync state (plans 050/055). ``sync_destination`` mirrors
+    # ``[sync].destination`` ("print" | "iphone") so the FTP
     # preflight gate and readiness surfaces can be destination-aware
     # without importing config. ``sync_qr_payload`` is populated only
     # while ``mode is UiMode.SYNC_PAIRING``.

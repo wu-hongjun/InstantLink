@@ -410,8 +410,14 @@ async def test_config_get_includes_sync_destination_default(tmp_path: Path) -> N
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("requested_destination", "expected_destination"),
+    [("iphone", "iphone"), ("both", "print")],
+)
 async def test_config_put_applies_sync_destination_and_preserves_provisioning(
     tmp_path: Path,
+    requested_destination: str,
+    expected_destination: str,
 ) -> None:
     private_key = _private_key()
     config_path = tmp_path / "config.toml"
@@ -420,7 +426,7 @@ async def test_config_put_applies_sync_destination_and_preserves_provisioning(
     client = TestClient(TestServer(app))
     await client.start_server()
     try:
-        body = _json_body({"config": {"sync": {"destination": "both"}}})
+        body = _json_body({"config": {"sync": {"destination": requested_destination}}})
         path = "/v1/config"
         response = await client.put(
             path,
@@ -432,9 +438,9 @@ async def test_config_put_applies_sync_destination_and_preserves_provisioning(
         )
         data = cast(dict[str, Any], await response.json())
         assert response.status == 200, data
-        assert data["config"]["sync"]["destination"] == "both"
+        assert data["config"]["sync"]["destination"] == expected_destination
         on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
-        assert on_disk["sync"]["destination"] == "both"
+        assert on_disk["sync"]["destination"] == expected_destination
         # Provisioning-level fields survive a destination-only diff.
         assert on_disk["sync"]["port"] == 9000
     finally:

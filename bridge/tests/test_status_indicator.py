@@ -313,9 +313,7 @@ def test_iphone_only_ready_listening_shows_ready_solid() -> None:
     assert state.pattern is StatusPattern.SOLID
 
 
-def test_both_mode_ready_not_gated_on_sync_service() -> None:
-    # Both-mode still accepts uploads during the sync-start window (print
-    # path + disk spool), so the bar stays green on an FTP path alone.
+def test_legacy_both_value_follows_print_readiness() -> None:
     state = derive_status(
         _ready_snapshot(
             sync_destination="both",
@@ -326,4 +324,4 @@ def test_both_mode_ready_not_gated_on_sync_service() -> None:
         )
     )
 
-    assert state.signal is StatusSignal.READY
+    assert state.signal is StatusSignal.NOT_READY

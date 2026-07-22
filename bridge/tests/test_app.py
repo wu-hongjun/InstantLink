@@ -327,72 +327,10 @@ async def test_dispatch_iphone_destination_spools_and_skips_print_flow(
 
 
 @pytest.mark.asyncio
-async def test_dispatch_both_destination_spools_before_print_flow(tmp_path: Path) -> None:
+async def test_dispatch_legacy_both_destination_uses_print_flow(tmp_path: Path) -> None:
     received = _write_received_image(tmp_path)
     ui = SyncAwarePrintUi(should_print=False)
     outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
-
-    await app.dispatch_received_image(
-        received,
-        snapshot=_make_snapshot(sync_destination="both"),
-        config=BridgeConfig(),
-        ui=ui,
-        pairer=FakePairer([]),
-        outbox=outbox,
-        printer_sender=_unused_sender,
-    )
-
-    assert outbox.depth() == 1
-    assert ui.events == ["sync_outbox:1", "received:image.jpg", "confirm:5.0"]
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "snapshot_kwargs",
-    [
-        {"paired_printer": None, "mode": UiMode.NEEDS_PAIRING, "printer_status_fresh": False},
-        {"mode": UiMode.PRINTER_OFFLINE, "printer_status_fresh": False},
-        {"printer_status_fresh": False},
-        {"film_remaining": 0},
-    ],
-)
-async def test_dispatch_both_destination_skips_print_when_printer_unready(
-    tmp_path: Path,
-    snapshot_kwargs: dict[str, object],
-) -> None:
-    received = _write_received_image(tmp_path)
-    ui = SyncAwarePrintUi(should_print=True)
-    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
-
-    await app.dispatch_received_image(
-        received,
-        snapshot=_make_snapshot(sync_destination="both", **snapshot_kwargs),
-        config=BridgeConfig(),
-        ui=ui,
-        pairer=FakePairer([]),
-        outbox=outbox,
-        printer_sender=_unused_sender,
-    )
-
-    # Spooled quietly, no print flow and no error screens.
-    assert outbox.depth() == 1
-    assert ui.events == ["sync_outbox:1"]
-
-
-@pytest.mark.asyncio
-async def test_dispatch_outbox_failure_does_not_break_print_path(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    received = _write_received_image(tmp_path)
-    ui = SyncAwarePrintUi(should_print=False)
-    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
-
-    def failing_add(_source: Path, *, remote_ip: str = "") -> None:
-        _ = remote_ip
-        raise OSError("disk full")
-
-    monkeypatch.setattr(outbox, "add", failing_add)
 
     await app.dispatch_received_image(
         received,
@@ -509,12 +447,8 @@ async def test_apply_sync_destination_change_starts_service_when_sync_enabled() 
         SyncConfig(destination=SyncDestination.IPHONE),
         service=service,
     )
-    await app.apply_sync_destination_change(
-        SyncConfig(destination=SyncDestination.BOTH),
-        service=service,
-    )
 
-    assert service.events == ["start", "start"]
+    assert service.events == ["start"]
 
 
 @pytest.mark.asyncio

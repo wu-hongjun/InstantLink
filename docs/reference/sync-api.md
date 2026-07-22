@@ -3,8 +3,8 @@
 The Bridge exposes a small HTTP API that an iOS app (or any client) uses to
 pull received camera photos and, on screenless SKUs, to drive the LCD
 remotely. It is implemented by `SyncService`
-(`bridge/src/instantlink_bridge/sync/server.py`) and runs only when the
-`[sync]` destination includes `iphone` (i.e. `iphone` or `both`).
+(`bridge/src/instantlink_bridge/sync/server.py`) and runs only when
+`[sync].destination = "iphone"` (the Bridge's Sync mode).
 
 ## Endpoint & discovery
 

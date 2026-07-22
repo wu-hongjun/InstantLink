@@ -78,10 +78,9 @@ def _printer_reachable(snap: UiSnapshot) -> bool:
 def printer_usable_for_print(snap: UiSnapshot) -> bool:
     """Return True when a print job could plausibly start right now.
 
-    Single shared readiness predicate (plan 050) between the FTP STOR
-    preflight (print-only destination) and the app dequeue fan-out
-    (both-mode print skip): paired + fresh status + reachable mode +
-    film available (or the no-film test override).
+    Single shared readiness predicate for the FTP STOR preflight: paired +
+    fresh status + reachable mode + film available (or the no-film test
+    override).
     """
 
     if snap.paired_printer is None:
@@ -383,11 +382,9 @@ class FtpReceiveService:
         (booting, not paired, printer offline, no film), then transient-busy last (printing).
         Returns None to fall through to the normal STOR handler on success.
 
-        Destination-aware (plan 050): when the sync destination is "iphone" or
-        "both" the upload always spools to the sync outbox, so only the BOOTING
-        gate applies — no printer checks and no PRINTING busy check (sync
-        spooling is not serialized by printing). "both" accepts whenever either
-        path could take the file, and post-boot sync always can.
+        Mode-aware (plans 050/055): in Sync mode the upload spools to the
+        outbox, so only the BOOTING gate applies — no printer checks and no
+        PRINTING busy check (sync spooling is not serialized by printing).
 
         Gracefully degrades to None when no bridge_snapshot_provider is wired.
         """
@@ -405,7 +402,7 @@ class FtpReceiveService:
             )
             return reply
 
-        if snap.sync_destination != SyncDestination.PRINT.value:
+        if snap.sync_destination == SyncDestination.IPHONE.value:
             return None
 
         if snap.paired_printer is None:

@@ -27,6 +27,7 @@ from instantlink_bridge.config import (
     PowerBackend,
     StatusSinkKind,
     SyncConfig,
+    SyncDestination,
     write_config,
 )
 from instantlink_bridge.imaging.pipeline import (
@@ -237,6 +238,15 @@ STATUS_VISIBLE_MODES = {
     UiMode.PRINTER_SEARCHING,
     UiMode.PRINTER_OFFLINE,
     UiMode.SETTINGS,
+}
+MODE_SWITCH_MODES = {
+    UiMode.READY,
+    UiMode.NO_FILM,
+    UiMode.VALIDATION,
+    UiMode.NEEDS_PAIRING,
+    UiMode.PRINTER_SEARCHING,
+    UiMode.PRINTER_OFFLINE,
+    UiMode.ERROR,
 }
 
 
@@ -685,21 +695,17 @@ class BridgeUi:
             self._render()
             return
 
-        sync_enabled = self._config.sync.sync_enabled
         printer = self._select_printer(printers)
         if printer is None:
-            # Both-mode without a paired printer stays on the READY sync
-            # surface (paused-print line covers the missing printer); the
-            # print-only SKU keeps the full-screen pairing prompt.
             self._snapshot = self._build_snapshot(
-                mode=UiMode.READY if sync_enabled else UiMode.NEEDS_PAIRING,
+                mode=UiMode.NEEDS_PAIRING,
                 printer_model=self._config.printer.model,
             )
             LOGGER.info("ui.status mode=needs_pairing paired_printer=none")
         else:
             self._printer_status_misses = 0
             self._snapshot = self._build_snapshot(
-                mode=UiMode.READY if sync_enabled else UiMode.PRINTER_SEARCHING,
+                mode=UiMode.PRINTER_SEARCHING,
                 paired_printer=printer,
                 printer_model=printer.model or self._known_printer_model(),
                 printer_status_message="Searching Printer",
@@ -714,12 +720,9 @@ class BridgeUi:
         await self._record_power_activity()
         if self._snapshot.mode is UiMode.SYNC_PAIRING:
             # Deliberate (plan 051 P2.4): an incoming photo must not clobber
-            # the QR card while the user is mid-scan. In both-mode the
-            # print/sync work still proceeds in the background — app.py
-            # drives it from the image queue, not from this notification —
-            # so only the lightweight state is recorded here: the last image
-            # name plus the queue/outbox chips via their own hooks. The QR
-            # stays up until the user exits with KEY2/LEFT.
+            # the QR card while the user is mid-scan. Only the lightweight
+            # state is recorded here: the last image name plus queue/outbox
+            # chips via their own hooks. The QR stays up until KEY2/LEFT.
             LOGGER.info(
                 "ui.image_received_suppressed reason=sync_pairing image=%s",
                 received.path.name,
@@ -806,10 +809,9 @@ class BridgeUi:
     async def _defer_while_sync_pairing(self, received: ReceivedImage) -> None:
         """Hold the print-confirmation flow while the QR card is on screen.
 
-        Plan 051 pass 2 (from Pass 1's ``image_received`` suppression): in
-        both-mode with a usable printer the preview / NO_FILM / auto-print
-        transitions would otherwise steal the SYNC_PAIRING screen mid-scan.
-        Policy: the whole per-image flow is deferred — nothing prints or
+        Plan 051 pass 2 (from Pass 1's ``image_received`` suppression): a
+        print-confirmation transition must never steal the SYNC_PAIRING screen
+        mid-scan. The whole per-image flow is deferred — nothing prints or
         switches modes behind the QR; the image proceeds through the normal
         flow (countdown restarted) once the user exits with KEY2/LEFT.
         Deferring (rather than printing silently behind the screen) keeps
@@ -1089,10 +1091,8 @@ class BridgeUi:
 
     def _cached_home_mode(self) -> UiMode:
         if self._config.sync.sync_enabled:
-            # Sync destinations keep the home surface on READY: the renderer
-            # degrades to the Setup-needed body when no FTP path is visible,
-            # and both-mode printer trouble shows as a paused-print line
-            # instead of the NO_FILM / VALIDATION full screens (plan 050).
+            # Sync mode keeps the home surface on READY; the renderer degrades
+            # to the setup-needed body when no FTP path is visible.
             return UiMode.READY
         if self._snapshot.paired_printer is None:
             return UiMode.NEEDS_PAIRING
@@ -1385,6 +1385,9 @@ class BridgeUi:
             if action is UiAction.BACK:
                 await self._cancel_pairing()
             return
+        if action is UiAction.BACK and self._snapshot.mode in MODE_SWITCH_MODES:
+            await self._switch_delivery_mode()
+            return
         if action is UiAction.PAIR:
             if not self._config.sync.print_enabled:
                 # iphone-only (plan 051 P2.6): a printer scan is pointless
@@ -1412,12 +1415,6 @@ class BridgeUi:
                 return
             if self._snapshot.paired_printer is not None:
                 self._show_settings("Wi-Fi + FTP credentials", page=SettingsPage.NETWORK)
-                return
-            if self._config.sync.sync_enabled:
-                # Both-mode without a printer sits on the READY sync surface
-                # instead of NEEDS_PAIRING; short KEY3 starts the printer
-                # scan the "KEY3 Pair" chip advertises (plan 051 P2.6).
-                await self._start_pairing()
                 return
             return
         if action is UiAction.BACK:
@@ -2415,7 +2412,13 @@ class BridgeUi:
         row = self._settings_row_for_key(key, "")
         return row.label
 
-    async def _set_config(self, config: BridgeConfig, *, message: str) -> bool:
+    async def _set_config(
+        self,
+        config: BridgeConfig,
+        *,
+        message: str,
+        show_settings: bool = True,
+    ) -> bool:
         if self._config_path is not None:
             try:
                 await asyncio.to_thread(write_config, config, self._config_path)
@@ -2441,6 +2444,8 @@ class BridgeUi:
                 # of flashing a stale "unavailable" error until the start
                 # attempt concludes (plan 051 P2.3).
                 self._sync_service_state = "starting"
+            if not config.sync.print_enabled:
+                await self._cancel_status_refresh()
             self._notify_sync_config_applied(config.sync)
         if config.printer.keepalive_interval_s != previous_keepalive:
             await self._configure_printer_keepalive()
@@ -2454,8 +2459,35 @@ class BridgeUi:
             sync_destination=config.sync.destination.value,
             sync_service_state=self._sync_service_state,
         )
-        self._show_settings(message)
+        if show_settings:
+            self._show_settings(message)
         return True
+
+    async def _switch_delivery_mode(self) -> None:
+        """Toggle Print/Sync from a home surface and persist immediately."""
+
+        destination = (
+            SyncDestination.PRINT
+            if self._config.sync.destination is SyncDestination.IPHONE
+            else SyncDestination.IPHONE
+        )
+        updated = replace(
+            self._config,
+            sync=replace(self._config.sync, destination=destination),
+        )
+        LOGGER.info(
+            "ui.delivery_mode_switch previous=%s destination=%s",
+            self._config.sync.destination.value,
+            destination.value,
+        )
+        if not await self._set_config(
+            updated,
+            message=f"{sync_destination_label(destination)} mode",
+            show_settings=False,
+        ):
+            return
+        self._settings_picker_key = None
+        await self.refresh_printer_status()
 
     def _notify_ftp_config_applied(self, config: FtpConfig) -> None:
         if self._ftp_config_applied_callback is None:
@@ -3158,7 +3190,7 @@ class BridgeUi:
             return SettingsRow("Reset credentials", "")
         if key is SettingKey.SYNC_DESTINATION:
             return SettingsRow(
-                "Send to",
+                "Mode",
                 sync_destination_label(self._config.sync.destination),
             )
         if key is SettingKey.SYNC_PAIRING:
@@ -3488,7 +3520,7 @@ class BridgeUi:
 
         if not self._config.sync.sync_enabled:
             LOGGER.info("ui.sync_pairing_blocked reason=sync_disabled")
-            self._show_settings("Enable in Print > Send to")
+            self._show_settings("Switch to Sync mode first")
             return
         if self._sync_service_state != "listening":
             reason = (

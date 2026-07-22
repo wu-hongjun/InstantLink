@@ -145,8 +145,9 @@ state in v1.
   Wide rotates portrait sources before center-crop. Explicit `crop` never rotates.
 - KEY1 / joystick press opens Settings from normal status screens. Settings persists
   `/etc/InstantLinkBridge/config.toml` and covers printer pairing/forget, Wi-Fi mode, printer type,
-  fit, JPEG quality, auto-print mode/delay, keepalive, and the photo destination
-  (`[sync].destination` — `Send to`: Print / iPhone / Both, plan 050). The remaining `[sync]`
+  fit, JPEG quality, auto-print mode/delay, keepalive, and the delivery mode
+  (`[sync].destination` — `Mode`: Print / Sync, plan 055). KEY2 switches between those modes
+  directly from normal home/status surfaces. The remaining `[sync]`
   fields (`port`, `outbox_dir`, `outbox_budget_mb`, `token_path`, `remote_ui`) are
   provisioning-level and not editable from the LCD.
 - `workflow.allow_print_without_film` is a testing-only escape hatch exposed as `No-film test`.
@@ -169,30 +170,25 @@ state in v1.
   same state as chips, subtitles, and headlines.
 - Do not show `Ready to print` unless the printer is ready and at least one FTP receive path
   is visible on a supported camera path: Bridge Wi-Fi `192.168.8.1` or Same Wi-Fi.
-  Sync exception (plans 050/051): with `Send to` = `iPhone` or `Both` the printer does not gate
-  readiness. iphone-only shows `Sync to iPhone` and requires an FTP path **and** a listening
-  sync service; while the service is starting the surface shows the validation treatment with
-  `Sync starting`, and after a failed start it shows `Sync failed · restart bridge` — never a
-  sync-ready claim with nothing bound on the sync port. Both-mode keeps READY on an FTP path
-  alone and reports printer/sync trouble as one cause-style line on the card.
+  Sync exception (plans 050/051/055): Sync mode does not use the Printer. It shows
+  `Sync to iPhone` and requires an FTP path **and** a listening sync service; while the service
+  is starting the surface shows the validation treatment with `Sync starting`, and after a
+  failed start it shows `Sync failed · restart bridge` — never a sync-ready claim with nothing
+  bound on the sync port.
 - Keep the three FTP transport subnets distinct. Do not use `192.168.7.2` for Wi-Fi; the
   `192.168.7.0/24` subnet is reserved for the USB gadget admin/diagnostics link.
 - If film remaining is `0` and `No-film test` is off, show `NO FILM` / `No Film Left`; do not
   show `READY`.
 - If film is already known to be `0/10` when an FTP image arrives and `No-film test` is off, skip
   the BLE transfer and show `No Film Left`.
-- Sync exception to the two NO-FILM rules above (plan 050): with `Send to: Both`, empty film
-  shows as the `No film · photos sync only` line on the READY sync card instead of the NO FILM
-  full screen, and arriving images still spool to the sync outbox; `Send to: iPhone` ignores
-  film entirely.
-- Sync-ready footer (plan 051 P2.6): iphone-only home surfaces read
-  `KEY1 Setting · (blank) · KEY3 iPhone` — short and hold KEY3 both open the iPhone pairing QR,
-  and BACK from that QR returns home. Both-mode without a printer reads
-  `KEY1 Setting · KEY2 Refresh · KEY3 Pair` with short KEY3 starting the printer scan. Never
-  advertise `KEY2 Refresh` or a printer-scan hold in iphone-only mode (the printer poll is
-  stopped there).
+- Sync mode ignores Printer and film state entirely; uploads spool to the sync outbox and never
+  enter the print pipeline.
+- Delivery-mode footer (plan 055): Print home surfaces advertise `KEY2 Sync`; Sync home surfaces
+  advertise `KEY2 Print`. KEY2 persists the new mode and refreshes the home state immediately.
+  In Sync mode short and hold KEY3 both open the iPhone pairing QR, and BACK from that QR returns
+  home.
 - iPhone pairing QR (plan 051): never show a QR while nothing listens on the sync port — the
-  action degrades to a Settings toast (`Enable in Print > Send to` / `Sync starting · try again`
+  action degrades to a Settings toast (`Switch to Sync mode first` / `Sync starting · try again`
   / `Sync failed · restart bridge`). While the QR is up: idle dim/screen-off are exempted, and
   arriving images defer (no IMAGE_RECEIVED, no preview/print/NO_FILM mode switches) until it
   exits. Until the first authenticated iPhone request since boot, the READY card shows a

@@ -485,15 +485,11 @@ def test_sync_destination_enables_expected_pipelines() -> None:
     assert iphone_only.sync_enabled
     assert not iphone_only.print_enabled
 
-    both = SyncConfig(destination=SyncDestination.BOTH)
-    assert both.sync_enabled
-    assert both.print_enabled
-
 
 def test_sync_destination_round_trip_toml(tmp_path: Path) -> None:
-    """Each sync destination survives a write/load cycle as the same enum value."""
+    """Each active delivery mode survives a write/load cycle."""
 
-    for destination in SyncDestination:
+    for destination in (SyncDestination.PRINT, SyncDestination.IPHONE):
         config_path = tmp_path / f"{destination.value}.toml"
         config = BridgeConfig(sync=SyncConfig(destination=destination))
         write_config(config, config_path)
@@ -507,7 +503,7 @@ def test_write_config_round_trips_sync_settings(tmp_path: Path) -> None:
     config_path = tmp_path / "config.toml"
     config = BridgeConfig(
         sync=SyncConfig(
-            destination=SyncDestination.BOTH,
+            destination=SyncDestination.IPHONE,
             port=9000,
             outbox_dir=Path("/var/lib/InstantLinkBridge/outbox-alt"),
             outbox_budget_mb=512,
@@ -518,11 +514,22 @@ def test_write_config_round_trips_sync_settings(tmp_path: Path) -> None:
     write_config(config, config_path)
     round_tripped = load_config(config_path)
 
-    assert round_tripped.sync.destination is SyncDestination.BOTH
+    assert round_tripped.sync.destination is SyncDestination.IPHONE
     assert round_tripped.sync.port == 9000
     assert round_tripped.sync.outbox_dir == Path("/var/lib/InstantLinkBridge/outbox-alt")
     assert round_tripped.sync.outbox_budget_mb == 512
     assert round_tripped.sync.token_path == Path("/etc/InstantLinkBridge/alt.token")
+
+
+def test_legacy_both_destination_migrates_to_print(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[sync]\ndestination = "both"\n', encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.sync.destination is SyncDestination.PRINT
+    assert config.sync.print_enabled
+    assert not config.sync.sync_enabled
 
 
 def test_sync_destination_must_be_known(tmp_path: Path) -> None:

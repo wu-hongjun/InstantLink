@@ -5400,7 +5400,7 @@ async def test_forget_printer_uses_destructive_confirm_label() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Plan 050: iPhone sync — Send to picker, pairing QR, status surfaces
+# Plans 050/055: Print/Sync mode picker, pairing QR, status surfaces
 # ---------------------------------------------------------------------------
 
 
@@ -5415,29 +5415,28 @@ def _test_system_info() -> SystemInfo:
 
 
 @pytest.mark.asyncio
-async def test_send_to_row_opens_picker_with_explicit_options() -> None:
+async def test_mode_row_opens_picker_with_two_explicit_options() -> None:
     ui, display = _make_settings_ui(BridgeConfig())
     ui._show_settings(page=SettingsPage.PRINT)
 
     # PRINT hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print
-    #   4 Send to (plan 050).
-    assert display.snapshots[-1].settings_rows[4].label == "Send to"
+    #   4 Mode (plan 055).
+    assert display.snapshots[-1].settings_rows[4].label == "Mode"
     assert display.snapshots[-1].settings_rows[4].value == "Print"
     for _ in range(4):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
 
     # Explicit option list per the no-blind-cycling rule.
-    assert display.snapshots[-1].settings_title == "Send to"
+    assert display.snapshots[-1].settings_title == "Mode"
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
         "Print",
-        "iPhone",
-        "Both",
+        "Sync",
     ]
 
 
 @pytest.mark.asyncio
-async def test_send_to_persists_fires_callback_and_stamps_snapshot(tmp_path: Path) -> None:
+async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path: Path) -> None:
     config_path = tmp_path / "config.toml"
     config_path.write_text("", encoding="utf-8")
     applied_sync: list[SyncConfig] = []
@@ -5457,7 +5456,7 @@ async def test_send_to_persists_fires_callback_and_stamps_snapshot(tmp_path: Pat
     for _ in range(4):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
-    # Picker opens on the current value (Print, index 0); one DOWN → iPhone.
+    # Picker opens on the current value (Print, index 0); one DOWN → Sync.
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
@@ -5467,7 +5466,7 @@ async def test_send_to_persists_fires_callback_and_stamps_snapshot(tmp_path: Pat
     assert ui._snapshot.sync_destination == "iphone"
     assert display.snapshots[-1].settings_message == "Saved"
     # The row value reflects the new destination back on the Print hub.
-    assert display.snapshots[-1].settings_rows[4].value == "iPhone"
+    assert display.snapshots[-1].settings_rows[4].value == "Sync"
 
 
 @pytest.mark.asyncio
@@ -5553,7 +5552,7 @@ async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> 
     ui = BridgeUi(
         BridgeConfig(
             sync=SyncConfig(
-                destination=SyncDestination.BOTH,
+                destination=SyncDestination.IPHONE,
                 token_path=tmp_path / "sync.token",
             )
         ),
@@ -5606,7 +5605,7 @@ async def test_sync_pairing_token_failure_shows_settings_toast(tmp_path: Path) -
 async def test_sync_outbox_changed_stamps_depth_and_renders() -> None:
     display = _FakeDisplay()
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),
@@ -5688,9 +5687,11 @@ async def test_iphone_destination_skips_printer_and_lands_ready() -> None:
 
 
 @pytest.mark.asyncio
-async def test_both_destination_keeps_ready_surface_without_printer() -> None:
+async def test_legacy_both_destination_normalizes_to_print_mode(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[sync]\ndestination = "both"\n', encoding="utf-8")
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
+        load_config(config_path),
         display=_FakeDisplay(),
         input_device=NullInput(),
         pairer=_FakePairer([]),
@@ -5699,59 +5700,8 @@ async def test_both_destination_keeps_ready_surface_without_printer() -> None:
 
     await ui.refresh_printer_status()
 
-    assert ui._snapshot.mode is UiMode.READY
-
-
-@pytest.mark.asyncio
-async def test_both_destination_no_film_does_not_block_ready_surface() -> None:
-    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
-    ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
-        display=_FakeDisplay(),
-        input_device=NullInput(),
-        pairer=_FakePairer([printer]),
-        status_provider=_FakeStatusProvider(
-            snapshot=PrinterStatusSnapshot(
-                film_remaining=0,
-                battery=70,
-                is_charging=False,
-                model=PrinterModel.SQUARE,
-                message="Ready",
-            )
-        ),
-        wifi_mode_setter=_unused_wifi_mode_setter,
-    )
-    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
-
-    assert await ui._refresh_printer_status_in_background(printer)
-
-    # Print-only would show the NO_FILM full screen; both-mode keeps the
-    # READY sync surface and reports film via the paused-print line.
-    assert ui._snapshot.mode is UiMode.READY
-    assert ui._snapshot.film_remaining == 0
-
-
-@pytest.mark.asyncio
-async def test_both_destination_printer_searching_keeps_ready_surface() -> None:
-    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
-    ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.BOTH)),
-        display=_FakeDisplay(),
-        input_device=NullInput(),
-        pairer=_FakePairer([printer]),
-        status_provider=_FakeStatusProvider(),
-        wifi_mode_setter=_unused_wifi_mode_setter,
-    )
-    ui._snapshot = replace(
-        ui._build_snapshot(mode=UiMode.READY, paired_printer=printer, film_remaining=8),
-        printer_status_fresh=True,
-    )
-
-    ui._apply_printer_searching(printer, "Searching Printer")
-
-    assert ui._snapshot.mode is UiMode.READY
-    assert not ui._snapshot.printer_status_fresh
-    assert ui._snapshot.printer_status_message == "Searching Printer"
+    assert ui.config.sync.destination is SyncDestination.PRINT
+    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
 
 
 # ---------------------------------------------------------------------------
@@ -5761,15 +5711,13 @@ async def test_both_destination_printer_searching_keeps_ready_surface() -> None:
 
 @pytest.mark.asyncio
 async def test_image_received_does_not_clobber_sync_pairing_qr(tmp_path: Path) -> None:
-    """An FTP upload landing while the user aims a phone at the QR must not
-    switch the LCD away from SYNC_PAIRING (both-mode print/sync work proceeds
-    in the background from app.py's queue, not from this notification)."""
+    """An FTP upload must not replace the QR while the user scans it."""
 
     display = _FakeDisplay()
     ui = BridgeUi(
         BridgeConfig(
             sync=SyncConfig(
-                destination=SyncDestination.BOTH,
+                destination=SyncDestination.IPHONE,
                 token_path=tmp_path / "sync.token",
             )
         ),
@@ -5812,7 +5760,7 @@ async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
     ui = BridgeUi(
         BridgeConfig(
             sync=SyncConfig(
-                destination=SyncDestination.BOTH,
+                destination=SyncDestination.IPHONE,
                 token_path=tmp_path / "sync.token",
             )
         ),
@@ -5870,7 +5818,7 @@ async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
     ui = BridgeUi(
         BridgeConfig(
             sync=SyncConfig(
-                destination=SyncDestination.BOTH,
+                destination=SyncDestination.IPHONE,
                 token_path=tmp_path / "sync.token",
             )
         ),
@@ -5904,7 +5852,7 @@ async def test_leaving_sync_pairing_restores_normal_idle_behavior(tmp_path: Path
     ui = BridgeUi(
         BridgeConfig(
             sync=SyncConfig(
-                destination=SyncDestination.BOTH,
+                destination=SyncDestination.IPHONE,
                 token_path=tmp_path / "sync.token",
             )
         ),
@@ -6002,7 +5950,7 @@ async def test_sync_pairing_row_blocked_when_destination_print(tmp_path: Path) -
 
     assert ui._snapshot.mode is UiMode.SETTINGS
     assert ui._snapshot.sync_qr_payload is None
-    assert display.snapshots[-1].settings_message == "Enable in Print > Send to"
+    assert display.snapshots[-1].settings_message == "Switch to Sync mode first"
 
 
 @pytest.mark.asyncio
@@ -6033,10 +5981,8 @@ async def test_sync_pairing_row_blocked_while_service_starting(tmp_path: Path) -
 
 
 # ---------------------------------------------------------------------------
-# Plan 051 P2.6: KEY3 on the sync-ready home surface — iphone-only routes
-# both short and hold KEY3 to the iPhone pairing QR (and back to home);
-# both-mode without a printer routes short KEY3 to the printer scan the
-# "KEY3 Pair" chip advertises.
+# Plan 051 P2.6: KEY3 on the Sync home surface routes both short and hold
+# presses to the iPhone pairing QR and back to home.
 # ---------------------------------------------------------------------------
 
 
@@ -6073,27 +6019,54 @@ async def test_hold_key3_opens_iphone_pairing_in_iphone_only_mode(tmp_path: Path
     assert ui._snapshot.sync_qr_payload is not None
 
 
-class _BlockingPairer(_FakePairer):
-    """Pairer whose scan never completes — pins the PAIRING screen."""
+@pytest.mark.asyncio
+async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) -> None:
+    display = _FakeDisplay()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("", encoding="utf-8")
+    applied: list[SyncConfig] = []
+    ui = BridgeUi(
+        load_config(config_path),
+        config_path=config_path,
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        sync_config_applied_callback=applied.append,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.NEEDS_PAIRING)
 
-    async def pair_first_available(self) -> PairedPrinter:
-        await asyncio.Event().wait()
-        raise AssertionError("unreachable")
+    await ui._handle_action(UiAction.BACK)
+
+    assert ui.config.sync.destination is SyncDestination.IPHONE
+    assert load_config(config_path).sync.destination is SyncDestination.IPHONE
+    assert applied == [ui.config.sync]
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.sync_destination == "iphone"
 
 
 @pytest.mark.asyncio
-async def test_key3_starts_printer_pairing_in_both_mode_without_printer() -> None:
+async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
     display = _FakeDisplay()
-    pairer = _BlockingPairer([])
-    ui = _sync_ui(display, destination=SyncDestination.BOTH, pairer=pairer)
-    await ui.sync_service_state_changed(True)
+    pairer = _FakePairer([])
+    applied: list[SyncConfig] = []
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        display=display,
+        input_device=NullInput(),
+        pairer=pairer,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        sync_config_applied_callback=applied.append,
+    )
     ui._snapshot = ui._build_snapshot(mode=UiMode.READY)
 
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.BACK)
 
-    assert ui._snapshot.mode is UiMode.PAIRING
-
-    await ui._cancel_pairing()
+    assert ui.config.sync.destination is SyncDestination.PRINT
+    assert applied == [ui.config.sync]
+    assert pairer.list_calls == 1
+    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
+    assert ui._snapshot.sync_destination == "print"
 
 
 # ---------------------------------------------------------------------------
@@ -6110,7 +6083,7 @@ async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
     image_path = tmp_path / "photo.jpg"
     image_path.write_bytes(b"jpg")
     display = _FakeDisplay()
-    ui = _sync_ui(display, destination=SyncDestination.BOTH, token_path=tmp_path / "sync.token")
+    ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
     await ui.sync_service_state_changed(True)
     ui._show_settings(page=SettingsPage.NETWORK)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
@@ -6131,33 +6104,6 @@ async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
     assert await asyncio.wait_for(task, timeout=2.0) == PrintEdit()
 
 
-@pytest.mark.asyncio
-async def test_deferred_no_film_screen_waits_for_qr_exit(tmp_path: Path) -> None:
-    image_path = tmp_path / "photo.jpg"
-    image_path.write_bytes(b"jpg")
-    display = _FakeDisplay()
-    ui = _sync_ui(display, destination=SyncDestination.BOTH, token_path=tmp_path / "sync.token")
-    await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
-    await ui._activate_setting(SettingKey.SYNC_PAIRING)
-    ui._snapshot = replace(ui._snapshot, film_remaining=0)
-
-    task = asyncio.create_task(
-        ui.await_print_confirmation(ReceivedImage(image_path, "192.168.8.10"), timeout_s=5.0)
-    )
-    await asyncio.sleep(0.3)
-
-    # The NO_FILM full screen must not replace the QR either.
-    assert not task.done()
-    assert ui._snapshot.mode is UiMode.SYNC_PAIRING
-
-    await ui._handle_action(UiAction.BACK)
-
-    assert await asyncio.wait_for(task, timeout=2.0) is None
-    assert ui._snapshot.mode is UiMode.NO_FILM
-    ui._cancel_image_reset()
-
-
 # ---------------------------------------------------------------------------
 # Plan 051 P2.7: the split sync settings rows cross-reference each other.
 # ---------------------------------------------------------------------------
@@ -6166,11 +6112,11 @@ async def test_deferred_no_film_screen_waits_for_qr_exit(tmp_path: Path) -> None
 def test_sync_settings_rows_cross_reference_each_other() -> None:
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_DESTINATION]
-        == "Where received photos go · Pair iPhone: Network page"
+        == "Print or sync received photos · Pair iPhone: Network page"
     )
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_PAIRING]
-        == "Show a QR code to pair your iPhone · Send to: Print page"
+        == "Show a QR code to pair your iPhone · Mode: Print page"
     )
 
 

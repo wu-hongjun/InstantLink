@@ -200,9 +200,8 @@ def _settings_inherit(snapshot: UiSnapshot) -> StatusState:
     """Infer the underlying health while the SETTINGS overlay is open."""
 
     if _sync_enabled(snapshot):
-        # iPhone sync destinations (plan 050): the printer never gates the
-        # underlying health — an FTP receive path alone means ready (plus,
-        # for iphone-only, a bound sync service — plan 051 P2.3).
+        # Sync mode: the Printer never gates underlying health; readiness
+        # requires an FTP receive path and a bound service.
         return _READY_SOLID if _can_accept(snapshot) else _NOT_READY_SOLID
     if snapshot.paired_printer is None:
         return _NOT_READY_SOLID
@@ -235,27 +234,23 @@ def _is_waiting_for_user(message: str | None) -> bool:
 def _sync_enabled(snapshot: UiSnapshot) -> bool:
     """Mirror of ``render.sync_enabled`` without the circular import."""
 
-    return snapshot.sync_destination in {"iphone", "both"}
+    return snapshot.sync_destination == "iphone"
 
 
 def _can_accept(snapshot: UiSnapshot) -> bool:
     """Mirror of ``render.can_accept_images`` without the circular import.
 
     The bar must agree with the READY body about whether uploads can be
-    accepted: with iPhone sync enabled ("iphone" or "both", plan 050) an FTP
-    receive path alone is enough; print-only additionally requires a healthy
-    printer with film. Kept in lockstep with ``render.printer_ready`` +
-    ``render.camera_link_ready`` + ``render.sync_enabled``.
+    accepted: Sync mode requires an FTP path and a listening sync service;
+    Print mode additionally requires a healthy printer with film. Kept in
+    lockstep with ``render.printer_ready`` + ``render.camera_link_ready`` +
+    ``render.sync_enabled``.
     """
 
     if not snapshot.camera_receive_ready:
         return False
     if _sync_enabled(snapshot):
-        if snapshot.sync_destination == "iphone":
-            # iphone-only additionally requires the sync service to be
-            # bound (plan 051 P2.3) — mirrors render.can_accept_images.
-            return snapshot.sync_service_state == "listening"
-        return True
+        return snapshot.sync_service_state == "listening"
     if snapshot.paired_printer is None:
         return False
     if not snapshot.printer_status_fresh:

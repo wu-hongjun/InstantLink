@@ -468,7 +468,13 @@ def test_ready_footer_exposes_upload_credentials_when_printer_is_paired() -> Non
         )
     )
 
-    assert lines == (("KEY1 Setting", "KEY2 Refresh", "KEY3 Network"),)
+    assert lines == (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
+
+
+def test_no_printer_footer_keeps_sync_mode_one_press_away() -> None:
+    lines = _footer_label_lines(UiSnapshot(mode=UiMode.NEEDS_PAIRING, ftp_host="192.168.7.1"))
+
+    assert lines == (("KEY1 Pair", "KEY2 Sync", "KEY3 Pair"),)
 
 
 def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
@@ -1607,66 +1613,7 @@ def test_iphone_only_without_ftp_path_reports_only_ftp_cause() -> None:
     assert render_snapshot(snapshot).size == (240, 240)
 
 
-def test_both_mode_printer_off_shows_paused_note_and_stays_ready() -> None:
-    from instantlink_bridge.ui.render import sync_print_paused_note
-
-    snapshot = UiSnapshot(
-        mode=UiMode.READY,
-        ftp_host="192.168.7.1",
-        camera_receive_ready=True,
-        hotspot_host="192.168.8.1",
-        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
-        printer_status_fresh=False,
-        sync_destination="both",
-        sync_outbox_depth=3,
-        sync_client_recent=True,
-    )
-
-    assert can_accept_images(snapshot)
-    assert sync_print_paused_note(snapshot) == "Printer off · photos sync only"
-    assert render_snapshot(snapshot).size == (240, 240)
-
-
-def test_both_mode_no_film_downgrades_to_paused_note() -> None:
-    from instantlink_bridge.ui.render import sync_print_paused_note
-
-    snapshot = UiSnapshot(
-        mode=UiMode.READY,
-        ftp_host="192.168.7.1",
-        camera_receive_ready=True,
-        hotspot_host="192.168.8.1",
-        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
-        printer_status_fresh=True,
-        film_remaining=0,
-        sync_destination="both",
-    )
-
-    assert can_accept_images(snapshot)
-    assert sync_print_paused_note(snapshot) == "No film · photos sync only"
-    assert render_snapshot(snapshot).size == (240, 240)
-
-
-def test_both_mode_healthy_printer_has_no_paused_note() -> None:
-    from instantlink_bridge.ui.render import sync_print_paused_note
-
-    snapshot = UiSnapshot(
-        mode=UiMode.READY,
-        ftp_host="192.168.7.1",
-        camera_receive_ready=True,
-        hotspot_host="192.168.8.1",
-        paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
-        printer_status_fresh=True,
-        film_remaining=8,
-        sync_destination="both",
-    )
-
-    assert sync_print_paused_note(snapshot) is None
-    assert can_accept_images(snapshot)
-
-
 def test_print_only_destination_keeps_printer_gate() -> None:
-    from instantlink_bridge.ui.render import sync_print_paused_note
-
     snapshot = UiSnapshot(
         mode=UiMode.READY,
         ftp_host="192.168.7.1",
@@ -1674,10 +1621,8 @@ def test_print_only_destination_keeps_printer_gate() -> None:
         sync_destination="print",
     )
 
-    # Print-only: no printer means no readiness, and no paused note either
-    # (printer trouble owns the full screen in print mode).
+    # Print mode: no Printer means no readiness.
     assert not can_accept_images(snapshot)
-    assert sync_print_paused_note(snapshot) is None
 
 
 # ---------------------------------------------------------------------------
@@ -1838,51 +1783,8 @@ def test_iphone_only_ready_while_listening_claims_sync_ready() -> None:
     assert readiness_cause_texts(snapshot) == []
 
 
-def test_both_mode_sync_unavailable_note_beats_paused_note(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Both-mode keeps the READY print card, but a dead sync service must
-    surface as the actionable note — including over the "photos sync only"
-    claim, which would be false with nothing listening."""
-
-    from instantlink_bridge.ui.render import sync_unavailable_note
-
-    snapshot = UiSnapshot(
-        mode=UiMode.READY,
-        ftp_host="192.168.7.1",
-        sync_destination="both",
-        camera_receive_ready=True,
-        sync_service_state="unavailable",
-    )
-    assert sync_unavailable_note(snapshot) == "Sync failed · restart bridge"
-
-    drawn = _drawn_texts(monkeypatch, snapshot)
-
-    assert "Sync failed · restart bridge" in drawn
-    assert "Printer off · photos sync only" not in drawn
-
-
-def test_both_mode_sync_note_absent_while_listening() -> None:
-    from instantlink_bridge.ui.render import sync_unavailable_note
-
-    snapshot = UiSnapshot(
-        mode=UiMode.READY,
-        ftp_host="192.168.7.1",
-        sync_destination="both",
-        camera_receive_ready=True,
-        sync_service_state="listening",
-    )
-
-    assert sync_unavailable_note(snapshot) is None
-    # Both-mode readiness is not gated on the sync service: the print path
-    # (and the disk spool) still accept uploads during the startup window.
-    assert can_accept_images(snapshot)
-
-
 # ---------------------------------------------------------------------------
-# Plan 051 P2.6: sync-ready footer honesty — iphone-only must not advertise
-# the dead printer-poll refresh or the printer-scan hold; KEY3 pairs the
-# iPhone instead. Both-mode without a printer advertises KEY3 printer pair.
+# Plan 055: the home footer exposes the one-press Print/Sync mode switch.
 # ---------------------------------------------------------------------------
 
 
@@ -1895,32 +1797,32 @@ def test_footer_iphone_only_offers_settings_and_iphone_pairing() -> None:
         sync_service_state="listening",
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "", "KEY3 iPhone"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Print", "KEY3 iPhone"),)
 
 
-def test_footer_both_mode_without_printer_offers_key3_pair() -> None:
+def test_footer_print_mode_without_printer_offers_sync_and_pair() -> None:
     snapshot = UiSnapshot(
         mode=UiMode.READY,
         ftp_host="192.168.7.1",
-        sync_destination="both",
+        sync_destination="print",
         camera_receive_ready=True,
         sync_service_state="listening",
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Refresh", "KEY3 Pair"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Sync", "KEY3 Pair"),)
 
 
-def test_footer_both_mode_with_printer_keeps_network_shortcut() -> None:
+def test_footer_print_mode_with_printer_keeps_network_shortcut() -> None:
     snapshot = UiSnapshot(
         mode=UiMode.READY,
         ftp_host="192.168.7.1",
-        sync_destination="both",
+        sync_destination="print",
         camera_receive_ready=True,
         sync_service_state="listening",
         paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Refresh", "KEY3 Network"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
 
 
 # ---------------------------------------------------------------------------
@@ -1940,9 +1842,6 @@ def test_sync_pair_nudge_shown_until_first_client_ever() -> None:
         sync_service_state="listening",
     )
     assert sync_pair_nudge(never_seen) == "Pair iPhone: press KEY3"
-
-    both_mode = replace(never_seen, sync_destination="both")
-    assert sync_pair_nudge(both_mode) == "Pair iPhone: Settings > Network"
 
     seen_once = replace(never_seen, sync_client_ever_seen=True)
     assert sync_pair_nudge(seen_once) is None
@@ -2005,7 +1904,7 @@ def _sync_chip_snapshot(**overrides: object) -> UiSnapshot:
         ftp_host="192.168.7.1",
         camera_receive_ready=True,
         hotspot_host="192.168.8.1",
-        sync_destination="both",
+        sync_destination="iphone",
         sync_service_state="listening",
         sync_outbox_depth=3,
         sync_client_recent=True,

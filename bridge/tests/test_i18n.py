@@ -143,23 +143,20 @@ def test_hue_help_zh_hans_has_no_trailing_full_stop() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Plan 050: iPhone sync strings — Send to picker, pairing QR, readiness copy
+# Plans 050/055: iPhone sync strings — mode picker, pairing QR, readiness copy
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     ("source", "expected"),
     [
-        ("Send to", "发送到"),
-        ("Where received photos go", "接收照片的去向"),
-        ("Both", "两者"),
+        ("Mode", "模式"),
+        ("Sync", "同步"),
         ("iPhone pairing", "iPhone 配对"),
         ("Show a QR code to pair your iPhone", "显示二维码以配对 iPhone"),
         ("Scan with InstantLink app", "请用 InstantLink App 扫码"),
         ("Pairing unavailable", "配对不可用"),
         ("Sync to iPhone", "同步到 iPhone"),
-        ("Printer off · photos sync only", "打印机已关闭 · 仅同步照片"),
-        ("No film · photos sync only", "无相纸 · 仅同步照片"),
         # The lowercase "connected" key stays for the Bluetooth diagnostics
         # row value; the READY-card sync chip now uses "active" (plan 051
         # P3.9) and the templated "{n} pending" (P3.10) below.
@@ -192,18 +189,20 @@ def test_zh_hans_iphone_brand_stays_latin() -> None:
         ("Sync starting", "同步启动中"),
         ("Sync failed · restart bridge", "同步失败 · 请重启桥接"),
         ("Sync starting · try again", "同步启动中 · 请稍后再试"),
-        ("Enable in Print > Send to", "请在 打印 > 发送到 中启用"),
+        ("Switch to Sync mode first", "请先切换到同步模式"),
         ("Pair iPhone: press KEY3", "配对 iPhone：按 KEY3"),  # noqa: RUF001
-        ("Pair iPhone: Settings > Network", "配对 iPhone：设置 > 网络"),  # noqa: RUF001
         ("KEY3 Pair", "KEY3 配对"),
         (
-            "Where received photos go · Pair iPhone: Network page",
-            "接收照片的去向 · 配对 iPhone：网络页",  # noqa: RUF001
+            "Print or sync received photos · Pair iPhone: Network page",
+            "打印或同步接收的照片 · 配对 iPhone：网络页",  # noqa: RUF001
         ),
         (
-            "Show a QR code to pair your iPhone · Send to: Print page",
-            "显示二维码以配对 iPhone · 发送到：打印页",  # noqa: RUF001
+            "Show a QR code to pair your iPhone · Mode: Print page",
+            "显示二维码以配对 iPhone · 模式：打印页",  # noqa: RUF001
         ),
+        ("KEY1 Pair", "KEY1 配对"),
+        ("KEY2 Print", "KEY2 打印"),
+        ("KEY2 Sync", "KEY2 同步"),
     ],
 )
 def test_zh_hans_sync_pass2_strings(source: str, expected: str) -> None:

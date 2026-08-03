@@ -10,6 +10,81 @@ and OS/runtime. Every number below is measured on real hardware unless marked
 
 **Both symptoms turned out to be bugs, not slow hardware.**
 
+## Verified on hardware (2026-08-03)
+
+Deployed to the live Pi and confirmed with a real print: Sony a7C II →
+`DSC01595.HIF` (5.19 MB) → hotspot FTP → Instax Square `INSTAX-52006924`.
+
+### Boot — fixed
+
+| | Before | After |
+|---|---|---|
+| `systemd-analyze` total | **1 min 35.8 s** | **20.1–20.5 s** |
+| Boot splash on screen | **95.79 s** | **9.87 s** |
+| `/dev/fb1` tags | `:seat:` | `:systemd:seat:` |
+| `dev-fb1.device` | inactive | active |
+| FTP listening | 14.34 s | 13.72 s |
+| `bridge.ready` | 16.55 s | 15.33 s |
+
+Confirmed stable across three separate cold boots, including an unplanned
+power cycle.
+
+### Print path — both changes fired
+
+```
+07:37:29.312  bridge.print_start         path=…/DSC01595.HIF
+07:37:29.316  instantlink.image_prepared source=preview model=square
+                                          bytes=102728 quality=90 prepare_ms=0
+```
+
+* **T1.1 confirmed** — `source=preview`, `prepare_ms=0`, logged 4 ms after
+  print start. The pipeline ran once (building the preview), not twice.
+* **T1.3 confirmed** — `quality=90` handed to the core, not the configured
+  `100`. At 102 728 bytes against Square's 105 000 budget the core's search
+  accepts on its first encode instead of inflating to ~400 KB.
+* **No OOM kills**; 181 MB available throughout.
+
+Full cycle: FTP upload 7.56 s → preview build ~1.85 s → 5.00 s countdown →
+BLE transfer and print 24.03 s ≈ **38.4 s** end to end. The 24 s print and
+7.6 s upload dominate; transcode does not. Square's `packet_delay_ms=150`
+across ~57 chunks is ~8.5 s of that 24 s by design.
+
+### Import cost
+
+Min-of-7 subprocess runs on the Pi: ~1676 ms → **1442 ms**. `-X importtime`
+confirms `segno`, `importlib.metadata` and `multiprocessing` are absent from
+the service import path.
+
+### Transcode, and a caveat that changes Tier 2's priority
+
+Benchmarked on the Pi with a realistic 29 MB / 33 MP JPEG (the quality search
+actually engaging), Square:
+
+| Profile | Time |
+|---|---|
+| Live config after T2.1 + `sharpness = 0` | **2743 ms** |
+| Same with `sharpness = 5` restored | 4654 ms |
+| No adjustments at all | 2612 ms |
+
+* Dropping `sharpness` 5 → 0 saved **1911 ms**, within 1 % of the audit's
+  1893 ms prediction. That setting is a factor of **1.05** applied at 8.2 MP
+  and then downscaled 4× — it was costing 41 % of transcode to do something
+  the resize almost entirely erased.
+* Saturation now costs **131 ms instead of 923 ms** (T2.1), same pixels.
+
+**But the real print was a `.HIF`, not a JPEG.** The HEIF path uses
+`heif-thumbnailer -s 1600`, so the working image is ~1600 px rather than the
+3504×2336 the JPEG draft path produces. The JPEG benchmarks above therefore
+do **not** describe a HIF workflow: T2.1's saving is proportionally smaller
+there, and **T2.2 (the `MINI_WORKING_EDGE` constant) barely matters at all**.
+Re-measure against the actual source format before investing in T2.2.
+
+### Not yet exercised
+
+**T1.6** cannot fire while T1.1 succeeds — it is the fallback for
+`auto_print_delay_s = 0`, where no preview is built. Measuring it needs a
+separate run with that config.
+
 ## Measured baseline
 
 ### Boot
@@ -374,7 +449,15 @@ Note: dropping `optimize=True` during the search saves only ~14 ms on the Pi
 
 - **`incoming/` is never pruned.** 94 MB of `.HIF` files dated May–June 2026 on the
   live unit. `bridge/CLAUDE.md` states "storage is ephemeral" — this is a spec
-  violation and unbounded SD wear.
+  violation and unbounded SD wear. **Fixed (2026-08-03):** new
+  `[ftp].incoming_budget_mb` (default 512), enforced by `prune_incoming_dir`
+  oldest-first at startup *and* on every arrival. Both call sites are needed
+  for the reason recorded under T2.5's landmines: the appliance is
+  hard-powered-off and the image worker can be OOM-killed, so no
+  completion-time hook can be relied on. The most recent 8 files and anything
+  modified within 5 minutes are exempt regardless of budget, which is what
+  keeps a queued or mid-print file safe — the queue drains one job at a time
+  and a print takes tens of seconds.
 - **`boot_splash.py` (93 lines) is dead code** — the unit uses `dd` (`:31`) and
   nothing imports it.
 - **Stale venv path**: `_editable_impl_instantbridge.pth` points at the removed

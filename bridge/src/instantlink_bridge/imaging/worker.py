@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import multiprocessing
 from collections.abc import Callable
 from dataclasses import dataclass
-from multiprocessing.connection import Connection
 from pathlib import Path
-from typing import Literal, Protocol, cast
+from typing import TYPE_CHECKING, Literal, Protocol, cast
+
+if TYPE_CHECKING:
+    from multiprocessing.connection import Connection
 
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.imaging.pipeline import (
@@ -18,6 +19,7 @@ from instantlink_bridge.imaging.pipeline import (
     PreparedImage,
     PrintEdit,
     UnsupportedImageError,
+    prepare_for_instantlink_backend,
     prepare_for_instax,
 )
 from instantlink_bridge.imaging.postprocess import AdjustmentProfile
@@ -41,6 +43,9 @@ class ImagePreparationRequest:
     quality: int = 100
     edit: PrintEdit | None = None
     adjustments: AdjustmentProfile | None = None
+    # False selects the InstantLink-backend flavour, which leaves the
+    # model transport flip to InstantLink itself (plan 056 T1.1).
+    apply_model_flip: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,6 +138,7 @@ class ImagePreparationWorker:
         edit: PrintEdit | None = None,
         adjustments: AdjustmentProfile | None = None,
         timeout_s: float | None = None,
+        apply_model_flip: bool = True,
     ) -> PreparedImage:
         """Prepare an image asynchronously in a killable worker process."""
 
@@ -143,6 +149,7 @@ class ImagePreparationWorker:
             quality=quality,
             edit=edit,
             adjustments=adjustments,
+            apply_model_flip=apply_model_flip,
         )
         async with self._lock:
             if self._termination_failed:
@@ -288,8 +295,15 @@ async def prepare_for_instax_async(
     adjustments: AdjustmentProfile | None = None,
     timeout_s: float | None = None,
     worker: ImagePreparationWorker | None = None,
+    apply_model_flip: bool = True,
 ) -> PreparedImage:
-    """Prepare an image with the default killable process worker."""
+    """Prepare an image with the default killable process worker.
+
+    ``apply_model_flip=False`` selects the InstantLink-backend flavour: the
+    model transport flip is left to InstantLink, so the result is the upright
+    image and is byte-identical to what the print path would build for itself
+    (plan 056 T1.1).
+    """
 
     image_worker = worker or default_image_preparation_worker()
     return await image_worker.prepare(
@@ -300,10 +314,15 @@ async def prepare_for_instax_async(
         edit=edit,
         adjustments=adjustments,
         timeout_s=timeout_s,
+        apply_model_flip=apply_model_flip,
     )
 
 
 def _create_process(request: ImagePreparationRequest) -> _WorkerHandle:
+    # Imported here rather than at module scope (plan 056 T1.5): ~25 ms of
+    # boot-path import cost for a module only needed once a job actually runs.
+    import multiprocessing
+
     receive_connection, send_connection = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
         target=_run_prepare_in_child,
@@ -322,7 +341,10 @@ def _run_prepare_in_child(
     request: ImagePreparationRequest,
 ) -> None:
     try:
-        prepared = prepare_for_instax(
+        prepare = (
+            prepare_for_instax if request.apply_model_flip else prepare_for_instantlink_backend
+        )
+        prepared = prepare(
             request.source_path,
             request.model,
             fit=request.fit,

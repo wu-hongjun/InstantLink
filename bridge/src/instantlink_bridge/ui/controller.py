@@ -32,6 +32,7 @@ from instantlink_bridge.config import (
 )
 from instantlink_bridge.imaging.pipeline import (
     ImagePipelineError,
+    PreparedImage,
     PrintEdit,
     create_preview_from_prepared,
 )
@@ -498,6 +499,10 @@ class BridgeUi:
         self._preview_image: Image.Image | None = None
         self._preview_received: ReceivedImage | None = None
         self._preview_session_token = 0
+        # The most recent preview's InstantLink-ready image, handed to the
+        # print path so it need not re-run the pipeline (plan 056 T1.1).
+        self._prepared_print_image: PreparedImage | None = None
+        self._prepared_print_key: tuple[Path, PrintEdit] | None = None
         self._ignore_actions_until = 0.0
         self._settings_page = SettingsPage.MAIN
         self._settings_indices: dict[SettingsPage, int] = {page: 0 for page in SETTINGS_BY_PAGE}
@@ -758,6 +763,11 @@ class BridgeUi:
         self._preview_tool = "zoom"
         self._preview_image = None
         self._preview_received = received
+        # Drop any image left by an earlier session: the (path, edit) key alone
+        # would not notice a config change (fit/quality/adjustments) between
+        # two previews of the same file (plan 056 T1.1).
+        self._prepared_print_image = None
+        self._prepared_print_key = None
         self._preview_session_token += 1
         session_token = self._preview_session_token
         loop = asyncio.get_running_loop()
@@ -857,6 +867,12 @@ class BridgeUi:
                 fmt=self._config.adjustments.datestamp_format,
             )
             adjustments = _replace(adjustments, datestamp_text=datestamp_text)
+        # apply_model_flip=False builds the InstantLink-backend flavour, which
+        # is both what the LCD should show (the flip is a transport quirk, not
+        # a visual one) and byte-identical to what the print path would build
+        # for itself — so `take_prepared_print_image` can hand this straight to
+        # the printer instead of running the whole pipeline a second time
+        # (plan 056 T1.1).
         prepared = await prepare_for_instax_async(
             received.path,
             model,
@@ -865,8 +881,34 @@ class BridgeUi:
             edit=edit,
             adjustments=adjustments,
             timeout_s=PREVIEW_BUILD_TIMEOUT_S,
+            apply_model_flip=False,
         )
+        self._prepared_print_image = prepared
+        self._prepared_print_key = (received.path, edit)
         return await asyncio.to_thread(create_preview_from_prepared, prepared)
+
+    def take_prepared_print_image(
+        self,
+        received: ReceivedImage,
+        edit: PrintEdit | None,
+    ) -> PreparedImage | None:
+        """Return the preview's prepared image when it matches ``edit`` exactly.
+
+        Consumed once: the caller owns it afterwards, and a stale entry can
+        never outlive the preview session that produced it (plan 056 T1.1).
+        The printer re-verifies ``prepared.model`` against the model it detects
+        on connect before trusting the bytes.
+        """
+
+        prepared = self._prepared_print_image
+        key = self._prepared_print_key
+        self._prepared_print_image = None
+        self._prepared_print_key = None
+        if prepared is None or key is None:
+            return None
+        if key != (received.path, edit if edit is not None else PrintEdit()):
+            return None
+        return prepared
 
     async def _resolve_printer_model_for_preview(self) -> PrinterModel | None:
         model = self._known_printer_model()

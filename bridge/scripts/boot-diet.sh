@@ -26,9 +26,29 @@ PROTECTED_UNITS=(
   systemd-networkd.service
 )
 
+# Development conveniences that must not ship on a product image (plan 056
+# T1.7). Measured on the dev unit: tailscaled sits in the boot critical chain
+# at +5.17 s and is the single largest process at 62 MB RSS; together with the
+# GitHub Actions runner (~38 MB + node) and rpi-connectd (~7.5 MB) that is
+# ~110 MB of 512 MB, and the proximate cause of the zram pressure that swaps
+# the bridge's own pages out.
+#
+# Deliberately NOT in SAFE_DISABLE_UNITS: --apply is routine, and on a dev unit
+# tailscaled is how you reach the Pi. These are only touched by --production.
+DEV_ONLY_UNITS=(
+  tailscaled.service
+  rpi-connectd.service
+)
+
+# GitHub Actions runner units are named per registration
+# (actions.runner.<owner>-<repo>.<name>.service), so they are discovered by
+# glob rather than listed.
+DEV_ONLY_UNIT_GLOBS=(
+  'actions.runner.*.service'
+)
+
 REPORT_ONLY_UNITS=(
   instantlink-bridge-boot-splash.service
-  tailscaled.service
   hciuart.service
   ModemManager.service
   cups.service
@@ -40,19 +60,25 @@ REPORT_ONLY_UNITS=(
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/boot-diet.sh [--report|--apply]
+Usage: scripts/boot-diet.sh [--report|--apply|--production]
 
 Reports or applies the conservative InstantLink Bridge boot diet on a target Pi.
 
 Modes:
-  --report  Print boot timings, protected service state, and diet candidates.
-            This is the default and makes no changes.
-  --apply   Disable only non-network, non-BLE background units from the safe
-            diet list, then print the resulting service state.
+  --report      Print boot timings, protected service state, and diet
+                candidates. This is the default and makes no changes.
+  --apply       Disable only non-network, non-BLE background units from the
+                safe diet list, then print the resulting service state.
+  --production  Everything --apply does, PLUS disable the development-only
+                units (see below). Intended for building a product image.
 
 The apply mode intentionally preserves NetworkManager, systemd-networkd,
 dnsmasq, bluetooth/BlueZ, and instantlink-bridge.service so hotspot mode, peer Wi-Fi,
 USB camera networking, and BLE reconnects remain intact.
+
+WARNING: --production disables tailscaled, rpi-connectd, and any GitHub
+Actions runner. On a development unit tailscaled is typically how you reach
+the Pi, so run it only against an image you can still access locally.
 USAGE
 }
 
@@ -64,6 +90,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --apply)
       MODE=apply
+      shift
+      ;;
+    --production)
+      MODE=production
       shift
       ;;
     -h|--help)
@@ -240,8 +270,30 @@ report() {
   print_units "Protected service state" "${PROTECTED_UNITS[@]}"
   print_units "Safe diet candidates" "${SAFE_DISABLE_UNITS[@]}" "${SAFE_STOP_UNITS[@]}"
   print_units "Report-only candidates" "${REPORT_ONLY_UNITS[@]}"
+
+  local dev_units=()
+  mapfile -t dev_units < <(dev_only_units)
+  if [[ ${#dev_units[@]} -gt 0 ]]; then
+    print_units "Development-only (--production disables)" "${dev_units[@]}"
+  fi
+
   print_boot_config
   print_app_milestones
+}
+
+# Echo the development-only units present on this host, one per line, expanding
+# the per-registration globs (plan 056 T1.7).
+dev_only_units() {
+  local unit glob
+  for unit in "${DEV_ONLY_UNITS[@]}"; do
+    if unit_exists "${unit}"; then
+      printf '%s\n' "${unit}"
+    fi
+  done
+  for glob in "${DEV_ONLY_UNIT_GLOBS[@]}"; do
+    systemctl list-unit-files --no-legend --no-pager "${glob}" 2>/dev/null |
+      awk '{ print $1 }'
+  done
 }
 
 apply_diet() {
@@ -259,8 +311,34 @@ apply_diet() {
   print_units "Safe diet candidates after apply" "${SAFE_DISABLE_UNITS[@]}" "${SAFE_STOP_UNITS[@]}"
 }
 
-if [[ "${MODE}" == "apply" ]]; then
+apply_production_diet() {
   apply_diet
-else
-  report
-fi
+
+  local dev_units=()
+  mapfile -t dev_units < <(dev_only_units)
+  if [[ ${#dev_units[@]} -eq 0 ]]; then
+    printf '\nNo development-only units present.\n'
+    return
+  fi
+
+  printf '\nDisabling development-only units (remote access may be lost):\n'
+  local unit
+  for unit in "${dev_units[@]}"; do
+    stop_unit_if_present "${unit}"
+    disable_unit_if_present "${unit}"
+  done
+
+  print_units "Development-only after apply" "${dev_units[@]}"
+}
+
+case "${MODE}" in
+  apply)
+    apply_diet
+    ;;
+  production)
+    apply_production_diet
+    ;;
+  *)
+    report
+    ;;
+esac

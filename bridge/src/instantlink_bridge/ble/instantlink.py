@@ -566,16 +566,21 @@ class InstantLinkBackend:
         # which can disagree with the printer we actually detected, and models
         # differ in output dimensions — so both go through the same guard.
         prepared = prepared_image
+        source = "preview"
         if prepared is None and speculative is not None:
             prepared = _speculative_prepared(speculative)
+            source = "speculative"
         if prepared is not None and prepared.model is not model:
             LOGGER.info(
-                "instantlink.prepared_discarded expected=%s prepared=%s",
+                "instantlink.prepared_discarded expected=%s prepared=%s source=%s",
                 model.value,
                 prepared.model.value,
+                source,
             )
             prepared = None
+        prepare_started = time.monotonic()
         if prepared is None:
+            source = "inline"
             try:
                 prepared = prepare_for_instantlink_backend(
                     image_path,
@@ -589,6 +594,19 @@ class InstantLinkBackend:
                 raise
             except Exception as exc:
                 raise ImagePipelineError("Image unsupported") from exc
+
+        # source=preview means the LCD preview's image was reused and the
+        # pipeline did not run again; speculative means it ran alongside the
+        # BLE connect; inline means it ran here on the critical path
+        # (plan 056 T1.1/T1.6). prepare_ms is ~0 for anything but inline.
+        LOGGER.info(
+            "instantlink.image_prepared source=%s model=%s bytes=%d quality=%d prepare_ms=%.0f",
+            source,
+            prepared.model.value,
+            len(prepared.data),
+            prepared.quality,
+            (time.monotonic() - prepare_started) * 1000,
+        )
 
         temp_path: Path | None = None
         try:

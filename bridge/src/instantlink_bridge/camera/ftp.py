@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import shutil
+import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,80 @@ LOGGER = logging.getLogger(__name__)
 INSECURE_FTP_PASSWORDS = {"", "change-me", "instax"}
 
 BridgeSnapshotProvider = Callable[[], UiSnapshot]
+
+
+INCOMING_PRUNE_KEEP_NEWEST = 8
+INCOMING_PRUNE_GRACE_S = 300.0
+
+
+def prune_incoming_dir(
+    incoming_dir: Path,
+    *,
+    budget_bytes: int,
+    keep_newest: int = INCOMING_PRUNE_KEEP_NEWEST,
+    grace_s: float = INCOMING_PRUNE_GRACE_S,
+    now: float | None = None,
+) -> list[Path]:
+    """Delete the oldest received originals until the directory fits its budget.
+
+    ``bridge/CLAUDE.md`` states incoming storage is ephemeral, but nothing
+    ever removed these files. A live unit was found holding 94 MB of camera
+    originals dating back two months (plan 056) — unbounded SD growth and
+    wear on a battery appliance.
+
+    Two files are never removed regardless of budget: the ``keep_newest`` most
+    recent, and anything modified within ``grace_s``. That is what keeps a
+    queued or mid-print file safe — the receive queue is drained one job at a
+    time and a print takes tens of seconds, so the margin is wide.
+
+    Best effort by design: a scan or unlink failure is logged and skipped
+    rather than raised, because pruning must never fail a receive.
+
+    Returns the paths actually deleted.
+    """
+
+    moment = time.time() if now is None else now
+    try:
+        candidates = [entry for entry in incoming_dir.iterdir() if entry.is_file()]
+    except OSError:
+        LOGGER.warning("ftp.incoming_prune_scan_failed dir=%s", incoming_dir, exc_info=True)
+        return []
+
+    stats: list[tuple[float, int, Path]] = []
+    for path in candidates:
+        try:
+            info = path.stat()
+        except OSError:
+            continue
+        stats.append((info.st_mtime, info.st_size, path))
+
+    stats.sort(key=lambda entry: entry[0])  # oldest first
+    total_bytes = sum(size for _, size, _ in stats)
+    protected = {path for _, _, path in stats[-keep_newest:]} if keep_newest > 0 else set()
+
+    removed: list[Path] = []
+    for mtime, size, path in stats:
+        if total_bytes <= budget_bytes:
+            break
+        if path in protected or moment - mtime < grace_s:
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            LOGGER.warning("ftp.incoming_prune_unlink_failed path=%s", path, exc_info=True)
+            continue
+        total_bytes -= size
+        removed.append(path)
+        LOGGER.info("ftp.incoming_pruned file=%s size=%s", path.name, size)
+
+    if removed:
+        LOGGER.info(
+            "ftp.incoming_prune_complete removed=%s remaining_bytes=%s budget_bytes=%s",
+            len(removed),
+            total_bytes,
+            budget_bytes,
+        )
+    return removed
 
 
 class FtpServiceFailedError(RuntimeError):
@@ -152,6 +227,12 @@ class FtpReceiveService:
         self._stopping = False
         self._config.incoming_dir.parent.mkdir(parents=True, exist_ok=True)
         self._config.incoming_dir.mkdir(parents=True, exist_ok=True)
+        # Startup sweep: the appliance is hard-powered-off and the image
+        # worker can be OOM-killed, so neither a completion hook nor an
+        # arrival-time prune alone is enough to bound this directory
+        # (plan 056). Grace/keep-newest do not apply at boot — nothing is in
+        # flight yet — but they cost nothing here.
+        self._prune_incoming()
         self._thread = Thread(target=self._run_server, name="instantlink-bridge-ftp", daemon=True)
         self._thread.start()
         if not self._started.wait(timeout=5):
@@ -313,7 +394,17 @@ class FtpReceiveService:
             self.config.mode.value,
             self._queue.qsize(),
         )
+        # Prune before handing off, so the directory is bounded even if this
+        # job is the one that dies. The file just received is inside the
+        # keep-newest/grace window, so it is never a prune candidate.
+        self._prune_incoming()
         self._handoff_received_image(path, remote_ip)
+
+    def _prune_incoming(self) -> None:
+        prune_incoming_dir(
+            self._config.incoming_dir,
+            budget_bytes=self._config.incoming_budget_mb * 1024 * 1024,
+        )
 
     def _normalize_received_file_path(self, path: Path, remote_ip: str) -> Path | None:
         incoming_dir = self._config.incoming_dir.resolve()

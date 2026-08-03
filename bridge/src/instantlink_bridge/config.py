@@ -159,6 +159,11 @@ class FtpConfig:
     username: str = "ib"
     password: str = "change-me"
     incoming_dir: Path = Path("/var/lib/InstantLinkBridge/incoming")
+    # Disk budget for received camera originals. Storage is documented as
+    # ephemeral, but nothing pruned this directory before plan 056 — a live
+    # unit was found holding two months of originals. Provisioning-level, like
+    # [sync].outbox_budget_mb; not editable from the LCD.
+    incoming_budget_mb: int = 512
     preferred_wifi_host: str | None = None
 
 
@@ -575,6 +580,7 @@ def render_config(config: BridgeConfig) -> str:
         f"username = {_toml_string(config.ftp.username)}",
         f"password = {_toml_string(config.ftp.password)}",
         f"incoming_dir = {_toml_string(str(config.ftp.incoming_dir))}",
+        f"incoming_budget_mb = {config.ftp.incoming_budget_mb}",
         preferred_wifi,
         "",
         "[printer]",
@@ -668,6 +674,9 @@ def _load_ftp_config(data: object) -> FtpConfig:
             "[ftp].preferred_wifi_host",
             hotspot_host,
         )
+    incoming_budget_mb = int(data.get("incoming_budget_mb", 512))
+    if incoming_budget_mb < 1:
+        raise ValueError("[ftp].incoming_budget_mb must be at least 1")
     return FtpConfig(
         mode=parse_ftp_receive_mode(data.get("mode", "hotspot")),
         bind_host=str(data.get("bind_host", "0.0.0.0")),
@@ -677,6 +686,7 @@ def _load_ftp_config(data: object) -> FtpConfig:
         username=str(data.get("username", "ib")),
         password=str(data.get("password", "change-me")),
         incoming_dir=Path(str(data.get("incoming_dir", "/var/lib/InstantLinkBridge/incoming"))),
+        incoming_budget_mb=incoming_budget_mb,
         preferred_wifi_host=preferred_wifi_host,
     )
 

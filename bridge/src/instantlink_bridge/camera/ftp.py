@@ -31,6 +31,11 @@ BridgeSnapshotProvider = Callable[[], UiSnapshot]
 
 INCOMING_PRUNE_KEEP_NEWEST = 8
 INCOMING_PRUNE_GRACE_S = 300.0
+# bridge/CLAUDE.md scopes this cache to "queueing, retry, and short-term
+# diagnostics" — a statement about time, which a size budget cannot express.
+# A live unit sat at 98 MB with originals back to May under a 512 MB budget:
+# bounded, but nowhere near ephemeral. Age is what actually retires them.
+INCOMING_MAX_AGE_S = 14 * 24 * 3600.0
 
 
 def prune_incoming_dir(
@@ -39,6 +44,7 @@ def prune_incoming_dir(
     budget_bytes: int,
     keep_newest: int = INCOMING_PRUNE_KEEP_NEWEST,
     grace_s: float = INCOMING_PRUNE_GRACE_S,
+    max_age_s: float = INCOMING_MAX_AGE_S,
     now: float | None = None,
 ) -> list[Path]:
     """Delete the oldest received originals until the directory fits its budget.
@@ -48,10 +54,20 @@ def prune_incoming_dir(
     originals dating back two months (plan 056) — unbounded SD growth and
     wear on a battery appliance.
 
-    Two files are never removed regardless of budget: the ``keep_newest`` most
-    recent, and anything modified within ``grace_s``. That is what keeps a
-    queued or mid-print file safe — the receive queue is drained one job at a
-    time and a print takes tens of seconds, so the margin is wide.
+    Two independent rules retire a file:
+
+    * **age** — anything older than ``max_age_s`` goes, regardless of budget.
+      This is the rule that matches the documented retention scope, and the
+      only one that ever fires on a lightly-used unit whose directory sits
+      well under budget.
+    * **budget** — oldest first until the total fits ``budget_bytes``.
+
+    ``grace_s`` exempts recently-modified files from *both*, which is what
+    keeps a queued or mid-print file safe: the receive queue is drained one
+    job at a time and a print takes tens of seconds, so the margin is wide.
+    ``keep_newest`` exempts the most recent files from budget eviction only —
+    deliberately not from age, or a unit holding a handful of months-old
+    originals would never retire any of them.
 
     Best effort by design: a scan or unlink failure is logged and skipped
     rather than raised, because pruning must never fail a receive.
@@ -76,22 +92,40 @@ def prune_incoming_dir(
 
     stats.sort(key=lambda entry: entry[0])  # oldest first
     total_bytes = sum(size for _, size, _ in stats)
-    protected = {path for _, _, path in stats[-keep_newest:]} if keep_newest > 0 else set()
+    newest = {path for _, _, path in stats[-keep_newest:]} if keep_newest > 0 else set()
 
     removed: list[Path] = []
-    for mtime, size, path in stats:
-        if total_bytes <= budget_bytes:
-            break
-        if path in protected or moment - mtime < grace_s:
-            continue
+
+    def drop(path: Path, size: int, reason: str) -> bool:
+        nonlocal total_bytes
         try:
             path.unlink()
         except OSError:
             LOGGER.warning("ftp.incoming_prune_unlink_failed path=%s", path, exc_info=True)
-            continue
+            return False
         total_bytes -= size
         removed.append(path)
-        LOGGER.info("ftp.incoming_pruned file=%s size=%s", path.name, size)
+        LOGGER.info("ftp.incoming_pruned file=%s size=%s reason=%s", path.name, size, reason)
+        return True
+
+    survivors: list[tuple[float, int, Path]] = []
+    for mtime, size, path in stats:
+        age = moment - mtime
+        if age < grace_s:
+            survivors.append((mtime, size, path))
+            continue
+        if age > max_age_s:
+            if not drop(path, size, "age"):
+                survivors.append((mtime, size, path))
+            continue
+        survivors.append((mtime, size, path))
+
+    for mtime, size, path in survivors:
+        if total_bytes <= budget_bytes:
+            break
+        if path in newest or moment - mtime < grace_s:
+            continue
+        drop(path, size, "budget")
 
     if removed:
         LOGGER.info(

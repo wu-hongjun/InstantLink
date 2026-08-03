@@ -76,6 +76,63 @@ def test_budget_can_be_unreachable_without_error(tmp_path: Path) -> None:
     assert prune_incoming_dir(tmp_path, budget_bytes=1 * MB, keep_newest=0) == []
 
 
+DAY = 24 * 3600.0
+
+
+def test_age_retires_files_even_when_far_under_budget(tmp_path: Path) -> None:
+    """The rule that actually fires on a real unit.
+
+    The live Bridge sat at 98 MB against a 512 MB budget with originals back
+    to May — bounded, but nothing a size budget would ever remove.
+    """
+
+    stale = _write(tmp_path, "may.hif", size=5 * MB, age_s=70 * DAY)
+    fresh = _write(tmp_path, "today.hif", size=5 * MB, age_s=1 * DAY)
+
+    removed = prune_incoming_dir(tmp_path, budget_bytes=512 * MB, max_age_s=14 * DAY)
+
+    assert removed == [stale]
+    assert fresh.exists()
+
+
+def test_age_ignores_keep_newest(tmp_path: Path) -> None:
+    """Otherwise a unit holding only old originals would never retire any."""
+
+    for index in range(3):
+        _write(tmp_path, f"old{index}.hif", size=1 * MB, age_s=70 * DAY + index)
+
+    removed = prune_incoming_dir(tmp_path, budget_bytes=512 * MB, keep_newest=8, max_age_s=14 * DAY)
+
+    assert len(removed) == 3
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_age_still_respects_the_in_flight_grace(tmp_path: Path) -> None:
+    # Contrived: mtime older than max_age but inside the grace window. Grace
+    # wins, because grace is the in-flight guarantee.
+    fresh = _write(tmp_path, "in-flight.hif", size=1 * MB, age_s=10)
+
+    removed = prune_incoming_dir(
+        tmp_path, budget_bytes=512 * MB, max_age_s=1.0, grace_s=300.0, keep_newest=0
+    )
+
+    assert removed == []
+    assert fresh.exists()
+
+
+def test_age_and_budget_both_apply(tmp_path: Path) -> None:
+    stale = _write(tmp_path, "stale.hif", size=2 * MB, age_s=70 * DAY)
+    big_old = _write(tmp_path, "big-old.hif", size=9 * MB, age_s=3 * DAY)
+    recent = _write(tmp_path, "recent.hif", size=2 * MB, age_s=2 * DAY)
+
+    removed = prune_incoming_dir(tmp_path, budget_bytes=10 * MB, keep_newest=0, max_age_s=14 * DAY)
+
+    # stale goes on age; that leaves 11 MB against a 10 MB budget, so the
+    # oldest survivor goes on budget too.
+    assert removed == [stale, big_old]
+    assert recent.exists()
+
+
 def test_missing_directory_is_not_an_error(tmp_path: Path) -> None:
     # Pruning must never fail a receive.
     assert prune_incoming_dir(tmp_path / "nope", budget_bytes=1 * MB) == []

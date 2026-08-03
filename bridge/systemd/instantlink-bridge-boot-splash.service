@@ -10,12 +10,19 @@ Description=InstantLink Bridge early LCD boot splash
 # cold-start (~1 s saving). plan 033 L5: ConditionPathExists=/dev/fb1 gates
 # the unit off on the headless SKU where /dev/fb1 does not exist.
 DefaultDependencies=no
-# Order against the auto-generated .device unit for /dev/fb1 so the kernel has
-# finished probing the fbtft overlay before we evaluate ConditionPathExists.
+# Order against the .device unit for /dev/fb1 so the kernel has finished
+# probing the fbtft overlay before we evaluate ConditionPathExists.
 # systemd-udev-settle.service is a no-op shim on Trixie and does NOT wait for
 # udev queue drain, so it was racy on the LCD-SKU (silent splash skip).
 # On the headless SKU /dev/fb1 never appears and Wants=dev-fb1.device is a
 # non-fatal request; the ConditionPathExists guard then skips the unit.
+#
+# plan 056 B1/T1.2: this dependency REQUIRES udev/61-instantlink-bridge-fb1.rules
+# (TAG+="systemd" on graphics/fb1). systemd only synthesises a .device unit for
+# devices udev has tagged `systemd`, and no default rule tags framebuffers — so
+# without that rule dev-fb1.device never activates, this unit blocks for the
+# full 90 s DefaultDeviceTimeoutUSec, and the splash runs at t+96 s instead of
+# ~t+5 s. Do not remove one without the other.
 After=local-fs.target dev-fb1.device
 Wants=dev-fb1.device
 ConditionPathExists=/dev/fb1

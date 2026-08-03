@@ -14,7 +14,11 @@ from typing import Any, Protocol, cast
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from instantlink_bridge.ble.models import PrinterModel, spec_for
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile, apply_adjustments
+from instantlink_bridge.imaging.postprocess import (
+    AdjustmentProfile,
+    apply_post_fit_adjustments,
+    apply_pre_fit_adjustments,
+)
 
 
 class ImagePipelineError(RuntimeError):
@@ -178,12 +182,15 @@ def _prepare_for_model(
     2. ``Image.draft`` hint for JPEG sources
     3. ``ImageOps.exif_transpose`` — correct camera orientation
     4. ``convert("RGB")`` — normalise colour space
-    5. ``apply_adjustments`` — colour/overlay adjustments at full source
-       resolution (identity profile in phase 2; wired to user settings
-       in phase 3)
+    5. ``apply_pre_fit_adjustments`` — sharpness / vignette / overlays, which
+       must run at working resolution because they are convolutions or have
+       frame-relative geometry
     6. ``_apply_print_edit`` — per-photo interactive rotate / zoom / offset
     7. ``_fit_image`` — model-aware crop / contain / stretch to print size
-    8. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
+    8. ``apply_post_fit_adjustments`` — hue / saturation / exposure. These are
+       pointwise, so they give the same pixels here as at working resolution
+       for a fraction of the cost (plan 056 T2.1)
+    9. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
     """
     spec = spec_for(model)
     working_size = _working_size_for_model(spec.width, spec.height)
@@ -208,9 +215,12 @@ def _prepare_for_model(
         transposed = _exif_transposed(image)
         prepared = transposed if transposed.mode == "RGB" else transposed.convert("RGB")
         profile = adjustments if adjustments is not None else AdjustmentProfile()
-        prepared = apply_adjustments(prepared, profile)
+        prepared = apply_pre_fit_adjustments(prepared, profile)
         prepared = _apply_print_edit(prepared, edit)
         fitted = _fit_image(prepared, spec.width, spec.height, fit)
+        # Pointwise colour work belongs at print resolution, not working
+        # resolution: same pixels, ~17x less of them (plan 056 T2.1).
+        fitted = apply_post_fit_adjustments(fitted, profile)
     except IMAGE_DECODE_ERRORS as error:
         raise UnsupportedImageError("unsupported or corrupt image file") from error
     finally:

@@ -210,6 +210,93 @@ def apply_adjustments(image: Image.Image, profile: AdjustmentProfile) -> Image.I
     return out
 
 
+def apply_pre_fit_adjustments(image: Image.Image, profile: AdjustmentProfile) -> Image.Image:
+    """Adjustments that must run at working resolution, before ``_fit_image``.
+
+    Sharpness is a 3x3 convolution and vignette/overlay geometry is relative
+    to the frame, so moving these past the resize changes the output. They
+    stay here; plan 056 T2.1 records the case for revisiting them.
+
+    Hue stays here too, and the reason is subtler: it is *pointwise* but not
+    *linear* — an RGB->HSV round trip — so it does not commute with a
+    resampling filter, unlike saturation and exposure. Moving it would change
+    the image, not just speed it up. (This is why it is here and not in
+    ``apply_post_fit_adjustments``, despite costing the most at working
+    resolution; see the OOM note in plan 056 I1.)
+
+    Order within this stage is unchanged: hue first so it operates on the
+    original colour space, vignette after sharpness, overlays last so
+    datestamp/watermark text lands on top of the darkened corners.
+    """
+
+    out = image
+
+    if profile.hue != 0:
+        out = _apply_hue(out, profile.hue)
+
+    if profile.sharpness != 1.0:
+        from PIL import ImageEnhance
+
+        out = ImageEnhance.Sharpness(out).enhance(profile.sharpness)
+
+    if profile.vignette != 0:
+        out = _apply_vignette(out, profile.vignette)
+
+    if profile.datestamp and profile.datestamp_text:
+        out = _render_overlay(out, profile.datestamp_text, anchor="rs")
+
+    if profile.watermark and profile.watermark_text:
+        out = _render_overlay(out, profile.watermark_text, anchor="ls")
+
+    return out
+
+
+def apply_post_fit_adjustments(image: Image.Image, profile: AdjustmentProfile) -> Image.Image:
+    """Linear colour adjustments, applied at print resolution.
+
+    Saturation (a blend toward luma) and exposure (a blend toward black) are
+    both *linear* functions of the pixel values, and resampling is a linear
+    combination of pixels, so the two operations commute: applying them to
+    the fitted output yields the same pixels as applying them at working
+    resolution — for ~1/17th of the work. Measured on a Pi Zero 2 W at
+    8.2 MP vs 600x800: saturation 923 ms -> 51 ms, exposure 1060 ms -> 57 ms
+    (plan 056 T2.1).
+
+    Linearity, not pointwise-ness, is what licenses the move. Hue is
+    pointwise but non-linear and therefore stays in
+    ``apply_pre_fit_adjustments``.
+
+    Two ordering consequences, both deliberate:
+
+    * Sharpness (pre-fit) now runs *before* these rather than after. It is a
+      convolution and these are linear, so results differ slightly; at any
+      realistic sharpness factor this is not visible, and pre-fit sharpening
+      is largely low-passed away by the resize regardless.
+    * Overlays (pre-fit) are now *subject* to these. Saturation does not
+      affect neutral colours, so white-on-black overlay text is unchanged by
+      it; a non-identity exposure will brighten or darken it.
+
+    Clipping is the one real deviation: where a channel saturates at 0 or
+    255, clamping is non-linear and the two orders can differ by a few
+    levels. LANCZOS overshoot near hard edges can also push values into the
+    clamp.
+    """
+
+    out = image
+
+    if profile.saturation != 1.0:
+        from PIL import ImageEnhance
+
+        out = ImageEnhance.Color(out).enhance(profile.saturation)
+
+    if profile.exposure != 1.0:
+        from PIL import ImageEnhance
+
+        out = ImageEnhance.Brightness(out).enhance(profile.exposure)
+
+    return out
+
+
 def _apply_vignette(image: Image.Image, strength: int) -> Image.Image:
     """Apply a radial corner-darkening vignette to ``image``.
 

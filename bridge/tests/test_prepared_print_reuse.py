@@ -10,7 +10,7 @@ from concurrent.futures import Future
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageChops
 
 from instantlink_bridge.ble.instantlink import _speculative_prepared
 from instantlink_bridge.ble.models import PrinterModel
@@ -24,6 +24,13 @@ from instantlink_bridge.imaging.pipeline import (
     _exif_transposed,
     prepare_for_instantlink_backend,
     prepare_for_instax,
+)
+from instantlink_bridge.imaging.postprocess import (
+    AdjustmentProfile,
+    _apply_hue,
+    apply_adjustments,
+    apply_post_fit_adjustments,
+    apply_pre_fit_adjustments,
 )
 from instantlink_bridge.imaging.worker import ImagePreparationRequest, _run_prepare_in_child
 from instantlink_bridge.ui.controller import BridgeUi
@@ -231,6 +238,74 @@ def test_exif_transposed_rotates_when_tag_present(tmp_path: Path) -> None:
         result = _exif_transposed(loaded)
         assert result is not loaded
         assert result.size == (30, 40)
+
+
+# --- T2.1 adjustment stage split -------------------------------------------
+
+
+def _two_tone(size: tuple[int, int] = (800, 600)) -> Image.Image:
+    # Mid-range colours: far enough from 0 and 255 that the factors below do
+    # not clip, since clamping is the one non-linear step in this path.
+    image = Image.new("RGB", size, (80, 150, 110))
+    image.paste((140, 90, 70), (0, 0, size[0] // 2, size[1] // 2))
+    return image
+
+
+def test_linear_adjustments_commute_with_the_resize() -> None:
+    """The premise of T2.1, asserted rather than assumed.
+
+    Saturation and exposure are linear in the pixel values and resampling is a
+    linear combination of pixels, so the two commute. That — not
+    pointwise-ness — is what licenses moving them off the 8.2 MP working
+    image.
+    """
+
+    profile = AdjustmentProfile(saturation=1.3, exposure=1.1)
+    source = _two_tone()
+    target = (200, 150)
+
+    before = apply_adjustments(source, profile).resize(target, Image.Resampling.LANCZOS)
+    after = apply_post_fit_adjustments(source.resize(target, Image.Resampling.LANCZOS), profile)
+
+    worst = max(band[1] for band in ImageChops.difference(before, after).getextrema())
+    assert worst <= 2, f"linear adjustments did not commute with resize (max delta {worst})"
+
+
+def test_hue_does_not_commute_with_the_resize() -> None:
+    """Why hue stays pre-fit despite being the most expensive axis.
+
+    Hue is pointwise but non-linear (an RGB->HSV round trip), so it does not
+    commute with resampling. If this ever starts passing, hue could move to
+    the post-fit stage — until then, moving it would change the image rather
+    than merely speed it up.
+    """
+
+    profile = AdjustmentProfile(hue=30)
+    source = _two_tone()
+    target = (200, 150)
+
+    before = apply_adjustments(source, profile).resize(target, Image.Resampling.LANCZOS)
+    after = _apply_hue(source.resize(target, Image.Resampling.LANCZOS), profile.hue)
+
+    worst = max(band[1] for band in ImageChops.difference(before, after).getextrema())
+    assert worst > 2, "hue now commutes with resize — see if it can move post-fit"
+
+
+def test_stage_split_covers_every_axis_exactly_once() -> None:
+    """Guards against an axis being dropped or applied twice by the split."""
+
+    image = Image.new("RGB", (60, 40), (120, 90, 60))
+    identity = AdjustmentProfile()
+
+    # Each stage must no-op on a profile whose axes all belong to the other.
+    linear_only = AdjustmentProfile(saturation=1.4, exposure=1.3)
+    assert apply_pre_fit_adjustments(image, linear_only) is image
+
+    structural_only = AdjustmentProfile(sharpness=1.6, vignette=40, hue=25)
+    assert apply_post_fit_adjustments(image, structural_only) is image
+
+    assert apply_pre_fit_adjustments(image, identity) is image
+    assert apply_post_fit_adjustments(image, identity) is image
 
 
 # --- T1.6 speculative prep -------------------------------------------------

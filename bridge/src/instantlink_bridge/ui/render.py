@@ -9,7 +9,6 @@ import time
 from collections.abc import Iterable
 from functools import lru_cache
 
-import segno
 from PIL import Image, ImageDraw, ImageFont
 
 from instantlink_bridge.ble.models import PrinterModel
@@ -2426,7 +2425,15 @@ def _sync_pairing_qr_image(payload: str, target_px: int) -> Image.Image:
     SYNC_PAIRING screen is open, and the ~3 fps render tick must not
     re-encode the QR on the Pi Zero 2 W. Always black-on-white — scanners
     need the contrast, so the dark theme does not restyle the code.
+
+    ``segno`` is imported here rather than at module scope (plan 056 T1.5):
+    it costs 164 ms on the Pi Zero 2 W — ``segno/__init__`` unconditionally
+    loads ``writers``, dragging in ``xml.sax.saxutils`` ->
+    ``urllib.request``/``http.client``/``email`` — and this is its only call
+    site, reached only on the SYNC_PAIRING screen.
     """
+
+    import segno
 
     qr = segno.make(payload, error="m")
     # Matrix width in modules including a 2-module quiet zone per side; the

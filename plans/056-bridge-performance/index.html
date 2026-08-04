@@ -1,0 +1,3757 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Rust CLI and macOS 15+ app for Fujifilm Instax Link printers via BLE">
+      
+      
+      
+        <link rel="canonical" href="https://instantlink.hongjunwu.com/plans/056-bridge-performance/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>056 — Bridge performance: boot time and image conversion - InstantLink</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#056-bridge-performance-boot-time-and-image-conversion" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="InstantLink" class="md-header__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InstantLink
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              056 — Bridge performance: boot time and image conversion
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="white"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../001-full-stack-scaffold/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plans
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../research/wifi-aware-iphone-feasibility/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InstantLink" class="md-nav__button md-logo" aria-label="InstantLink" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InstantLink
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wu-hongjun/InstantLink" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wu-hongjun/InstantLink
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/sync-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bridge-firmware-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Firmware Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/reverse-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reverse Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plans
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plans
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../001-full-stack-scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 001 Full-Stack Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../002-ci-cd-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 002 CI/CD Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 003 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../004-app-bundle-and-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 004 App Bundle and Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../005-mock-transport-device-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 005 Mock Transport Device Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-overlay-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 006 Overlay System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-ui-ux-pass-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 007 UI/UX Pass 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../008-ui-ux-pass-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 008 UI/UX Pass 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../009-repo-simplification-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 009 Repo Simplification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../010-ui-ux-pass-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 010 UI/UX Pass 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../011-macos-coordinator-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 011 macOS Coordinator Extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../012-macos-15-liquid-glass-adoption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 012 macOS 15 Baseline and Liquid Glass Adoption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../013-ffi-connection-stage-callbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 013 FFI Connection Stage Callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../014-printer-led-print-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 014 Printer LED Print Phase Feedback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../015-ffi-callback-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 015 FFI Callback Safety and Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../016-transport-command-serialization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 016 Transport Command Serialization and Protocol Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../017-reconnect-fallback-behavior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 017 Reconnect Fallback and Recovery UX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../018-auto-update-signature-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 018 Auto-Update Signature Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../019-packet-assembler-error-surfacing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 019 Packet Assembler Error Surfacing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../020-notification-listener-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 020 Notification Listener Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../021-print-flow-deduplication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 021 Print Flow Deduplication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../022-ffi-device-guard-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 022 FFI Device Guard Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../023-ffi-unsafe-block-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 023 FFI Unsafe Block Discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../024-protocol-build-packet-bounds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 024 Protocol Build Packet Bounds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../025-rand-dependency-upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 025 Rand Dependency Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../026-docs-ffi-symbol-count-and-context-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 026 Docs FFI Symbol Count and Context Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../027-docs-protocol-mini-link-3-flip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 027 Docs Protocol Mini Link 3 Flip
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../028-sparkle-2-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 028 Sparkle 2 Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../029-bridge-control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 029 Bridge Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../030-bridge-secure-management-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 030 Bridge Secure Management and Updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../031-bridge-printer-connection-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 031 Bridge Printer Connection Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../032-bridge-startup-and-power/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 032 Bridge Startup and Power
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../033-bridge-ux-and-headless/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 033 Bridge UX and Headless
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../034-bridge-ux-polish-audit-pass/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 034 Bridge UX Polish Audit Pass
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../035-print-settings-restructure-and-postprocessing-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 035 Print Settings Restructure and Postprocessing Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../036-adjustments-live-preview-and-sliders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 036 Adjustments Live Preview and Sliders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../037-settings-audit-cleanup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 037 Settings Audit Cleanup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../038-bridge-usb-experience-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 038 Bridge USB Experience Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../039-schema-driven-settings-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 039 Schema-Driven Settings Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../040-server-driven-request-timestamps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 040 Server-Driven Request Timestamps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../041-app-ux-optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 041 App UX Optimization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../042-main-window-banner-stack-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 042 Main Window Banner Stack Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../043-main-window-banner-stack-implementation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 043 Main Window Banner Stack Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../044-image-editor-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 044 Image Editor Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../045-desktop-disconnected-printer-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 045 Desktop Disconnected Printer Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../046-desktop-disconnected-printer-implementation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 046 Desktop Disconnected Printer Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../047-photos-style-editor-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 047 Photos-Style Editor Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../048-photos-style-editor-implementation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 048 Photos-Style Editor Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../049-editor-ui-photos-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 049 Editor UI Photos Parity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../050-iphone-auto-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 050 iPhone Auto-Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../051-sync-ux-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 051 Sync UX Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../052-accessorysetupkit-pairing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 052 AccessorySetupKit Pairing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../053-seamless-background-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 053 Seamless Background Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../054-headless-budget-bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan 054 Headless Budget Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/wifi-aware-iphone-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wi-Fi Aware iPhone Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verified-on-hardware-2026-08-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verified on hardware (2026-08-03)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verified on hardware (2026-08-03)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#boot-fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boot — fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#print-path-both-changes-fired" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Print path — both changes fired
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transcode-and-a-caveat-that-changes-tier-2s-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transcode, and a caveat that changes Tier 2's priority
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-yet-exercised" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet exercised
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measured-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured baseline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Measured baseline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#boot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transcode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-headline-bugs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two headline bugs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The two headline bugs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#b1-the-boot-splash-has-never-run-early" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B1 — the boot splash has never run early
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i1-the-pipeline-oom-kills-the-pi-and-runs-35-per-print" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I1 — the pipeline OOM-kills the Pi, and runs 3–5× per print
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-pure-wins-no-output-pixels-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — pure wins, no output pixels change
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1 — pure wins, no output pixels change">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t16-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1.6 detail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t17-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1.7 detail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t11-status-b-implemented-a-outstanding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1.1 status: B implemented, A outstanding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-the-obvious-version-of-a-does-not-work-process-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the obvious version of A does not work — process isolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t13-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1.3 detail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t15-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1.5 detail
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-2-large-wins-that-change-output-pixels-or-need-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — large wins that change output pixels or need validation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 2 — large wins that change output pixels or need validation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t21-adjustments-after-the-fit-1719-and-it-removes-the-oom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2.1 — adjustments after the fit (17–19×, and it removes the OOM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t22-working-size-is-one-constant-from-a-179-win" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2.2 — working size is one constant from a 1.79× win
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t23-cgroup_disablememory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2.3 — cgroup_disable=memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t24-dtparamsd_overclock100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2.4 — dtparam=sd_overclock=100
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t25-encode-seeding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2.5 — encode seeding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-3-deferred" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 — deferred
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ruled-out-with-measurement-do-not-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ruled out with measurement — do not revisit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#landmines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Landmines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bugs-found-incidentally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bugs found incidentally
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-yet-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet measured
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="056-bridge-performance-boot-time-and-image-conversion">056 — Bridge performance: boot time and image conversion<a class="headerlink" href="#056-bridge-performance-boot-time-and-image-conversion" title="Permanent link">&para;</a></h1>
+<h2 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h2>
+<p>Two user-reported symptoms — "the Zero 2 W boots too slowly" and "it converts
+images too slowly" — were audited against the live device (<code>192.168.7.1</code>,
+2026-08-02) by four parallel agents: boot path, Python startup, image pipeline,
+and OS/runtime. Every number below is measured on real hardware unless marked
+<em>estimated</em>.</p>
+<p><strong>Both symptoms turned out to be bugs, not slow hardware.</strong></p>
+<h2 id="verified-on-hardware-2026-08-03">Verified on hardware (2026-08-03)<a class="headerlink" href="#verified-on-hardware-2026-08-03" title="Permanent link">&para;</a></h2>
+<p>Deployed to the live Pi and confirmed with a real print: Sony a7C II →
+<code>DSC01595.HIF</code> (5.19 MB) → hotspot FTP → Instax Square <code>INSTAX-52006924</code>.</p>
+<h3 id="boot-fixed">Boot — fixed<a class="headerlink" href="#boot-fixed" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>systemd-analyze</code> total</td>
+<td><strong>1 min 35.8 s</strong></td>
+<td><strong>20.1–20.5 s</strong></td>
+</tr>
+<tr>
+<td>Boot splash on screen</td>
+<td><strong>95.79 s</strong></td>
+<td><strong>9.87 s</strong></td>
+</tr>
+<tr>
+<td><code>/dev/fb1</code> tags</td>
+<td><code>:seat:</code></td>
+<td><code>:systemd:seat:</code></td>
+</tr>
+<tr>
+<td><code>dev-fb1.device</code></td>
+<td>inactive</td>
+<td>active</td>
+</tr>
+<tr>
+<td>FTP listening</td>
+<td>14.34 s</td>
+<td>13.72 s</td>
+</tr>
+<tr>
+<td><code>bridge.ready</code></td>
+<td>16.55 s</td>
+<td>15.33 s</td>
+</tr>
+</tbody>
+</table>
+<p>Confirmed stable across three separate cold boots, including an unplanned
+power cycle.</p>
+<h3 id="print-path-both-changes-fired">Print path — both changes fired<a class="headerlink" href="#print-path-both-changes-fired" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>07:37:29.312  bridge.print_start         path=…/DSC01595.HIF
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>07:37:29.316  instantlink.image_prepared source=preview model=square
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                                          bytes=102728 quality=90 prepare_ms=0
+</code></pre></div>
+<ul>
+<li><strong>T1.1 confirmed</strong> — <code>source=preview</code>, <code>prepare_ms=0</code>, logged 4 ms after
+  print start. The pipeline ran once (building the preview), not twice.</li>
+<li><strong>T1.3 confirmed</strong> — <code>quality=90</code> handed to the core, not the configured
+  <code>100</code>. At 102 728 bytes against Square's 105 000 budget the core's search
+  accepts on its first encode instead of inflating to ~400 KB.</li>
+<li><strong>No OOM kills</strong>; 181 MB available throughout.</li>
+</ul>
+<p>Full cycle: FTP upload 7.56 s → preview build ~1.85 s → 5.00 s countdown →
+BLE transfer and print 24.03 s ≈ <strong>38.4 s</strong> end to end. The 24 s print and
+7.6 s upload dominate; transcode does not. Square's <code>packet_delay_ms=150</code>
+across ~57 chunks is ~8.5 s of that 24 s by design.</p>
+<h3 id="import-cost">Import cost<a class="headerlink" href="#import-cost" title="Permanent link">&para;</a></h3>
+<p>Min-of-7 subprocess runs on the Pi: ~1676 ms → <strong>1442 ms</strong>. <code>-X importtime</code>
+confirms <code>segno</code>, <code>importlib.metadata</code> and <code>multiprocessing</code> are absent from
+the service import path.</p>
+<h3 id="transcode-and-a-caveat-that-changes-tier-2s-priority">Transcode, and a caveat that changes Tier 2's priority<a class="headerlink" href="#transcode-and-a-caveat-that-changes-tier-2s-priority" title="Permanent link">&para;</a></h3>
+<p>Benchmarked on the Pi with a realistic 29 MB / 33 MP JPEG (the quality search
+actually engaging), Square:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Live config after T2.1 + <code>sharpness = 0</code></td>
+<td><strong>2743 ms</strong></td>
+</tr>
+<tr>
+<td>Same with <code>sharpness = 5</code> restored</td>
+<td>4654 ms</td>
+</tr>
+<tr>
+<td>No adjustments at all</td>
+<td>2612 ms</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Dropping <code>sharpness</code> 5 → 0 saved <strong>1911 ms</strong>, within 1 % of the audit's
+  1893 ms prediction. That setting is a factor of <strong>1.05</strong> applied at 8.2 MP
+  and then downscaled 4× — it was costing 41 % of transcode to do something
+  the resize almost entirely erased.</li>
+<li>Saturation now costs <strong>131 ms instead of 923 ms</strong> (T2.1), same pixels.</li>
+</ul>
+<p><strong>But the real print was a <code>.HIF</code>, not a JPEG.</strong> The HEIF path uses
+<code>heif-thumbnailer -s 1600</code>, so the working image is ~1600 px rather than the
+3504×2336 the JPEG draft path produces. The JPEG benchmarks above therefore
+do <strong>not</strong> describe a HIF workflow: T2.1's saving is proportionally smaller
+there, and <strong>T2.2 (the <code>MINI_WORKING_EDGE</code> constant) barely matters at all</strong>.
+Re-measure against the actual source format before investing in T2.2.</p>
+<h3 id="not-yet-exercised">Not yet exercised<a class="headerlink" href="#not-yet-exercised" title="Permanent link">&para;</a></h3>
+<p><strong>T1.6</strong> cannot fire while T1.1 succeeds — it is the fallback for
+<code>auto_print_delay_s = 0</code>, where no preview is built. Measuring it needs a
+separate run with that config.</p>
+<h2 id="measured-baseline">Measured baseline<a class="headerlink" href="#measured-baseline" title="Permanent link">&para;</a></h2>
+<h3 id="boot">Boot<a class="headerlink" href="#boot" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First pixel on the LCD</td>
+<td><strong>14.4 s</strong></td>
+</tr>
+<tr>
+<td><code>bridge.ready</code> (<code>READY=1</code>)</td>
+<td>16.55 s</td>
+</tr>
+<tr>
+<td>Wi-Fi camera can associate and upload</td>
+<td><strong>20.97 s</strong></td>
+</tr>
+<tr>
+<td><code>multi-user.target</code></td>
+<td>20.86 s</td>
+</tr>
+<tr>
+<td><code>systemd-analyze</code> total</td>
+<td>1 min 36 s ← <strong>artifact, see B1</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Within the service: ExecStart → FTP listening = 4.06 s, → <code>bridge.ready</code> = 6.27 s.
+<code>import instantlink_bridge.app</code> is 1.81 s warm, ~2× that cold.</p>
+<h3 id="transcode">Transcode<a class="headerlink" href="#transcode" title="Permanent link">&para;</a></h3>
+<p>Source: 7008×4672 (32.7 MP) 11.1 MB JPEG q90 4:2:0 — matches a Sony a7C II Fine JPEG.</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identity adjustments</td>
+<td><strong>2491 ms</strong></td>
+</tr>
+<tr>
+<td>Non-identity adjustments</td>
+<td><strong>OOM-killed</strong> (see I1)</td>
+</tr>
+</tbody>
+</table>
+<p>Stage breakdown at the current 8.2 MP working size: decode 973 ms, <code>exif_transpose</code>
+85 ms, <code>convert("RGB")</code> 27 ms, fit (LANCZOS) 449 ms, encode search 270 ms (8 encodes).</p>
+<h2 id="the-two-headline-bugs">The two headline bugs<a class="headerlink" href="#the-two-headline-bugs" title="Permanent link">&para;</a></h2>
+<h3 id="b1-the-boot-splash-has-never-run-early">B1 — the boot splash has never run early<a class="headerlink" href="#b1-the-boot-splash-has-never-run-early" title="Permanent link">&para;</a></h3>
+<p><code>systemd/instantlink-bridge-boot-splash.service:19-20</code> declares
+<code>After=</code>/<code>Wants=dev-fb1.device</code>. udev does not tag fbdev nodes with <code>systemd</code>
+(<code>udevadm info /dev/fb1</code> → <code>TAGS=:seat:</code>), so <code>dev-fb1.device</code> never activates and
+the unit blocks on the full 90 s <code>DefaultDeviceTimeoutUSec</code>. It runs at <strong>t+96.17 s</strong>.</p>
+<p>The entire 1 min 36 s <code>systemd-analyze</code> figure is this one unit. Real boot is ~21 s.</p>
+<p>Consequence: the LCD is dark from power-on until the main UI's first <code>_render()</code> at
+~14.4 s. <strong>This is the most likely source of the "boots too slowly" perception</strong> —
+there is no feedback for two-thirds of the boot, and the thing designed to provide
+it never fires.</p>
+<p>The unit's own comment block (lines 13-18) documents choosing <code>dev-fb1.device</code> over
+<code>systemd-udev-settle</code> to avoid a race. The chosen alternative simply never fires.</p>
+<h3 id="i1-the-pipeline-oom-kills-the-pi-and-runs-35-per-print">I1 — the pipeline OOM-kills the Pi, and runs 3–5× per print<a class="headerlink" href="#i1-the-pipeline-oom-kills-the-pi-and-runs-35-per-print" title="Permanent link">&para;</a></h3>
+<p><strong>OOM:</strong> <code>_apply_vignette</code> (<code>imaging/postprocess.py:265</code>) does
+<code>np.array(image, dtype=np.float32)</code> on the 8.2 MP working image = <strong>98 MB</strong>, plus a
+33 MB factor map, on top of three live 25 MB RGB buffers. The Pi has ~230 MB
+available with 150 MB of swap already consumed. Two reproducible kills
+(<code>dmesg</code>: <code>Out of memory: Killed process … total-vm:640000kB</code>). A non-identity
+adjustment profile on a 33 MP source is not slow — the worker dies.</p>
+<p><strong>Repeated work:</strong> nothing caches a decoded image anywhere in <code>imaging/</code> or
+<code>ui/controller.py</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Site</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ui/controller.py:860</code></td>
+<td>Builds the preview by running the entire pipeline</td>
+</tr>
+<tr>
+<td><code>ui/controller.py:1058</code></td>
+<td>Re-runs the entire pipeline from the original 33 MP file on <strong>every joystick nudge</strong> of zoom/crop/rotate (~2.5 s each)</td>
+</tr>
+<tr>
+<td><code>app.py:996</code>, <code>app.py:1009</code></td>
+<td>Pass <code>received.path</code> — the <em>original</em> file — to the print backend</td>
+</tr>
+<tr>
+<td><code>ble/instantlink.py:495</code></td>
+<td>Runs the whole pipeline <strong>again</strong></td>
+</tr>
+</tbody>
+</table>
+<p>End-to-end for a previewed print with two edit nudges: <strong>~12 s</strong>, projected <strong>~2 s</strong>
+after Tier 1 + Tier 2.</p>
+<h2 id="tier-1-pure-wins-no-output-pixels-change">Tier 1 — pure wins, no output pixels change<a class="headerlink" href="#tier-1-pure-wins-no-output-pixels-change" title="Permanent link">&para;</a></h2>
+<p><strong>All implemented</strong> (2026-08-02). <code>ruff</code> + strict <code>mypy</code> clean, 1106 tests
+passing (14 new in <code>tests/test_prepared_print_reuse.py</code>). Not yet deployed —
+every gain below is projected from the measurements above, not yet re-measured
+on the device.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fix</th>
+<th>Gain</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1.1</td>
+<td>Reuse the preview's <code>PreparedImage</code> for the print (option B)</td>
+<td><strong>halves the default config: 2 pipeline runs → 1</strong></td>
+<td>done</td>
+</tr>
+<tr>
+<td>T1.2</td>
+<td>Fix the <code>dev-fb1.device</code> dependency via a udev <code>TAG+="systemd"</code> rule</td>
+<td>5 s of blank screen; −80 s off the reported number</td>
+<td>done</td>
+</tr>
+<tr>
+<td>T1.3</td>
+<td>Stop the Python→Rust double encode</td>
+<td>270 ms + a JPEG generation</td>
+<td>done</td>
+</tr>
+<tr>
+<td>T1.4</td>
+<td>Guard the two no-op full-buffer copies</td>
+<td>112 ms + 50 MB peak</td>
+<td>done</td>
+</tr>
+<tr>
+<td>T1.5</td>
+<td>Lazy-import <code>segno</code>, <code>importlib.metadata</code>, <code>multiprocessing</code></td>
+<td>274 ms warm, ~2× cold</td>
+<td>done</td>
+</tr>
+<tr>
+<td>T1.6</td>
+<td>Run image prep concurrently with the BLE connect</td>
+<td>hides seconds, <code>auto_print_delay_s=0</code> path</td>
+<td>done</td>
+</tr>
+<tr>
+<td>T1.7</td>
+<td><code>boot-diet.sh --production</code> drops tailscaled / rpi-connectd / Actions runner</td>
+<td>~110 MB of 512 MB; tailscaled is +5.17 s in the boot critical chain</td>
+<td>done</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t16-detail">T1.6 detail<a class="headerlink" href="#t16-detail" title="Permanent link">&para;</a></h3>
+<p>Prep needs no BLE link, so it is submitted to a single-worker
+<code>ThreadPoolExecutor</code> <em>before</em> <code>_ensure_connected_blocking</code>, and collected after
+model detection. Only speculated when <code>model_override</code> is set — that is the
+model it builds for — and the result flows through the <strong>same</strong> mismatch guard
+as T1.1's, so a wrong guess is discarded rather than printed. A speculative
+failure returns <code>None</code> (<code>_speculative_prepared</code>) so the synchronous prepare
+still raises the authoritative error; the executor is shut down with
+<code>wait=True</code> so a prep can never outlive its print.</p>
+<p>Note this only bites when T1.1 did <em>not</em> supply an image — i.e. at
+<code>auto_print_delay_s = 0</code>, where no preview is built. At the shipped default the
+preview already covers it.</p>
+<h3 id="t17-detail">T1.7 detail<a class="headerlink" href="#t17-detail" title="Permanent link">&para;</a></h3>
+<p>Deliberately <strong>not</strong> added to <code>SAFE_DISABLE_UNITS</code>: <code>--apply</code> is routine, and on
+a dev unit tailscaled is how you reach the Pi. The new <code>--production</code> mode is
+opt-in, warns before disabling, and discovers Actions runner units by glob
+(<code>actions.runner.*.service</code>) since they are named per registration.</p>
+<h3 id="t11-status-b-implemented-a-outstanding">T1.1 status: B implemented, A outstanding<a class="headerlink" href="#t11-status-b-implemented-a-outstanding" title="Permanent link">&para;</a></h3>
+<p><strong>B is done.</strong> The preview now builds the InstantLink-backend flavour
+(<code>apply_model_flip=False</code>) and stashes it; <code>BridgeUi.take_prepared_print_image</code>
+hands it to the print path, consumed once, keyed on <code>(source path, edit)</code> and
+dropped whenever a new preview session starts. <code>print_file_to_printer</code>
+re-verifies <code>prepared.model</code> against the model detected on connect and falls
+back to preparing normally on any mismatch. Bound via <code>functools.partial</code> at the
+sender selection site so the <code>PrinterSender</code> protocol keeps its 5-positional
+signature and injected test senders are unaffected.</p>
+<p>Effect: with the shipped default (<code>auto_print_delay_s = 5.0</code>) a print goes from
+<strong>two full pipeline runs to one</strong>. At <code>auto_print_delay_s = 0</code> the preview is
+skipped entirely (<code>ui/controller.py:754</code>), nothing is cached, and the print path
+behaves exactly as before.</p>
+<p><strong>Side effect — a display bug fixed.</strong> <code>create_preview_from_prepared</code> never
+un-flipped, so the LCD preview on <code>MINI_LINK3</code> (the only <code>flip_vertical</code> model)
+was showing vertically flipped. Building the preview in backend flavour makes it
+upright. Covered by <code>tests/test_prepared_print_reuse.py</code>.</p>
+<p><strong>A is still outstanding</strong>, and the constraint below is why it needs care.</p>
+<h3 id="why-the-obvious-version-of-a-does-not-work-process-isolation">Why the obvious version of A does not work — process isolation<a class="headerlink" href="#why-the-obvious-version-of-a-does-not-work-process-isolation" title="Permanent link">&para;</a></h3>
+<p>The audit's fix ("cache the decoded image keyed by source path") <strong>does not work
+as stated.</strong> The two paths do not share a process:</p>
+<ul>
+<li><strong>Preview and every edit nudge</strong> go through <code>prepare_for_instax_async</code>
+  (<code>ui/controller.py:860</code>) → <code>imaging/worker.py:_create_process</code>, which forks a
+  <strong>fresh <code>multiprocessing.Process</code> per job</strong>. A module-level cache is populated
+  in the child and dies with it.</li>
+<li><strong>The print</strong> goes through <code>asyncio.to_thread</code> (<code>ble/instantlink.py:308</code>) — a
+  thread in the <em>main</em> process, and a single run with nothing to reuse.</li>
+</ul>
+<p>So an in-process LRU buys nothing. Three viable designs:</p>
+<p><strong>A — disk-backed working-size cache.</strong> Write the decoded, EXIF-corrected,
+working-size image once, keyed by <code>(path, mtime, working_size)</code>; later runs decode
+that instead of the 33 MP original. Works across processes. Its remaining value
+after B is the <strong>edit-nudge loop only</strong>.</p>
+<p>Format is load-bearing, not a detail — measured against the 973 ms decode it
+replaces, at the SD's 22.7 MB/s:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Size</th>
+<th>Write</th>
+<th>Read</th>
+<th>Decode</th>
+<th>Net</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raw RGB / BMP</td>
+<td>24.6 MB</td>
+<td>~1.08 s</td>
+<td>~1.08 s</td>
+<td>~0</td>
+<td><strong>~1.1 s — slower than no cache</strong></td>
+</tr>
+<tr>
+<td>PNG lossless</td>
+<td>15–20 MB</td>
+<td>slow</td>
+<td>~0.8 s</td>
+<td>~1 s</td>
+<td>worse</td>
+</tr>
+<tr>
+<td><strong>JPEG q95–98</strong></td>
+<td><strong>3–5 MB</strong></td>
+<td>~0.2 s</td>
+<td>~0.2 s</td>
+<td>~0.4 s</td>
+<td><strong>~0.5 s saved</strong></td>
+</tr>
+</tbody>
+</table>
+<p>So JPEG only, and ~3–5 MB is small beside the 11.1 MB original FTP already writes
+to <code>incoming/</code>. Two constraints:</p>
+<ul>
+<li><strong>Eviction cannot rely on cleanup-on-completion.</strong> <code>incoming/</code> is already never
+  pruned (94 MB of stale files), the worker gets OOM-killed, and the appliance is
+  hard-powered-off — all three skip a delete step. Needs a budget-bounded cache
+  with LRU eviction plus a clear-on-start sweep, reusing the <code>SyncOutbox</code> /
+  <code>outbox_budget_mb</code> pattern rather than a second mechanism.</li>
+<li><strong>Compounding with B</strong>: if a nudge repopulates from the cache and B then hands
+  that image to the print, the print inherits the cache's JPEG generation. q98
+  keeps that under control for ~1 MB more.</li>
+</ul>
+<p><strong>C — run preview prep in a thread instead of a fork</strong>, making a normal in-memory
+LRU work. <strong>Rejected: conflicts with a deliberate safety property.</strong> The worker
+exists to be <em>killable</em> (<code>ImagePreparationTimeoutError</code>, <code>worker.py</code> — "Async,
+killable image preparation worker"). A hung or oversized decode would become
+unkillable.</p>
+<p>Recommended sequence: B (done) → measure the nudge path on-device → then decide
+whether A's ~500 ms/nudge justifies a cache subsystem.</p>
+<h3 id="t13-detail">T1.3 detail<a class="headerlink" href="#t13-detail" title="Permanent link">&para;</a></h3>
+<p><code>ble/instantlink.py:495</code> prepares a JPEG already sized under <code>spec.max_image_size</code>
+(typically q74), writes it to a temp file, then passes the <strong>config</strong> quality —
+default <strong>100</strong> — to <code>instantlink_print_with_progress</code> (<code>:529</code>). The Rust core
+decodes that JPEG and re-encodes it with its own binary search
+(<code>crates/instantlink-core/src/image.rs:170</code> → <code>:153</code> → <code>encode_jpeg</code> at <code>:72</code>),
+inflating it back to ~412 KB before searching down again.</p>
+<p>That is a third full encode pass <strong>and</strong> a generational double-JPEG quality loss.
+Minimal fix: pass <code>prepared.quality</code> instead of the config quality, so the Rust
+search converges on its first encode. Longer term, exactly one layer should own the
+size budget.</p>
+<h3 id="t15-detail">T1.5 detail<a class="headerlink" href="#t15-detail" title="Permanent link">&para;</a></h3>
+<p><code>segno</code> is the best ms-per-line-of-diff in the repo: 164 ms, one call site
+(<code>ui/render.py:2431</code>, only reached in <code>SYNC_PAIRING</code>). <code>segno/__init__.py</code>
+unconditionally loads <code>writers</code>, dragging in <code>xml.sax.saxutils</code> →
+<code>urllib.request</code>/<code>http.client</code>/<code>email</code> — 93 ms of stdlib on every boot.</p>
+<p>The existing lazy-import discipline is otherwise <strong>already excellent</strong>: aiohttp,
+zeroconf, bleak, rawpy, pillow-heif, numpy, dbus-fast, gpiozero, luma, spidev,
+pyftpdlib and cryptography are all verified absent from the service import path.</p>
+<h2 id="tier-2-large-wins-that-change-output-pixels-or-need-validation">Tier 2 — large wins that change output pixels or need validation<a class="headerlink" href="#tier-2-large-wins-that-change-output-pixels-or-need-validation" title="Permanent link">&para;</a></h2>
+<h3 id="t21-adjustments-after-the-fit-1719-and-it-removes-the-oom">T2.1 — adjustments after the fit (17–19×, and it removes the OOM)<a class="headerlink" href="#t21-adjustments-after-the-fit-1719-and-it-removes-the-oom" title="Permanent link">&para;</a></h3>
+<p>Move <code>apply_adjustments</code> (<code>pipeline.py:206</code>) after <code>_fit_image</code> (<code>:208</code>). Measured
+on the Pi, working res (3504×2336) vs output (600×800):</p>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>@working</th>
+<th>@output</th>
+<th>Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>saturation</td>
+<td>923 ms</td>
+<td>51 ms</td>
+<td>18×</td>
+</tr>
+<tr>
+<td>exposure</td>
+<td>1060 ms</td>
+<td>57 ms</td>
+<td>19×</td>
+</tr>
+<tr>
+<td>sharpness</td>
+<td>1893 ms</td>
+<td>105 ms</td>
+<td>18×</td>
+</tr>
+<tr>
+<td>vignette</td>
+<td><strong>OOM</strong></td>
+<td>95 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>hue</td>
+<td><strong>OOM</strong></td>
+<td>408 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>all four</td>
+<td>~5.5 s <em>(est.)</em></td>
+<td>313 ms</td>
+<td>~17×</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Safe to move now</strong> (pointwise, commutative with resampling apart from clipping):
+saturation, exposure, hue.</p>
+<p><strong>Changes the look — but arguably fixes bugs:</strong></p>
+<ul>
+<li><strong>sharpness</strong>: <code>ImageEnhance.Sharpness</code> is a 3×3 convolution. Applied at 8.2 MP
+  then downsampled 4×, it is almost entirely low-passed away — the slider is close
+  to a no-op today. Post-fit it actually does something.</li>
+<li><strong>vignette</strong>: geometry is normalized to image dimensions
+  (<code>postprocess.py:248-253</code>). Pre-fit it centres on the <em>uncropped</em> working image
+  and <code>ImageOps.fit</code> then crops 25–50% away, so print corners are unevenly
+  darkened. Post-fit it centres on the actual print.</li>
+<li><strong>overlays</strong> (<code>_render_overlay</code>, <code>postprocess.py:271</code>): a bottom-left watermark on
+  a 3:2 source cropped to 3:4 can be cropped clean off, and the font size
+  (<code>h//30</code> clamped to 48, <code>:296-300</code>) is computed on working height then shrunk
+  2.9× → ~16 px on an 800 px print instead of the intended 26.</li>
+</ul>
+<p><code>postprocess.py:147</code> documents pre-fit as deliberate. That reasoning does not
+survive the AUTO-crop case. <strong>Requires a product decision on the look change.</strong></p>
+<h3 id="t22-working-size-is-one-constant-from-a-179-win">T2.2 — working size is one constant from a 1.79× win<a class="headerlink" href="#t22-working-size-is-one-constant-from-a-179-win" title="Permanent link">&para;</a></h3>
+<p><code>draft()</code> only scales by powers of two, and <code>MINI_WORKING_EDGE=1200</code>
+(<code>pipeline.py:423</code>) sits <em>just above</em> the /4 boundary for a 3:2 33 MP source
+(7008/4 = 1752×1168; 1168 &lt; 1200 → rejected → /2):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>draft(800)  -&gt; 1752x1168  2.0 MP   812 ms
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>draft(1100) -&gt; 1752x1168  2.0 MP   764 ms
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>draft(1200) -&gt; 3504x2336  8.2 MP   973 ms   &lt;-- current MINI
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>draft(1600) -&gt; 3504x2336  8.2 MP   909 ms   &lt;-- current SQUARE/WIDE
+</code></pre></div>
+<p>A 32-pixel constant quadruples the pixel count of every downstream stage. Measured
+end-to-end 2491 → 1390 ms. Decode itself barely improves (17%) because entropy
+decoding dominates over IDCT scaling — the win is all downstream.</p>
+<p><strong>Must be made zoom-aware.</strong> <code>_zoom_and_offset</code> (<code>pipeline.py:319</code>) crops to
+1/zoom with zoom up to 3.0, so use <code>edge = max(w,h) * max(1.0, zoom)</code>. Note today's
+1200 is <em>already</em> below what zoom=3 needs — a latent quality bug independent of
+this change.</p>
+<h3 id="t23-cgroup_disablememory">T2.3 — <code>cgroup_disable=memory</code><a class="headerlink" href="#t23-cgroup_disablememory" title="Permanent link">&para;</a></h3>
+<p><code>/proc/cmdline</code> carries <code>cgroup_disable=memory</code> (firmware-injected on ≤512 MB
+boards). <code>/sys/fs/cgroup/cgroup.controllers</code> = <code>cpuset cpu io pids</code> — no memory
+controller. Every <code>MemoryMin=</code>/<code>MemoryMax=</code> on the bridge unit is <strong>silently
+inert</strong>, memory PSI is empty, and systemd-oomd cannot function.</p>
+<p>Concretely: the bridge has 30.8 MB swapped to zram against 25 MB RSS, with
+<code>pgmajfault 10730</code> / <code>pswpin 7070</code>. Fix: append <code>cgroup_enable=memory</code> via
+<code>bridge/config/cmdline-token.txt</code> (later args win). Cost ~1–2% RAM for accounting.</p>
+<h3 id="t24-dtparamsd_overclock100">T2.4 — <code>dtparam=sd_overclock=100</code><a class="headerlink" href="#t24-dtparamsd_overclock100" title="Permanent link">&para;</a></h3>
+<p>SD measures 22.7 MB/s sequential, 10.8 MB/s at 4K — that is the 50 MHz bus limit,
+not the card. Boot is dominated by ~2500 small Python/<code>.so</code> reads, and the Python
+audit independently found cold-cache SD reads (not CPU) to be the bottleneck:
+a cold import attributed 13.7 s with <code>yarl._quoting_c</code> alone at 2.13 s.</p>
+<p>Risk: card-dependent, silent-corruption failure mode. The BOM's SanDisk Industrial
+A1 handles it, but it must be validated per-SKU. Apply in
+<code>bridge/config/boot-firmware-config.append</code>.</p>
+<h3 id="t25-encode-seeding">T2.5 — encode seeding<a class="headerlink" href="#t25-encode-seeding" title="Permanent link">&para;</a></h3>
+<p>The search runs <strong>8 encodes</strong> (<code>[100, 50, 75, 62, 68, 71, 73, 74]</code>, 270 ms) on every
+print, because <code>printer.quality</code> defaults to 100 and q100 yields 412 KB against a
+102 KB budget — the full descent is guaranteed. Measured curve (600×800,
+<code>subsampling=2</code>): <code>q100=412K q90=170K q80=118K q75=102K q70=92K q60=76K q50=65K</code>.</p>
+<p>Seed from a per-model table (Mini ≈ 78) plus one or two corrections → 2–3 encodes,
+~180 ms saved. <code>MINI_LINK3</code> has <code>max_image_size=55_000</code> (<code>ble/models.py:56</code>), half
+of Mini's, so its search runs deeper.</p>
+<p>Note: dropping <code>optimize=True</code> during the search saves only ~14 ms on the Pi
+(53 → 29 ms/encode). <strong>Deprioritised</strong> — the Mac ratio (4.4×) badly overstates it.</p>
+<h2 id="tier-3-deferred">Tier 3 — deferred<a class="headerlink" href="#tier-3-deferred" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>@dataclass(frozen=True)</code> costs ~377 ms</strong>, ~21% of all import time (107
+  decorators; 62 classes / 349 fields on the service path). <code>slots=True</code> is nearly
+  free — the cost is <code>frozen=True</code> (~123 ms) plus irreducible dataclass machinery.
+  Naive removal breaks nested defaults (<code>config.py:508</code> → <code>ValueError: mutable
+  default</code>), so each site needs <code>field(default_factory=…)</code> and loses immutability.
+  <code>typing.NamedTuple</code> is ~55% cheaper per class and keeps the guarantee.
+  <em>Medium-high risk; revisit only if boot is still the complaint after Tiers 1–2.</em></li>
+<li><strong>Bind FTP before importing UI/BLE</strong> — worth ~710 ms to time-to-uploadable
+  (<code>import camera.ftp</code> alone is 1097 ms vs 1807 ms for <code>app.py</code>). Large mechanical
+  diff; <code>BridgeUi</code> construction (<code>app.py:283</code>) must move after the FTP thread spawn.</li>
+<li><strong><code>arm_freq</code> 1000 → 1100/1200</strong> — ~10–17% on transcode, but a 60 s bench load
+  already hit 73.1 °C bare-board and still climbing, and <code>over_voltage</code> raises draw
+  on a single 18650. Enclosure venting is an aspiration in <code>HARDWARE.md</code>, not a
+  validated design.</li>
+<li>Blacklist the unused V4L2/camera stack and shrink CMA (<code>CmaFree</code> is 184 kB of
+  65 MB; ~2 MB module text, ~32 MB reclaimable).</li>
+<li>vm sysctls: with zram-only swap and a 10.8 MB/s 4K SD path the usual advice
+  inverts — <code>vm.swappiness</code> 100–150, <code>vfs_cache_pressure</code> 50.</li>
+<li>Manager service ordering: it imports aiohttp at module scope (4.0–4.4 s warm,
+  13.7 s cold) starting 5.4 s into the bridge's startup on a box with 30 MB free,
+  evicting the bridge's page cache. Add <code>After=instantlink-bridge.service</code>.</li>
+<li><code>/boot/firmware</code> fstab passno 2 → 0 (~0.8 s; <code>fsck.fat</code> finds the dirty bit every
+  boot because the appliance is hard-powered-off).</li>
+<li>Swap setup chain ~1.0–1.5 s (<code>rpi-resize-swap-file</code> re-runs <code>mkswap</code> on a 463 MB
+  file every boot). <strong>Medium-high risk</strong> — 135 MB of swap is currently in use.</li>
+</ul>
+<h2 id="ruled-out-with-measurement-do-not-revisit">Ruled out with measurement — do not revisit<a class="headerlink" href="#ruled-out-with-measurement-do-not-revisit" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>CPU governor.</strong> <code>ondemand</code>, but the CPU sits at 1000 MHz (max) 98–100% of the
+  time; ramp under load was 0.00 s. <code>initial_turbo=30</code> makes it structurally
+  irrelevant to boot. Pinning <code>performance</code> buys ~0% and <em>costs</em> battery at idle.</li>
+<li><strong>Thermal throttling.</strong> <code>throttled=0x0</code>, no history bits; 60 s 4-core saturation
+  went 58 → 73.1 °C with zero throttle events (soft limit 80 °C).</li>
+<li><strong>Pillow build.</strong> 11.3.0 with libjpeg-turbo 3.1.1 and zlib-ng 2.2.4 — already
+  optimal.</li>
+<li><strong>Worker process overhead.</strong> <code>worker.py:306-317</code> forks per job; measured <strong>90 ms</strong>
+  (2488 vs 2398 ms). Not worth pooling. Only 1 of 4 cores is used, but Pillow ops
+  are single-threaded and one image is inherently serial.</li>
+<li><strong><code>reducing_gap=2.0</code></strong> — measured <em>slower</em>, because <code>ImageOps.fit</code> crops first.</li>
+<li>Already covered by <code>boot-diet.sh</code> and verified live: <code>NetworkManager-wait-online</code>
+  disabled, apt/man-db timers disabled, <code>gpu_mem=16</code>, <code>initial_turbo=30</code>,
+  <code>disable_splash</code>, <code>boot_delay=0</code>, <code>camera_auto_detect=0</code>, <code>auto_initramfs=0</code>,
+  <code>max_framebuffers=1</code>, <code>audio=off</code>, serial console off, <code>quiet loglevel=3</code>,
+  <code>noatime</code>, <code>/tmp</code> on tmpfs, zram correctly tuned (485 MB zstd, 4.2:1).</li>
+</ul>
+<h2 id="landmines">Landmines<a class="headerlink" href="#landmines" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Do not move <code>incoming/</code> to tmpfs naively.</strong> <code>SyncOutbox.add()</code>
+  (<code>sync/outbox.py</code>) uses <code>os.link(source, spool_path)</code> with a <code>shutil.copy2</code>
+  fallback. <code>os.link</code> requires the same filesystem, so splitting <code>incoming_dir</code>
+  (<code>config.py:161</code>) from <code>outbox_dir</code> (<code>config.py:336</code>) silently degrades every
+  sync from an inode link to a full multi-MB copy. Net loss in sync mode, win in
+  print-only mode — gate on delivery mode if pursued.</li>
+<li><strong>Keep zram.</strong> It is correctly configured and is what keeps a 512 MB box with
+  36 MB image buffers from OOMing. Reduce demand (T1.7, T2.3), don't retune it.</li>
+<li><strong><code>resample</code> and working size overlap.</strong> Once T2.2 drops the working size to
+  2 MP, fit falls to ~110 ms and a <code>reduce()</code> prepass saves little. Measured at
+  8.2 MP: LANCZOS 449 ms, <code>reduce()</code>+LANCZOS 247 ms, BICUBIC 317 ms, BILINEAR
+  183 ms (aliases visibly — not acceptable for print). <strong>Do not count both.</strong></li>
+</ul>
+<h2 id="bugs-found-incidentally">Bugs found incidentally<a class="headerlink" href="#bugs-found-incidentally" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>incoming/</code> is never pruned.</strong> 94 MB of <code>.HIF</code> files dated May–June 2026 on the
+  live unit. <code>bridge/CLAUDE.md</code> states "storage is ephemeral" — this is a spec
+  violation and unbounded SD wear. <strong>Fixed (2026-08-03):</strong> new
+  <code>[ftp].incoming_budget_mb</code> (default 512), enforced by <code>prune_incoming_dir</code>
+  oldest-first at startup <em>and</em> on every arrival. Both call sites are needed
+  for the reason recorded under T2.5's landmines: the appliance is
+  hard-powered-off and the image worker can be OOM-killed, so no
+  completion-time hook can be relied on. The most recent 8 files and anything
+  modified within 5 minutes are exempt regardless of budget, which is what
+  keeps a queued or mid-print file safe — the queue drains one job at a time
+  and a print takes tens of seconds.</li>
+<li><strong><code>boot_splash.py</code> (93 lines) is dead code</strong> — the unit uses <code>dd</code> (<code>:31</code>) and
+  nothing imports it.</li>
+<li><strong>Stale venv path</strong>: <code>_editable_impl_instantbridge.pth</code> points at the removed
+  <code>/opt/InstantBridge/src</code>. <code>site</code> drops it, so cost ≈ 0, but it is stale state.</li>
+<li><strong>Stale NM profiles</strong> accumulating: <code>InstantLink.2YJ1R3</code>, <code>InstantLink.LDE2S3</code>.
+  <code>delete_stale_hotspot_profiles</code> (<code>scripts/wifi-mode.sh:134</code>) only cleans
+  hotspot-named ones.</li>
+<li><code>arm_boost=1</code> is in the live <code>config.txt</code> but is a <strong>no-op on Zero 2 W</strong> (Pi 4B
+  only); it is not in <code>boot-firmware-config.append</code>, so it is stray.</li>
+</ul>
+<h2 id="not-yet-measured">Not yet measured<a class="headerlink" href="#not-yet-measured" title="Permanent link">&para;</a></h2>
+<p>The boot capture ran with the Instax powered <strong>off</strong>, so BLE reconnect scanned in a
+5.3 s-scan / 2 s-backoff loop throughout. The print-ready half of "ready to receive
+and print" is unmeasured. Re-capture with the printer on before ranking any
+BLE-side work.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes", "navigation.top", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

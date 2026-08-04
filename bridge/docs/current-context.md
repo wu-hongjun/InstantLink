@@ -1,9 +1,13 @@
 # InstantLink Bridge Current Context
 
-Latest source deployment verified: 2026-07-22 on `riverps-rpi-zero-2w` (bridge 0.1.17 on `main`;
-Print/Sync mode behavior from commit `7a43570` deployed and service-smoked). The iPhone sync
-feature from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a real
-iPhone on 2026-07-15.
+Latest source deployment verified: 2026-08-04 on `riverps-rpi-zero-2w` (bridge 0.1.17 on `main`,
+commit `0e1acab` — plan 056 performance work, deployed clean and service-smoked). **A real print
+was completed on this build** (Sony a7C II `.HIF` → Instax Square), which closes several items
+that had stood unverified since 2026-07-22 — see *Live print verified* below.
+
+Print/Sync mode behavior from commit `7a43570` was the prior baseline (2026-07-22). The iPhone
+sync feature from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a
+real iPhone on 2026-07-15.
 
 This file is the fast handoff for anyone opening the bridge code after the InstantLink port. The
 source of truth is the InstantLink repository under `bridge/`; the old standalone InstantBridge
@@ -31,7 +35,55 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- Deployed Print/Sync behavior baseline: commit `7a43570` on branch `main`, delivered through a
+- **Current deployment: commit `0e1acab` on `main` (2026-08-04)**, clean tree, `--system --restart`.
+  Verified on-device: `instantlink-bridge.service` and `instantlink-bridge-manager.service` both
+  active with `NRestarts=0`; FTP `:21` and manager `:8742` (on both `192.168.7.1` and
+  `192.168.8.1`) listening; no errors in the journal.
+
+### Live print verified (2026-08-04) — closes prior open items
+
+The 2026-07-22 entry recorded that "live printing, live film polling, physical-LCD observation
+with a connected Printer" remained unverified because the Printer was not advertising. All three
+are now confirmed on hardware:
+
+- **Live print**: `DSC01595.HIF` (5.19 MB) uploaded over the hotspot from the a7C II, previewed on
+  the physical LCD, and printed on Instax Square `INSTAX-52006924`. `bridge.print_start` →
+  `bridge.print_complete` in 24.0 s; ~38.4 s from upload start to print delivered.
+- **Live film polling**: `ui.printer_status film_remaining=2 battery=95 model=square` at the
+  configured 10 s keepalive interval.
+- **Model auto-detection**: `[printer] model = "auto"` resolved to `square` from the connected
+  device.
+
+Still unverified: a physical KEY2 mode switch, and Mini / Mini Link 3 / Wide hardware (only Square
+has been exercised end-to-end).
+
+### Plan 056 performance work (deployed 2026-08-04)
+
+- Boot **1 min 35.8 s → 20.1 s**; the LCD boot splash now appears at **9.9 s instead of 95.8 s**.
+  Root cause was `instantlink-bridge-boot-splash.service` waiting on a `dev-fb1.device` unit that
+  udev never created — fixed by `bridge/udev/61-instantlink-bridge-fb1.rules`, which must be
+  installed for the dependency to resolve (`provision-sd.sh`, so a `--system` deploy is required).
+  Stable across three cold boots including a power cycle.
+- Print path now runs the image pipeline **once per print instead of twice**: the LCD preview's
+  prepared image is handed to the printer. Confirmed live by
+  `instantlink.image_prepared source=preview prepare_ms=0`. `source=` is the diagnostic to check
+  if a print ever feels slow — `inline` means the reuse did not apply.
+- `incoming/` is now bounded by `[ftp].incoming_budget_mb` (default 512) **and** a 14-day age
+  rule. It had never been pruned; the device was holding 98 MB back to May 25. First run cleared
+  **98 MB → 10 MB**. Configs predating the key default to 512.
+- `boot-diet.sh --production` drops tailscaled / rpi-connectd / any GitHub Actions runner (~110 MB
+  of 512 MB on this unit). Deliberately **not** part of `--apply`, because on a dev unit tailscaled
+  is how you reach the Pi.
+- Full measurements, and what was ruled out with data (CPU governor, thermal throttling, Pillow
+  build, worker overhead), are in `docs/plans/056-bridge-performance.md`.
+
+**Local config drift on this device:** `workflow.auto_print_delay_s` was set to `5` (from `0`) and
+`adjustments.sharpness` to `0` (from `5`) during the 056 measurement session. Backup of the prior
+values at `/etc/InstantLinkBridge/config.toml.bak-056`. `sharpness = 5` maps to a factor of 1.05
+applied at working resolution and then downscaled ~4x — it cost 1911 ms per print to do
+essentially nothing visible.
+
+- Prior Print/Sync behavior baseline: commit `7a43570` on branch `main`, delivered through a
   clean `git-archive` deployment with `dirty=false`.
   - On-device verification 2026-07-22: `instantlink-bridge.service` and
     `instantlink-bridge-manager.service` were both active with `NRestarts=0`; FTP `:21` and manager

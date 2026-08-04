@@ -6,7 +6,6 @@ import platform
 import shutil
 import subprocess
 from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from instantlink_bridge import __version__
@@ -72,7 +71,15 @@ def read_device_suffix() -> str | None:
 
 
 def read_app_version() -> str:
-    """Return the installed InstantLink Bridge package version."""
+    """Return the installed InstantLink Bridge package version.
+
+    ``importlib.metadata`` is imported here rather than at module scope
+    (plan 056 T1.5): it costs 79 ms on the Pi Zero 2 W — it pulls ``zipfile``,
+    ``email`` and ``importlib.resources.abc`` — to read a version string that
+    already has a ``__version__`` fallback.
+    """
+
+    from importlib.metadata import PackageNotFoundError, version
 
     try:
         return version("instantlink-bridge")

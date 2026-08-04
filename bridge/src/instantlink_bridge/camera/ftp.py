@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import shutil
+import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,114 @@ LOGGER = logging.getLogger(__name__)
 INSECURE_FTP_PASSWORDS = {"", "change-me", "instax"}
 
 BridgeSnapshotProvider = Callable[[], UiSnapshot]
+
+
+INCOMING_PRUNE_KEEP_NEWEST = 8
+INCOMING_PRUNE_GRACE_S = 300.0
+# bridge/CLAUDE.md scopes this cache to "queueing, retry, and short-term
+# diagnostics" — a statement about time, which a size budget cannot express.
+# A live unit sat at 98 MB with originals back to May under a 512 MB budget:
+# bounded, but nowhere near ephemeral. Age is what actually retires them.
+INCOMING_MAX_AGE_S = 14 * 24 * 3600.0
+
+
+def prune_incoming_dir(
+    incoming_dir: Path,
+    *,
+    budget_bytes: int,
+    keep_newest: int = INCOMING_PRUNE_KEEP_NEWEST,
+    grace_s: float = INCOMING_PRUNE_GRACE_S,
+    max_age_s: float = INCOMING_MAX_AGE_S,
+    now: float | None = None,
+) -> list[Path]:
+    """Delete the oldest received originals until the directory fits its budget.
+
+    ``bridge/CLAUDE.md`` states incoming storage is ephemeral, but nothing
+    ever removed these files. A live unit was found holding 94 MB of camera
+    originals dating back two months (plan 056) — unbounded SD growth and
+    wear on a battery appliance.
+
+    Two independent rules retire a file:
+
+    * **age** — anything older than ``max_age_s`` goes, regardless of budget.
+      This is the rule that matches the documented retention scope, and the
+      only one that ever fires on a lightly-used unit whose directory sits
+      well under budget.
+    * **budget** — oldest first until the total fits ``budget_bytes``.
+
+    ``grace_s`` exempts recently-modified files from *both*, which is what
+    keeps a queued or mid-print file safe: the receive queue is drained one
+    job at a time and a print takes tens of seconds, so the margin is wide.
+    ``keep_newest`` exempts the most recent files from budget eviction only —
+    deliberately not from age, or a unit holding a handful of months-old
+    originals would never retire any of them.
+
+    Best effort by design: a scan or unlink failure is logged and skipped
+    rather than raised, because pruning must never fail a receive.
+
+    Returns the paths actually deleted.
+    """
+
+    moment = time.time() if now is None else now
+    try:
+        candidates = [entry for entry in incoming_dir.iterdir() if entry.is_file()]
+    except OSError:
+        LOGGER.warning("ftp.incoming_prune_scan_failed dir=%s", incoming_dir, exc_info=True)
+        return []
+
+    stats: list[tuple[float, int, Path]] = []
+    for path in candidates:
+        try:
+            info = path.stat()
+        except OSError:
+            continue
+        stats.append((info.st_mtime, info.st_size, path))
+
+    stats.sort(key=lambda entry: entry[0])  # oldest first
+    total_bytes = sum(size for _, size, _ in stats)
+    newest = {path for _, _, path in stats[-keep_newest:]} if keep_newest > 0 else set()
+
+    removed: list[Path] = []
+
+    def drop(path: Path, size: int, reason: str) -> bool:
+        nonlocal total_bytes
+        try:
+            path.unlink()
+        except OSError:
+            LOGGER.warning("ftp.incoming_prune_unlink_failed path=%s", path, exc_info=True)
+            return False
+        total_bytes -= size
+        removed.append(path)
+        LOGGER.info("ftp.incoming_pruned file=%s size=%s reason=%s", path.name, size, reason)
+        return True
+
+    survivors: list[tuple[float, int, Path]] = []
+    for mtime, size, path in stats:
+        age = moment - mtime
+        if age < grace_s:
+            survivors.append((mtime, size, path))
+            continue
+        if age > max_age_s:
+            if not drop(path, size, "age"):
+                survivors.append((mtime, size, path))
+            continue
+        survivors.append((mtime, size, path))
+
+    for mtime, size, path in survivors:
+        if total_bytes <= budget_bytes:
+            break
+        if path in newest or moment - mtime < grace_s:
+            continue
+        drop(path, size, "budget")
+
+    if removed:
+        LOGGER.info(
+            "ftp.incoming_prune_complete removed=%s remaining_bytes=%s budget_bytes=%s",
+            len(removed),
+            total_bytes,
+            budget_bytes,
+        )
+    return removed
 
 
 class FtpServiceFailedError(RuntimeError):
@@ -152,6 +261,12 @@ class FtpReceiveService:
         self._stopping = False
         self._config.incoming_dir.parent.mkdir(parents=True, exist_ok=True)
         self._config.incoming_dir.mkdir(parents=True, exist_ok=True)
+        # Startup sweep: the appliance is hard-powered-off and the image
+        # worker can be OOM-killed, so neither a completion hook nor an
+        # arrival-time prune alone is enough to bound this directory
+        # (plan 056). Grace/keep-newest do not apply at boot — nothing is in
+        # flight yet — but they cost nothing here.
+        self._prune_incoming()
         self._thread = Thread(target=self._run_server, name="instantlink-bridge-ftp", daemon=True)
         self._thread.start()
         if not self._started.wait(timeout=5):
@@ -313,7 +428,25 @@ class FtpReceiveService:
             self.config.mode.value,
             self._queue.qsize(),
         )
+        # Prune before handing off, so the directory is bounded even if this
+        # job is the one that dies. The file just received is inside the
+        # keep-newest/grace window, so it is never a prune candidate.
+        self._prune_incoming()
         self._handoff_received_image(path, remote_ip)
+
+    def _prune_incoming(self) -> None:
+        # Pruning is housekeeping and runs inline on the receive path, so it
+        # must never be the reason an upload fails. prune_incoming_dir handles
+        # the expected OSErrors itself; this catch is for the unexpected, and
+        # is deliberately at the call site so the pruner stays honest about
+        # its own failures rather than swallowing them internally.
+        try:
+            prune_incoming_dir(
+                self._config.incoming_dir,
+                budget_bytes=self._config.incoming_budget_mb * 1024 * 1024,
+            )
+        except Exception:
+            LOGGER.warning("ftp.incoming_prune_failed", exc_info=True)
 
     def _normalize_received_file_path(self, path: Path, remote_ip: str) -> Path | None:
         incoming_dir = self._config.incoming_dir.resolve()

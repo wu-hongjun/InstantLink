@@ -1,0 +1,19 @@
+# InstantLink Bridge — tag the LCD framebuffer so `dev-fb1.device` exists.
+#
+# systemd only synthesises a .device unit for a device that udev has tagged
+# `systemd`. Framebuffer nodes are not tagged by any default rule
+# (`udevadm info /dev/fb1` shows only `TAGS=:seat:`), so `dev-fb1.device`
+# never activates.
+#
+# instantlink-bridge-boot-splash.service orders itself After=/Wants=
+# dev-fb1.device so the fbtft overlay has finished probing before its
+# ConditionPathExists=/dev/fb1 is evaluated. Without this rule that
+# dependency can never be satisfied and the unit instead blocks for the full
+# DefaultDeviceTimeoutUSec (90 s) — the splash ran at t+96 s, i.e. never
+# early, and `systemd-analyze` reported a ~96 s boot that was entirely this
+# one timeout (plan 056 B1/T1.2).
+#
+# On the headless SKU /dev/fb1 never appears, so this rule matches nothing
+# and Wants=dev-fb1.device stays an unsatisfied non-fatal request, exactly
+# as the unit's ConditionPathExists guard expects.
+SUBSYSTEM=="graphics", KERNEL=="fb1", TAG+="systemd"

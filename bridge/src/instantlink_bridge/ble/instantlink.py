@@ -18,6 +18,7 @@ import re
 import tempfile
 import time
 from collections.abc import Callable, Iterable
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -34,6 +35,7 @@ from instantlink_bridge.ble.models import PrinterModel, spec_for
 from instantlink_bridge.imaging.pipeline import (
     FitMode,
     ImagePipelineError,
+    PreparedImage,
     PrintEdit,
     prepare_for_instantlink_backend,
 )
@@ -203,8 +205,14 @@ async def print_file_to_printer(
     model: PrinterModel | None = None,
     progress: PrintProgressCallback | None = None,
     adjustments: AdjustmentProfile | None = None,
+    prepared_image: PreparedImage | None = None,
 ) -> None:
-    """Print a file through InstantLink's Rust transport."""
+    """Print a file through InstantLink's Rust transport.
+
+    ``prepared_image`` lets a caller that has already built the model-sized
+    JPEG — the LCD preview does — skip the pipeline entirely (plan 056 T1.1).
+    It is used only when its model matches the printer detected on connect.
+    """
 
     _ = address
     await default_instantlink_backend().print_file(
@@ -217,6 +225,7 @@ async def print_file_to_printer(
         model_override=model,
         progress=progress,
         adjustments=adjustments,
+        prepared_image=prepared_image,
     )
 
 
@@ -264,6 +273,7 @@ class InstantLinkBackend:
         model_override: PrinterModel | None = None,
         progress: PrintProgressCallback | None = None,
         adjustments: AdjustmentProfile | None = None,
+        prepared_image: PreparedImage | None = None,
     ) -> None:
         """Prepare an edited image and send it through InstantLink."""
 
@@ -280,6 +290,7 @@ class InstantLinkBackend:
                 model_override,
                 progress,
                 adjustments,
+                prepared_image,
             ),
         )
 
@@ -477,6 +488,64 @@ class InstantLinkBackend:
         model_override: PrinterModel | None,
         progress: PrintProgressCallback | None,
         adjustments: AdjustmentProfile | None = None,
+        prepared_image: PreparedImage | None = None,
+    ) -> None:
+        # Image prep needs no BLE link, so overlap it with the connect and
+        # model query below — seconds of radio work (plan 056 T1.6). Only
+        # speculate when the model is configured: that is the model we build
+        # for, and the mismatch guard further down discards the result if
+        # detection disagrees. Skipped entirely when a preview already handed
+        # us an image (T1.1), which is the common case at the shipped default.
+        speculative: Future[PreparedImage] | None = None
+        prep_executor: ThreadPoolExecutor | None = None
+        if prepared_image is None and model_override is not None:
+            prep_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="instantlink-prep")
+            speculative = prep_executor.submit(
+                partial(
+                    prepare_for_instantlink_backend,
+                    image_path,
+                    model_override,
+                    fit=fit,
+                    quality=quality,
+                    edit=edit,
+                    adjustments=adjustments,
+                )
+            )
+
+        try:
+            self._print_file_connected(
+                name=name,
+                image_path=image_path,
+                fit=fit,
+                quality=quality,
+                edit=edit,
+                print_option=print_option,
+                model_override=model_override,
+                progress=progress,
+                adjustments=adjustments,
+                prepared_image=prepared_image,
+                speculative=speculative,
+            )
+        finally:
+            if prep_executor is not None:
+                # wait=True so a speculative prep can never outlive the print
+                # and leak a worker into the next job.
+                prep_executor.shutdown(wait=True)
+
+    def _print_file_connected(
+        self,
+        *,
+        name: str,
+        image_path: Path,
+        fit: FitMode,
+        quality: int,
+        edit: PrintEdit | None,
+        print_option: int,
+        model_override: PrinterModel | None,
+        progress: PrintProgressCallback | None,
+        adjustments: AdjustmentProfile | None,
+        prepared_image: PreparedImage | None,
+        speculative: Future[PreparedImage] | None,
     ) -> None:
         _emit_progress(
             progress,
@@ -491,19 +560,53 @@ class InstantLinkBackend:
             progress,
             PrintProgress(PrintStage.PREPARING, "Preparing image", spec.name, None),
         )
-        try:
-            prepared = prepare_for_instantlink_backend(
-                image_path,
-                model,
-                fit=fit,
-                quality=quality,
-                edit=edit,
-                adjustments=adjustments,
+        # A preview, when one was shown, has already built exactly this image
+        # (plan 056 T1.1); failing that, a speculative prep may have run
+        # alongside the connect (T1.6). Both build for the *configured* model,
+        # which can disagree with the printer we actually detected, and models
+        # differ in output dimensions — so both go through the same guard.
+        prepared = prepared_image
+        source = "preview"
+        if prepared is None and speculative is not None:
+            prepared = _speculative_prepared(speculative)
+            source = "speculative"
+        if prepared is not None and prepared.model is not model:
+            LOGGER.info(
+                "instantlink.prepared_discarded expected=%s prepared=%s source=%s",
+                model.value,
+                prepared.model.value,
+                source,
             )
-        except ImagePipelineError:
-            raise
-        except Exception as exc:
-            raise ImagePipelineError("Image unsupported") from exc
+            prepared = None
+        prepare_started = time.monotonic()
+        if prepared is None:
+            source = "inline"
+            try:
+                prepared = prepare_for_instantlink_backend(
+                    image_path,
+                    model,
+                    fit=fit,
+                    quality=quality,
+                    edit=edit,
+                    adjustments=adjustments,
+                )
+            except ImagePipelineError:
+                raise
+            except Exception as exc:
+                raise ImagePipelineError("Image unsupported") from exc
+
+        # source=preview means the LCD preview's image was reused and the
+        # pipeline did not run again; speculative means it ran alongside the
+        # BLE connect; inline means it ran here on the critical path
+        # (plan 056 T1.1/T1.6). prepare_ms is ~0 for anything but inline.
+        LOGGER.info(
+            "instantlink.image_prepared source=%s model=%s bytes=%d quality=%d prepare_ms=%.0f",
+            source,
+            prepared.model.value,
+            len(prepared.data),
+            prepared.quality,
+            (time.monotonic() - prepare_started) * 1000,
+        )
 
         temp_path: Path | None = None
         try:
@@ -525,10 +628,20 @@ class InstantLinkBackend:
                 ),
             )
             callback = _print_progress_callback(progress, len(prepared.data))
+            # Hand InstantLink the quality the pipeline actually settled on,
+            # not the configured one (plan 056 T1.3). `prepared.data` is
+            # already sized under spec.max_image_size, but the core decodes it
+            # and re-encodes at whatever quality it is given
+            # (crates/instantlink-core/src/image.rs `encode_jpeg`). Passing the
+            # config value — 100 by default — inflated a 102 KB image back to
+            # ~412 KB and forced the core through its own binary search: a
+            # third full encode pass plus a second generation of JPEG loss.
+            # `encode_jpeg` tries the requested quality first and returns
+            # immediately when it fits, so this collapses that to one encode.
             rc = int(
                 self._library().instantlink_print_with_progress(
                     str(temp_path).encode("utf-8"),
-                    ctypes.c_uint8(max(1, min(100, quality))),
+                    ctypes.c_uint8(max(1, min(100, prepared.quality))),
                     ctypes.c_uint8(INSTANTLINK_FIT_STRETCH),
                     ctypes.c_uint8(max(0, min(255, print_option))),
                     callback,
@@ -796,6 +909,22 @@ def _parse_instantlink_model(value: str) -> PrinterModel:
     if "mini" in normalized:
         return PrinterModel.MINI
     raise InstantLinkBleError(f"unknown InstantLink model string: {value}", code=ERROR_BLE)
+
+
+def _speculative_prepared(future: Future[PreparedImage]) -> PreparedImage | None:
+    """Return the speculative prep result, or ``None`` if it failed.
+
+    A speculative failure must never be the error the user sees: returning
+    ``None`` falls through to the synchronous prepare, which raises the
+    authoritative ``ImagePipelineError`` with the normal handling around it
+    (plan 056 T1.6).
+    """
+
+    try:
+        return future.result()
+    except Exception:
+        LOGGER.debug("instantlink.speculative_prepare_failed", exc_info=True)
+        return None
 
 
 def _compatible_model_override(

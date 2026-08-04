@@ -11,6 +11,7 @@ import signal
 from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future as ThreadFuture
 from contextlib import suppress
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
@@ -48,6 +49,7 @@ from instantlink_bridge.config import (
 from instantlink_bridge.imaging.pipeline import (
     ImagePipelineError,
     ImageTooLargeError,
+    PreparedImage,
     PrintEdit,
 )
 from instantlink_bridge.imaging.worker import (
@@ -116,6 +118,17 @@ class PrintUi(Protocol):
         timeout_s: float | None = AUTO_PRINT_DELAY_S,
     ) -> PrintEdit | None:
         """Return preview edits when printing should continue."""
+
+    def take_prepared_print_image(
+        self,
+        received: ReceivedImage,
+        edit: PrintEdit | None,
+    ) -> PreparedImage | None:
+        """Return the preview's prepared image when it matches ``edit``.
+
+        Returning ``None`` is always valid — the print path then prepares the
+        image itself, exactly as it did before plan 056 T1.1.
+        """
 
     async def printing_started(self, received: ReceivedImage) -> None:
         """Show printing state."""
@@ -786,7 +799,18 @@ async def handle_received_image(
             LOGGER.info("bridge.print_cancelled path=%s", received.path)
             return
 
-        sender = printer_sender if printer_sender is not None else send_print_to_printer
+        if printer_sender is not None:
+            sender = printer_sender
+        else:
+            # Bind the preview's already-prepared image here rather than
+            # widening PrinterSender: injected senders keep the 5-positional
+            # signature, and only the real sender learns about it
+            # (plan 056 T1.1). Must run after await_print_confirmation, so the
+            # edit is final.
+            sender = partial(
+                send_print_to_printer,
+                prepared_image=ui.take_prepared_print_image(received, edit),
+            )
         await ui.printing_started(received)
         await ui.print_progress(
             PrintProgress(PrintStage.SELECTING_PRINTER, "Checking printer", "Looking up printer")
@@ -974,6 +998,8 @@ async def send_print_to_printer(
     config: BridgeConfig,
     edit: PrintEdit,
     progress: PrintProgressCallback,
+    *,
+    prepared_image: PreparedImage | None = None,
 ) -> None:
     """Print a received file through the model-detecting BLE path."""
 
@@ -993,6 +1019,11 @@ async def send_print_to_printer(
         )
         adjustments = _replace(adjustments, datestamp_text=datestamp_text)
     if instantlink_backend_enabled():
+        # When a preview was shown it already built this exact image; hand it
+        # over rather than running the pipeline a second time (plan 056 T1.1).
+        # Returns None whenever the preview was skipped (auto_print_delay_s=0)
+        # or its edit no longer matches, in which case the printer prepares
+        # normally.
         await print_file_to_printer_instantlink(
             printer.address,
             received.path,
@@ -1004,6 +1035,7 @@ async def send_print_to_printer(
             model=config.printer.model,
             progress=progress,
             adjustments=adjustments,
+            prepared_image=prepared_image,
         )
     else:
         await print_file_to_printer_bleak(

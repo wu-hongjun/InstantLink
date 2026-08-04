@@ -78,9 +78,15 @@ fi
 if changed '^bridge/'; then
   echo "── Bridge Python (bridge/ changed) ──"
   pushd bridge >/dev/null
-  run "ruff check src tests" python -m ruff check src tests
-  run "mypy src" python -m mypy src
-  run "pytest -q" python -m pytest -q
+  # Prefer the project venv. A bare `python` resolves from PATH — conda,
+  # homebrew, whatever is first — and those interpreters generally lack
+  # pytest-asyncio, so the suite fails to *collect* and the hook blocks a
+  # commit that is actually fine. Fall back to PATH when there is no venv.
+  bridge_py=python
+  [ -x .venv/bin/python ] && bridge_py=.venv/bin/python
+  run "ruff check src tests" "$bridge_py" -m ruff check src tests
+  run "mypy src" "$bridge_py" -m mypy src
+  run "pytest -q" "$bridge_py" -m pytest -q
   popd >/dev/null
 fi
 

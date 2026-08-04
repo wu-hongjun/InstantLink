@@ -11,6 +11,9 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from instantlink_bridge.camera.ftp import prune_incoming_dir
 
@@ -147,3 +150,23 @@ def test_subdirectories_are_ignored(tmp_path: Path) -> None:
 
     assert removed == [old]
     assert (tmp_path / "sub" / "nested.hif").exists()
+
+
+def test_receive_survives_a_pruner_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Housekeeping must never be the reason an upload fails.
+
+    prune_incoming_dir handles expected OSErrors itself; this covers the
+    unexpected, which the receive path swallows at the call site.
+    """
+
+    from instantlink_bridge.camera import ftp as ftp_module
+
+    def boom(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("unexpected pruner bug")
+
+    monkeypatch.setattr(ftp_module, "prune_incoming_dir", boom)
+
+    service = ftp_module.FtpReceiveService.__new__(ftp_module.FtpReceiveService)
+    service._config = SimpleNamespace(incoming_dir=tmp_path, incoming_budget_mb=1)
+
+    service._prune_incoming()  # must not raise

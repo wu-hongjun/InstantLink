@@ -435,10 +435,18 @@ class FtpReceiveService:
         self._handoff_received_image(path, remote_ip)
 
     def _prune_incoming(self) -> None:
-        prune_incoming_dir(
-            self._config.incoming_dir,
-            budget_bytes=self._config.incoming_budget_mb * 1024 * 1024,
-        )
+        # Pruning is housekeeping and runs inline on the receive path, so it
+        # must never be the reason an upload fails. prune_incoming_dir handles
+        # the expected OSErrors itself; this catch is for the unexpected, and
+        # is deliberately at the call site so the pruner stays honest about
+        # its own failures rather than swallowing them internally.
+        try:
+            prune_incoming_dir(
+                self._config.incoming_dir,
+                budget_bytes=self._config.incoming_budget_mb * 1024 * 1024,
+            )
+        except Exception:
+            LOGGER.warning("ftp.incoming_prune_failed", exc_info=True)
 
     def _normalize_received_file_path(self, path: Path, remote_ip: str) -> Path | None:
         incoming_dir = self._config.incoming_dir.resolve()

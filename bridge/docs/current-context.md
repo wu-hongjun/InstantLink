@@ -10,7 +10,10 @@ print remains the 2026-08-04 Sony a7C II `.HIF` → Instax Square run described 
 
 - The X306 now holds a **2300 mAh 18650 cell**. It has no Linux-readable current or charge gauge;
   no measured runtime claim exists yet. The full-charge discharge test is specified in
-  `docs/plans/057-bridge-battery-day.md` and awaits a charged, unplugged run.
+  `docs/plans/057-bridge-battery-day.md` and awaits a charged, unplugged run. A transient
+  `instantlink-battery-run.service` began writing 60-second, fsynced activity samples to
+  `/var/lib/InstantLinkBridge/battery-run.jsonl` at 20:41:51 EDT while USB power was still attached;
+  the unplug time must be recorded separately before those samples can bound battery runtime.
 - KEY2 now locks the LCD from home/status surfaces; the next key wakes it without also activating
   a UI action. The Print/Sync Mode picker is on the top Settings page. Locked screens skip physical
   framebuffer renders, and network status polling slows from 1 s to 5 s while the screen is off.

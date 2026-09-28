@@ -333,12 +333,12 @@ Boot behavior:
   show `READY`. If `No-film test` is `On`, show ready/test status and allow print transfer.
   Sync mode ignores film entirely and stays on its own READY/validation surface.
 - If no printer is found, show `Printer setup` with `Find printer` selected.
-- If a selected printer is not currently connected, run short Bleak discovery passes until it
-  appears. The default pass is 0.5 seconds with a 1 second retry pause, and the slower BlueZ
-  fallback is throttled to roughly every 10 seconds so ordinary retry cadence stays close to one
-  BLE scan per second. Keep the search screen and show scanner
-  diagnostics such as `No printer signal`, `Saw other Instax`, or `Printer seen; connecting`;
-  do not call it offline while discovery is still active.
+- If a selected Printer is not currently connected, keep searching automatically. The default
+  Rust backend scans for about 5 seconds every 30 seconds while offline; Settings > Printer >
+  Search rate offers 5/15/30/60-second periods. A newly dropped connection retries immediately.
+  The diagnostic Bleak fallback retains its separate discovery policy. Keep the search screen
+  and show scanner diagnostics such as `No printer signal`, `Saw other Instax`, or
+  `Printer seen; connecting`; do not call it offline while discovery is still active.
 - Transient missed advertisements and connect timeouts stay on the search/connect screen; do not label the printer offline from a single failed BLE status attempt.
 - If the selected printer is visible but repeatedly disconnects during GATT/service discovery, show
   `Restart printer` rather than asking the user to re-pair. Re-pairing only helps when the selected

@@ -126,7 +126,7 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # configured search_interval_s equals the scan window — `period - elapsed`
 # rounds to ~0 and the UI render task starves. 2 seconds gives the asyncio
 # event loop room to service LCD render, FTP, and BLE callbacks without
-# noticeably delaying reconnect when the printer wakes up.
+# noticeably delaying reconnect when the printer wakes up at the 5-second setting.
 MIN_OFFLINE_SEARCH_GAP_S = 2.0
 # How long a SystemStatsSnapshot is reused before re-reading /proc and /sys.
 # The About page can re-render at the LCD's ~30 Hz tick when help text toasts or
@@ -3928,7 +3928,7 @@ class BridgeUi:
                 # match or ran the full window — and so a fast-failing connect does not hammer.
                 # A MIN_OFFLINE_SEARCH_GAP_S floor guarantees the asyncio event loop gets at least
                 # a couple of seconds to render the LCD and service other tasks even when the
-                # configured period equals the scan window (the default 5s case).
+                # configured period equals the scan window (the optional 5s setting).
                 period = self._printer_status_retry_delay(online)
                 self._printer_was_online = online
                 elapsed = self._monotonic() - attempt_start
@@ -4057,7 +4057,7 @@ class BridgeUi:
             return 0.0
         # The configured search interval is the total cadence PERIOD between attempt starts; the
         # poll loop subtracts the time each attempt consumed. The minimum 5s option equals the scan
-        # window, so attempts run back-to-back (continuous). No exponential backoff, so a
+        # window, so attempts run with only the minimum gap. No exponential backoff, so a
         # powered-off printer keeps being searched at the chosen period (Settings > Search rate).
         return self._config.printer.search_interval_s
 

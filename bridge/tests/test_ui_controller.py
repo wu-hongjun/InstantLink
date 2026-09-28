@@ -6087,6 +6087,16 @@ async def test_key2_locks_sync_home_and_first_key_only_wakes_display() -> None:
     assert len(display.snapshots) == rendered_before + 1
 
 
+def test_screen_off_uses_slower_network_status_poll() -> None:
+    ui, _ = _make_settings_ui(BridgeConfig())
+    assert ui._network_status_poll_interval_s() == 1.0
+    ui._apply_idle_stage(IdleStage.SCREEN_OFF)
+    assert ui._network_status_poll_interval_s() == 5.0
+    ui._apply_idle_stage(IdleStage.ACTIVE)
+    ui._lock_screen()
+    assert ui._network_status_poll_interval_s() == 5.0
+
+
 # ---------------------------------------------------------------------------
 # Plan 051 pass-2 (from Pass 1): the auto-print preview must not steal the
 # QR screen. The whole confirmation flow (including the NO_FILM screen and

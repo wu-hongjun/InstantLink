@@ -74,6 +74,10 @@ reversible and does not change the source build.
   The Bridge continues receiving uploads and reconnecting while locked.
 - While the LCD is off, the controller skips physical framebuffer renders;
   virtual LCD snapshots still use the same state machine and renderer on demand.
+- The network-status watcher checks every 5 seconds while the LCD is off
+  instead of running two `ip` subprocesses every second. FTP listeners and
+  incoming-upload events stay live; the 1-second status cadence resumes while
+  the screen is visible.
 - Settings > Mode is the one place to choose Print or Sync. The QR pairing action
   remains on Settings > Network. KEY2 is still Back/Cancel inside menus and
   print previews.

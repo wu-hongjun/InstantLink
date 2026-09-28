@@ -200,6 +200,7 @@ RENDER_TICK_S = 0.35
 # printer_status_fresh TTL pattern.
 SYNC_CLIENT_RECENT_TTL_S = 20.0
 USB_STATUS_POLL_S = 1.0
+NETWORK_STATUS_SCREEN_OFF_POLL_S = 5.0
 # Readiness freshness gate: "Ready to print" must be backed by a printer status that succeeded
 # recently, not just stale cached film/mode. If the printer powers off, status polls fail and the
 # last success ages out past this TTL, so the display leaves "Ready" even if a PRINTER_SEARCHING
@@ -4522,8 +4523,21 @@ class BridgeUi:
 
     async def _run_network_status(self) -> None:
         while True:
-            await asyncio.sleep(USB_STATUS_POLL_S)
+            await asyncio.sleep(self._network_status_poll_interval_s())
             await self._refresh_network_status()
+
+    def _network_status_poll_interval_s(self) -> float:
+        # `detect_camera_link_health` launches `ip` for both interfaces. Once
+        # the LCD is dark, a five-second status refresh is enough to track
+        # connectivity without launching those subprocesses every second.
+        # FTP itself remains event-driven and accepts uploads immediately.
+        if self._effective_idle_stage() in {
+            IdleStage.SCREEN_OFF,
+            IdleStage.DEEP_IDLE,
+            IdleStage.POWEROFF,
+        }:
+            return NETWORK_STATUS_SCREEN_OFF_POLL_S
+        return USB_STATUS_POLL_S
 
     async def _run_about_page_refresh(self) -> None:
         """Rebuild the About page rows periodically so live stats tick.

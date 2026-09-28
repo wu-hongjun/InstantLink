@@ -9,13 +9,14 @@ print remains the 2026-08-04 Sony a7C II `.HIF` → Instax Square run described 
 ### Battery session, 2026-09-27
 
 - The X306 now holds a **2300 mAh 18650 cell**. It has no Linux-readable current or charge gauge;
-  no measured runtime claim exists yet. The battery directly powers the Bridge, so the runtime
-  test is one full charge followed by discharge to hardware cutoff with external charging power
-  disconnected. The protocol is in `docs/plans/057-bridge-battery-day.md`. A transient
-  `instantlink-battery-run.service` began writing 60-second, fsynced activity samples to
-  `/var/lib/InstantLinkBridge/battery-run.jsonl` at 20:41:51 EDT while USB power was still attached;
-  the external-power disconnect time must be recorded separately before those samples can bound
-  battery runtime.
+  the first near-full discharge ran overnight, but the exact unplug time is pending. The battery
+  directly powers the Bridge. The protocol and evidence are in
+  `docs/plans/057-bridge-battery-day.md`. The transient sampler wrote 206 one-minute records through
+  00:07:08 EDT, then stopped at an unplanned reboot. The next boot had no USB carrier and ran the
+  Bridge for 9 h 9 min before hardware cutoff. The user confirmed empty battery LEDs and keys
+  unable to wake the LCD before restoring power. The Bridge had recovered automatically after the
+  midnight reset. A new opt-in persistent sampler unit was installed and verified on the Pi; it is
+  disabled between tests and can be enabled for a repeat run.
 - KEY2 now locks the LCD from home/status surfaces; the next key wakes it without also activating
   a UI action. The Print/Sync Mode picker is on the top Settings page. Locked screens skip physical
   framebuffer renders, and network status polling slows from 1 s to 5 s while the screen is off.

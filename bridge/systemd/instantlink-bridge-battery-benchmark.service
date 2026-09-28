@@ -1,0 +1,13 @@
+[Unit]
+Description=InstantLink Bridge battery discharge sampler
+Documentation=file:/opt/InstantLinkBridge/docs/current-context.md
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/InstantLinkBridge/scripts/benchmark-power.py --interval 60 --output /var/lib/InstantLinkBridge/battery-run.jsonl
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

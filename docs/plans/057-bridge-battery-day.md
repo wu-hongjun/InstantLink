@@ -16,12 +16,11 @@ runtime, and any estimate must state its workload and initial charge.
 
 The cell's nominal energy is `2.3 Ah × 3.7 V = 8.51 Wh`. A 24-hour target permits
 an average draw of just `0.355 W` at the cell, before X306 conversion loss. The
-Raspberry Pi documentation lists 350 mA typical bare-board current for the Zero
-2 W at 5 V (about 1.75 W). This figure alone implies under 4.9 hours before
-UPS, Wi-Fi, BLE, LCD, and workload losses. It is a reference figure, not a
-measurement of this Bridge. A continuously awake, discoverable Pi with this
-single cell should not be described as a 24-hour product until a discharge test
-proves it. X306 hardware poweroff has very low standby draw, but an off Pi cannot
+Raspberry Pi documentation lists 350 mA typical bare-board **active** current
+for the Zero 2 W at 5 V (about 1.75 W). That reference describes a different
+workload and cannot predict this Bridge's mostly idle draw. The cell still must
+support a measured average below 0.355 W to reach 24 hours. X306 hardware
+poweroff has very low standby draw, but an off Pi cannot
 receive FTP or reconnect automatically when a camera or Printer turns on.
 
 Sources: [Raspberry Pi hardware power table](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html),
@@ -69,6 +68,27 @@ Available RAM rose from about 197 to 281 MB; swap use fell from 67 to 45 MB.
 USB SSH, hotspot, FTP, Bluetooth, and Bridge services remained active. This is
 reversible and does not change the source build.
 
+## First discharge, 2026-09-27 to 2026-09-28
+
+The user disconnected external power after the 21:37 EDT logger check and
+reconnected the Bridge to the Mac the next morning. The precise unplug time is
+pending. Before reconnection, the battery LEDs were empty and physical keys
+could not wake the LCD, confirming the morning hardware cutoff. The first
+battery boot (`2c3406e2-…`) logged through monotonic uptime
+`14909.6 s` at 00:07:15 EDT. It stopped without an orderly shutdown. The next
+boot (`32f96c0b-…`) performed ext4 journal recovery, reported no USB carrier,
+and ran the Bridge until monotonic uptime `32962.8 s` (9 h 9 min 23 s). It also
+ended without an orderly shutdown at battery cutoff; the current boot is
+`0250b538-…`.
+
+The transient sampler survived only the first boot: 206 valid, 60-second JSONL
+records from 20:41:51 to 00:07:08 EDT, all with LCD backlight off and mean
+aggregate CPU busy 2.94%. Persistent journals establish the second boot's
+duration and continuing 30-second Printer search, but cannot reconstruct its
+minute-by-minute CPU or an exact cutoff. The first-boot reset cause is unknown;
+the Bridge service recovered automatically. The persistent opt-in sampler below
+fixes this measurement gap for a repeat run.
+
 ## UX and power behavior
 
 - KEY2 on a normal home/status surface turns the LCD backlight off immediately.
@@ -93,24 +113,24 @@ reversible and does not change the source build.
    X306 revision, room temperature, and workload. Disconnect external charging
    power at the start so the battery is the Bridge's only energy source; do not
    assume a USB connection is data-only.
-2. Start the sampler as a transient systemd service before disconnecting power:
-   `sudo systemd-run --unit=instantlink-battery-run /usr/bin/python3
-   /opt/InstantLinkBridge/scripts/benchmark-power.py --interval 60 --output
-   /var/lib/InstantLinkBridge/battery-run.jsonl`. This logger is already running
-   on the current Bridge. Mark the external-power disconnect time. Each sample
-   is flushed to persistent storage. Use monotonic uptime from one boot to
-   calculate elapsed time even if the Pi's wall clock drifts.
+2. Enable the opt-in persistent sampler before disconnecting power:
+   `sudo systemctl enable --now instantlink-bridge-battery-benchmark.service`.
+   It appends one fsynced sample per minute to
+   `/var/lib/InstantLinkBridge/battery-run.jsonl` and resumes after a reboot.
+   Mark the external-power disconnect time. Use monotonic uptime within each
+   boot ID; the Pi's wall clock may reset when it reboots without network time.
 3. For the first full cycle, leave the hotspot on, Printer off, screen locked,
    and do not send camera uploads. Let the Bridge run until the battery hardware
    cuts power. A realistic shoot with camera FTP and Printer on requires a
    separate full charge and full cycle; record prints and idle gaps for that run.
    These are different battery claims and must not be conflated.
-4. After cutoff, reconnect charging power and read the saved JSONL. Confirm the
-   boot ID changed, then compare the last same-boot uptime with the sample
-   nearest the marked disconnect time. The last durable sample is a lower bound;
-   if the logger remained active until hardware cutoff, the 60-second interval
-   bounds the cutoff to before the next expected sample. The X306 has no software
-   low-battery shutdown signal, so the Bridge may stop abruptly.
+4. After cutoff, reconnect charging power and read the saved JSONL. Compare the
+   boot ID and uptime sequence with persistent journal boots. A healthy sampler
+   ending abruptly bounds the final cutoff to between its last sample and the
+   next expected minute; an intervening reboot creates a new segment rather than
+   silently truncating the run. The X306 has no software low-battery shutdown
+   signal, so the Bridge may stop abruptly. Disable the sampler after collecting
+   results: `sudo systemctl disable --now instantlink-bridge-battery-benchmark.service`.
 5. With the Printer initially off, turn it on and measure time from its power
    button to a successful `ui.printer_status` log and READY screen. Repeat with
    the camera joining the hotspot and sending a photo. Verify no manual
@@ -124,6 +144,5 @@ reversible and does not change the source build.
   changing the default; a longer interval is useful only if it preserves the
   link and printer wakefulness.
 - If a true 24-hour always-ready target remains, change the energy source or
-  add external wake/power-control hardware. Software-only idle work cannot
-  make a Zero 2 W hotspot and BLE appliance average below the cell's 0.355 W
-  day budget based on the published bare-board power figure.
+  add external wake/power-control hardware unless repeat discharge tests show
+  this Bridge can reach the cell's 0.355 W day budget with software changes.

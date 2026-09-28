@@ -8,10 +8,11 @@ throughout a shoot while removing work that does not improve that experience.
 KEY2 on the home surface locks the physical LCD; Print/Sync Mode moves to the
 main Settings page.
 
-The X306 has no host-readable current, voltage, state-of-charge, or charge-state
-interface. Its LEDs provide coarse battery indication. Software CPU and thermal
-measurements are **not** power measurements. A repeatable discharge run is needed
-for real runtime, and any estimate must state its workload and initial charge.
+The installed battery directly powers the Bridge. The X306 has no host-readable
+current, voltage, state-of-charge, or charge-state interface. Its LEDs provide
+coarse battery indication. Software CPU and thermal measurements are **not**
+power measurements. A full-charge-to-cutoff discharge run is needed for real
+runtime, and any estimate must state its workload and initial charge.
 
 The cell's nominal energy is `2.3 Ah × 3.7 V = 8.51 Wh`. A 24-hour target permits
 an average draw of just `0.355 W` at the cell, before X306 conversion loss. The
@@ -87,24 +88,29 @@ reversible and does not change the source build.
 
 ## Discharge test and acceptance gates
 
-1. Fully charge the 2300 mAh cell until the X306 indicates full. Record the
-   battery make/model, X306 revision, room temperature, and workload. Confirm
-   the device is independently powered through the X306. USB must be unplugged
-   for the timed run so the Mac cannot supply power.
-2. Start the sampler as a transient systemd service while USB SSH is attached:
+1. Fully charge the installed 2300 mAh cell using the device's existing power
+   wiring until its charge indicator shows full. Record the battery make/model,
+   X306 revision, room temperature, and workload. Disconnect external charging
+   power at the start so the battery is the Bridge's only energy source; do not
+   assume a USB connection is data-only.
+2. Start the sampler as a transient systemd service before disconnecting power:
    `sudo systemd-run --unit=instantlink-battery-run /usr/bin/python3
    /opt/InstantLinkBridge/scripts/benchmark-power.py --interval 60 --output
-   /var/lib/InstantLinkBridge/battery-run.jsonl`. Then unplug USB and mark the
-   host time. Each sample is flushed to persistent storage. The Pi's own clock
-   need not be accurate; use the monotonic uptime in samples from one boot.
-3. Run an **idle-ready** profile first: hotspot on, Printer off, screen locked,
-   no camera uploads. Then repeat with a realistic shoot: camera joins FTP,
-   Printer on, sample number of prints and idle gaps. These are different
-   battery claims and must not be conflated.
-4. At the low X306 LED indicator, record elapsed time and recharge. If testing
-   to hardware cutoff, the last durable sample bounds the cutoff to the next
-   60 seconds; the X306 has no software low-battery shutdown signal, so cutoff
-   may be abrupt. After reconnecting power, compare boot IDs and sample uptime.
+   /var/lib/InstantLinkBridge/battery-run.jsonl`. This logger is already running
+   on the current Bridge. Mark the external-power disconnect time. Each sample
+   is flushed to persistent storage. Use monotonic uptime from one boot to
+   calculate elapsed time even if the Pi's wall clock drifts.
+3. For the first full cycle, leave the hotspot on, Printer off, screen locked,
+   and do not send camera uploads. Let the Bridge run until the battery hardware
+   cuts power. A realistic shoot with camera FTP and Printer on requires a
+   separate full charge and full cycle; record prints and idle gaps for that run.
+   These are different battery claims and must not be conflated.
+4. After cutoff, reconnect charging power and read the saved JSONL. Confirm the
+   boot ID changed, then compare the last same-boot uptime with the sample
+   nearest the marked disconnect time. The last durable sample is a lower bound;
+   if the logger remained active until hardware cutoff, the 60-second interval
+   bounds the cutoff to before the next expected sample. The X306 has no software
+   low-battery shutdown signal, so the Bridge may stop abruptly.
 5. With the Printer initially off, turn it on and measure time from its power
    button to a successful `ui.printer_status` log and READY screen. Repeat with
    the camera joining the hotspot and sending a photo. Verify no manual

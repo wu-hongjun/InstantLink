@@ -40,11 +40,13 @@ boot ID and monotonic uptime to establish order. The LCD backlight was off
 | Previous device config | 5 s | 8.75% mean, four 5 s intervals | Bridge 13–15%, D-Bus 7–11%, Bluetooth 6–9% of one core; effectively continuous BLE search |
 | Battery profile | 30 s | 3.67% mean, seventeen 5 s intervals | 5 s scans with idle gaps; CPU dropped to 600 MHz between scans; mean SoC temperature 50.6 °C |
 | Battery profile, development services stopped | 30 s | 3.93% mean, seventeen 5 s intervals | mean SoC temperature 49.5 °C; available RAM about 285 MB |
+| Plus 5 s dark-screen network status polling | 30 s | 3.42% mean, seventeen 5 s intervals | mean SoC temperature 48.6 °C; Bridge process 7.6% of one core versus 8.7% in prior row |
 
 These CPU means are short observations over different phases of the scan cycle;
-the small difference between the two 30-second rows is within this sampling
-variation, so stopping development services is a memory/boot improvement, not
-a measured CPU or energy saving here.
+the small differences among the 30-second rows are within this sampling
+variation. Stopping development services is a memory/boot improvement here;
+the dark-screen poll change removes four out of five network probes, but the
+short CPU sample does not establish a battery-life gain.
 They show that the old search loop was substantial avoidable work, but do not
 establish a percentage battery saving. `bridge/scripts/benchmark-power.py` records
 boot ID, uptime, CPU, process activity, temperature, memory, Wi-Fi counters, and

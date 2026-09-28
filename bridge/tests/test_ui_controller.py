@@ -1216,7 +1216,7 @@ def test_min_offline_search_gap_guarantees_event_loop_breathing_room() -> None:
     to service the LCD render and other tasks.
 
     Regression guard: a previous build used `max(0.0, period - elapsed)` in
-    the post-attempt sleep. With the default `search_interval_s == 5.0` and a
+    the post-attempt sleep. With the fastest `search_interval_s == 5.0` and a
     typical 5s BLE scan, that produced 0s sleeps and pegged one core at
     ~88% CPU, starving the UI render and making the LCD look frozen. The
     floor must be > 1s so each cycle yields visibly to other tasks.

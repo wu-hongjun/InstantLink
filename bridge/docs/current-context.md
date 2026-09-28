@@ -1,9 +1,36 @@
 # InstantLink Bridge Current Context
 
-Latest source deployment verified: 2026-08-04 on `riverps-rpi-zero-2w` (bridge 0.1.17 on `main`,
-commit `0e1acab` — plan 056 performance work, deployed clean and service-smoked). **A real print
-was completed on this build** (Sony a7C II `.HIF` → Instax Square), which closes several items
-that had stood unverified since 2026-07-22 — see *Live print verified* below.
+Latest source deployment verified: 2026-09-27 on `riverps-rpi-zero-2w` (bridge 0.1.17,
+branch `codex/bridge-battery-day`, commit `06e3812`, clean archive). The Bridge service restarted
+successfully with `NRestarts=0`; FTP `:21` and manager `:8742` listen on the expected addresses.
+The Pi clock was corrected from 2026-09-11 by the deployment script. The last completed real
+print remains the 2026-08-04 Sony a7C II `.HIF` → Instax Square run described below.
+
+### Battery session, 2026-09-27
+
+- The X306 now holds a **2300 mAh 18650 cell**. It has no Linux-readable current or charge gauge;
+  no measured runtime claim exists yet. The full-charge discharge test is specified in
+  `docs/plans/057-bridge-battery-day.md` and awaits a charged, unplugged run.
+- KEY2 now locks the LCD from home/status surfaces; the next key wakes it without also activating
+  a UI action. The Print/Sync Mode picker is on the top Settings page. Locked screens skip physical
+  framebuffer renders, and network status polling slows from 1 s to 5 s while the screen is off.
+  These changes pass 1121 local Bridge tests. **Physical KEY2/backlight behavior is not yet
+  hand-verified**; the Printer was off during deployment.
+- The device's saved Printer search period was changed from 5 s to 30 s (prior config backup:
+  `/etc/InstantLinkBridge/config.toml.bak-battery-baseline`). Automatic BLE search remains active.
+  With the Printer off and the LCD dark, sampled aggregate CPU busy fell from 8.75% (5 s search,
+  four 5 s intervals) to 3.67% (30 s search, seventeen 5 s intervals). This measures activity,
+  **not** battery draw. The updated code also defaults new configs to 30 s and leaves 5/15/30/60
+  s choices in Settings.
+- After the dark-screen network watcher moved to a 5 s cadence, a further seventeen 5 s samples
+  averaged 3.42% aggregate CPU busy and 48.6 °C SoC temperature. That small difference from the
+  3.93% post-boot-diet sample is within short-run variation; it is not a runtime measurement.
+- The production boot diet disabled `tailscaled` and the OpenFilmAdvance GitHub Actions runner;
+  user-level `rpi-connect` was disabled separately. USB SSH remains available. Available RAM rose
+  from about 197 MB to 281 MB, and swap use fell from 67 MB to 45 MB. The live Bridge, Bluetooth,
+  Wi-Fi hotspot, FTP, and manager services remained active.
+- The paired Instax Square was not advertising during this session. A timed power-on reconnect,
+  camera FTP upload, and full battery discharge remain the hardware gates.
 
 Print/Sync mode behavior from commit `7a43570` was the prior baseline (2026-07-22). The iPhone
 sync feature from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a
@@ -35,7 +62,7 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- **Current deployment: commit `0e1acab` on `main` (2026-08-04)**, clean tree, `--system --restart`.
+- **Prior deployment: commit `0e1acab` on `main` (2026-08-04)**, clean tree, `--system --restart`.
   Verified on-device: `instantlink-bridge.service` and `instantlink-bridge-manager.service` both
   active with `NRestarts=0`; FTP `:21` and manager `:8742` (on both `192.168.7.1` and
   `192.168.8.1`) listening; no errors in the journal.

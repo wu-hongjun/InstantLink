@@ -57,8 +57,9 @@ backup at `/etc/InstantLinkBridge/config.toml.bak-battery-baseline`. The code
 default is also 30 seconds; the existing Settings choice of 5/15/30/60 seconds
 remains available. Automatic scanning continues while the Printer is offline.
 The user can choose the 5-second option when immediate reconnect is worth the
-continuous radio activity. A camera upload also makes a direct print connection
-attempt; the periodic status scan is not the only path.
+continuous radio activity. FTP preflight waits for a fresh ready Printer status
+before accepting an upload in Print mode; the periodic status scan restores that
+readiness after the Printer turns on.
 
 The device's production boot diet was applied over the USB admin link:
 `tailscaled`, a GitHub Actions runner, and the user-level `rpi-connect` service

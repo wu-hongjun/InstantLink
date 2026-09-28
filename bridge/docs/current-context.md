@@ -1,9 +1,12 @@
 # InstantLink Bridge Current Context
 
-Latest source deployment verified: 2026-09-27 on `riverps-rpi-zero-2w` (bridge 0.1.17,
-branch `codex/bridge-battery-day`, commit `06e3812`, clean archive). The Bridge service restarted
-successfully with `NRestarts=0`; FTP `:21` and manager `:8742` listen on the expected addresses.
-The Pi clock was corrected from 2026-09-11 by the deployment script. The last completed real
+Latest source deployment verified: 2026-09-28 on `riverps-rpi-zero-2w` (bridge 0.1.17,
+branch `codex/bridge-battery-day`, commit `4455f53`, clean archive). This source-only deployment
+updated the benchmark script and service unit without restarting the healthy Bridge runtime. The
+prior runtime deployment restarted successfully with `NRestarts=0`; FTP `:21` and manager `:8742`
+listen on the expected addresses.
+The Pi clock was corrected from 2026-09-11 by the deployment script and resynced on 2026-09-28;
+offline wall-clock timestamps drift or reset across boots. The last completed real
 print remains the 2026-08-04 Sony a7C II `.HIF` → Instax Square run described below.
 
 ### Battery session, 2026-09-27

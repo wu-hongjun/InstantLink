@@ -146,8 +146,8 @@ state in v1.
 - KEY1 / joystick press opens Settings from normal status screens. Settings persists
   `/etc/InstantLinkBridge/config.toml` and covers printer pairing/forget, Wi-Fi mode, printer type,
   fit, JPEG quality, auto-print mode/delay, keepalive, and the delivery mode
-  (`[sync].destination` — `Mode`: Print / Sync, plan 055). KEY2 switches between those modes
-  directly from normal home/status surfaces. The remaining `[sync]`
+  (`[sync].destination` — `Mode`: Print / Sync on the main Settings page). KEY2 locks the LCD
+  from normal home/status surfaces; the next key wakes it without taking a second action. The remaining `[sync]`
   fields (`port`, `outbox_dir`, `outbox_budget_mb`, `token_path`, `remote_ui`) are
   provisioning-level and not editable from the LCD.
 - `workflow.allow_print_without_film` is a testing-only escape hatch exposed as `No-film test`.
@@ -183,8 +183,8 @@ state in v1.
   the BLE transfer and show `No Film Left`.
 - Sync mode ignores Printer and film state entirely; uploads spool to the sync outbox and never
   enter the print pipeline.
-- Delivery-mode footer (plan 055): Print home surfaces advertise `KEY2 Sync`; Sync home surfaces
-  advertise `KEY2 Print`. KEY2 persists the new mode and refreshes the home state immediately.
+- Home footer (plan 057): Print and Sync surfaces advertise `KEY2 Lock`. A deliberate screen lock
+  persists through FTP and status activity, while the runtime and automatic Printer reconnect stay active.
   In Sync mode short and hold KEY3 both open the iPhone pairing QR, and BACK from that QR returns
   home.
 - iPhone pairing QR (plan 051): never show a QR while nothing listens on the sync port — the

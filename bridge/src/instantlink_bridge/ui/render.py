@@ -2998,7 +2998,7 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
             ("KEY1 OK", "KEY2 Back", "KEY3 Help"),
         )
     if snapshot.mode is UiMode.NEEDS_PAIRING:
-        return (("KEY1 Pair", "KEY2 Sync", "KEY3 Pair"),)
+        return (("KEY1 Pair", "KEY2 Lock", "KEY3 Pair"),)
     if snapshot.mode is UiMode.PAIR_FAILED:
         return (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
     if snapshot.mode is UiMode.PAIRING:
@@ -3019,10 +3019,10 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
             return (("KEY1 Setting", "Ejecting", "KEY3 Network"),)
         return (("KEY1 Setting", "Ejecting", "Hold KEY3"),)
     if snapshot.sync_destination == "iphone":
-        return (("KEY1 Setting", "KEY2 Print", "KEY3 iPhone"),)
+        return (("KEY1 Setting", "KEY2 Lock", "KEY3 iPhone"),)
     if snapshot.paired_printer is not None:
-        return (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
-    return (("KEY1 Setting", "KEY2 Sync", "KEY3 Pair"),)
+        return (("KEY1 Setting", "KEY2 Lock", "KEY3 Network"),)
+    return (("KEY1 Setting", "KEY2 Lock", "KEY3 Pair"),)
 
 
 # ---------------------------------------------------------------------------

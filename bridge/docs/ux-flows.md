@@ -260,7 +260,7 @@ Setting details:
   pairing row: `Print or sync received photos · Pair iPhone: Network page`.
 - `iPhone pairing` (Network page, plan 050): action row that opens the SYNC_PAIRING QR screen
   (see template above). Its KEY3 help cross-references the destination row:
-  `Show a QR code to pair your iPhone · Mode: Print page`.
+  `Show a QR code to pair your iPhone · Mode: Settings page`.
 - `Reset sync token` (Network page, plan 051 P3.11): destructive action row next to
   `Reset credentials` (escalation order — token first, full credentials last). Two-press
   confirm, then rotates the pairing token and restarts the sync service; see "Token rotation"
@@ -294,16 +294,18 @@ The UI is designed for the Waveshare 240x240 square LCD HAT, not touch input.
 | Joystick right | 26 | Select focused item / next value |
 | Joystick press | 13 | Select focused item / next value |
 | KEY1 | 21 | Open settings / select focused item |
-| KEY2 | 20 | Switch Print/Sync on home; back/cancel elsewhere |
+| KEY2 | 20 | Lock the LCD on home; back/cancel elsewhere |
 | KEY3 press | 16 | Help for selected Settings row |
 | KEY3 hold | 16 | Start pair-printer scan outside Settings |
 
-Delivery-mode footer semantics on the home/status surfaces (plan 055):
+Home/status footer semantics (plan 057):
 
-- Print mode reads `KEY1 Setting · KEY2 Sync · KEY3 Network` when paired, or exposes Printer
-  pairing on KEY1/KEY3 when unpaired.
-- Sync mode reads `KEY1 Setting · KEY2 Print · KEY3 iPhone`. Both short **and** hold KEY3 open
-  the iPhone pairing QR — a Printer scan would be pointless with printing disabled.
+- Print mode reads `KEY1 Setting · KEY2 Lock · KEY3 Network` when paired, or exposes Printer
+  pairing on KEY1/KEY3 when unpaired. The Print/Sync Mode picker is on the main Settings page.
+- Sync mode reads `KEY1 Setting · KEY2 Lock · KEY3 iPhone`. Both short **and** hold KEY3 open
+  the iPhone pairing QR — a Printer scan would be pointless with printing disabled. KEY2
+  switches off the LCD backlight without stopping FTP, sync, or printer status. The next key
+  wakes the display and does not also activate an action. Background activity keeps it locked.
   BACK from a QR opened this way returns to the home surface, not Settings.
 
 Boot behavior:

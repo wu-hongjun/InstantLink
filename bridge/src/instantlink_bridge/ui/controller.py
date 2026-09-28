@@ -27,7 +27,6 @@ from instantlink_bridge.config import (
     PowerBackend,
     StatusSinkKind,
     SyncConfig,
-    SyncDestination,
     write_config,
 )
 from instantlink_bridge.imaging.pipeline import (
@@ -240,14 +239,13 @@ STATUS_VISIBLE_MODES = {
     UiMode.PRINTER_OFFLINE,
     UiMode.SETTINGS,
 }
-MODE_SWITCH_MODES = {
+LOCKABLE_HOME_MODES = {
     UiMode.READY,
     UiMode.NO_FILM,
     UiMode.VALIDATION,
     UiMode.NEEDS_PAIRING,
     UiMode.PRINTER_SEARCHING,
     UiMode.PRINTER_OFFLINE,
-    UiMode.ERROR,
 }
 
 
@@ -420,6 +418,7 @@ class BridgeUi:
         self._bridge_power_alert: str = BatteryAlert.UNKNOWN.value
         self._bridge_external_power: bool | None = None
         self._idle_stage = IdleStage.ACTIVE
+        self._screen_locked = False
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         self._battery_estimator = BatteryLifeEstimator()
         self._battery_minutes_remaining: int | None = None
@@ -1373,10 +1372,28 @@ class BridgeUi:
 
     def _apply_idle_stage(self, stage: IdleStage) -> None:
         self._idle_stage = stage
-        self._snapshot = replace(self._snapshot, idle_stage=stage.value)
-        self._set_display_idle_stage(stage)
-        if stage is IdleStage.ACTIVE or self._snapshot.mode is UiMode.SETTINGS:
+        effective_stage = self._effective_idle_stage()
+        self._snapshot = replace(self._snapshot, idle_stage=effective_stage.value)
+        self._set_display_idle_stage(effective_stage)
+        if effective_stage is IdleStage.ACTIVE or self._snapshot.mode is UiMode.SETTINGS:
             self._render()
+
+    def _effective_idle_stage(self) -> IdleStage:
+        return IdleStage.SCREEN_OFF if self._screen_locked else self._idle_stage
+
+    def _lock_screen(self) -> None:
+        self._screen_locked = True
+        self._snapshot = replace(self._snapshot, idle_stage=IdleStage.SCREEN_OFF.value)
+        self._set_display_idle_stage(IdleStage.SCREEN_OFF)
+        LOGGER.info("ui.screen_locked")
+
+    def _unlock_screen(self) -> None:
+        self._screen_locked = False
+        self._idle_stage = IdleStage.ACTIVE
+        self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
+        self._set_display_idle_stage(IdleStage.ACTIVE)
+        self._render()
+        LOGGER.info("ui.screen_unlocked")
 
     def _apply_shutdown_requested(self, event: PowerEvent) -> None:
         reason = event.shutdown_reason.value if event.shutdown_reason is not None else "shutdown"
@@ -1399,6 +1416,11 @@ class BridgeUi:
         await self._power_activity_callback()
 
     async def _handle_action(self, action: UiAction) -> None:
+        if self._screen_locked:
+            # The first key only wakes the display. Background FTP and printer
+            # status updates cannot undo a deliberate lock.
+            self._unlock_screen()
+            return
         if self._snapshot.mode is UiMode.CONFIRMATION_DIALOG:
             await self._handle_confirmation_dialog_action(action)
             return
@@ -1427,8 +1449,8 @@ class BridgeUi:
             if action is UiAction.BACK:
                 await self._cancel_pairing()
             return
-        if action is UiAction.BACK and self._snapshot.mode in MODE_SWITCH_MODES:
-            await self._switch_delivery_mode()
+        if action is UiAction.BACK and self._snapshot.mode in LOCKABLE_HOME_MODES:
+            self._lock_screen()
             return
         if action is UiAction.PAIR:
             if not self._config.sync.print_enabled:
@@ -2504,32 +2526,6 @@ class BridgeUi:
         if show_settings:
             self._show_settings(message)
         return True
-
-    async def _switch_delivery_mode(self) -> None:
-        """Toggle Print/Sync from a home surface and persist immediately."""
-
-        destination = (
-            SyncDestination.PRINT
-            if self._config.sync.destination is SyncDestination.IPHONE
-            else SyncDestination.IPHONE
-        )
-        updated = replace(
-            self._config,
-            sync=replace(self._config.sync, destination=destination),
-        )
-        LOGGER.info(
-            "ui.delivery_mode_switch previous=%s destination=%s",
-            self._config.sync.destination.value,
-            destination.value,
-        )
-        if not await self._set_config(
-            updated,
-            message=f"{sync_destination_label(destination)} mode",
-            show_settings=False,
-        ):
-            return
-        self._settings_picker_key = None
-        await self.refresh_printer_status()
 
     def _notify_ftp_config_applied(self, config: FtpConfig) -> None:
         if self._ftp_config_applied_callback is None:
@@ -3870,7 +3866,7 @@ class BridgeUi:
             bridge_power_status=self._bridge_power_status,
             bridge_power_alert=self._bridge_power_alert,
             bridge_external_power=self._bridge_external_power,
-            idle_stage=self._idle_stage.value,
+            idle_stage=self._effective_idle_stage().value,
             message=message,
             allow_print_without_film=self._config.workflow.allow_print_without_film,
             settings_title=settings_title,
@@ -4654,6 +4650,12 @@ class BridgeUi:
             # idle screens. The breath-bypass branch was removed when the
             # pill switched to solid colour: with no time-based tint, an
             # equal snapshot really does render to an identical frame.
+            if self._snapshot.idle_stage in {
+                IdleStage.SCREEN_OFF.value,
+                IdleStage.DEEP_IDLE.value,
+                IdleStage.POWEROFF.value,
+            }:
+                return
             if self._snapshot == self._last_rendered_snapshot:
                 return
             self._display.render(self._snapshot)

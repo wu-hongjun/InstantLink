@@ -1459,13 +1459,14 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     await ui._handle_action(UiAction.SELECT)
 
-    # MAIN: Print (0), Network (1), System (2). Accessibility folded into
+    # MAIN: Print (0), Network (1), System (2), Mode (3). Accessibility folded into
     # System after plan 035 phase 1 follow-up — Appearance / Text size /
     # Language now sit under System next to the bridge-state rows.
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
         "Print",
         "Network",
         "System",
+        "Mode",
     ]
 
     # 1 DOWN lands on Network; SELECT enters it.
@@ -1547,7 +1548,8 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
 
     assert display.snapshots[-1].settings_title == "Settings"
     assert display.snapshots[-1].settings_message is None
-    assert all(row.value == "" for row in display.snapshots[-1].settings_rows)
+    assert all(row.value == "" for row in display.snapshots[-1].settings_rows[:3])
+    assert display.snapshots[-1].settings_rows[3].value == "Print"
     # MAIN row 0 = Print; help text describes pairing and print options.
     assert display.snapshots[-1].settings_rows[0].help == "Pairing and photo/print options"
 
@@ -5417,13 +5419,12 @@ def _test_system_info() -> SystemInfo:
 @pytest.mark.asyncio
 async def test_mode_row_opens_picker_with_two_explicit_options() -> None:
     ui, display = _make_settings_ui(BridgeConfig())
-    ui._show_settings(page=SettingsPage.PRINT)
+    ui._show_settings(page=SettingsPage.MAIN)
 
-    # PRINT hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print
-    #   4 Mode (plan 055).
-    assert display.snapshots[-1].settings_rows[4].label == "Mode"
-    assert display.snapshots[-1].settings_rows[4].value == "Print"
-    for _ in range(4):
+    # Mode is a top-level Settings row after the three category links.
+    assert display.snapshots[-1].settings_rows[3].label == "Mode"
+    assert display.snapshots[-1].settings_rows[3].value == "Print"
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
 
@@ -5452,8 +5453,8 @@ async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path:
     )
     assert ui._snapshot.sync_destination == "print"
 
-    ui._show_settings(page=SettingsPage.PRINT)
-    for _ in range(4):
+    ui._show_settings(page=SettingsPage.MAIN)
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     # Picker opens on the current value (Print, index 0); one DOWN → Sync.
@@ -5465,8 +5466,8 @@ async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path:
     assert applied_sync == [ui.config.sync]
     assert ui._snapshot.sync_destination == "iphone"
     assert display.snapshots[-1].settings_message == "Saved"
-    # The row value reflects the new destination back on the Print hub.
-    assert display.snapshots[-1].settings_rows[4].value == "Sync"
+    # The row value reflects the new destination on the main Settings page.
+    assert display.snapshots[-1].settings_rows[3].value == "Sync"
 
 
 @pytest.mark.asyncio
@@ -6020,7 +6021,7 @@ async def test_hold_key3_opens_iphone_pairing_in_iphone_only_mode(tmp_path: Path
 
 
 @pytest.mark.asyncio
-async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) -> None:
+async def test_key2_locks_no_printer_home_without_switching_mode(tmp_path: Path) -> None:
     display = _FakeDisplay()
     config_path = tmp_path / "config.toml"
     config_path.write_text("", encoding="utf-8")
@@ -6038,15 +6039,16 @@ async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) 
 
     await ui._handle_action(UiAction.BACK)
 
-    assert ui.config.sync.destination is SyncDestination.IPHONE
-    assert load_config(config_path).sync.destination is SyncDestination.IPHONE
-    assert applied == [ui.config.sync]
-    assert ui._snapshot.mode is UiMode.READY
-    assert ui._snapshot.sync_destination == "iphone"
+    assert ui.config.sync.destination is SyncDestination.PRINT
+    assert load_config(config_path).sync.destination is SyncDestination.PRINT
+    assert applied == []
+    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
+    assert ui._snapshot.idle_stage == "screen_off"
+    assert display.idle_stages[-1] == "screen_off"
 
 
 @pytest.mark.asyncio
-async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
+async def test_key2_locks_sync_home_and_first_key_only_wakes_display() -> None:
     display = _FakeDisplay()
     pairer = _FakePairer([])
     applied: list[SyncConfig] = []
@@ -6062,11 +6064,27 @@ async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
 
     await ui._handle_action(UiAction.BACK)
 
-    assert ui.config.sync.destination is SyncDestination.PRINT
-    assert applied == [ui.config.sync]
-    assert pairer.list_calls == 1
-    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
-    assert ui._snapshot.sync_destination == "print"
+    assert ui.config.sync.destination is SyncDestination.IPHONE
+    assert applied == []
+    assert pairer.list_calls == 0
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.idle_stage == "screen_off"
+
+    # FTP or printer events may reset the idle timer, but a manual lock keeps
+    # the physical LCD dark until a key is pressed.
+    rendered_before = len(display.snapshots)
+    ui._apply_idle_stage(IdleStage.ACTIVE)
+    ui._snapshot = replace(ui._snapshot, message="background update")
+    ui._render()
+    assert ui._snapshot.idle_stage == "screen_off"
+    assert display.idle_stages[-1] == "screen_off"
+    assert len(display.snapshots) == rendered_before
+
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.idle_stage == "active"
+    assert display.idle_stages[-1] == "active"
+    assert len(display.snapshots) == rendered_before + 1
 
 
 # ---------------------------------------------------------------------------
@@ -6116,7 +6134,7 @@ def test_sync_settings_rows_cross_reference_each_other() -> None:
     )
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_PAIRING]
-        == "Show a QR code to pair your iPhone · Mode: Print page"
+        == "Show a QR code to pair your iPhone · Mode: Settings page"
     )
 
 

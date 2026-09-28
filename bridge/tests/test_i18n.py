@@ -197,12 +197,11 @@ def test_zh_hans_iphone_brand_stays_latin() -> None:
             "打印或同步接收的照片 · 配对 iPhone：网络页",  # noqa: RUF001
         ),
         (
-            "Show a QR code to pair your iPhone · Mode: Print page",
-            "显示二维码以配对 iPhone · 模式：打印页",  # noqa: RUF001
+            "Show a QR code to pair your iPhone · Mode: Settings page",
+            "显示二维码以配对 iPhone · 模式：设置页",  # noqa: RUF001
         ),
         ("KEY1 Pair", "KEY1 配对"),
-        ("KEY2 Print", "KEY2 打印"),
-        ("KEY2 Sync", "KEY2 同步"),
+        ("KEY2 Lock", "KEY2 锁屏"),
     ],
 )
 def test_zh_hans_sync_pass2_strings(source: str, expected: str) -> None:

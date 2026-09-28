@@ -154,8 +154,7 @@ _ZH_HANS: dict[str, str] = {
     "KEY1 Setting": "KEY1 设置",
     "KEY2 Back": "KEY2 返回",
     "KEY2 Cancel": "KEY2 取消",
-    "KEY2 Print": "KEY2 打印",
-    "KEY2 Sync": "KEY2 同步",
+    "KEY2 Lock": "KEY2 锁屏",
     "KEY3 Network": "KEY3 网络",
     "KEY3 Help": "KEY3 帮助",
     "KEY3 Retry": "KEY3 重试",
@@ -611,8 +610,8 @@ _ZH_HANS: dict[str, str] = {
     "Print or sync received photos · Pair iPhone: Network page": (
         "打印或同步接收的照片 · 配对 iPhone：网络页"
     ),
-    "Show a QR code to pair your iPhone · Mode: Print page": (
-        "显示二维码以配对 iPhone · 模式：打印页"
+    "Show a QR code to pair your iPhone · Mode: Settings page": (
+        "显示二维码以配对 iPhone · 模式：设置页"
     ),
     # --- iPhone sync pass 3 (plan 051 P3.11): token rotation ---------------
     # "Reset sync token" mirrors the Reset-credentials vocabulary (还原);

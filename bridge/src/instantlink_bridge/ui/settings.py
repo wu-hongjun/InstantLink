@@ -92,8 +92,7 @@ class SettingKey(StrEnum):
     APPEARANCE = "appearance"
     REFRESH_STATUS = "refresh_status"
     RESET_CREDENTIALS = "reset_credentials"
-    # iPhone sync (plan 050): delivery-destination picker on the Print hub
-    # and the QR pairing action on the Network page.
+    # Delivery mode is a top-level Settings row; iPhone pairing is on Network.
     SYNC_DESTINATION = "sync_destination"
     SYNC_PAIRING = "sync_pairing"
     # Sync-token rotation (plan 051 P3.11): destructive action row on the
@@ -148,17 +147,15 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.OPEN_PRINT,
         SettingKey.OPEN_NETWORK,
         SettingKey.OPEN_SYSTEM,
+        SettingKey.SYNC_DESTINATION,
     ),
-    # PRINT is now a 4-row hub (plan 035 phase 1). Each row opens a
+    # PRINT is a 4-row hub (plan 035 phase 1). Each row opens a
     # dedicated sub-page; BACK from any sub-page returns here.
     SettingsPage.PRINT: (
         SettingKey.OPEN_PRINTER,
         SettingKey.OPEN_ADJUSTMENTS,
         SettingKey.OPEN_TRANSFORM,
         SettingKey.OPEN_AUTO_PRINT,
-        # Delivery destination (plan 050): a page-level routing decision, so
-        # it sits below the four sub-page openers rather than inside one.
-        SettingKey.SYNC_DESTINATION,
     ),
     # PRINTER: pairing actions and model selection.
     # PAIR_PRINTER is the single pair/re-pair surface: when no printer is
@@ -607,10 +604,10 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
     # iPhone sync (plans 050/055). The two rows live on different Settings pages
-    # (Mode on Print, iPhone pairing on Network), so each help text
+    # (Mode on the main page, iPhone pairing on Network), so each help text
     # cross-references the other (plan 051 P2.7).
     SettingKey.SYNC_DESTINATION: "Print or sync received photos · Pair iPhone: Network page",
-    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Mode: Print page",
+    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Mode: Settings page",
     # Token rotation (plan 051 P3.11) — honest about the blast radius: every
     # paired iPhone loses access until it scans the new QR.
     SettingKey.RESET_SYNC_TOKEN: "New pairing token; unpairs all iPhones",

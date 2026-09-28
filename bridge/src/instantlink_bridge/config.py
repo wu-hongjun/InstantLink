@@ -305,11 +305,11 @@ class PrinterConfig:
     print_option: int = 0
     device_name: str | None = None
     keepalive_interval_s: float = 10.0
-    # Total scan period, in seconds, while searching for the offline selected printer: the active
-    # scan window plus any idle gap. The minimum (5s) equals the scan window, so the bridge scans
-    # continuously; larger values add an idle gap to save power. User-selectable in Settings; no
-    # exponential backoff, so reconnection stays prompt when the printer powers on.
-    search_interval_s: float = 5.0
+    # Total scan period while the selected Printer is offline. The 5-second
+    # scan still runs automatically, but a 30-second period leaves the BLE
+    # radio and CPU idle between scans on a battery-powered Bridge. Settings
+    # offers faster and slower choices when latency matters more or less.
+    search_interval_s: float = 30.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -702,7 +702,7 @@ def _load_printer_config(data: object) -> PrinterConfig:
     keepalive_interval_s = float(data.get("keepalive_interval_s", 10.0))
     if not isfinite(keepalive_interval_s) or keepalive_interval_s <= 0:
         raise ValueError("[printer].keepalive_interval_s must be a finite value greater than 0")
-    search_interval_s = float(data.get("search_interval_s", 5.0))
+    search_interval_s = float(data.get("search_interval_s", 30.0))
     if not isfinite(search_interval_s) or search_interval_s <= 0:
         raise ValueError("[printer].search_interval_s must be a finite value greater than 0")
     return PrinterConfig(

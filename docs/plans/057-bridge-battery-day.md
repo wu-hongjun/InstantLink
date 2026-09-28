@@ -73,13 +73,18 @@ reversible and does not change the source build.
 The user disconnected external power after the 21:37 EDT logger check and
 reconnected the Bridge to the Mac the next morning. The precise unplug time is
 pending. Before reconnection, the battery LEDs were empty and physical keys
-could not wake the LCD, confirming the morning hardware cutoff. The first
+could not visibly wake the LCD. The first
 battery boot (`2c3406e2-…`) logged through monotonic uptime
 `14909.6 s` at 00:07:15 EDT. It stopped without an orderly shutdown. The next
 boot (`32f96c0b-…`) performed ext4 journal recovery, reported no USB carrier,
 and ran the Bridge until monotonic uptime `32962.8 s` (9 h 9 min 23 s). It also
-ended without an orderly shutdown at battery cutoff; the current boot is
-`0250b538-…`.
+ended without an orderly shutdown around the morning reconnection; the current
+boot is `0250b538-…`. The second boot logged physical `select` and `left` input
+at 09:08:37–09:08:39 on its unsynchronized clock and continued BLE scans through
+09:15:45. The device was therefore still running when at least those keys were
+pressed, even though the display appeared unresponsive. Empty LEDs and a dark LCD
+support a depleted battery, but the logs alone do not distinguish final cutoff
+from a power-path reset when the computer was reconnected.
 
 The transient sampler survived only the first boot: 206 valid, 60-second JSONL
 records from 20:41:51 to 00:07:08 EDT, all with LCD backlight off and mean

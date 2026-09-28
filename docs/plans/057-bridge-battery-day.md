@@ -50,7 +50,9 @@ short CPU sample does not establish a battery-life gain.
 They show that the old search loop was substantial avoidable work, but do not
 establish a percentage battery saving. `bridge/scripts/benchmark-power.py` records
 boot ID, uptime, CPU, process activity, temperature, memory, Wi-Fi counters, and
-backlight state as low-overhead JSONL.
+backlight state as low-overhead JSONL. It also records USB carrier and Raspberry
+Pi undervoltage/throttling flags for subsequent runs; these can distinguish a
+power-path problem from ordinary software activity but are not a battery gauge.
 
 The on-device `[printer].search_interval_s` was changed from 5 to 30, with a
 backup at `/etc/InstantLinkBridge/config.toml.bak-battery-baseline`. The code
@@ -93,6 +95,59 @@ duration and continuing 30-second Printer search, but cannot reconstruct its
 minute-by-minute CPU or an exact cutoff. The first-boot reset cause is unknown;
 the Bridge service recovered automatically. The persistent opt-in sampler below
 fixes this measurement gap for a repeat run.
+
+## Optimization budget
+
+The user's all-day acceptance target is **16 hours** with camera FTP and
+automatic Printer reconnect ready. If the first run was about 11.5 hours from a
+near-full cell, the following are
+**planning ratios**, not measured power savings. They hold only if workload and
+usable cell energy remain similar. A full-charge repeat with a reboot-resilient
+sampler is needed before setting a battery-life claim.
+
+| Target | Runtime multiplier from 11.5 h | Average draw reduction at the same capacity |
+| --- | ---: | ---: |
+| 12 h | 1.04× | 4% |
+| 16 h | 1.39× | 28% |
+| 24 h | 2.09× | 52% |
+
+The active hardware floor is Pi Zero 2 W + 2.4 GHz Wi-Fi hotspot + Bluetooth +
+X306 conversion. The LCD backlight and HDMI are already off when idle; CPU uses
+the `ondemand` governor and reaches 600 MHz between scans. Development-only
+services are disabled. The next software lever is offline BLE search duty cycle:
+the Rust backend currently scans about 5 seconds per 30-second period. A
+60-second period halves scan opportunities and can double worst-case Printer
+power-on detection latency. Compare powered software activity first, then use
+a full-charge A/B discharge to establish any runtime gain. If reconnection must
+remain fast, investigate advertisement-triggered or camera-activity-triggered
+search rather than simply lengthening every period.
+
+A powered five-minute 60-second search trial on 2026-09-28 recorded 61 samples:
+aggregate CPU busy averaged 2.67%, Bridge process 7.32% of one core, D-Bus
+0.99%, and Bluetooth 0.58%. The earlier 206-sample 30-second search run averaged
+2.94% aggregate CPU busy, Bridge 8.74%, D-Bus 1.54%, and Bluetooth 1.05%.
+The trials differed in duration, charge state, and temperature, so this is only
+evidence of lower software activity, **not** a watt or runtime saving. The
+60-second trial setting was reverted to 30 seconds after sampling; Bridge and
+FTP remained healthy. Its small CPU difference does not justify doubling
+reconnect latency without a full-charge A/B discharge result.
+
+Turning off the hotspot or Bluetooth would save radio power but remove automatic
+camera or Printer reconnection unless additional wake hardware is added. CPU
+underclocking, disabling the ACT LED, and stopping tiny background services are
+lower-priority experiments because no device-level watt saving has been measured
+for them and they can harm print latency or diagnosis. For the 16-hour target,
+software would have to reduce average draw roughly 28% at the same usable
+battery capacity. A higher-capacity compatible cell is an alternative energy
+path; the X306 is a one-cell 18650 board, so cell capacity and holder
+compatibility constrain that path. For example, 3500/2300 mAh is 1.52× nominal
+capacity and would project about 17.5 idle hours from an 11.5-hour baseline
+*only if* usable energy and load scale linearly. That is a small margin for
+camera uploads and printing, not a validated runtime claim. Geekworm recommends
+high-quality flat-top 18650 cells for the X306; the installed cell's model and
+board revision should be checked before any replacement. For 24 hours, plan for
+more usable battery energy unless a controlled discharge shows a roughly 52%
+average-draw reduction from software alone.
 
 ## UX and power behavior
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -64,6 +65,30 @@ def _memory() -> dict[str, int]:
     return values
 
 
+def _throttled_flags() -> int | None:
+    """Read Pi undervoltage/throttling flags, including sticky per-boot history."""
+
+    try:
+        result = subprocess.run(
+            ["vcgencmd", "get_throttled"],
+            capture_output=True,
+            text=True,
+            timeout=1,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    prefix, _, value = result.stdout.strip().partition("=")
+    if prefix != "throttled":
+        return None
+    try:
+        return int(value, 16)
+    except ValueError:
+        return None
+
+
 def _snapshot(
     previous: tuple[float, tuple[int, int], dict[int, tuple[str, int]]] | None,
 ) -> tuple[dict[str, Any], tuple[float, tuple[int, int], dict[int, tuple[str, int]]]]:
@@ -78,11 +103,13 @@ def _snapshot(
         "cpu_mhz": (_read_int(Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")) or 0)
         / 1000,
         "memory_kb": _memory(),
+        "throttled_flags": _throttled_flags(),
         "backlight_power": next(
             (_read(path) for path in Path("/sys/class/backlight").glob("*/bl_power")), None
         ),
         "wlan0_rx_bytes": _read_int(Path("/sys/class/net/wlan0/statistics/rx_bytes")),
         "wlan0_tx_bytes": _read_int(Path("/sys/class/net/wlan0/statistics/tx_bytes")),
+        "usb0_carrier": _read_int(Path("/sys/class/net/usb0/carrier")),
     }
     if previous is not None:
         then, old_cpu, old_processes = previous

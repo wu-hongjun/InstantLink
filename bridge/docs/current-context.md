@@ -32,6 +32,10 @@ print remains the 2026-08-04 Sony a7C II `.HIF` → Instax Square run described 
 - After the dark-screen network watcher moved to a 5 s cadence, a further seventeen 5 s samples
   averaged 3.42% aggregate CPU busy and 48.6 °C SoC temperature. That small difference from the
   3.93% post-boot-diet sample is within short-run variation; it is not a runtime measurement.
+- A powered 5-minute search-rate trial on 2026-09-28 averaged 2.67% aggregate CPU busy at a
+  60-second interval, versus 2.94% across the longer 30-second overnight sample. Different trial
+  conditions prevent translating this into battery savings. The live interval was restored to
+  30 seconds immediately after the trial for faster Printer reconnection.
 - The production boot diet disabled `tailscaled` and the OpenFilmAdvance GitHub Actions runner;
   user-level `rpi-connect` was disabled separately. USB SSH remains available. Available RAM rose
   from about 197 MB to 281 MB, and swap use fell from 67 MB to 45 MB. The live Bridge, Bluetooth,

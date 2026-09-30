@@ -1,21 +1,31 @@
 # InstantLink Bridge Current Context
 
-**2026-09-30 audit pending USB access:** the user reports good portable behavior but slower
-printing. Plan 057 did not change CPU clock limits or the `ondemand` governor. Plan 058 adds an
-explicit stock-maximum policy while awake and throughout photo jobs, with automatic scaling only
-while dark/locked and idle. Local checks pass; this new policy is **not yet deployed or verified
-on hardware**. At the start of the audit the Mac had no Pi USB gadget or `en8` interface, and the
-saved Pi hostname did not resolve. See `docs/plans/058-bridge-awake-performance.md` for the audit
-findings and pending timing checks.
+**2026-09-30 performance tiers deployed and checked:** source commit `892945a` was installed
+through a clean archive and the Bridge restarted successfully (`NRestarts=0`). The root-owned CPU
+helper and constrained sudo rule were installed and validated. Awake/photo work uses 1000 MHz;
+dark/locked idle uses `powersave` at the supported 600 MHz minimum across cores 0–3. The live
+runtime automatically switched to 600 MHz with LCD backlight off (`bl_power=4`), and kept the
+hotspot, FTP, manager, SSH and 30-second BLE searches operational. `throttled=0x0` throughout.
+The policy controller was exercised on-device through awake → locked → boosted job → locked →
+awake transitions. A fresh physical KEY2 cycle with these new tiers remains pending.
 
-Latest source deployment verified: 2026-09-28 on `riverps-rpi-zero-2w` (bridge 0.1.17,
+Latest recorded real print is `DSC02697.HIF` → Instax Square, logged in the earlier session as
+2026-09-28: send/print 24.837 s (prior reference 24.03 s), prepared preview reused. Upload took
+11.835 s for an 11.26 MB file, compared with 7.56 s for the prior 5.19 MB file. The larger source
+and upload account for most of the observed total-cycle difference. No reduced clock maximum
+or duplicate preparation was found. Same-file preparation trials measured about 9.7 s at fixed
+600 MHz and 5.7 s at fixed 1000 MHz, supporting the photo-job boost. Details and limits are in
+`docs/plans/058-bridge-awake-performance.md`. The sampler now records the governor; it remains
+disabled between discharge tests. The Pi's clock was resynced to the host on 2026-09-30.
+
+Prior source deployment verified: 2026-09-28 on `riverps-rpi-zero-2w` (bridge 0.1.17,
 branch `codex/bridge-battery-day`, commit `4455f53`, clean archive). This source-only deployment
 updated the benchmark script and service unit without restarting the healthy Bridge runtime. The
 prior runtime deployment restarted successfully with `NRestarts=0`; FTP `:21` and manager `:8742`
 listen on the expected addresses.
 The Pi clock was corrected from 2026-09-11 by the deployment script and resynced on 2026-09-28;
-offline wall-clock timestamps drift or reset across boots. The last completed real
-print remains the 2026-08-04 Sony a7C II `.HIF` → Instax Square run described below.
+offline wall-clock timestamps drift or reset across boots. The earlier 2026-08-04 Sony a7C II
+`.HIF` → Instax Square reference run is described below.
 
 ### Battery session, 2026-09-27
 

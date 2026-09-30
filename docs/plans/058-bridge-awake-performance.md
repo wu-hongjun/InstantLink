@@ -66,11 +66,28 @@ the CPU governor along with frequency so the tiers can be distinguished in subse
 - Local Bridge suite: 1126 tests passed; Ruff and strict mypy passed. Shell syntax checks passed.
 - Policy tests cover lock/wake/dim/automatic screen-off, a wake during an idle helper call,
   nested photo boosts, job failure/cancellation, and helper failure without interrupting a photo job.
-- Pending on Pi Zero 2 W / Debian 13: inspect clock limits and boot config; compare governor,
-  actual clock and throttling flags awake/locked/during preparation; verify helper ownership and
-  constrained sudo access; verify no service restarts or errors.
-- Pending camera/Printer timing: collect recent and repeat Sony a7C II → Instax Square stages
-  without initiating a film-consuming print remotely. Check `source=preview` reuse, preparation
-  time, payload bytes, transfer time, countdown, reconnect delay and power/thermal flags.
+- Deployed source `892945a` through a clean archive on Pi Zero 2 W, Debian 13.2,
+  kernel 6.12.47+rpt-rpi-v8, Bridge 0.1.17. Installed the CPU helper `root:root 0755` and sudo rule
+  `root:root 0440`; `visudo` and `systemd-analyze verify` passed. Restart completed with
+  `NRestarts=0`; startup logged maximum performance and `bridge.ready` without CPU-mode errors.
+- On-device policy controller check: awake 1000 → locked 600 → locked photo job 1000 → job ends
+  locked 600 → unlock 1000 MHz. This exercises the real helper/controller; a physical KEY2 cycle
+  on the live runtime is still pending. The runtime's automatic screen-off independently logged
+  `powersave` after 60 seconds; backlight `bl_power=4`, actual CPU clock 600 MHz.
+- At 600 MHz, hotspot, Bridge, manager and Bluetooth services remained active; automatic Printer
+  scan attempts continued every 30 seconds. SSH worked. FTP returned its normal greeting and
+  NOOP response from the hotspot interface; the USB source remained correctly rejected in the
+  saved hotspot-only receive mode. These are control-path checks, not a camera upload or a
+  successful Printer reconnect (the paired Instax Square was not advertising).
+- Same-source image preparation, live config, alternating governors (two samples each):
+  600 MHz **9.909/9.513 s**, 1000 MHz **5.659/5.735 s**, all produced 102303-byte JPEGs. These
+  call the real image pipeline without sending film; they demonstrate the need for a photo-job
+  boost, not total print speed or battery savings. Per-boot throttling flags stayed `0x0`; SoC
+  temperature after the trials was 50.5 °C.
+- The updated sampler produced a 600 MHz / `powersave` / backlight-off sample with flags 0 and
+  USB carrier 1; it remains disabled between tests. FFI binary was unchanged, SHA-256
+  `a974372ec276fdd3e21eab28fdf5f769b68e5216c5bcdec6f63bec9568e1cc96`.
+- Pending: a fresh physical lock/wake and a controlled camera/Printer run to verify full photo
+  job integration, reconnect timing and print stages after these tier changes.
 - Repeat the battery test with the new awake policy and a realistic workload. Plan 057's overnight
   idle estimate does not establish 16-hour use with this policy.

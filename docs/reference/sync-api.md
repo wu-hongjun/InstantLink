@@ -64,6 +64,12 @@ drives the physical LCD.
 the same action queue as the physical joystick/keys, so all input handling
 (settle window, power activity) applies.
 
+When the LCD is locked or automatically dark, three discrete input actions unlock it by
+default. The first two show progress; the third restores the latest live screen. All three
+actions are consumed. An incomplete sequence expires after 10 seconds. The Bridge's
+`ui.unlock_requires_three_presses` setting can restore single-action wake. The screen endpoint
+renders this same unlock prompt; receiving photos and Printer operations retain their live state.
+
 Errors: `remote_ui = false` → `404 {"error": "remote_ui_disabled"}`; no
 snapshot/injector wired → `404 {"error": "remote_ui_unavailable"}`; bad
 action → `400 {"error": "invalid_action", "allowed": [...]}`; queue full →

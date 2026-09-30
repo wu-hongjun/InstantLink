@@ -63,22 +63,30 @@ controller/routing checkpoint passed 262 tests, and strict mypy passed for the c
 Regression coverage includes all abstract keys, consumed third input, first-press CPU readiness
 before queued unlocking, fixed timeout/reset, retained Printer/photo state, one-press opt-out,
 forced repaint of an identical home state, framebuffer restoration, configuration validation,
-App field round trips and unlock rendering across font sizes/languages. Final deployment and
-hardware results should be recorded with the completed change.
+App field round trips and unlock rendering across font sizes/languages. Ruff, touched-file
+formatting, strict mypy (65 source files) and strict MkDocs pass. App strings cover all 12 locales;
+the global localization check still reports its previously verified baseline gaps.
 
-This record does **not** establish physical-device acceptance or battery runtime. Hardware
-verification remains provisional until recorded in `bridge/docs/current-context.md`:
+Clean source `fb1f27e` was deployed to the Pi Zero 2 W / Waveshare ST7789 LCD HAT on Debian 13.2.
+Film-free smoke under the `ib` runtime account verified real framebuffer restoration and
+backlight 4→0, both progress frames, restoration of a newer underlying error, same-key/mixed-key
+sequences, opt-out wake and automatic screen-off. Actual CPU transitions were 600 MHz locked →
+1000 MHz on first press → 600 MHz after incomplete-sequence expiry → 1000 MHz on opt-out wake.
+The Bridge service was restored after the check and remains active with `NRestarts=0`, throttling
+`0x0` and a working hotspot FTP listener. See `bridge/docs/current-context.md` for hardware details.
+
+![Pi-rendered unlock sequence with synthetic status](../assets/bridge-ux-061/unlock-sequence.png)
+
+Physical GPIO and battery acceptance remain pending:
 
 1. Raspberry Pi Zero 2 W / Waveshare LCD HAT: lock from Printer-searching, unlock using the
    same key three times and then mixed keys; verify the third press restores content and the
    fourth executes its normal action.
 2. Hold a key and verify it counts once; leave the sequence incomplete and verify a dark
    screen after 10 seconds, with a new sequence starting at `1 / 3`.
-3. Disable the toggle and verify one-press wake repaints the latest screen without executing
-   a normal action. Repeat after automatic screen-off.
-4. Verify first-press awake CPU performance and idle-low CPU after timeout. During active
-   preparation/printing, verify work continues and retains its boost through lock/unlock.
-5. Verify camera receive, saved-Printer reconnect and virtual input remain operational, with
+3. During a real preparation/printing job, verify work continues and retains its boost
+   through physical lock/unlock.
+4. Verify camera receive, saved-Printer reconnect and virtual input remain operational, with
    current status restored on unlock. Film-consuming tests require deliberate print intent.
 
 No new power-consumption or 16-hour runtime claim follows from these interaction changes.

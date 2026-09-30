@@ -1,5 +1,36 @@
 # Current Bridge Context
 
+## Reliable wake and three-press unlock, 2026-09-30
+
+Clean runtime `fb1f27e` is deployed on the Raspberry Pi Zero 2 W Rev 1.0 / Waveshare
+240×240 ST7789 LCD HAT / X306 2300 mAh cell, Debian 13.2, kernel 6.12.47+rpt-rpi-v8,
+Python 3.13.5 and BlueZ 5.82. Bridge 0.1.17 restarted at 13:47 EDT after the smoke check.
+The default-enabled guard is live: **Settings → System → Unlock: 3 presses**. The App also
+exposes the toggle. KEY3 remains Reconnect when the saved Printer is offline, and Post when ready.
+
+- Fixed blank wake caused by black framebuffer pixels plus an unchanged cached UI snapshot.
+  The retained frame is restored before the backlight comes on, and wake forces a current redraw.
+- First press shows one filled circle and warms the CPU; second shows two; third restores the
+  latest state. Inputs are consumed. An incomplete sequence expires after 10 seconds.
+- Real framebuffer/backlight smoke passed under the runtime `ib` account with the Bridge service
+  temporarily stopped. Tests verified byte-for-byte frame restoration, visible prompts,
+  `bl_power` 4→0, same-key and mixed-key sequences, and a newer synthetic error state appearing
+  on the third press. One-press opt-out and automatic screen-off wake also passed.
+- Actual governor checks recorded locked `powersave` at 600 MHz, first-press `performance` at
+  1000 MHz, timeout back to 600 MHz, and opt-out wake at 1000 MHz. The service was restarted
+  even if the smoke failed. No film was sent and no production photo/config values were changed.
+- Bridge, manager, Bluetooth and NetworkManager are active, Bridge `NRestarts=0`, throttling
+  `0x0`; hotspot FTP greeting and NOOP passed. The runtime automatically returned to backlight
+  off after the check. The deployed manifest records `dirty=false` and source `fb1f27e`.
+- Final checks: **1,241 Bridge tests**, **154 App tests**, Ruff, touched-file formatting,
+  strict mypy (65 source files) and strict MkDocs. New toggle strings cover all 12 App locales;
+  the global localization checker retains its previously verified baseline gaps.
+
+Frames in plan 061 are Pi-rendered synthetic states. Physical GPIO press/hold confirmation,
+Sony a7C II upload, Instax Square power-cycle/film checks and the 16-hour discharge remain
+unverified. Shared controller tests cover busy/error FTP guards during unlocking; the overlay
+does not replace operational Printer/photo state.
+
 ## Post processing and interface implementation, 2026-09-30
 
 Plan 060 implements the plan 059 audit. KEY3 is **Post** on ready Print home, with separate

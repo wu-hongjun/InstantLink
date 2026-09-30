@@ -29,7 +29,7 @@ async def test_locked_photo_job_boosts_and_restores_scaling_even_on_failure() ->
             async with cpu.boost():
                 assert modes[-1] == "performance"
             raise ValueError("image failed")
-    assert modes[-1] == "ondemand"
+    assert modes[-1] == "powersave"
     cpu.set_power_saving(False)
     await cpu.start()
     assert modes[-1] == "performance"
@@ -60,7 +60,7 @@ async def test_cancelled_photo_job_releases_locked_boost() -> None:
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
-    assert modes[-1] == "ondemand"
+    assert modes[-1] == "powersave"
     await cpu.close()
 
 
@@ -72,7 +72,7 @@ async def test_wake_during_idle_helper_is_not_lost() -> None:
 
     async def setter(mode: str) -> None:
         modes.append(mode)
-        if mode == "ondemand":
+        if mode == "powersave":
             idle_started.set()
             await release_idle.wait()
 
@@ -83,7 +83,7 @@ async def test_wake_during_idle_helper_is_not_lost() -> None:
     cpu.set_power_saving(False)
     release_idle.set()
     await cpu.start()
-    assert modes == ["performance", "ondemand", "performance"]
+    assert modes == ["performance", "powersave", "performance"]
     await cpu.close()
 
 
@@ -127,11 +127,11 @@ async def test_ui_lock_and_wake_drive_cpu_policy_without_display_hardware() -> N
     await cpu.start()
     ui._lock_screen()
     await cpu.start()
-    assert modes[-1] == "ondemand"
+    assert modes[-1] == "powersave"
     # Background activity cannot lift a manual lock or change its CPU policy.
     ui._apply_idle_stage(IdleStage.ACTIVE)
     await cpu.start()
-    assert modes[-1] == "ondemand"
+    assert modes[-1] == "powersave"
     ui._unlock_screen()
     await cpu.start()
     assert modes[-1] == "performance"
@@ -140,5 +140,5 @@ async def test_ui_lock_and_wake_drive_cpu_policy_without_display_hardware() -> N
     assert modes[-1] == "performance"
     ui._apply_idle_stage(IdleStage.SCREEN_OFF)
     await cpu.start()
-    assert modes[-1] == "ondemand"
+    assert modes[-1] == "powersave"
     await cpu.close()

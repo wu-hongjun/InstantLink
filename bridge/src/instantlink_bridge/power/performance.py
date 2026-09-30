@@ -35,7 +35,7 @@ async def set_cpu_governor(governor: str) -> None:
 
 
 class CpuPerformanceController:
-    """Run awake/work at stock maximum; let an idle, dark screen scale down.
+    """Run awake/work at stock maximum; pin idle, dark screens to stock minimum.
 
     Requests coalesce under a lock. A photo job holds a boost through preview,
     edits, image preparation and print completion even if the LCD stays locked.
@@ -109,6 +109,8 @@ class CpuPerformanceController:
                 # again so a wake request cannot be lost behind an idle write.
 
     def _desired_governor(self) -> str:
-        if self._closed or (self._power_saving and self._jobs == 0):
+        if self._closed:
             return "ondemand"
+        if self._power_saving and self._jobs == 0:
+            return "powersave"
         return "performance"

@@ -102,6 +102,7 @@ def _snapshot(
         "temperature_c": (_read_int(Path("/sys/class/thermal/thermal_zone0/temp")) or 0) / 1000,
         "cpu_mhz": (_read_int(Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")) or 0)
         / 1000,
+        "cpu_governor": _read(Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")),
         "memory_kb": _memory(),
         "throttled_flags": _throttled_flags(),
         "backlight_power": next(

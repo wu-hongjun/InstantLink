@@ -307,7 +307,7 @@ Home/status footer semantics (plan 057):
   switches off the LCD backlight without stopping FTP, sync, or printer status. The next key
   wakes the display and does not also activate an action. Background activity keeps it locked.
   The CPU uses maximum stock performance while awake or dimmed. While locked/dark and idle,
-  it scales automatically; a received photo boosts performance through preparation and printing
+  all CPU cores use the lowest supported stock clock; a received photo boosts performance through preparation and printing
   even when the LCD stays locked (plan 058).
   BACK from a QR opened this way returns to the home surface, not Settings.
 

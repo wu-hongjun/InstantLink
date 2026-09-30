@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # This file is installed root-owned outside the runtime-writable source tree.
-# Only the two stock governors are allowed; no frequency/voltage overrides.
-if [[ "$#" -ne 1 ]] || [[ "$1" != performance && "$1" != ondemand ]]; then
-  echo "Usage: instantlink-bridge-cpu-mode performance|ondemand" >&2
+# Only stock governors are allowed; no frequency/voltage overrides.
+if [[ "$#" -ne 1 ]] || [[ "$1" != performance && "$1" != powersave && "$1" != ondemand ]]; then
+  echo "Usage: instantlink-bridge-cpu-mode performance|powersave|ondemand" >&2
   exit 2
 fi
 

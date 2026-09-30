@@ -1,2 +1,3 @@
 ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-cpu-mode performance
+ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-cpu-mode powersave
 ib ALL=(root) NOPASSWD: /usr/local/sbin/instantlink-bridge-cpu-mode ondemand

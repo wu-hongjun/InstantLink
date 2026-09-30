@@ -69,6 +69,8 @@ _ZH_HANS: dict[str, str] = {
     "KEY1 apply. Joystick RIGHT manages a saved slot. KEY2 returns.": (
         "KEY1载入；按右管理已保存槽位；KEY2返回。"
     ),
+    "Up/Dn ±10": "上/下 ±10",
+    "Up/Dn ±25": "上/下 ±25",
     "Post": "后期",
     "Looks": "风格",
     "Correction": "校正",

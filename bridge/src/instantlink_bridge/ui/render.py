@@ -1607,18 +1607,33 @@ def _awaiting_confirm(
     )
     if snapshot.preview_image is not None:
         # Wrap preview in a card
-        draw_card(draw, 16, 40, 208, 114, theme)
-        preview = snapshot.preview_image
+        draw_card(draw, 16, 40, 208, 100, theme)
+        preview = snapshot.preview_image.copy()
+        preview.thumbnail((172, 92), Image.Resampling.LANCZOS)
         x = 120 - preview.width // 2
-        y = 96 - preview.height // 2
+        y = 90 - preview.height // 2
         canvas.paste(preview, (x, y))
-        _text(draw, 18, 158, _ellipsize(title, 27), fonts["body"], theme.label_primary)
-        _text(draw, 18, 175, _ellipsize(detail, 31), fonts["small"], theme.accent_yellow)
         _text(
             draw,
             18,
-            190,
-            _ellipsize(preview_state_text(snapshot), 31),
+            144,
+            _fit_text_to_width(draw, title, fonts["body"], 204),
+            fonts["body"],
+            theme.label_primary,
+        )
+        _text(
+            draw,
+            18,
+            164,
+            _fit_text_to_width(draw, detail, fonts["small"], 204),
+            fonts["small"],
+            theme.accent_yellow,
+        )
+        _text(
+            draw,
+            18,
+            181,
+            _fit_text_to_width(draw, preview_state_text(snapshot), fonts["small"], 204),
             fonts["small"],
             theme.label_secondary,
         )
@@ -1650,7 +1665,11 @@ def _printing(
     theme: Theme,
 ) -> None:
     title = snapshot.print_title or t("Sending to printer", snapshot.language)
-    _center_lines(draw, [title], 58, fonts["large"], theme.label_primary)
+    title_font = fonts["large"]
+    if _text_width(draw, title, title_font) > 216:
+        title_font = fonts["body"]
+    title = _fit_text_to_width(draw, title, title_font, 216)
+    _center_lines(draw, [title], 58, title_font, theme.label_primary)
     # `print_detail` is only populated during non-SENDING stages now
     # (e.g. "Checking printer"). The chunk-count / KB sub-string was
     # dropped per user feedback: the progress bar + the percent-suffixed
@@ -2298,7 +2317,7 @@ def _adjustment_edit(
             label_y_inner = pills_y + (pill_h - 14) // 2
             _text(draw, label_x, label_y_inner, label, font_body, text_colour)
 
-        help_strip = t("KEY1 commit · KEY2 cancel", lang)
+        help_strip = ""
     else:
         # --- Vertical slider track (right column) ---------------------------
         # The joystick edits with UP/DOWN, so the track runs along the
@@ -2359,13 +2378,18 @@ def _adjustment_edit(
             theme.label_secondary,
         )
 
-        help_strip = t("Up/Dn ±10 · K1 OK · K2/Left Cancel", lang)
+        help_strip = t("Up/Dn ±25" if edit_key == "adjust_exposure" else "Up/Dn ±10", lang)
 
     # --- Help strip ---------------------------------------------------------
-    help_y = card_y1 + 3
-    help_w = _text_width(draw, help_strip, font_small)
-    help_x = (240 - help_w) // 2
-    _text(draw, help_x, help_y, help_strip, font_small, theme.label_secondary)
+    if help_strip:
+        _text(
+            draw,
+            16,
+            176,
+            _fit_text_to_width(draw, help_strip, font_small, 138),
+            font_small,
+            theme.label_secondary,
+        )
 
     # --- Hint bar -----------------------------------------------------------
     hints = _mode_hints(snapshot)

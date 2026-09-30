@@ -169,3 +169,45 @@ async def test_correction_editor_previews_commits_and_cancels_independently() ->
     assert ui.snapshot.settings_title == "Correction"
     await ui._handle_action(UiAction.BACK)
     assert ui.snapshot.settings_title == "Post"
+
+
+@pytest.mark.parametrize("size", ["small", "medium", "large"])
+@pytest.mark.parametrize("mode", [UiMode.AWAITING_CONFIRM, UiMode.PRINTING, UiMode.ADJUSTMENT_EDIT])
+def test_photo_screen_text_fits_above_footer(
+    monkeypatch: pytest.MonkeyPatch,
+    size: str,
+    mode: UiMode,
+) -> None:
+    from PIL import Image
+
+    body_bounds: list[tuple[int, int, int, int]] = []
+    original = render._text
+
+    def spy(
+        draw: ImageDraw.ImageDraw,
+        x: int,
+        y: int,
+        text: str,
+        font: render.Font,
+        fill: str,
+    ) -> None:
+        if render.STATUS_BAR_H <= y < render.HINT_BAR_Y:
+            bounds = draw.textbbox((x, y), text, font=font)
+            body_bounds.append(tuple(int(v) for v in bounds))
+        original(draw, x, y, text, font, fill)
+
+    monkeypatch.setattr(render, "_text", spy)
+    render.render_snapshot(
+        UiSnapshot(
+            mode=mode,
+            ftp_host="192.168.8.1",
+            font_size=size,
+            print_title="Sending to printer" if mode is UiMode.PRINTING else "Print in 5s",
+            preview_image=Image.new("RGB", (112, 112)),
+            preview_tool="crop",
+            adjustment_edit_key="correction_saturation",
+            adjustment_edit_value=50,
+        )
+    )
+    assert body_bounds
+    assert all(0 <= x0 < x1 <= 240 and y1 <= render.HINT_BAR_Y for x0, _, x1, y1 in body_bounds)

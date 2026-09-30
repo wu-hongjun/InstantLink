@@ -458,7 +458,7 @@ class BlePrinterStatusProvider:
             if stale
             else "printer status endpoint is not advertising"
         )
-        status_message = "Hold K3 to re-pair" if stale else None
+        status_message = "Check saved Printer" if stale else None
         retry_after_s = self._unavailable_scan_interval_for_misses(self._not_advertising_misses)
         return PrinterStatusUnavailableError(
             message,

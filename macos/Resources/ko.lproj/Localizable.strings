@@ -427,3 +427,15 @@
 "filter_instant" = "인스턴트";
 "filter_process" = "프로세스";
 "filter_transfer" = "트랜스퍼";
+
+/* Bridge Printer output correction */
+"Printer correction" = "프린터 보정";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "룩과 별개로 필름 출력을 보정합니다. 0이면 출력이 변경되지 않습니다.";
+
+/* Bridge workflow and recovery */
+"Workflow" = "작업 흐름";
+"Confirmation" = "확인";
+"Confirm each" = "매번 확인";
+"Print immediately" = "즉시 인쇄";
+"Review 5s" = "5초 검토";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "Bridge를 다시 시작하려면 X306 전원 버튼으로 껐다가 다시 켜세요.";

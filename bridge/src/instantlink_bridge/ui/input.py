@@ -77,27 +77,11 @@ class GpioUiInput:
             button.when_pressed = _enqueue(queue, loop, action)
             self._buttons.append(button)
 
-        pair_button = cast(
-            _ButtonDevice,
-            Button(KEY3, pull_up=True, bounce_time=0.05, hold_time=1.2),
-        )
-        pair_held = False
-
-        def hold_pair() -> None:
-            nonlocal pair_held
-            pair_held = True
-            _enqueue(queue, loop, UiAction.PAIR)()
-
-        def release_help() -> None:
-            nonlocal pair_held
-            if pair_held:
-                pair_held = False
-                return
-            _enqueue(queue, loop, UiAction.HELP)()
-
-        pair_button.when_held = hold_pair
-        pair_button.when_released = release_help
-        self._buttons.append(pair_button)
+        # KEY3 is a single contextual action on press. Holding it does not
+        # emit a second, hidden operation when the button is released.
+        context_button = cast(_ButtonDevice, Button(KEY3, pull_up=True, bounce_time=0.05))
+        context_button.when_pressed = _enqueue(queue, loop, UiAction.HELP)
+        self._buttons.append(context_button)
 
     def close(self) -> None:
         for button in self._buttons:

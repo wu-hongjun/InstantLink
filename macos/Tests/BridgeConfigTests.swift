@@ -29,6 +29,19 @@ final class BridgeConfigTests {
         try expectEqual(roundTripped, original)
     }
 
+    func testCorrectionDefaultsForOlderBridgeAndRoundTripsIndependently() throws {
+        var config = try JSONDecoder().decode(
+            BridgeConfig.self, from: Data(Self.fullConfigJSON.utf8)
+        )
+        try expectEqual(config.correction.saturation, 0)
+        config.correction.saturation = 20
+        let decoded = try JSONDecoder().decode(
+            BridgeConfig.self, from: JSONEncoder().encode(config)
+        )
+        try expectEqual(decoded.correction.saturation, 20)
+        try expectEqual(decoded.adjustments.saturation, 25)
+    }
+
     func testFTPReceiveModeAllValuesDecode() throws {
         for mode in BridgeFTPReceiveMode.allCases {
             let data = Data("\"\(mode.rawValue)\"".utf8)

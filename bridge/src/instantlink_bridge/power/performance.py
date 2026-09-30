@@ -37,8 +37,9 @@ async def set_cpu_governor(governor: str) -> None:
 class CpuPerformanceController:
     """Run awake/work at stock maximum; pin idle, dark screens to stock minimum.
 
-    Requests coalesce under a lock. A photo job holds a boost through preview,
-    edits, image preparation and print completion even if the LCD stays locked.
+    Requests coalesce under a lock. Image preparation and accepted prints hold
+    a boost even with the LCD locked. Waiting for a person's confirmation has
+    no boost, so a locked Bridge returns to its idle clock between operations.
     """
 
     def __init__(

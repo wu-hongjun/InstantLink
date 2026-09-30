@@ -261,3 +261,15 @@ state in v1.
 - Do not build cloud sync.
 - Do not build photo editing beyond deterministic auto-rotate, resize/crop, and color-safe
   preparation for Instax.
+
+## Current LCD interaction
+
+KEY1 opens Settings, including without a Printer. KEY2 locks home and printing screens; the
+first input wakes only. KEY3 uses its visible action: Post when ready, Reconnect when the saved
+Printer is offline, Pair when unpaired, and iPhone status/QR in Sync mode. Hold has no hidden
+re-pair action. Settings uses KEY3 Help and saved-preset management uses RIGHT.
+
+Settings → Print → Post separates creative Looks from persistent Printer Correction. Correction
+saturation is stored independently, defaults to zero and is applied at print resolution after
+Looks; Sync originals are untouched. Review countdown begins after preview preparation, and
+editing switches to explicit confirmation. See docs/ux-flows.md and plan 060.

@@ -10,7 +10,7 @@ import os
 import signal
 from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future as ThreadFuture
-from contextlib import suppress
+from contextlib import AsyncExitStack, suppress
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
@@ -417,15 +417,15 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             )
             await power_monitor.record_activity()
             try:
-                async with cpu_performance.boost():
-                    await dispatch_received_image(
-                        received,
-                        snapshot=ui.snapshot,
-                        config=ui.config,
-                        ui=ui,
-                        pairer=pairer,
-                        outbox=sync_outbox,
-                    )
+                await dispatch_received_image(
+                    received,
+                    snapshot=ui.snapshot,
+                    config=ui.config,
+                    ui=ui,
+                    pairer=pairer,
+                    outbox=sync_outbox,
+                    cpu_performance=cpu_performance,
+                )
             except Exception as exc:
                 LOGGER.exception(
                     "bridge.image_job_unhandled path=%s error_type=%s",
@@ -552,6 +552,7 @@ async def dispatch_received_image(
     pairer: PrinterPairer,
     outbox: SyncOutbox | None,
     printer_sender: PrinterSender | None = None,
+    cpu_performance: CpuPerformanceController | None = None,
 ) -> None:
     """Fan one dequeued image out to the sync outbox and/or the print flow.
 
@@ -576,6 +577,7 @@ async def dispatch_received_image(
         printer_sender=printer_sender,
         timeout_s=config.workflow.auto_print_delay_s,
         notify_received=False,
+        cpu_performance=cpu_performance,
     )
 
 
@@ -792,11 +794,13 @@ async def handle_received_image(
     printer_sender: PrinterSender | None = None,
     timeout_s: float | None = AUTO_PRINT_DELAY_S,
     notify_received: bool = True,
+    cpu_performance: CpuPerformanceController | None = None,
 ) -> None:
     """Run one FTP-received image through the auto-print flow."""
 
     progress_tasks: list[asyncio.Future[None] | ThreadFuture[None]] = []
     accepting_progress = False
+    performance_scope = AsyncExitStack()
     try:
         if notify_received:
             await ui.image_received(received)
@@ -804,6 +808,9 @@ async def handle_received_image(
         if edit is None:
             LOGGER.info("bridge.print_cancelled path=%s", received.path)
             return
+
+        if cpu_performance is not None:
+            await performance_scope.enter_async_context(cpu_performance.boost())
 
         if printer_sender is not None:
             sender = printer_sender
@@ -881,6 +888,8 @@ async def handle_received_image(
     else:
         LOGGER.info("bridge.print_complete path=%s", received.path)
         await ui.print_complete(received)
+    finally:
+        await performance_scope.aclose()
 
 
 async def await_print_sender_without_cancelling_on_timeout(
@@ -1011,7 +1020,7 @@ async def send_print_to_printer(
 
     from dataclasses import replace as _replace
 
-    from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text
+    from instantlink_bridge.imaging.postprocess import correction_profile, read_exif_datestamp_text
     from instantlink_bridge.imaging.presets import resolve_preset
 
     adjustments = resolve_preset(config.adjustments)
@@ -1041,6 +1050,7 @@ async def send_print_to_printer(
             model=config.printer.model,
             progress=progress,
             adjustments=adjustments,
+            correction=correction_profile(config.correction),
             prepared_image=prepared_image,
         )
     else:
@@ -1055,6 +1065,7 @@ async def send_print_to_printer(
             model=config.printer.model,
             progress=progress,
             adjustments=adjustments,
+            correction=correction_profile(config.correction),
         )
 
 

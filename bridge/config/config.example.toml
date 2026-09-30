@@ -34,8 +34,8 @@ keepalive_interval_s = 10
 [workflow]
 # Allowed values:
 # - 0 prints immediately after FTP receive.
-# - 5 shows editable preview for 5 seconds before printing.
-# - "off" shows editable preview until K1/joystick press prints.
+# - 5 starts a 5-second review after preview appears; editing requires KEY1 confirmation.
+# - "off" confirms each photo with KEY1/joystick press.
 auto_print_delay_s = 5
 # Testing escape hatch. When true, the bridge sends print jobs even if the printer reports 0 film.
 allow_print_without_film = false
@@ -60,3 +60,9 @@ idle_poweroff_enabled = false
 # Optional local test or staged release trust anchors. Product builds also use the embedded
 # firmware signing key list compiled into the Bridge manager.
 trusted_public_keys = []
+
+[correction]
+# Printer output compensation, separate from creative Look settings in [adjustments].
+# Applies after the Look at final print resolution. -100 to 100; 0 is neutral.
+# Select a value from your own film comparisons; no automatic calibration is assumed.
+saturation = 0

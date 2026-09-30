@@ -427,3 +427,15 @@
 "annotate_overlay_show" = "הצגה";
 "annotate_overlay_hide" = "הסתרה";
 "annotate_select_image_overlay" = "בחר תמונה כשכבה";
+
+/* Bridge Printer output correction */
+"Printer correction" = "תיקון מדפסת";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "פיצוי על פלט הסרט בנפרד מהמראה. אפס משאיר את הפלט ללא שינוי.";
+
+/* Bridge workflow and recovery */
+"Workflow" = "תהליך עבודה";
+"Confirmation" = "אישור";
+"Confirm each" = "אישור כל תמונה";
+"Print immediately" = "הדפסה מיידית";
+"Review 5s" = "סקירה למשך 5 שניות";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "כדי להפעיל מחדש את Bridge, כבה והדלק אותו באמצעות לחצן ההפעלה של X306.";

@@ -507,6 +507,17 @@ class AdjustmentsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class CorrectionConfig:
+    """Persistent Printer output compensation, independent of creative Looks."""
+
+    saturation: int = 0
+
+    def __post_init__(self) -> None:
+        if type(self.saturation) is not int or not -100 <= self.saturation <= 100:
+            raise ValueError("[correction].saturation must be an integer in [-100, 100]")
+
+
+@dataclass(frozen=True, slots=True)
 class BridgeConfig:
     """Top-level bridge configuration."""
 
@@ -517,6 +528,7 @@ class BridgeConfig:
     firmware: FirmwareUpdateConfig = FirmwareUpdateConfig()
     ui: UiConfig = UiConfig()
     adjustments: AdjustmentsConfig = AdjustmentsConfig()
+    correction: CorrectionConfig = CorrectionConfig()
     sync: SyncConfig = SyncConfig()
 
 
@@ -534,6 +546,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
         firmware=_load_firmware_config(data.get("firmware", {})),
         ui=_load_ui_config(data.get("ui", {})),
         adjustments=_load_adjustments_config(data.get("adjustments", {})),
+        correction=_load_correction_config(data.get("correction", {})),
         sync=_load_sync_config(data.get("sync", {})),
     )
 
@@ -643,6 +656,9 @@ def render_config(config: BridgeConfig) -> str:
             f"watermark = {_toml_bool(config.adjustments.watermark)}",
             f"watermark_text = {_toml_string(config.adjustments.watermark_text)}",
             f"vignette = {config.adjustments.vignette}",
+            "",
+            "[correction]",
+            f"saturation = {config.correction.saturation}",
             "",
             "[sync]",
             f"destination = {_toml_string(config.sync.destination.value)}",
@@ -794,6 +810,12 @@ def _load_firmware_config(data: object) -> FirmwareUpdateConfig:
         records.append(FirmwareTrustedPublicKeyConfig(key_id=key_id, public_key=public_key))
 
     return FirmwareUpdateConfig(trusted_public_keys=tuple(records))
+
+
+def _load_correction_config(data: object) -> CorrectionConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[correction] must be a TOML table")
+    return CorrectionConfig(saturation=data.get("saturation", 0))
 
 
 def _load_adjustments_config(data: object) -> AdjustmentsConfig:

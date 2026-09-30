@@ -189,7 +189,7 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
     elif snapshot.mode is UiMode.ADJUSTMENT_EDIT:
         _adjustment_edit(image, draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.SETTINGS:
-        if snapshot.settings_title == "Adjustments":
+        if snapshot.settings_title in {"Adjustments", "Looks"}:
             _adjustments(image, draw, snapshot, fonts, theme)
         else:
             _settings(draw, snapshot, fonts, theme)
@@ -726,42 +726,33 @@ def _draw_status_bar_settings(
     """Settings status bar: page title (left) + status dot (center) +
     page counter (right)."""
 
-    # --- Title (top-left) -------------------------------------------------
-    title = t(status_bar_word(snapshot), snapshot.language)
-    title_bbox = draw.textbbox((0, 0), title, font=font_body)
-    title_h = int(title_bbox[3] - title_bbox[1])
-    title_top = int(title_bbox[1])
-    # Optical centring: +1 px so the cap-height sits visually mid-bar even
-    # though the descent-anchored bbox would otherwise look top-heavy.
-    title_y = (STATUS_BAR_H - title_h) // 2 - title_top + 1
-    _text(draw, 12, title_y, title, font_body, theme.label_primary)
-
-    # --- Status dot (top-center) ------------------------------------------
-    # Inherits the underlying device health (status_indicator._settings_inherit).
-    # Same colour + breath the pill would have shown if Settings weren't open.
-    dot_rgb = _apply_breath(state, _state_pill_bg(state), now)
-    dot_hex = _rgb_to_hex(dot_rgb)
-    dot_radius = 6  # 12 px diameter — visible at arm's length, not loud
-    dot_cx = 120
-    dot_cy = STATUS_BAR_H // 2 + 1  # mirrors title's +1 optical centring
-    draw.ellipse(
-        (dot_cx - dot_radius, dot_cy - dot_radius, dot_cx + dot_radius, dot_cy + dot_radius),
-        fill=dot_hex,
-    )
-
-    # --- Page counter (top-right) -----------------------------------------
+    counter = ""
     if snapshot.settings_rows:
         selected = min(snapshot.selected_index, len(snapshot.settings_rows) - 1)
         counter = f"{selected + 1}/{len(snapshot.settings_rows)}"
-        counter_bbox = draw.textbbox((0, 0), counter, font=font_small)
-        # textbbox returns floats in current Pillow stubs; coerce so the
-        # downstream pixel coordinates stay strictly int.
-        counter_w = int(counter_bbox[2] - counter_bbox[0])
-        counter_h = int(counter_bbox[3] - counter_bbox[1])
-        counter_top = int(counter_bbox[1])
-        counter_x = 232 - counter_w
-        counter_y = (STATUS_BAR_H - counter_h) // 2 - counter_top
-        _text(draw, counter_x, counter_y, counter, font_small, theme.label_secondary)
+    counter_w = _text_width(draw, counter, font_small)
+    counter_x = 232 - counter_w
+    dot_radius = 6
+    dot_cx = counter_x - 16 if counter else 222
+    title_max_w = dot_cx - dot_radius - 10 - 12
+    title = _fit_text_to_width(
+        draw, t(status_bar_word(snapshot), snapshot.language), font_body, title_max_w
+    )
+    title_bbox = draw.textbbox((0, 0), title, font=font_body)
+    title_h = int(title_bbox[3] - title_bbox[1])
+    title_y = (STATUS_BAR_H - title_h) // 2 - int(title_bbox[1]) + 1
+    _text(draw, 12, title_y, title, font_body, theme.label_primary)
+
+    dot_rgb = _apply_breath(state, _state_pill_bg(state), now)
+    dot_cy = STATUS_BAR_H // 2 + 1
+    draw.ellipse(
+        (dot_cx - dot_radius, dot_cy - dot_radius, dot_cx + dot_radius, dot_cy + dot_radius),
+        fill=_rgb_to_hex(dot_rgb),
+    )
+    if counter:
+        bbox = draw.textbbox((0, 0), counter, font=font_small)
+        y = (STATUS_BAR_H - int(bbox[3] - bbox[1])) // 2 - int(bbox[1])
+        _text(draw, counter_x, y, counter, font_small, theme.label_secondary)
 
 
 def _state_pill_bg(state: StatusState) -> tuple[int, int, int]:
@@ -820,7 +811,7 @@ _MODE_STATUS_WORD: dict[UiMode, str] = {
     UiMode.IMAGE_RECEIVED: "Received",
     UiMode.AWAITING_CONFIRM: "Preview",
     UiMode.PRINTING: "Printing",
-    UiMode.PRINT_COMPLETE: "Ejecting",
+    UiMode.PRINT_COMPLETE: "Complete",
     UiMode.ERROR: "Error",
     UiMode.SETTINGS: "Settings",
     UiMode.ADJUSTMENT_EDIT: "Adjustments",
@@ -893,6 +884,7 @@ def status_bar_label(snapshot: UiSnapshot) -> str:
 # ``controller._ADJUSTMENT_AXIS_LABEL``; render.py keeps its own copy
 # because the renderer must not import from controller.
 _ADJUSTMENT_EDIT_KEY_TO_LABEL: dict[str, str] = {
+    "correction_saturation": "Correction",
     "adjust_saturation": "Saturation",
     "adjust_exposure": "Exposure",
     "adjust_sharpness": "Sharpness",
@@ -1241,56 +1233,21 @@ def _ready(
     # split row is what compacts Film and Battery into a single line.
     row_groups: list[list[tuple[str, str]]] = []
 
-    if snapshot.paired_printer is not None and not iphone_only:
-        row_groups.append([(t("Type", lang), _status_bar_printer_name(snapshot))])
-
-    film_cell: tuple[str, str] | None = None
-    if snapshot.film_remaining is not None and not iphone_only:
-        film_cell = (
-            t("Film", lang),
-            f"{snapshot.film_remaining}/{snapshot.film_capacity}",
-        )
-
-    battery_cell: tuple[str, str] | None = None
-    if snapshot.printer_battery is not None and not iphone_only:
-        charging = "+" if snapshot.printer_is_charging else ""
-        # Drop the body-line battery-life estimate from this row: pairing
-        # Film + Battery on one line leaves no room for "(4h32m left)", and
-        # the user-facing value (percentage) is the part that matters at
-        # arm's length. Battery-life is still surfaced via the helper for
-        # the future Mac/headless views.
-        battery_cell = (t("Battery", lang), f"{snapshot.printer_battery}%{charging}")
-
-    # Pair Film + Battery on a single split row when both are present;
-    # fall back to a single-row render if only one is available.
-    if film_cell is not None and battery_cell is not None:
-        row_groups.append([film_cell, battery_cell])
-    elif film_cell is not None:
-        row_groups.append([film_cell])
-    elif battery_cell is not None:
-        row_groups.append([battery_cell])
-
-    # Bare-serial Printer row removed: the serial is already in
-    # Settings → Print → Serial and duplicates nothing useful at print
-    # time. Replace with FTP host + SSID the user actually needs during
-    # camera setup (plan 034 item 7).
-    #
-    # Layout: Host gets a dedicated full-width row (camera's FTP server
-    # field — the most critical value). SSID gets a second full-width row
-    # when known. A split row was tried but neither value fits in the 92 px
-    # half-card at body font; the plan says "prioritise Host and full-line
-    # the SSID below it" when both don't fit.
-    ftp_host_addr: str
-    if snapshot.hotspot_host is not None:
-        ftp_host_addr = snapshot.hotspot_host
-    elif snapshot.wifi_host is not None:
-        ftp_host_addr = snapshot.wifi_host
+    if not iphone_only:
+        if snapshot.printer_battery is not None:
+            charging = "+" if snapshot.printer_is_charging else ""
+            row_groups.append(
+                [(t("Printer battery", lang), f"{snapshot.printer_battery}%{charging}")]
+            )
+        row_groups.append([(t("Look", lang), t(snapshot.look_name, lang))])
+        row_groups.append([(t("Workflow", lang), t(snapshot.workflow_label, lang))])
+        if snapshot.correction_saturation:
+            row_groups.append([(t("Correction", lang), f"{snapshot.correction_saturation:+d}%")])
     else:
-        ftp_host_addr = _ready_ftp_line(snapshot)
-    row_groups.append([(t("Host", lang), ftp_host_addr)])
-    ssid = snapshot.hotspot_ssid
-    if ssid is not None:
-        row_groups.append([(t("Wi-Fi", lang), ssid)])
+        host = snapshot.hotspot_host or snapshot.wifi_host or _ready_ftp_line(snapshot)
+        row_groups.append([(t("Host", lang), host)])
+        if snapshot.hotspot_ssid is not None:
+            row_groups.append([(t("Wi-Fi", lang), snapshot.hotspot_ssid)])
 
     depth = snapshot.image_queue_depth
     if depth == 1:
@@ -1579,7 +1536,7 @@ def _printer_offline(
         _center_lines(
             draw, [t("Checking", snapshot.language)], 75, fonts["large"], theme.label_primary
         )
-    elif message == "Hold K3 to re-pair":
+    elif message == "Check saved Printer":
         _center_lines(
             draw, [t("No printer", snapshot.language)], 75, fonts["large"], theme.label_primary
         )
@@ -1725,7 +1682,7 @@ def _printing(
     _text(
         draw, 18, 182, t("Do not power off", snapshot.language), fonts["small"], theme.accent_yellow
     )
-    # No hint bar for PRINTING
+    draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
 
 
 def _print_complete(
@@ -1734,7 +1691,9 @@ def _print_complete(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    _center_lines(draw, [t("Ejecting", snapshot.language)], 75, fonts["large"], theme.label_primary)
+    _center_lines(
+        draw, [t("Print complete", snapshot.language)], 75, fonts["large"], theme.label_primary
+    )
     if snapshot.last_image_name is not None:
         _text(
             draw,
@@ -1748,7 +1707,7 @@ def _print_complete(
         draw,
         18,
         148,
-        t("Film ejecting", snapshot.language),
+        t("Photo sent to Printer", snapshot.language),
         fonts["small"],
         theme.label_secondary,
     )
@@ -1768,8 +1727,8 @@ def _needs_pairing(
     _menu_item(
         draw,
         122,
-        t("Find printer", snapshot.language),
-        selected=True,
+        t("KEY3 Pair", snapshot.language),
+        selected=False,
         font=fonts["body"],
         theme=theme,
     )
@@ -1782,7 +1741,12 @@ def _needs_pairing(
         theme.label_secondary,
     )
     _text(
-        draw, 18, 178, t("Then press K1", snapshot.language), fonts["small"], theme.label_secondary
+        draw,
+        18,
+        178,
+        t("Press KEY3 to pair", snapshot.language),
+        fonts["small"],
+        theme.label_secondary,
     )
 
     hints = _mode_hints(snapshot)
@@ -2228,6 +2192,7 @@ def _adjustment_edit(
     """
     from instantlink_bridge.imaging.postprocess import (
         AdjustmentProfile,
+        CorrectionProfile,
         render_adjustments_preview,
     )
 
@@ -2262,7 +2227,11 @@ def _adjustment_edit(
 
     profile = snapshot.adjustments_profile or AdjustmentProfile()
     try:
-        preview_img = render_adjustments_preview(profile, size=(_ADJ_EDIT_W, _ADJ_EDIT_H))
+        preview_img = render_adjustments_preview(
+            profile,
+            size=(_ADJ_EDIT_W, _ADJ_EDIT_H),
+            correction=CorrectionProfile(saturation=1.0 + snapshot.correction_saturation / 100.0),
+        )
         image.paste(preview_img, (tile_x, tile_y))
     except Exception:
         # Preview failure must never crash the renderer. Draw a
@@ -2463,7 +2432,7 @@ def _sync_pairing(
     """
 
     lang = snapshot.language
-    title = t("iPhone pairing", lang)
+    title = t("iPhone active" if snapshot.sync_client_recent else "iPhone pairing", lang)
     _center_lines(draw, [title], _QR_TITLE_Y, fonts["body"], theme.label_primary)
 
     payload = snapshot.sync_qr_payload
@@ -2495,7 +2464,11 @@ def _sync_pairing(
 
     _center_lines(
         draw,
-        [t("Scan with InstantLink app", lang)],
+        [
+            t("{n} pending", lang).format(n=snapshot.sync_outbox_depth)
+            if snapshot.sync_client_recent or snapshot.sync_outbox_depth
+            else t("Scan with InstantLink app", lang)
+        ],
         _QR_CAPTION_Y,
         fonts["small"],
         theme.label_secondary,
@@ -2554,9 +2527,8 @@ def _pair_failed(
             fonts["small"],
             theme.label_secondary,
         )
-    _menu_item(
-        draw, 162, t("Try again", snapshot.language), selected=True, font=fonts["body"], theme=theme
-    )
+    context = "KEY3 Reconnect" if snapshot.paired_printer is not None else "KEY3 Pair"
+    _text(draw, 18, 162, t(context, snapshot.language), fonts["body"], theme.label_primary)
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -2998,31 +2970,30 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
             ("KEY1 OK", "KEY2 Back", "KEY3 Help"),
         )
     if snapshot.mode is UiMode.NEEDS_PAIRING:
-        return (("KEY1 Pair", "KEY2 Lock", "KEY3 Pair"),)
+        return (("KEY1 Settings", "KEY2 Lock", "KEY3 Pair"),)
     if snapshot.mode is UiMode.PAIR_FAILED:
-        return (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
+        context = "KEY3 Reconnect" if snapshot.paired_printer is not None else "KEY3 Pair"
+        return (("KEY1 Settings", "KEY2 Back", context),)
     if snapshot.mode is UiMode.PAIRING:
         return (("", "Scanning", "KEY2 Back"),)
     if snapshot.mode is UiMode.SYNC_PAIRING:
         # QR card (plan 050): KEY2 is the only binding; centre it.
         return (("", "KEY2 Back", ""),)
     if snapshot.mode is UiMode.AWAITING_CONFIRM:
-        if snapshot.preview_tool == "crop":
-            return (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
-        if snapshot.preview_tool == "rotate":
-            return (("Left/Right", "KEY1 Print", "KEY2 Cancel"),)
-        return (("Up/Dn Edit", "KEY1 Print", "KEY2 Cancel"),)
+        return (("KEY1 Print", "KEY2 Cancel", "KEY3 Tool"),)
     if snapshot.mode is UiMode.PRINTING:
-        return (("", "Printing", ""),)
-    if snapshot.mode is UiMode.PRINT_COMPLETE:
-        if snapshot.paired_printer is not None:
-            return (("KEY1 Setting", "Ejecting", "KEY3 Network"),)
-        return (("KEY1 Setting", "Ejecting", "Hold KEY3"),)
+        return (("", "KEY2 Lock", ""),)
+    if snapshot.mode is UiMode.ERROR:
+        return (("KEY1 Settings", "KEY2 Back", "KEY3 Check"),)
     if snapshot.sync_destination == "iphone":
-        return (("KEY1 Setting", "KEY2 Lock", "KEY3 iPhone"),)
+        return (("KEY1 Settings", "KEY2 Lock", "KEY3 iPhone"),)
+    if snapshot.mode in {UiMode.PRINTER_OFFLINE, UiMode.PRINTER_SEARCHING}:
+        return (("KEY1 Settings", "KEY2 Lock", "KEY3 Reconnect"),)
+    if snapshot.mode is UiMode.NO_FILM:
+        return (("KEY1 Settings", "KEY2 Lock", "KEY3 Status"),)
     if snapshot.paired_printer is not None:
-        return (("KEY1 Setting", "KEY2 Lock", "KEY3 Network"),)
-    return (("KEY1 Setting", "KEY2 Lock", "KEY3 Pair"),)
+        return (("KEY1 Settings", "KEY2 Lock", "KEY3 Post"),)
+    return (("KEY1 Settings", "KEY2 Lock", "KEY3 Pair"),)
 
 
 # ---------------------------------------------------------------------------
@@ -3539,7 +3510,7 @@ def printer_top_status_text(snapshot: UiSnapshot) -> str:
             return _ellipsize(message, 24)
         return "Printer searching"
     if snapshot.mode is UiMode.PRINTER_OFFLINE:
-        if snapshot.printer_status_message == "Hold K3 to re-pair":
+        if snapshot.printer_status_message == "Check saved Printer":
             return "Re-pair printer"
         return "Printer offline"
     if snapshot.film_remaining is None:

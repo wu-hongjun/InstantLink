@@ -107,6 +107,11 @@ def test_take_prepared_returns_image_when_edit_matches(tmp_path: Path) -> None:
     received = ReceivedImage(tmp_path / "a.jpg", "192.168.8.10")
     edit = PrintEdit(rotate_degrees=90)
     prepared = _prepared()
+    ui._prepared_print_config = (
+        ui.config.printer,
+        ui.config.adjustments,
+        ui.config.correction,
+    )
     ui._prepared_print_image = prepared
     ui._prepared_print_key = (received.path, edit)
 
@@ -117,6 +122,11 @@ def test_take_prepared_is_consumed_once(tmp_path: Path) -> None:
     ui = _controller()
     received = ReceivedImage(tmp_path / "a.jpg", "192.168.8.10")
     edit = PrintEdit()
+    ui._prepared_print_config = (
+        ui.config.printer,
+        ui.config.adjustments,
+        ui.config.correction,
+    )
     ui._prepared_print_image = _prepared()
     ui._prepared_print_key = (received.path, edit)
 
@@ -128,6 +138,11 @@ def test_take_prepared_is_consumed_once(tmp_path: Path) -> None:
 def test_take_prepared_rejects_changed_edit(tmp_path: Path) -> None:
     ui = _controller()
     received = ReceivedImage(tmp_path / "a.jpg", "192.168.8.10")
+    ui._prepared_print_config = (
+        ui.config.printer,
+        ui.config.adjustments,
+        ui.config.correction,
+    )
     ui._prepared_print_image = _prepared()
     ui._prepared_print_key = (received.path, PrintEdit(zoom=2.0))
 
@@ -137,6 +152,11 @@ def test_take_prepared_rejects_changed_edit(tmp_path: Path) -> None:
 def test_take_prepared_rejects_different_source(tmp_path: Path) -> None:
     ui = _controller()
     edit = PrintEdit()
+    ui._prepared_print_config = (
+        ui.config.printer,
+        ui.config.adjustments,
+        ui.config.correction,
+    )
     ui._prepared_print_image = _prepared()
     ui._prepared_print_key = (tmp_path / "a.jpg", edit)
 
@@ -156,6 +176,11 @@ def test_none_edit_matches_default_print_edit(tmp_path: Path) -> None:
     ui = _controller()
     received = ReceivedImage(tmp_path / "a.jpg", "192.168.8.10")
     prepared = _prepared()
+    ui._prepared_print_config = (
+        ui.config.printer,
+        ui.config.adjustments,
+        ui.config.correction,
+    )
     ui._prepared_print_image = prepared
     ui._prepared_print_key = (received.path, PrintEdit())
 

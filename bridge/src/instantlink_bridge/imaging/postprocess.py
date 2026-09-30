@@ -16,12 +16,16 @@ from PIL import Image, ImageDraw, ImageFont
 if TYPE_CHECKING:
     from instantlink_bridge.config import (  # pragma: no cover
         AdjustmentsConfig,
+        CorrectionConfig,
         DatestampFormat,
     )
 
 __all__ = [
     "AdjustmentProfile",
+    "CorrectionProfile",
     "apply_adjustments",
+    "apply_correction",
+    "correction_profile",
     "format_datestamp",
     "read_exif_datestamp_text",
     "render_adjustments_preview",
@@ -29,6 +33,27 @@ __all__ = [
 
 # The five discrete picker values exposed in UI (-100, -50, 0, +50, +100).
 ADJUSTMENT_PICKER_VALUES: tuple[int, ...] = (-100, -50, 0, 50, 100)
+
+
+@dataclass(frozen=True, slots=True)
+class CorrectionProfile:
+    """Printer compensation applied after the creative Look at print resolution."""
+
+    saturation: float = 1.0
+
+
+def correction_profile(config: CorrectionConfig) -> CorrectionProfile:
+    """Resolve the persistent correction without changing Look values or presets."""
+    return CorrectionProfile(saturation=1.0 + config.saturation / 100.0)
+
+
+def apply_correction(image: Image.Image, profile: CorrectionProfile | None) -> Image.Image:
+    """Apply user-selected output compensation; neutral correction is a no-op."""
+    if profile is None or profile.saturation == 1.0:
+        return image
+    from PIL import ImageEnhance
+
+    return ImageEnhance.Color(image).enhance(profile.saturation)
 
 
 @dataclass(frozen=True, slots=True)
@@ -350,8 +375,8 @@ def _apply_vignette(image: Image.Image, strength: int) -> Image.Image:
     # factor map is H×W×1 = one channel).  Same pixel output, lower peak RSS
     # — important on the Pi Zero 2 W with 512 MB RAM.
     arr = np.array(image, dtype=np.float32)  # H×W×3 — copy so we can mutate
-    arr *= factor[:, :, np.newaxis]          # in-place multiply (no second H×W×3 alloc)
-    np.clip(arr, 0.0, 255.0, out=arr)        # in-place clip
+    arr *= factor[:, :, np.newaxis]  # in-place multiply (no second H×W×3 alloc)
+    np.clip(arr, 0.0, 255.0, out=arr)  # in-place clip
     return Image.fromarray(arr.astype(np.uint8), mode="RGB")
 
 
@@ -556,9 +581,7 @@ def _load_example_photo_resized(size: tuple[int, int]) -> Image.Image:
     """
     import importlib.resources
 
-    ref = importlib.resources.files("instantlink_bridge.imaging").joinpath(
-        "_example_photo.jpg"
-    )
+    ref = importlib.resources.files("instantlink_bridge.imaging").joinpath("_example_photo.jpg")
     with importlib.resources.as_file(ref) as path:
         with Image.open(path) as raw:
             resized = raw.resize(size, Image.Resampling.LANCZOS).convert("RGB")
@@ -573,6 +596,7 @@ def render_adjustments_preview(
     profile: AdjustmentProfile,
     *,
     size: tuple[int, int] = (88, 88),
+    correction: CorrectionProfile | None = None,
 ) -> Image.Image:
     """Load the built-in example photo, resize to ``size``, apply ``profile``.
 
@@ -594,7 +618,7 @@ def render_adjustments_preview(
     source = _load_example_photo_resized(size)
     # apply_adjustments returns ``source`` unchanged (same object) for the
     # identity profile — that's fine because we never mutate the cached object.
-    return apply_adjustments(source, profile)
+    return apply_correction(apply_adjustments(source, profile), correction)
 
 
 def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:

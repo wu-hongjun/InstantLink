@@ -143,6 +143,9 @@ class UiSnapshot:
     appearance: str = "light"
     image_queue_depth: int = 0
     adjustments_profile: AdjustmentProfile | None = None
+    look_name: str = "Default"
+    workflow_label: str = "Review 5s"
+    correction_saturation: int = 0
     # Focused adjustment-edit mode state (plan 036 phase 4).
     # adjustment_edit_key: which axis is being edited (None outside ADJUSTMENT_EDIT).
     # Use str to avoid circular import with settings.SettingKey.

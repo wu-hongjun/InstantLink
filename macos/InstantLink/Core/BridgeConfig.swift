@@ -13,6 +13,7 @@ struct BridgeConfig: Codable, Equatable, Hashable, Sendable {
     var power: BridgePowerConfig
     var ui: BridgeUIConfig
     var adjustments: BridgeAdjustmentsConfig
+    var correction: BridgeCorrectionConfig = .defaults
 
     enum CodingKeys: String, CodingKey {
         case ftp
@@ -21,6 +22,7 @@ struct BridgeConfig: Codable, Equatable, Hashable, Sendable {
         case power
         case ui
         case adjustments
+        case correction
     }
 
     static let defaults = BridgeConfig(
@@ -31,9 +33,42 @@ struct BridgeConfig: Codable, Equatable, Hashable, Sendable {
         ui: .defaults,
         adjustments: .defaults
     )
+
+    init(
+        ftp: BridgeFTPConfig, printer: BridgePrinterConfig,
+        workflow: BridgeWorkflowConfig, power: BridgePowerConfig,
+        ui: BridgeUIConfig, adjustments: BridgeAdjustmentsConfig,
+        correction: BridgeCorrectionConfig = .defaults
+    ) {
+        self.ftp = ftp
+        self.printer = printer
+        self.workflow = workflow
+        self.power = power
+        self.ui = ui
+        self.adjustments = adjustments
+        self.correction = correction
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        ftp = try container.decode(BridgeFTPConfig.self, forKey: .ftp)
+        printer = try container.decode(BridgePrinterConfig.self, forKey: .printer)
+        workflow = try container.decode(BridgeWorkflowConfig.self, forKey: .workflow)
+        power = try container.decode(BridgePowerConfig.self, forKey: .power)
+        ui = try container.decode(BridgeUIConfig.self, forKey: .ui)
+        adjustments = try container.decode(BridgeAdjustmentsConfig.self, forKey: .adjustments)
+        correction = try container.decodeIfPresent(BridgeCorrectionConfig.self, forKey: .correction)
+            ?? .defaults
+    }
 }
 
 // MARK: - Child structs
+
+struct BridgeCorrectionConfig: Codable, Equatable, Hashable, Sendable {
+    var saturation: Int
+
+    static let defaults = BridgeCorrectionConfig(saturation: 0)
+}
 
 struct BridgeFTPConfig: Codable, Equatable, Hashable, Sendable {
     /// Configured FTP receive mode.
@@ -327,6 +362,7 @@ enum BridgeConfigField: String, CaseIterable, Hashable, Sendable {
     case uiLanguage = "ui.language"
 
     case adjustmentsPreset = "adjustments.preset"
+    case correctionSaturation = "correction.saturation"
     case adjustmentsSaturation = "adjustments.saturation"
     case adjustmentsExposure = "adjustments.exposure"
     case adjustmentsSharpness = "adjustments.sharpness"

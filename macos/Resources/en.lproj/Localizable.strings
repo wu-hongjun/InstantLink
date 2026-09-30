@@ -426,3 +426,15 @@
 "filter_instant" = "Instant";
 "filter_process" = "Process";
 "filter_transfer" = "Transfer";
+
+/* Bridge Printer output correction */
+"Printer correction" = "Printer correction";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "Compensate for film output independently of your Look. Zero leaves output unchanged.";
+
+/* Bridge workflow and recovery */
+"Workflow" = "Workflow";
+"Confirmation" = "Confirmation";
+"Confirm each" = "Confirm each";
+"Print immediately" = "Print immediately";
+"Review 5s" = "Review 5s";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "To restart the Bridge, turn it off and back on with the X306 power button.";

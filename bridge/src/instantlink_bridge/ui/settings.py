@@ -27,6 +27,9 @@ class SettingKey(StrEnum):
     # Print hub → sub-page openers (phase 1, plan 035).
     OPEN_PRINTER = "open_printer"
     OPEN_ADJUSTMENTS = "open_adjustments"
+    OPEN_POST = "open_post"
+    OPEN_CORRECTION = "open_correction"
+    CORRECTION_SATURATION = "correction_saturation"
     OPEN_TRANSFORM = "open_transform"
     OPEN_AUTO_PRINT = "open_auto_print"
     # Adjustments sub-page placeholder (phase 1 only; kept for back-compat but no
@@ -122,6 +125,8 @@ class SettingsPage(StrEnum):
     # Print sub-pages (plan 035 phase 1).
     PRINTER = "printer"
     ADJUSTMENTS = "adjustments"
+    POST = "post"
+    CORRECTION = "correction"
     TRANSFORM = "transform"
     AUTO_PRINT = "auto_print"
 
@@ -152,11 +157,13 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     # PRINT is a 4-row hub (plan 035 phase 1). Each row opens a
     # dedicated sub-page; BACK from any sub-page returns here.
     SettingsPage.PRINT: (
-        SettingKey.OPEN_PRINTER,
-        SettingKey.OPEN_ADJUSTMENTS,
+        SettingKey.OPEN_POST,
         SettingKey.OPEN_TRANSFORM,
         SettingKey.OPEN_AUTO_PRINT,
+        SettingKey.OPEN_PRINTER,
     ),
+    SettingsPage.POST: (SettingKey.OPEN_ADJUSTMENTS, SettingKey.OPEN_CORRECTION),
+    SettingsPage.CORRECTION: (SettingKey.CORRECTION_SATURATION,),
     # PRINTER: pairing actions and model selection.
     # PAIR_PRINTER is the single pair/re-pair surface: when no printer is
     # saved it shows "Pair" and starts a scan; when one is saved it shows
@@ -201,8 +208,8 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     # item 18, Option B; kept here under the Auto print sub-page).
     SettingsPage.AUTO_PRINT: (
         SettingKey.AUTO_PRINT_DELAY,
-        SettingKey.ALLOW_PRINT_WITHOUT_FILM,
         SettingKey.PRINT_ADVANCED_HEADER,
+        SettingKey.ALLOW_PRINT_WITHOUT_FILM,
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
     ),
@@ -273,9 +280,11 @@ PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.ABOUT: "About",
     # Print sub-page titles (plan 035 phase 1).
     SettingsPage.PRINTER: "Printer",
-    SettingsPage.ADJUSTMENTS: "Adjustments",
+    SettingsPage.ADJUSTMENTS: "Looks",
+    SettingsPage.POST: "Post",
+    SettingsPage.CORRECTION: "Correction",
     SettingsPage.TRANSFORM: "Transform",
-    SettingsPage.AUTO_PRINT: "Auto print",
+    SettingsPage.AUTO_PRINT: "Workflow",
 }
 
 PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
@@ -286,6 +295,8 @@ PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
     # Print hub → sub-page openers (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: SettingsPage.PRINTER,
     SettingKey.OPEN_ADJUSTMENTS: SettingsPage.ADJUSTMENTS,
+    SettingKey.OPEN_POST: SettingsPage.POST,
+    SettingKey.OPEN_CORRECTION: SettingsPage.CORRECTION,
     SettingKey.OPEN_TRANSFORM: SettingsPage.TRANSFORM,
     SettingKey.OPEN_AUTO_PRINT: SettingsPage.AUTO_PRINT,
 }
@@ -297,7 +308,9 @@ SETTINGS_PARENT_PAGE: dict[SettingsPage, SettingsPage] = {
     SettingsPage.ABOUT: SettingsPage.SYSTEM,
     # Print sub-pages all return to the Print hub (plan 035 phase 1).
     SettingsPage.PRINTER: SettingsPage.PRINT,
-    SettingsPage.ADJUSTMENTS: SettingsPage.PRINT,
+    SettingsPage.ADJUSTMENTS: SettingsPage.POST,
+    SettingsPage.POST: SettingsPage.PRINT,
+    SettingsPage.CORRECTION: SettingsPage.POST,
     SettingsPage.TRANSFORM: SettingsPage.PRINT,
     SettingsPage.AUTO_PRINT: SettingsPage.PRINT,
 }
@@ -373,6 +386,7 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
         SettingKey.APPEARANCE,
+        SettingKey.CORRECTION_SATURATION,
         # Adjustments sub-page pickers (plan 035 phase 3).
         SettingKey.ADJUST_SATURATION,
         SettingKey.ADJUST_EXPOSURE,
@@ -523,7 +537,10 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_ABOUT: "Versions and device identity",
     # Print hub → sub-page opener help strings (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: "Pairing and printer model",
-    SettingKey.OPEN_ADJUSTMENTS: "Colour and overlay adjustments",
+    SettingKey.OPEN_ADJUSTMENTS: "Creative colour and overlay adjustments",
+    SettingKey.OPEN_POST: "Looks and independent Printer correction",
+    SettingKey.OPEN_CORRECTION: "Compensate film colour without changing Looks",
+    SettingKey.CORRECTION_SATURATION: "Printer output compensation; independent of Looks",
     SettingKey.OPEN_TRANSFORM: "Fit-to-film and JPEG quality",
     SettingKey.OPEN_AUTO_PRINT: "Auto-print delay and connection knobs",
     # Adjustments placeholder help (phase 1 only — no longer surfaced in any page).
@@ -558,7 +575,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.ADJUST_WATERMARK: "Stamp a short label in the bottom-left corner",
     # Preset picker and save action (plan 035 phase 5; updated plan 036 phase 5).
     SettingKey.ADJUST_PRESET: "Choose a look, or tweak the sliders below",
-    SettingKey.ADJUST_SAVE_CUSTOM: "Save as preset. K3 hold a slot to overwrite or delete.",
+    SettingKey.ADJUST_SAVE_CUSTOM: "Save as preset. Right on a saved slot to manage.",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
@@ -634,6 +651,8 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
             SettingOption("Hotspot", FtpReceiveMode.HOTSPOT),
             SettingOption("Client", FtpReceiveMode.PEER),
         )
+    if key is SettingKey.CORRECTION_SATURATION:
+        return tuple(SettingOption(format_int_with_sign(v), v) for v in range(-100, 101, 10))
     if key is SettingKey.PRINTER_MODEL:
         return tuple(SettingOption(model_label(value), value) for value in MODEL_OPTIONS)
     if key is SettingKey.IMAGE_FIT:
@@ -642,7 +661,7 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(SettingOption(str(value), value) for value in QUALITY_OPTIONS)
     if key is SettingKey.AUTO_PRINT_DELAY:
         return tuple(
-            SettingOption(seconds_label(value), value) for value in AUTO_PRINT_DELAY_OPTIONS
+            SettingOption(workflow_label(value), value) for value in AUTO_PRINT_DELAY_OPTIONS
         )
     if key is SettingKey.ALLOW_PRINT_WITHOUT_FILM:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
@@ -754,6 +773,8 @@ def config_with_setting_value(
         return replace(config, ui=replace(config.ui, language=value))
     if key is SettingKey.APPEARANCE and isinstance(value, UiAppearance):
         return replace(config, ui=replace(config.ui, appearance=value))
+    if key is SettingKey.CORRECTION_SATURATION and isinstance(value, int):
+        return replace(config, correction=replace(config.correction, saturation=value))
     if key is SettingKey.ADJUST_SATURATION and isinstance(value, int):
         return replace(config, adjustments=replace(config.adjustments, saturation=value))
     if key is SettingKey.ADJUST_EXPOSURE and isinstance(value, int):
@@ -829,6 +850,15 @@ def sync_destination_label(destination: SyncDestination) -> str:
     return labels[destination]
 
 
+def workflow_label(value: float | None) -> str:
+    """Describe the actual confirmation behavior without changing stored values."""
+    if value is None:
+        return "Confirm each"
+    if value == 0:
+        return "Print immediately"
+    return f"Review {value:g}s"
+
+
 def seconds_label(value: float | None) -> str:
     """Return compact LCD label for a second value."""
 
@@ -868,6 +898,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.ui.language
     if key is SettingKey.APPEARANCE:
         return config.ui.appearance
+    if key is SettingKey.CORRECTION_SATURATION:
+        return config.correction.saturation
     if key is SettingKey.ADJUST_SATURATION:
         return config.adjustments.saturation
     if key is SettingKey.ADJUST_EXPOSURE:

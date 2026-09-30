@@ -39,7 +39,7 @@ from instantlink_bridge.imaging.pipeline import (
     PrintEdit,
     prepare_for_instantlink_backend,
 )
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
 
 LOGGER = logging.getLogger(__name__)
@@ -205,6 +205,7 @@ async def print_file_to_printer(
     model: PrinterModel | None = None,
     progress: PrintProgressCallback | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
     prepared_image: PreparedImage | None = None,
 ) -> None:
     """Print a file through InstantLink's Rust transport.
@@ -225,6 +226,7 @@ async def print_file_to_printer(
         model_override=model,
         progress=progress,
         adjustments=adjustments,
+        correction=correction,
         prepared_image=prepared_image,
     )
 
@@ -273,6 +275,7 @@ class InstantLinkBackend:
         model_override: PrinterModel | None = None,
         progress: PrintProgressCallback | None = None,
         adjustments: AdjustmentProfile | None = None,
+        correction: CorrectionProfile | None = None,
         prepared_image: PreparedImage | None = None,
     ) -> None:
         """Prepare an edited image and send it through InstantLink."""
@@ -290,6 +293,7 @@ class InstantLinkBackend:
                 model_override,
                 progress,
                 adjustments,
+                correction,
                 prepared_image,
             ),
         )
@@ -488,6 +492,7 @@ class InstantLinkBackend:
         model_override: PrinterModel | None,
         progress: PrintProgressCallback | None,
         adjustments: AdjustmentProfile | None = None,
+        correction: CorrectionProfile | None = None,
         prepared_image: PreparedImage | None = None,
     ) -> None:
         # Image prep needs no BLE link, so overlap it with the connect and
@@ -509,6 +514,7 @@ class InstantLinkBackend:
                     quality=quality,
                     edit=edit,
                     adjustments=adjustments,
+                    correction=correction,
                 )
             )
 
@@ -523,6 +529,7 @@ class InstantLinkBackend:
                 model_override=model_override,
                 progress=progress,
                 adjustments=adjustments,
+                correction=correction,
                 prepared_image=prepared_image,
                 speculative=speculative,
             )
@@ -544,6 +551,7 @@ class InstantLinkBackend:
         model_override: PrinterModel | None,
         progress: PrintProgressCallback | None,
         adjustments: AdjustmentProfile | None,
+        correction: CorrectionProfile | None,
         prepared_image: PreparedImage | None,
         speculative: Future[PreparedImage] | None,
     ) -> None:
@@ -589,6 +597,7 @@ class InstantLinkBackend:
                     quality=quality,
                     edit=edit,
                     adjustments=adjustments,
+                    correction=correction,
                 )
             except ImagePipelineError:
                 raise

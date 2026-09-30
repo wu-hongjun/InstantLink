@@ -131,6 +131,9 @@ final class BridgeSettingsDraft: ObservableObject {
         if !BridgeAdjustmentsConfig.allPresetNames.contains(draft.adjustments.preset) {
             errors[.adjustmentsPreset] = "Unknown preset."
         }
+        if !(-100...100).contains(draft.correction.saturation) {
+            errors[.correctionSaturation] = "Must be between -100 and 100"
+        }
         // Slider range validation reads from the loaded schema when
         // available; falls back to the hardcoded defaults so validation
         // still runs before the schema has been fetched. The bridge owns
@@ -275,6 +278,9 @@ final class BridgeSettingsDraft: ObservableObject {
         }
         if !adjustments.isEmpty {
             payload["adjustments"] = adjustments
+        }
+        if loaded.correction.saturation != draft.correction.saturation {
+            payload["correction"] = ["saturation": draft.correction.saturation]
         }
 
         return payload

@@ -143,6 +143,7 @@ async def test_config_get_returns_defaults_when_no_config_file(tmp_path: Path) -
         # Adjustments only exposes the user-editable bits.
         assert config["adjustments"]["watermark_text"] == ""
         assert config["adjustments"]["datestamp_format"] == "quartz_date"
+        assert config["correction"] == {"saturation": 0}
     finally:
         await client.close()
 
@@ -252,6 +253,36 @@ async def test_config_put_applies_diff_and_persists_file(tmp_path: Path) -> None
         on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
         assert on_disk["printer"]["quality"] == 90
         assert on_disk["printer"]["fit"] == "crop"
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_config_put_persists_correction_without_changing_look(tmp_path: Path) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[adjustments]\nsaturation = 50\n")
+    app = _make_app(tmp_path, private_key, config_path)
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        body = _json_body({"config": {"correction": {"saturation": 20}}})
+        path = "/v1/config"
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["correction"] == {"saturation": 20}
+        assert data["config"]["adjustments"]["saturation"] == 50
+        on_disk = tomllib.loads(config_path.read_text())
+        assert on_disk["correction"]["saturation"] == 20
+        assert on_disk["adjustments"]["saturation"] == 50
     finally:
         await client.close()
 

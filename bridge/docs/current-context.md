@@ -1,4 +1,16 @@
-# InstantLink Bridge Current Context
+# Current Bridge Context
+
+## Post processing and interface implementation, 2026-09-30
+
+Plan 060 implements the plan 059 audit. KEY3 is **Post** on ready Print home, with separate
+Looks and persistent Printer Correction. New correction defaults to zero; existing creative
+adjustments are preserved. A user choice about moving the live +50 saturation to Correction
+remains pending, so the deployment will retain the current Look values.
+
+Local validation and deployment details will be appended after final verification. Camera/Printer
+film output, physical GPIO and the 16-hour discharge target are distinct hardware gates.
+
+## Previous verified context
 
 **2026-09-30 performance tiers deployed and checked:** source commit `892945a` was installed
 through a clean archive and the Bridge restarted successfully (`NRestarts=0`). The root-owned CPU

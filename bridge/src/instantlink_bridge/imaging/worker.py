@@ -22,7 +22,7 @@ from instantlink_bridge.imaging.pipeline import (
     prepare_for_instantlink_backend,
     prepare_for_instax,
 )
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
 
 
 class ImageWorkerError(ImagePipelineError):
@@ -43,6 +43,7 @@ class ImagePreparationRequest:
     quality: int = 100
     edit: PrintEdit | None = None
     adjustments: AdjustmentProfile | None = None
+    correction: CorrectionProfile | None = None
     # False selects the InstantLink-backend flavour, which leaves the
     # model transport flip to InstantLink itself (plan 056 T1.1).
     apply_model_flip: bool = True
@@ -137,6 +138,7 @@ class ImagePreparationWorker:
         quality: int = 100,
         edit: PrintEdit | None = None,
         adjustments: AdjustmentProfile | None = None,
+        correction: CorrectionProfile | None = None,
         timeout_s: float | None = None,
         apply_model_flip: bool = True,
     ) -> PreparedImage:
@@ -149,6 +151,7 @@ class ImagePreparationWorker:
             quality=quality,
             edit=edit,
             adjustments=adjustments,
+            correction=correction,
             apply_model_flip=apply_model_flip,
         )
         async with self._lock:
@@ -293,6 +296,7 @@ async def prepare_for_instax_async(
     quality: int = 100,
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
     timeout_s: float | None = None,
     worker: ImagePreparationWorker | None = None,
     apply_model_flip: bool = True,
@@ -313,6 +317,7 @@ async def prepare_for_instax_async(
         quality=quality,
         edit=edit,
         adjustments=adjustments,
+        correction=correction,
         timeout_s=timeout_s,
         apply_model_flip=apply_model_flip,
     )
@@ -351,6 +356,7 @@ def _run_prepare_in_child(
             quality=request.quality,
             edit=request.edit,
             adjustments=request.adjustments,
+            correction=request.correction,
         )
         result_writer.send(_PreparedImageResult(prepared))
     except ImageTooLargeError as error:

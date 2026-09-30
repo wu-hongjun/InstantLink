@@ -452,3 +452,15 @@
 "filter_instant" = "即时";
 "filter_process" = "处理";
 "filter_transfer" = "转印";
+
+/* Bridge Printer output correction */
+"Printer correction" = "打印机校正";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "独立于风格补偿相纸的色彩表现。零表示不改变输出。";
+
+/* Bridge workflow and recovery */
+"Workflow" = "工作流程";
+"Confirmation" = "确认方式";
+"Confirm each" = "逐张确认";
+"Print immediately" = "立即打印";
+"Review 5s" = "预览5秒";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "要重启 Bridge，请使用 X306 电源按钮关闭后再开启。";

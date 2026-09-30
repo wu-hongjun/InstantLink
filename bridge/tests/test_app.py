@@ -939,3 +939,145 @@ def test_make_remote_input_injector_maps_action_strings() -> None:
     assert injected == [UiAction.SELECT, UiAction.PAIR]
     assert injector("jump") is False  # unknown strings never reach the queue
     assert injected == [UiAction.SELECT, UiAction.PAIR]
+
+
+@pytest.mark.asyncio
+async def test_locked_manual_confirmation_wait_and_cancel_keep_idle_clock(tmp_path: Path) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    modes: list[str] = []
+    confirming = asyncio.Event()
+    decision: asyncio.Future[PrintEdit | None] = asyncio.get_running_loop().create_future()
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    class WaitingUi(FakePrintUi):
+        async def await_print_confirmation(
+            self,
+            received: ReceivedImage,
+            *,
+            timeout_s: float | None = app.AUTO_PRINT_DELAY_S,
+        ) -> PrintEdit | None:
+            assert timeout_s is None
+            confirming.set()
+            return await decision
+
+    cpu = CpuPerformanceController(setter)
+    cpu.set_power_saving(True)
+    await cpu.start()
+    ui = WaitingUi(should_print=False)
+    received = ReceivedImage(tmp_path / "manual.jpg", "192.168.8.10")
+    task = asyncio.create_task(
+        app.handle_received_image(
+            received,
+            config=BridgeConfig(),
+            ui=ui,
+            pairer=FakePairer([]),
+            printer_sender=_unused_sender,
+            timeout_s=None,
+            cpu_performance=cpu,
+        )
+    )
+    await confirming.wait()
+    assert modes == ["powersave"]
+    decision.set_result(None)
+    await task
+    assert modes == ["powersave"]
+    await cpu.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail", [False, True])
+async def test_dispatch_boosts_accepted_print_through_completion_and_restores_idle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fail: bool,
+) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    modes: list[str] = []
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    class CheckingUi(FakePrintUi):
+        async def print_complete(self, received: ReceivedImage) -> None:
+            assert modes[-1] == "performance"
+            await super().print_complete(received)
+
+        async def print_failed(self, message: str) -> None:
+            assert modes[-1] == "performance"
+            await super().print_failed(message)
+
+    async def target(selected: PairedPrinter) -> PairedPrinter:
+        assert modes[-1] == "performance"
+        return selected
+
+    async def sender(
+        _printer: PairedPrinter,
+        _received: ReceivedImage,
+        _config: BridgeConfig,
+        _edit: PrintEdit,
+        _progress: PrintProgressCallback,
+    ) -> None:
+        assert modes[-1] == "performance"
+        if fail:
+            raise ImagePipelineError("bad image")
+
+    cpu = CpuPerformanceController(setter)
+    cpu.set_power_saving(True)
+    await cpu.start()
+    monkeypatch.setattr(app, "resolve_print_target", target)
+    ui = CheckingUi(should_print=True)
+    await app.dispatch_received_image(
+        ReceivedImage(tmp_path / "accepted.jpg", "192.168.8.10"),
+        snapshot=UiSnapshot(mode=UiMode.READY, ftp_host="192.168.8.1"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678")]),
+        outbox=None,
+        printer_sender=sender,
+        cpu_performance=cpu,
+    )
+    assert modes == ["powersave", "performance", "powersave"]
+    assert ui.events[-1] == ("failed:Image unsupported" if fail else "complete:accepted.jpg")
+    await cpu.close()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_accepted_printer_lookup_releases_boost(tmp_path: Path) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    modes: list[str] = []
+    lookup_started = asyncio.Event()
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    class WaitingPairer(FakePairer):
+        async def list_paired(self) -> list[PairedPrinter]:
+            assert modes[-1] == "performance"
+            lookup_started.set()
+            await asyncio.Event().wait()
+            return []
+
+    cpu = CpuPerformanceController(setter)
+    cpu.set_power_saving(True)
+    await cpu.start()
+    task = asyncio.create_task(
+        app.handle_received_image(
+            ReceivedImage(tmp_path / "cancel.jpg", "192.168.8.10"),
+            config=BridgeConfig(),
+            ui=FakePrintUi(should_print=True),
+            pairer=WaitingPairer([]),
+            printer_sender=_unused_sender,
+            cpu_performance=cpu,
+        )
+    )
+    await lookup_started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert modes == ["powersave", "performance", "powersave"]
+    await cpu.close()

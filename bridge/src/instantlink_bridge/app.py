@@ -58,6 +58,7 @@ from instantlink_bridge.imaging.worker import (
 )
 from instantlink_bridge.net.health import FtpActivityTracker
 from instantlink_bridge.power.monitor import BatteryPolicy, IdlePolicy, PowerMonitor, PowerPolicy
+from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.power.pisugar import PiSugarClient
 from instantlink_bridge.power.x306 import NoBatteryClient, X306BatteryClient
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
@@ -191,6 +192,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     pairer = BluetoothctlPrinterPairer()
     ftp_activity = FtpActivityTracker()
     power_monitor: PowerMonitor | None = None
+    cpu_performance = CpuPerformanceController()
     service: FtpReceiveService | None = None
     bluez_agent: AsyncStopService | None = None
     sync_outbox: SyncOutbox | None = None
@@ -299,6 +301,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         pairer=pairer,
         ftp_activity=ftp_activity,
         power_activity_callback=record_power_activity,
+        cpu_performance=cpu_performance,
         ftp_config_applied_callback=apply_runtime_ftp_config,
         sync_config_applied_callback=apply_runtime_sync_config,
         sync_token_rotated_callback=on_sync_token_rotated,
@@ -363,6 +366,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # third gather branch: it must never delay bridge.ready, its imports run
         # off-loop in a worker thread, and it holds no BLE locks (the failure
         # mode that sank the Sprint 6 warmup branch).
+        await cpu_performance.start()
         sync_setup_task = asyncio.create_task(setup_sync_service())
         ftp_result, ble_result = await asyncio.gather(
             start_ftp_service(),
@@ -413,14 +417,15 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             )
             await power_monitor.record_activity()
             try:
-                await dispatch_received_image(
-                    received,
-                    snapshot=ui.snapshot,
-                    config=ui.config,
-                    ui=ui,
-                    pairer=pairer,
-                    outbox=sync_outbox,
-                )
+                async with cpu_performance.boost():
+                    await dispatch_received_image(
+                        received,
+                        snapshot=ui.snapshot,
+                        config=ui.config,
+                        ui=ui,
+                        pairer=pairer,
+                        outbox=sync_outbox,
+                    )
             except Exception as exc:
                 LOGGER.exception(
                     "bridge.image_job_unhandled path=%s error_type=%s",
@@ -450,6 +455,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 await sync_setup_task
         await stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
         await ui.stop()
+        await cpu_performance.close()
         await close_default_instantlink_backend()
         if bluez_agent is not None:
             await bluez_agent.stop()

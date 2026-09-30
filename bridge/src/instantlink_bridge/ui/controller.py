@@ -48,6 +48,7 @@ from instantlink_bridge.power.battery_estimator import (
     BatteryLifeEstimator,
 )
 from instantlink_bridge.power.monitor import BatteryAlert, IdleStage, PowerEvent, PowerEventKind
+from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.power.pisugar import BatteryState
 from instantlink_bridge.printing import PrintProgress
 from instantlink_bridge.system_info import SystemInfo, default_hotspot_ssid, read_system_info
@@ -367,6 +368,7 @@ class BridgeUi:
         ftp_activity: FtpActivityTracker | None = None,
         wifi_mode_setter: WifiModeSetter | None = None,
         power_activity_callback: PowerActivityCallback | None = None,
+        cpu_performance: CpuPerformanceController | None = None,
         ftp_config_applied_callback: FtpConfigAppliedCallback | None = None,
         sync_config_applied_callback: SyncConfigAppliedCallback | None = None,
         sync_token_rotated_callback: SyncTokenRotatedCallback | None = None,
@@ -402,6 +404,7 @@ class BridgeUi:
             wifi_mode_setter if wifi_mode_setter is not None else set_wifi_mode_with_helper
         )
         self._power_activity_callback = power_activity_callback
+        self._cpu_performance = cpu_performance
         self._ftp_config_applied_callback = ftp_config_applied_callback
         self._sync_config_applied_callback = sync_config_applied_callback
         self._sync_token_rotated_callback = sync_token_rotated_callback
@@ -4679,6 +4682,10 @@ class BridgeUi:
             LOGGER.exception("ui.render_failed mode=%s", self._snapshot.mode)
 
     def _set_display_idle_stage(self, stage: IdleStage) -> None:
+        if self._cpu_performance is not None:
+            self._cpu_performance.set_power_saving(
+                stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}
+            )
         set_idle_stage = getattr(self._display, "set_idle_stage", None)
         if set_idle_stage is None:
             return

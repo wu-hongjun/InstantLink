@@ -1,5 +1,13 @@
 # InstantLink Bridge Current Context
 
+**2026-09-30 audit pending USB access:** the user reports good portable behavior but slower
+printing. Plan 057 did not change CPU clock limits or the `ondemand` governor. Plan 058 adds an
+explicit stock-maximum policy while awake and throughout photo jobs, with automatic scaling only
+while dark/locked and idle. Local checks pass; this new policy is **not yet deployed or verified
+on hardware**. At the start of the audit the Mac had no Pi USB gadget or `en8` interface, and the
+saved Pi hostname did not resolve. See `docs/plans/058-bridge-awake-performance.md` for the audit
+findings and pending timing checks.
+
 Latest source deployment verified: 2026-09-28 on `riverps-rpi-zero-2w` (bridge 0.1.17,
 branch `codex/bridge-battery-day`, commit `4455f53`, clean archive). This source-only deployment
 updated the benchmark script and service unit without restarting the healthy Bridge runtime. The

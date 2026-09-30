@@ -15,6 +15,7 @@ class UiMode(StrEnum):
     """Top-level LCD modes."""
 
     BOOTING = "booting"
+    UNLOCKING = "unlocking"
     SETTINGS = "settings"
     ADJUSTMENT_EDIT = "adjustment_edit"
     NEEDS_PAIRING = "needs_pairing"
@@ -124,6 +125,8 @@ class UiSnapshot:
     bridge_power_alert: str = "unknown"
     bridge_external_power: bool | None = None
     idle_stage: str = "active"
+    unlock_presses: int = 0
+    unlock_required: int = 3
     message: str | None = None
     print_title: str | None = None
     print_detail: str | None = None

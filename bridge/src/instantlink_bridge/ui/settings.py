@@ -90,6 +90,7 @@ class SettingKey(StrEnum):
     SYSTEM_POWER_INFO = "system_power_info"
     SYSTEM_BATTERY_INFO = "system_battery_info"
     SYSTEM_IDLE_POWEROFF = "system_idle_poweroff"
+    UNLOCK_THREE_PRESSES = "unlock_three_presses"
     FONT_SIZE = "font_size"
     LANGUAGE = "language"
     APPEARANCE = "appearance"
@@ -249,6 +250,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
     SettingsPage.SYSTEM: (
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
+        SettingKey.UNLOCK_THREE_PRESSES,
         SettingKey.REFRESH_STATUS,
         SettingKey.SYSTEM_PERSONALISATION_HEADER,
         SettingKey.APPEARANCE,
@@ -383,6 +385,7 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
         SettingKey.SYSTEM_IDLE_POWEROFF,
+        SettingKey.UNLOCK_THREE_PRESSES,
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
         SettingKey.APPEARANCE,
@@ -614,6 +617,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_OS_VERSION: "Operating system release",
     SettingKey.SYSTEM_POWER_INFO: "Bridge battery/UPS hardware (legacy)",
     SettingKey.SYSTEM_BATTERY_INFO: "Battery charge if telemetry available",
+    SettingKey.UNLOCK_THREE_PRESSES: "Require three presses to avoid accidental unlock",
     SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
     SettingKey.FONT_SIZE: "Screen text size",
     SettingKey.LANGUAGE: "Screen language (中文 / English)",
@@ -663,6 +667,8 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(
             SettingOption(workflow_label(value), value) for value in AUTO_PRINT_DELAY_OPTIONS
         )
+    if key is SettingKey.UNLOCK_THREE_PRESSES:
+        return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.ALLOW_PRINT_WITHOUT_FILM:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.KEEPALIVE:
@@ -765,6 +771,8 @@ def config_with_setting_value(
         return replace(config, printer=replace(config.printer, keepalive_interval_s=value))
     if key is SettingKey.SEARCH_INTERVAL and isinstance(value, float):
         return replace(config, printer=replace(config.printer, search_interval_s=value))
+    if key is SettingKey.UNLOCK_THREE_PRESSES and isinstance(value, bool):
+        return replace(config, ui=replace(config.ui, unlock_requires_three_presses=value))
     if key is SettingKey.SYSTEM_IDLE_POWEROFF and isinstance(value, bool):
         return replace(config, power=replace(config.power, idle_poweroff_enabled=value))
     if key is SettingKey.FONT_SIZE and isinstance(value, FontSize):
@@ -890,6 +898,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.printer.keepalive_interval_s
     if key is SettingKey.SEARCH_INTERVAL:
         return config.printer.search_interval_s
+    if key is SettingKey.UNLOCK_THREE_PRESSES:
+        return config.ui.unlock_requires_three_presses
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return config.power.idle_poweroff_enabled
     if key is SettingKey.FONT_SIZE:

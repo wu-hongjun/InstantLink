@@ -438,3 +438,6 @@
 "Print immediately" = "Print immediately";
 "Review 5s" = "Review 5s";
 "To restart the Bridge, turn it off and back on with the X306 power button." = "To restart the Bridge, turn it off and back on with the X306 power button.";
+
+/* Bridge unlock protection */
+"Require 3 presses to unlock" = "Require 3 presses to unlock";

@@ -7,8 +7,32 @@ Looks and persistent Printer Correction. New correction defaults to zero; existi
 adjustments are preserved. A user choice about moving the live +50 saturation to Correction
 remains pending, so the deployment will retain the current Look values.
 
-Local validation and deployment details will be appended after final verification. Camera/Printer
-film output, physical GPIO and the 16-hour discharge target are distinct hardware gates.
+**Deployed runtime: `10fd031`**, clean archive, Bridge 0.1.17 on Pi Zero 2 W Rev 1.0,
+Debian 13.2 / kernel 6.12.47+rpt-rpi-v8 / Python 3.13.5 / BlueZ 5.82, Waveshare LCD HAT and
+X306 with 2300 mAh cell. The App contract and copy were updated in `7ca015d`.
+
+- Final gates: **1198 Bridge tests**, Ruff lint and touched-file format checks, strict mypy
+  (65 source files), **152 App tests**, whitespace checks and strict MkDocs build pass.
+- The localization checker has pre-existing missing/extra keys at baseline `4f6a8e7`; comparison
+  found no new diagnostic lines. All introduced App strings are present in all 12 locales.
+- On-Pi shared-controller smoke passed Settings without Printer, Post/Looks/Correction navigation,
+  staged Correction cancellation, context Help, wake-only input, locking during a simulated print,
+  and actual killable-worker preview preparation/cancellation. Real root helper transitions were
+  1000/600/1000/600/1000/600 MHz. A dark manual-confirmation wait returned to powersave after
+  preparation; only preparation/rebuild and accepted printing hold the boost.
+- The smoke uses synthetic state and a sample JPEG, installed Pi fonts and actual CPU controls.
+  It does not inject physical GPIO or send film. Its rendered frames exposed clipped instructions
+  and a wide printing title; these were fixed with nine additional font-size layout tests.
+- Bridge, manager, Bluetooth and NetworkManager are active; Bridge `NRestarts=0`, throttling
+  `0x0`, hotspot FTP greeting/NOOP and both manager listeners verified. Runtime automatic
+  screen-off entered powersave at 600 MHz with backlight off.
+- Saved Printer is still Instax Square `INSTAX-52006924`; it was not advertising during checks.
+  Current creative Look is Vivid with saturation +50; Correction is 0. No live image setting was
+  silently reinterpreted. The user can move the compensation to Correction independently.
+
+Physical KEY2/KEY3, Sony a7C II upload with edit/confirmation, Printer power-cycle reconnect and
+film colour output are pending user smoke checks. The 16-hour discharge target remains unmeasured.
+See plan 060 and `docs/assets/bridge-ux-060/validated-screens.png` for details.
 
 ## Previous verified context
 

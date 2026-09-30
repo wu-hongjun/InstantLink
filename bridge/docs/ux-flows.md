@@ -229,7 +229,8 @@ It remains accessible without a saved Printer through KEY1.
   explicit confirmation. Reconnect checks the saved device without changing its identity.
 - Network combines camera Hotspot/Client setup, Wi-Fi/FTP credentials, diagnostics, iPhone
   pairing, and credential/token reset controls. USB is for administration only.
-- System contains appearance, language, text size, power behavior and About diagnostics.
+- System contains appearance, language, text size, power behavior, `Unlock: 3 presses`, and About
+  diagnostics.
 
 RIGHT/KEY1 opens a category or editor. UP/DOWN selects a row; KEY2/LEFT backs out. KEY3 opens
 context help in a dialog that preserves the selected row, picker and working edit. In saved
@@ -270,11 +271,43 @@ Home/status footer semantics (plans 059/060):
 | Error | Settings | Back | Check (never resend a photo) |
 
 Short and long KEY3 presses perform the same visible action. Manual lock and automatic screen-off
-both consume the first input solely to wake. Locking during a print does not cancel it: the
-CPU boost stays active for the job, then the dark Bridge returns to its lowest supported clock.
+use the same unlock sequence described below. Locking during a print does not cancel it: active
+preparation and printing stay boosted, then the idle dark Bridge returns to its lowest supported
+clock.
 Home identifies **Printer battery**, current Look, workflow and any nonzero Correction; camera
 setup addresses are in Network. X306 has no charge telemetry, so no Bridge charge is invented.
 The completion screen says **Print complete**, without claiming a separate ejection stage.
+
+### Lock and unlock
+
+`Settings → System → Unlock: 3 presses` defaults to **On**. It applies to manual lock and
+automatic screen-off, on both physical and virtual LCDs.
+
+1. Press any key once. The LCD wakes to an **Unlock** prompt showing **1 / 3**. The Bridge starts
+   its awake CPU tier immediately and prepares the current interface.
+2. Press any key again. The prompt shows **2 / 3**.
+3. Press any key a third time. The latest underlying screen appears. All three inputs are
+   consumed by unlocking; a fourth input performs its normal labelled action.
+
+The keys may be the same or different. Physical buttons must be released between presses;
+holding a key counts once. Virtual input uses the same controller and each accepted action is a
+press.
+
+An incomplete sequence has a fixed **10-second timeout from the first press**. On expiry the
+LCD becomes dark again and the count resets. The idle CPU returns to its lowest supported
+clock; active image preparation or printing retains its performance boost. FTP, Sync and
+Printer reconnect continue throughout, and live status or photo changes are retained behind
+the unlock prompt.
+
+Set the toggle to **Off** to use one-press wake: the first input wakes and repaints the latest
+screen without executing a normal action. The next input performs the labelled action.
+
+Wake must repaint even when the current screen is unchanged. Screen-off can clear the physical
+framebuffer, so matching an old cached active snapshot is insufficient evidence that its pixels
+are still present. The display restores its retained frame before enabling the backlight, and
+the controller invalidates its render cache for dark stages and unlock transitions. See
+[plan 061](../../docs/plans/061-bridge-three-press-unlock.md) for the implementation and validation
+record.
 
 ## State Diagram
 

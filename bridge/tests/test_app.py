@@ -1081,3 +1081,46 @@ async def test_cancelled_accepted_printer_lookup_releases_boost(tmp_path: Path) 
         await task
     assert modes == ["powersave", "performance", "powersave"]
     await cpu.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operational_mode", "reply_prefix"),
+    [(UiMode.PRINTING, "450 Printer busy"), (UiMode.ERROR, "451 ")],
+)
+async def test_unlock_overlay_preserves_operational_ftp_preflight_guards(
+    tmp_path: Path, operational_mode: UiMode, reply_prefix: str
+) -> None:
+    from instantlink_bridge.camera.ftp import FtpReceiveService
+    from instantlink_bridge.config import FtpConfig
+    from instantlink_bridge.ui.controller import BridgeUi
+    from instantlink_bridge.ui.display import NullDisplay
+    from instantlink_bridge.ui.input import NullInput
+    from instantlink_bridge.ui.render import can_accept_images
+
+    ui = BridgeUi(BridgeConfig(), display=NullDisplay(), input_device=NullInput())
+    ui._snapshot = UiSnapshot(
+        mode=operational_mode,
+        ftp_host="192.168.8.1",
+        paired_printer=PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678"),
+        film_remaining=7,
+        printer_status_fresh=True,
+        camera_receive_ready=True,
+    )
+    ui._screen_locked = True
+    ui._unlocking = True
+    ui._unlock_presses = 1
+    assert ui.snapshot.mode is UiMode.UNLOCKING
+    assert app.live_ui_snapshot(ui).mode is operational_mode
+
+    service = FtpReceiveService(
+        FtpConfig(incoming_dir=tmp_path),
+        asyncio.Queue(),
+        asyncio.get_running_loop(),
+        bridge_snapshot_provider=lambda: app.live_ui_snapshot(ui),
+    )
+    reply = service._ftp_preflight_reply("192.168.8.2")
+    assert reply is not None
+    assert reply.startswith(reply_prefix)
+    if operational_mode is UiMode.ERROR:
+        assert not can_accept_images(app.live_ui_snapshot(ui))

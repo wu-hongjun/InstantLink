@@ -241,6 +241,9 @@ final class BridgeSettingsDraft: ObservableObject {
         if loaded.ui.language != draft.ui.language {
             ui["language"] = draft.ui.language.rawValue
         }
+        if loaded.ui.unlockRequiresThreePresses != draft.ui.unlockRequiresThreePresses {
+            ui["unlock_requires_three_presses"] = draft.ui.unlockRequiresThreePresses
+        }
         if !ui.isEmpty {
             payload["ui"] = ui
         }

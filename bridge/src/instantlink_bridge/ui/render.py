@@ -184,7 +184,9 @@ def render_snapshot(snapshot: UiSnapshot, now: float | None = None) -> Image.Ima
     breath_clock = time.monotonic() if now is None else now
     draw_status_bar(draw, snapshot, fonts, breath_clock, theme=theme)
 
-    if snapshot.mode is UiMode.READY:
+    if snapshot.mode is UiMode.UNLOCKING:
+        _unlocking(draw, snapshot, fonts, theme)
+    elif snapshot.mode is UiMode.READY:
         _ready(draw, snapshot, fonts, theme)
     elif snapshot.mode is UiMode.ADJUSTMENT_EDIT:
         _adjustment_edit(image, draw, snapshot, fonts, theme)
@@ -801,6 +803,7 @@ def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
 # status_indicator.StatusSignal which we share across surfaces.
 _MODE_STATUS_WORD: dict[UiMode, str] = {
     UiMode.BOOTING: "Starting",
+    UiMode.UNLOCKING: "Locked",
     UiMode.NEEDS_PAIRING: "No printer",
     UiMode.PAIRING: "Pairing",
     UiMode.PAIR_FAILED: "Pair failed",
@@ -1189,6 +1192,30 @@ def _booting(
 ) -> None:
     _center_lines(draw, [t("Starting", snapshot.language)], 75, fonts["large"], theme.label_primary)
     # No hint bar for BOOTING
+
+
+def _unlocking(
+    draw: ImageDraw.ImageDraw,
+    snapshot: UiSnapshot,
+    fonts: dict[str, Font],
+    theme: Theme,
+) -> None:
+    """Three deliberate presses wake the interface without activating a control."""
+    lang = snapshot.language
+    _center_lines(draw, [t("Press any key", lang)], 65, fonts["body"], theme.label_primary)
+    required = max(1, min(3, snapshot.unlock_required))
+    count = max(0, min(required, snapshot.unlock_presses))
+    for i in range(required):
+        x = 120 + (i - (required - 1) / 2) * 44
+        draw.ellipse(
+            (x - 13, 112, x + 13, 138),
+            fill=theme.accent_blue if i < count else theme.surface,
+            outline=theme.accent_blue,
+            width=2,
+        )
+    remaining = required - count
+    text = t("Press once more" if remaining == 1 else "Press twice more", lang)
+    _center_lines(draw, [text], 158, fonts["small"], theme.label_secondary)
 
 
 def _ready(
@@ -2816,7 +2843,7 @@ def _help_dialog(
         _text(draw, line_x, body_top + i * line_h, line, body_font, theme.label_secondary)
 
     # 5. Footer hint — "Press any key to close".
-    hint = t("Press any key", lang)
+    hint = t("Press any key to close", lang)
     hint_font = fonts["small"]
     hint_w = _text_width(draw, hint, hint_font)
     hint_x = card_x0 + (_CONFIRM_CARD_W - hint_w) // 2
@@ -2975,6 +3002,8 @@ def _mode_hints(snapshot: UiSnapshot) -> tuple[str, str, str]:
 
 
 def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...]:
+    if snapshot.mode is UiMode.UNLOCKING:
+        return (("", "", ""),)
     if snapshot.mode is UiMode.BOOTING:
         return (("", "Starting", ""),)
     if snapshot.mode is UiMode.CONFIRMATION_DIALOG:

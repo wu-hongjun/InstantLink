@@ -20,6 +20,7 @@ from instantlink_bridge.config import (
     PrinterConfig,
     SyncConfig,
     SyncDestination,
+    UiConfig,
     WorkflowConfig,
     load_config,
 )
@@ -1988,7 +1989,8 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     # 0 Idle poweroff  1 Refresh status  [skip 2 Personalisation header]
     # 3 Appearance  4 Text size  5 Language  6 About. Five DOWNs lands on
     # About (header is skipped, so the visited indices are 1,3,4,5,6).
-    for _ in range(5):
+    keys = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+    while keys[ui._snapshot.selected_index] is not SettingKey.OPEN_ABOUT:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"
@@ -6060,7 +6062,10 @@ async def test_key2_locks_sync_home_and_first_key_only_wakes_display() -> None:
     pairer = _FakePairer([])
     applied: list[SyncConfig] = []
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        BridgeConfig(
+            sync=SyncConfig(destination=SyncDestination.IPHONE),
+            ui=UiConfig(unlock_requires_three_presses=False),
+        ),
         display=display,
         input_device=NullInput(),
         pairer=pairer,

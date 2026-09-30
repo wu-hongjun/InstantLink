@@ -16,7 +16,7 @@ from test_ui_controller import (
 
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.camera.ftp import ReceivedImage
-from instantlink_bridge.config import BridgeConfig, CorrectionConfig, PrinterConfig
+from instantlink_bridge.config import BridgeConfig, CorrectionConfig, PrinterConfig, UiConfig
 from instantlink_bridge.imaging.pipeline import PrintEdit
 from instantlink_bridge.imaging.worker import ImagePreparationWorker
 from instantlink_bridge.power.performance import CpuPerformanceController
@@ -27,7 +27,10 @@ from instantlink_bridge.ui.models import UiAction, UiSnapshot
 
 def _ui(display: _FakeDisplay, *, cpu: CpuPerformanceController | None = None) -> BridgeUi:
     return BridgeUi(
-        BridgeConfig(printer=PrinterConfig(model=PrinterModel.SQUARE)),
+        BridgeConfig(
+            printer=PrinterConfig(model=PrinterModel.SQUARE),
+            ui=UiConfig(unlock_requires_three_presses=False),
+        ),
         display=display,
         input_device=NullInput(),
         pairer=_FakePairer([]),

@@ -439,3 +439,6 @@
 "Print immediately" = "Imprimir imediatamente";
 "Review 5s" = "Revisar por 5 s";
 "To restart the Bridge, turn it off and back on with the X306 power button." = "Para reiniciar o Bridge, desligue-o e ligue-o novamente com o botão de energia do X306.";
+
+/* Bridge unlock protection */
+"Require 3 presses to unlock" = "Pressionar 3 vezes para desbloquear";

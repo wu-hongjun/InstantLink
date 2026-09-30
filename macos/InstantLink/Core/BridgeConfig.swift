@@ -204,11 +204,13 @@ struct BridgeUIConfig: Codable, Equatable, Hashable, Sendable {
     var appearance: BridgeUIAppearance
     var fontSize: BridgeFontSize
     var language: BridgeUILanguage
+    var unlockRequiresThreePresses: Bool = true
 
     enum CodingKeys: String, CodingKey {
         case appearance
         case fontSize = "font_size"
         case language
+        case unlockRequiresThreePresses = "unlock_requires_three_presses"
     }
 
     static let defaults = BridgeUIConfig(
@@ -216,6 +218,26 @@ struct BridgeUIConfig: Codable, Equatable, Hashable, Sendable {
         fontSize: .medium,
         language: .english
     )
+
+    init(
+        appearance: BridgeUIAppearance, fontSize: BridgeFontSize,
+        language: BridgeUILanguage, unlockRequiresThreePresses: Bool = true
+    ) {
+        self.appearance = appearance
+        self.fontSize = fontSize
+        self.language = language
+        self.unlockRequiresThreePresses = unlockRequiresThreePresses
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        appearance = try container.decode(BridgeUIAppearance.self, forKey: .appearance)
+        fontSize = try container.decode(BridgeFontSize.self, forKey: .fontSize)
+        language = try container.decode(BridgeUILanguage.self, forKey: .language)
+        unlockRequiresThreePresses = container.contains(.unlockRequiresThreePresses)
+            ? try container.decode(Bool.self, forKey: .unlockRequiresThreePresses)
+            : true
+    }
 }
 
 struct BridgeFirmwareUpdateConfig: Codable, Equatable, Hashable, Sendable {
@@ -360,6 +382,7 @@ enum BridgeConfigField: String, CaseIterable, Hashable, Sendable {
     case uiAppearance = "ui.appearance"
     case uiFontSize = "ui.font_size"
     case uiLanguage = "ui.language"
+    case uiUnlockRequiresThreePresses = "ui.unlock_requires_three_presses"
 
     case adjustmentsPreset = "adjustments.preset"
     case correctionSaturation = "correction.saturation"

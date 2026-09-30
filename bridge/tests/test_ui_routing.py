@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 from test_ui_controller import _FakeDisplay, _FakePairer, _FakeStatusProvider
 
-from instantlink_bridge.config import BridgeConfig
+from instantlink_bridge.config import BridgeConfig, UiConfig
 from instantlink_bridge.power.monitor import IdleStage
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.input import NullInput
@@ -17,10 +17,10 @@ from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiMode
 from instantlink_bridge.ui.settings import SettingKey, SettingsPage
 
 
-def _ui(mode: UiMode, *, saved: bool = False) -> BridgeUi:
+def _ui(mode: UiMode, *, saved: bool = False, three_presses: bool = False) -> BridgeUi:
     printer = PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678") if saved else None
     ui = BridgeUi(
-        BridgeConfig(),
+        BridgeConfig(ui=UiConfig(unlock_requires_three_presses=three_presses)),
         display=_FakeDisplay(),
         input_device=NullInput(),
         pairer=_FakePairer([printer] if printer else []),
@@ -261,3 +261,163 @@ async def test_main_mode_help_explains_print_and_sync_and_preserves_selection() 
     await ui._handle_action(UiAction.BACK)
     assert ui.snapshot.selected_index == 3
     assert ui._settings_page is SettingsPage.MAIN
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", list(UiAction))
+async def test_three_press_unlock_consumes_each_key_and_then_accepts_actions(
+    action: UiAction,
+) -> None:
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._lock_screen()
+    for presses in (1, 2):
+        await ui._handle_action(action)
+        assert ui.snapshot.mode is UiMode.UNLOCKING
+        assert ui.snapshot.unlock_presses == presses
+        assert ui.snapshot.unlock_required == 3
+        assert ui._snapshot.mode is UiMode.PRINTER_SEARCHING
+        assert ui.snapshot.idle_stage == "active"
+    await ui._handle_action(action)
+    assert ui.snapshot.mode is UiMode.PRINTER_SEARCHING
+    assert ui.snapshot.idle_stage == "active"
+    await ui._handle_action(UiAction.SELECT)
+    assert ui.snapshot.mode is UiMode.SETTINGS
+    assert ui._unlock_timeout_task is None
+
+
+@pytest.mark.asyncio
+async def test_unlock_overlay_preserves_incoming_printer_and_photo_state() -> None:
+    from pathlib import Path
+
+    from instantlink_bridge.camera.ftp import ReceivedImage
+    from instantlink_bridge.ui.status import PrinterStatusSnapshot
+
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    ui._lock_screen()
+    await ui._handle_action(UiAction.HELP)
+    ui._apply_printer_status(
+        printer, PrinterStatusSnapshot(film_remaining=7, battery=90, is_charging=False)
+    )
+    assert ui.snapshot.mode is UiMode.UNLOCKING
+    assert ui.snapshot.film_remaining == 7
+    received = ReceivedImage(path=Path("/tmp/photo.jpg"), remote_ip="192.168.8.2")
+    await ui.printing_started(received)
+    assert ui.snapshot.mode is UiMode.UNLOCKING
+    assert ui._snapshot.mode is UiMode.PRINTING
+    await ui._handle_action(UiAction.BACK)
+    await ui._handle_action(UiAction.SELECT)
+    assert ui.snapshot.mode is UiMode.PRINTING
+    assert ui.snapshot.last_image_name == "photo.jpg"
+    assert ui._unlock_timeout_task is None
+
+
+@pytest.mark.asyncio
+async def test_incomplete_unlock_expires_to_dark_idle_and_resets_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+    from instantlink_bridge.ui import controller
+
+    modes: list[str] = []
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    monkeypatch.setattr(controller, "UNLOCK_TIMEOUT_S", 0.02)
+    cpu = CpuPerformanceController(setter)
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._cpu_performance = cpu
+    await cpu.start()
+    ui._lock_screen()
+    await cpu.start()
+    assert modes[-1] == "powersave"
+    await ui._handle_action(UiAction.SELECT)
+    assert modes[-1] == "performance"
+    timer = ui._unlock_timeout_task
+    assert timer is not None
+    await timer
+    await cpu.start()
+    assert ui.snapshot.idle_stage == "screen_off"
+    assert ui.snapshot.mode is UiMode.PRINTER_SEARCHING
+    assert modes[-1] == "powersave"
+    await ui._handle_action(UiAction.SELECT)
+    assert ui.snapshot.mode is UiMode.UNLOCKING
+    assert ui.snapshot.unlock_presses == 1
+    ui._lock_screen()
+    await cpu.close()
+
+
+@pytest.mark.asyncio
+async def test_disabled_gate_repaints_identical_prelock_home() -> None:
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True)
+    ui._render()
+    display = ui._display
+    assert isinstance(display, _FakeDisplay)
+    before = len(display.snapshots)
+    ui._lock_screen()
+    await ui._handle_action(UiAction.SELECT)
+    assert len(display.snapshots) == before + 1
+    assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
+
+
+@pytest.mark.asyncio
+async def test_first_press_finishes_cpu_wake_before_third_queued_press() -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    assert BridgeConfig().ui.unlock_requires_three_presses is True
+    warming = asyncio.Event()
+    warmed = asyncio.Event()
+    hold_wake = False
+
+    async def setter(mode: str) -> None:
+        if mode == "performance" and hold_wake:
+            warming.set()
+            await warmed.wait()
+
+    cpu = CpuPerformanceController(setter)
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._cpu_performance = cpu
+    await cpu.start()
+    ui._lock_screen()
+    await cpu.start()
+    hold_wake = True
+    actions = asyncio.create_task(ui._run_actions())
+    try:
+        for _ in range(3):
+            ui.inject_action(UiAction.SELECT)
+        await asyncio.wait_for(warming.wait(), timeout=1)
+        assert ui.snapshot.mode is UiMode.UNLOCKING
+        assert ui.snapshot.unlock_presses == 1
+        warmed.set()
+        await asyncio.wait_for(ui._actions.join(), timeout=1)
+        assert ui.snapshot.mode is UiMode.PRINTER_SEARCHING
+        assert not ui._screen_locked
+        assert ui._unlock_timeout_task is None
+    finally:
+        warmed.set()
+        actions.cancel()
+        with suppress(asyncio.CancelledError):
+            await actions
+        ui._cancel_unlock_timeout()
+        await cpu.close()
+
+
+@pytest.mark.asyncio
+async def test_system_unlock_toggle_changes_next_wake() -> None:
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._show_settings(page=SettingsPage.SYSTEM)
+    keys = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+    for _ in range(keys.index(SettingKey.UNLOCK_THREE_PRESSES)):
+        await ui._handle_action(UiAction.DOWN)
+    assert ui.snapshot.settings_rows[ui.snapshot.selected_index].label == "Unlock: 3 presses"
+    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._config.ui.unlock_requires_three_presses is False
+    ui._lock_screen()
+    await ui._handle_action(UiAction.SELECT)
+    assert ui.snapshot.mode is UiMode.SETTINGS
+    assert not ui._screen_locked
+    assert ui._unlock_timeout_task is None

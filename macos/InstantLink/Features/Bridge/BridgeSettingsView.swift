@@ -335,9 +335,20 @@ struct BridgeSettingsView: View {
                         (.chineseSimplified, L("Chinese (Simplified)")),
                     ]
                 )
+                Toggle(
+                    L("Require 3 presses to unlock"),
+                    isOn: Binding(
+                        get: { draft.draft?.ui.unlockRequiresThreePresses ?? true },
+                        set: { newValue in
+                            updateDraft { $0.ui.unlockRequiresThreePresses = newValue }
+                        }
+                    )
+                )
             }
         } footer: {
-            errorFooter(for: [.uiAppearance, .uiFontSize, .uiLanguage])
+            errorFooter(for: [
+                .uiAppearance, .uiFontSize, .uiLanguage, .uiUnlockRequiresThreePresses,
+            ])
         }
     }
 
@@ -755,6 +766,13 @@ struct BridgeSettingsView: View {
                 field: L("LCD language"),
                 before: languageLabel(loaded.ui.language),
                 after: languageLabel(draft.ui.language)
+            ))
+        }
+        if loaded.ui.unlockRequiresThreePresses != draft.ui.unlockRequiresThreePresses {
+            rows.append(.init(
+                field: L("Require 3 presses to unlock"),
+                before: loaded.ui.unlockRequiresThreePresses ? L("On") : L("Off"),
+                after: draft.ui.unlockRequiresThreePresses ? L("On") : L("Off")
             ))
         }
         if loaded.adjustments.preset != draft.adjustments.preset {

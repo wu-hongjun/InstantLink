@@ -439,3 +439,6 @@
 "Print immediately" = "すぐに印刷";
 "Review 5s" = "5秒間確認";
 "To restart the Bridge, turn it off and back on with the X306 power button." = "Bridgeを再起動するには、X306の電源ボタンで電源を切ってから再び入れてください。";
+
+/* Bridge unlock protection */
+"Require 3 presses to unlock" = "ロック解除に3回押す";

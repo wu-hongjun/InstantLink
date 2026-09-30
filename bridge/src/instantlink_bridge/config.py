@@ -397,6 +397,11 @@ class UiConfig:
     status_sink: StatusSinkKind = StatusSinkKind.LCD
     language: UiLanguage = UiLanguage.EN
     appearance: UiAppearance = UiAppearance.LIGHT
+    unlock_requires_three_presses: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.unlock_requires_three_presses, bool):
+            raise ValueError("[ui].unlock_requires_three_presses must be a boolean")
 
 
 @dataclass(frozen=True, slots=True)
@@ -644,6 +649,8 @@ def render_config(config: BridgeConfig) -> str:
             f"status_sink = {_toml_string(config.ui.status_sink.value)}",
             f"language = {_toml_string(config.ui.language.value)}",
             f"appearance = {_toml_string(config.ui.appearance.value)}",
+            "unlock_requires_three_presses = "
+            f"{_toml_bool(config.ui.unlock_requires_three_presses)}",
             "",
             "[adjustments]",
             f"preset = {_toml_string(config.adjustments.preset)}",
@@ -874,6 +881,7 @@ def _load_ui_config(data: object) -> UiConfig:
         status_sink=parse_status_sink(data.get("status_sink", StatusSinkKind.LCD.value)),
         language=parse_ui_language(data.get("language", UiLanguage.EN.value)),
         appearance=parse_ui_appearance(data.get("appearance", UiAppearance.LIGHT.value)),
+        unlock_requires_three_presses=data.get("unlock_requires_three_presses", True),
     )
 
 

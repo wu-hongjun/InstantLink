@@ -66,3 +66,7 @@ trusted_public_keys = []
 # Applies after the Look at final print resolution. -100 to 100; 0 is neutral.
 # Select a value from your own film comparisons; no automatic calibration is assumed.
 saturation = 0
+
+[ui]
+# Require three quick key presses to wake a locked screen; disable for one press.
+unlock_requires_three_presses = true

@@ -140,6 +140,7 @@ async def test_config_get_returns_defaults_when_no_config_file(tmp_path: Path) -
         assert config["ui"]["appearance"] == "light"
         assert config["ui"]["font_size"] == "medium"
         assert config["ui"]["language"] == "en"
+        assert config["ui"]["unlock_requires_three_presses"] is True
         # Adjustments only exposes the user-editable bits.
         assert config["adjustments"]["watermark_text"] == ""
         assert config["adjustments"]["datestamp_format"] == "quartz_date"
@@ -231,6 +232,7 @@ async def test_config_put_applies_diff_and_persists_file(tmp_path: Path) -> None
         diff = {
             "printer": {"quality": 90, "fit": "crop"},
             "workflow": {"allow_print_without_film": True},
+            "ui": {"unlock_requires_three_presses": False},
         }
         body = _json_body({"config": diff})
         path = "/v1/config"
@@ -248,11 +250,13 @@ async def test_config_put_applies_diff_and_persists_file(tmp_path: Path) -> None
         assert config["printer"]["quality"] == 90
         assert config["printer"]["fit"] == "crop"
         assert config["workflow"]["allow_print_without_film"] is True
+        assert config["ui"]["unlock_requires_three_presses"] is False
         # File is persisted on disk.
         assert config_path.exists()
         on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
         assert on_disk["printer"]["quality"] == 90
         assert on_disk["printer"]["fit"] == "crop"
+        assert on_disk["ui"]["unlock_requires_three_presses"] is False
     finally:
         await client.close()
 

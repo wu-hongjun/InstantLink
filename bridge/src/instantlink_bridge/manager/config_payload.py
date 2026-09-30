@@ -92,6 +92,7 @@ ALLOWED_FIELDS: dict[str, frozenset[str]] = {
             "appearance",
             "font_size",
             "language",
+            "unlock_requires_three_presses",
         }
     ),
     "adjustments": frozenset(
@@ -285,6 +286,7 @@ def _serialize_ui(ui: UiConfig) -> dict[str, Any]:
         "appearance": ui.appearance.value,
         "font_size": ui.font_size.value,
         "language": ui.language.value,
+        "unlock_requires_three_presses": ui.unlock_requires_three_presses,
     }
 
 
@@ -483,6 +485,7 @@ def _apply_ui(
     appearance: UiAppearance = current.appearance
     font_size: FontSize = current.font_size
     language: UiLanguage = current.language
+    unlock_requires_three_presses = current.unlock_requires_three_presses
     if "appearance" in body:
         try:
             appearance = parse_ui_appearance(body["appearance"])
@@ -498,7 +501,19 @@ def _apply_ui(
             language = parse_ui_language(body["language"])
         except ValueError as exc:
             field_errors["ui.language"] = str(exc)
-    return replace(current, appearance=appearance, font_size=font_size, language=language)
+    if "unlock_requires_three_presses" in body:
+        value = body["unlock_requires_three_presses"]
+        if not isinstance(value, bool):
+            field_errors["ui.unlock_requires_three_presses"] = "Must be a boolean."
+        else:
+            unlock_requires_three_presses = value
+    return replace(
+        current,
+        appearance=appearance,
+        font_size=font_size,
+        language=language,
+        unlock_requires_three_presses=unlock_requires_three_presses,
+    )
 
 
 def _apply_sync(

@@ -39,6 +39,9 @@ printed image share prepared bytes; Printer, adjustment or correction changes in
 Both Rust FFI and diagnostic Bleak paths forward the same corrected prepared image. Original
 camera files delivered to the iOS app in Sync mode remain unchanged.
 
+A locked prepared preview waiting for confirmation uses the idle CPU tier; actual preparation,
+rebuilds and accepted printing acquire a boost, which releases on failure/cancellation.
+
 The App exposes a separate Printer correction control, preserves older Bridge responses with a
 zero default, and includes correction in draft validation/diff/revert. Its sample preview is
 approximate, as are the pre-existing Look sample controls. New copy is present in all 12 locales.
@@ -65,7 +68,17 @@ decoding and draft behavior, real killable-worker cancellation, countdown timing
 status-interrupted preview completion, timeout boundary input, saved reconnect cadence, dark wake
 callback races, printing lock, preset Help and six language/font-size title-spacing cases.
 
-Final test counts and device smoke results are recorded in bridge/docs/current-context.md after
-deployment. Real camera upload, Printer power cycling/film output and physical GPIO confirmation
+Final validation: **1198 Bridge tests**, **152 App tests**, Ruff, strict mypy and strict MkDocs
+pass. The repository localization check reports the same existing gaps as its baseline; all new
+keys are present across 12 locales. Runtime `10fd031` was deployed through a clean archive.
+On-device shared UI, real CPU helper and killable worker smoke passed; transitions used stock
+1000/600 MHz, including powersave while a dark prepared preview waits. Rendering uses installed
+Pi fonts. Screens below use synthetic device data and an example photo, rather than physical LCD
+photographs. Nine additional layout regressions ensure photo text stays above the footer at all
+three text sizes.
+
+![Validated Pi-rendered interface](../assets/bridge-ux-060/validated-screens.png)
+
+Device smoke details are recorded in bridge/docs/current-context.md. Real camera upload, Printer power cycling/film output and physical GPIO confirmation
 require the corresponding hardware to be on. Battery runtime still requires a full discharge;
 software tests and clock checks do not establish 16 hours of endurance.

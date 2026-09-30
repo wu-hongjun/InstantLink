@@ -130,6 +130,7 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # event loop room to service LCD render, FTP, and BLE callbacks without
 # noticeably delaying reconnect when the printer wakes up at the 5-second setting.
 MIN_OFFLINE_SEARCH_GAP_S = 2.0
+UNLOCK_TIMEOUT_S = 10.0
 # How long a SystemStatsSnapshot is reused before re-reading /proc and /sys.
 # The About page can re-render at the LCD's ~30 Hz tick when help text toasts or
 # the cursor moves; without a cache that would hammer the filesystem readers
@@ -428,6 +429,9 @@ class BridgeUi:
         self._bridge_external_power: bool | None = None
         self._idle_stage = IdleStage.ACTIVE
         self._screen_locked = False
+        self._unlocking = False
+        self._unlock_presses = 0
+        self._unlock_timeout_task: asyncio.Task[None] | None = None
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         self._battery_estimator = BatteryLifeEstimator()
         self._battery_minutes_remaining: int | None = None
@@ -542,12 +546,31 @@ class BridgeUi:
 
     @property
     def snapshot(self) -> UiSnapshot:
-        """Read-only access to the current UI snapshot; used by FTP pre-flight (Phase 6).
+        """Read display state, including the shared physical/virtual unlock overlay.
 
-        Safe to call from any thread: UiSnapshot is frozen+slotted, the attribute swap
-        is atomic under the GIL, and a one-mutation-lag is acceptable for FTP replies.
+        Operational callers use ``live_snapshot`` so unlocking does not alter
+        camera readiness or photo dispatch. Frozen snapshots remain safe to read
+        from other threads; an occasional one-mutation lag is acceptable.
         """
+
+        return self._visible_snapshot()
+
+    @property
+    def live_snapshot(self) -> UiSnapshot:
+        """Read operational state beneath the lock overlay for FTP/photo dispatch."""
+
         return self._snapshot
+
+    def _visible_snapshot(self) -> UiSnapshot:
+        if not self._unlocking:
+            return self._snapshot
+        return replace(
+            self._snapshot,
+            mode=UiMode.UNLOCKING,
+            idle_stage=IdleStage.ACTIVE.value,
+            unlock_presses=self._unlock_presses,
+            unlock_required=3,
+        )
 
     def inject_action(self, action: UiAction) -> bool:
         """Inject a UI action from a remote surface (virtual LCD, plan 054).
@@ -629,6 +652,7 @@ class BridgeUi:
             self._proactive_bond_reset_task,
             self._initial_status_task,
             self._credential_hotspot_task,
+            self._unlock_timeout_task,
         ):
             if task is None:
                 continue
@@ -1408,7 +1432,7 @@ class BridgeUi:
                     continue
                 LOGGER.info("ui.input action=%s mode=%s", action, self._snapshot.mode)
                 if was_dark:
-                    self._unlock_screen()
+                    await self._begin_unlock()
                     continue
                 await self._handle_action(action)
             finally:
@@ -1483,6 +1507,8 @@ class BridgeUi:
             self._render()
 
     def _effective_idle_stage(self) -> IdleStage:
+        if self._unlocking:
+            return IdleStage.ACTIVE
         return IdleStage.SCREEN_OFF if self._screen_locked else self._idle_stage
 
     def _screen_is_dark(self) -> bool:
@@ -1493,18 +1519,66 @@ class BridgeUi:
         }
 
     def _lock_screen(self) -> None:
+        self._cancel_unlock_timeout()
+        self._unlocking = False
+        self._unlock_presses = 0
         self._screen_locked = True
         self._snapshot = replace(self._snapshot, idle_stage=IdleStage.SCREEN_OFF.value)
         self._set_display_idle_stage(IdleStage.SCREEN_OFF)
         LOGGER.info("ui.screen_locked")
 
     def _unlock_screen(self) -> None:
+        self._cancel_unlock_timeout()
+        self._unlocking = False
+        self._unlock_presses = 0
         self._screen_locked = False
         self._idle_stage = IdleStage.ACTIVE
         self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
         self._set_display_idle_stage(IdleStage.ACTIVE)
+        # A dark display may have cleared its pixels. Repaint even when the
+        # live home state equals the last frame seen before locking.
+        self._last_rendered_snapshot = None
         self._render()
         LOGGER.info("ui.screen_unlocked")
+
+    def _cancel_unlock_timeout(self) -> None:
+        task = self._unlock_timeout_task
+        self._unlock_timeout_task = None
+        if task is not None:
+            task.cancel()
+
+    async def _begin_unlock(self) -> None:
+        if not self._config.ui.unlock_requires_three_presses:
+            self._unlock_screen()
+            return
+        self._screen_locked = True
+        self._unlocking = True
+        self._unlock_presses = 1
+        self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
+        self._set_display_idle_stage(IdleStage.ACTIVE)
+        self._last_rendered_snapshot = None
+        self._render()
+        self._cancel_unlock_timeout()
+        self._unlock_timeout_task = asyncio.create_task(self._expire_unlock_prompt())
+        # Warm the awake tier on the first press, before later queued presses
+        # can complete unlocking. Normal services continue using the live state.
+        if self._cpu_performance is not None:
+            await self._cpu_performance.start()
+        LOGGER.info("ui.unlock_started presses=1 required=3")
+
+    async def _expire_unlock_prompt(self) -> None:
+        await asyncio.sleep(UNLOCK_TIMEOUT_S)
+        self._unlock_timeout_task = None
+        if self._unlocking:
+            self._lock_screen()
+            LOGGER.info("ui.unlock_expired")
+
+    def _advance_unlock(self) -> None:
+        self._unlock_presses += 1
+        if self._unlock_presses >= 3:
+            self._unlock_screen()
+            return
+        self._render()
 
     def _apply_shutdown_requested(self, event: PowerEvent) -> None:
         reason = event.shutdown_reason.value if event.shutdown_reason is not None else "shutdown"
@@ -1527,10 +1601,13 @@ class BridgeUi:
         await self._power_activity_callback()
 
     async def _handle_action(self, action: UiAction) -> None:
+        if self._unlocking:
+            self._advance_unlock()
+            return
         if self._screen_is_dark():
             # Every dark screen consumes the first action, including direct
             # abstract input. Capture darkness before activity in the queue loop.
-            self._unlock_screen()
+            await self._begin_unlock()
             return
         if self._snapshot.mode is UiMode.CONFIRMATION_DIALOG:
             await self._handle_confirmation_dialog_action(action)
@@ -3183,6 +3260,10 @@ class BridgeUi:
         return self._setting_picker_rows(key, self._snapshot.selected_index)
 
     def _settings_row_for_key(self, key: SettingKey, printer_name: str) -> SettingsRow:
+        if key is SettingKey.UNLOCK_THREE_PRESSES:
+            return SettingsRow(
+                "Unlock: 3 presses", bool_label(self._config.ui.unlock_requires_three_presses)
+            )
         if key is SettingKey.OPEN_PRINT:
             return SettingsRow("Print", "")
         if key is SettingKey.OPEN_NETWORK:
@@ -4847,7 +4928,8 @@ class BridgeUi:
 
     def _render(self) -> None:
         try:
-            state = derive_status(self._snapshot)
+            visible = self._visible_snapshot()
+            state = derive_status(visible)
             # Push every render to the sink (headless GPIO LED, future surfaces).
             # The sink itself dedups; calling it on every render keeps the LCD
             # bar and the side channel in lockstep with no extra plumbing.
@@ -4859,21 +4941,23 @@ class BridgeUi:
             # idle screens. The breath-bypass branch was removed when the
             # pill switched to solid colour: with no time-based tint, an
             # equal snapshot really does render to an identical frame.
-            if self._snapshot.idle_stage in {
+            if visible.idle_stage in {
                 IdleStage.SCREEN_OFF.value,
                 IdleStage.DEEP_IDLE.value,
                 IdleStage.POWEROFF.value,
             }:
                 return
-            if self._snapshot == self._last_rendered_snapshot:
+            if visible == self._last_rendered_snapshot:
                 return
-            self._display.render(self._snapshot)
-            self._last_rendered_snapshot = self._snapshot
+            self._display.render(visible)
+            self._last_rendered_snapshot = visible
             self._last_status_state = state
         except Exception:
             LOGGER.exception("ui.render_failed mode=%s", self._snapshot.mode)
 
     def _set_display_idle_stage(self, stage: IdleStage) -> None:
+        if stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}:
+            self._last_rendered_snapshot = None
         if self._cpu_performance is not None:
             self._cpu_performance.set_power_saving(
                 stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}

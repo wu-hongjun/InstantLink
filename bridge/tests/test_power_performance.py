@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from instantlink_bridge.config import BridgeConfig
+from instantlink_bridge.config import BridgeConfig, UiConfig
 from instantlink_bridge.power.monitor import IdleStage
 from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.input import NullInput
-from instantlink_bridge.ui.models import UiSnapshot
+from instantlink_bridge.ui.models import UiAction, UiSnapshot
 
 
 @pytest.mark.asyncio
@@ -118,7 +118,7 @@ async def test_ui_lock_and_wake_drive_cpu_policy_without_display_hardware() -> N
 
     cpu = CpuPerformanceController(setter)
     ui = BridgeUi(
-        BridgeConfig(),
+        BridgeConfig(ui=UiConfig(unlock_requires_three_presses=False)),
         display=Display(),
         input_device=NullInput(),
         cpu_performance=cpu,
@@ -132,7 +132,7 @@ async def test_ui_lock_and_wake_drive_cpu_policy_without_display_hardware() -> N
     ui._apply_idle_stage(IdleStage.ACTIVE)
     await cpu.start()
     assert modes[-1] == "powersave"
-    ui._unlock_screen()
+    await ui._handle_action(UiAction.SELECT)
     await cpu.start()
     assert modes[-1] == "performance"
     ui._apply_idle_stage(IdleStage.DIM)

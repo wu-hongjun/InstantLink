@@ -2,6 +2,22 @@ import Foundation
 
 @MainActor
 final class BridgeSettingsDraftTests {
+    func testUnlockGuardDiffAndRevertPreserveOtherSettings() throws {
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+        try expectTrue(draft.draft?.ui.unlockRequiresThreePresses == true)
+        draft.draft?.ui.unlockRequiresThreePresses = false
+        try expectTrue(draft.validate())
+        let ui = try unwrap(draft.diff()["ui"] as? [String: Any])
+        try expectEqual(ui["unlock_requires_three_presses"] as? Bool, false)
+        try expectEqual(ui.count, 1)
+        try expectFalse(draft.diff().keys.contains("power"))
+        try expectFalse(draft.diff().keys.contains("correction"))
+        draft.revert()
+        try expectTrue(draft.draft?.ui.unlockRequiresThreePresses == true)
+        try expectFalse(draft.isDirty)
+    }
+
     func testCorrectionDiffValidationAndRevertPreserveLook() throws {
         let draft = BridgeSettingsDraft()
         draft.load(.defaults)

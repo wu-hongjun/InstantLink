@@ -43,9 +43,9 @@ virtual LCDs continue sharing one controller and render path; no API fields chan
 
 ## Validation and hardware acceptance
 
-Validation is provisional at this record's creation. Existing first-press-deadline tests and
-previous hardware smoke evidence do not verify the new inactivity behavior. Required local
-regressions are:
+Final checks passed: **1,251 Bridge tests**, Ruff, touched-file formatting, strict mypy (65
+source files), whitespace and strict MkDocs. The normal pre-commit gate passed. No App/iOS
+source or API fields changed. Regression coverage includes:
 
 - Same-button advancement refreshes the deadline and the third press cancels it.
 - A different button resets the count and refreshes the deadline.
@@ -55,11 +55,15 @@ regressions are:
 - Latest-state restoration, first-press CPU readiness, active-work boosts and one-press opt-out
   remain intact; unrelated background activity cannot refresh the unlock timeout.
 
-On Raspberry Pi Zero 2 W / Waveshare LCD HAT, verify a press near the old deadline gives a full
-new 10-second window, both with the same button and a different button. Then leave the prompt
-untouched and verify it darkens while staying locked, with idle CPU at the lowest supported
-clock. Verify normal unlocking cancels the pending expiry and restores the latest interface.
+Clean runtime `0c80d83` was deployed to Pi Zero 2 W / Waveshare ST7789 LCD HAT on Debian 13.2.
+Film-free smoke under `ib` exercised real framebuffer/backlight and CPU controls. Both matching
+and different-button trials used a six-second gap, then verified that the prompt remained visible
+another 4.5 seconds after the second press, beyond the obsolete first-press deadline. With no
+new input, the completed dark-frame transition was observed about 10.19 seconds after the latest
+press; idle governor/frequency were verified as powersave/600 MHz. A final same-button triple
+cancelled expiry, restored the latest screen and used performance/1000 MHz.
 
-Record final automated checks, deployment and hardware evidence in
-`bridge/docs/current-context.md`. This provisional record establishes no new hardware acceptance
-or battery runtime claim.
+The service was restored and remains healthy with `NRestarts=0`, throttling `0x0` and working
+hotspot FTP. Hardware details are recorded in `bridge/docs/current-context.md`. GPIO identities
+were injected; physical switch press/hold acceptance remains pending, along with camera/Printer
+and film checks. This record establishes no new battery runtime claim.

@@ -1,5 +1,34 @@
 # Current Bridge Context
 
+## Unlock inactivity timeout, 2026-10-01
+
+Clean runtime **`0c80d83`** now expires an incomplete unlock **10 seconds after its last accepted
+button press**. Every press renews the timer, including a different button resetting the count
+to one. Three consecutive presses of the same button still complete unlocking and cancel the
+timer. Expiry clears progress, keeps the Bridge locked, turns off the LCD and returns idle CPU
+to the supported 600 MHz minimum. Active preparation/printing keeps its boost until completion.
+
+- **1,251 Bridge tests**, Ruff, touched-file formatting, strict mypy (65 source files), whitespace
+  and strict MkDocs passed. The normal pre-commit gate passed. Deterministic timer tests cover
+  stale cancellation, renewal on matching/different presses, dark locked expiry, low idle CPU
+  and active-job boost release. No App or iOS source/config contract changed.
+- Real framebuffer/CPU smoke under `ib` tested both matching and different button identities:
+  first press, six-second wait, second press, then another 4.5-second wait. The prompt remained
+  visible at full performance past the former first-press deadline. With no further input, it
+  returned to dark locked state about 10.19 seconds after the latest press, with idle CPU checked
+  at 600 MHz. Both trials passed; a final same-button triple cancelled the timer and restored
+  the latest screen at 1000 MHz.
+- Inputs were injected into the controller with GPIO identities; real framebuffer, backlight
+  and root CPU helper were exercised. No physical switch or film was used. The service was
+  restored after the smoke and restarted at 11:10 EDT. Bridge, manager, Bluetooth and
+  NetworkManager are active, `NRestarts=0`, throttling `0x0`; hotspot FTP greeting/NOOP passed.
+- Hardware remains Pi Zero 2 W Rev 1.0 / Waveshare ST7789 LCD HAT / X306 2300 mAh, Debian 13.2,
+  kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17. Saved Instax Square
+  was not advertising. Physical GPIO, Sony a7C II upload, film/reconnect and 16-hour discharge
+  acceptance remain pending.
+
+Plan 063 supersedes the fixed first-press timeout recorded below.
+
 ## Same-button unlock correction, 2026-10-01
 
 Clean runtime **`8dadb69`** replaces the earlier mixed-button rule. Unlock requires the same

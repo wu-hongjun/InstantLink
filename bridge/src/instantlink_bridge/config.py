@@ -305,11 +305,11 @@ class PrinterConfig:
     print_option: int = 0
     device_name: str | None = None
     keepalive_interval_s: float = 10.0
-    # Total scan period, in seconds, while searching for the offline selected printer: the active
-    # scan window plus any idle gap. The minimum (5s) equals the scan window, so the bridge scans
-    # continuously; larger values add an idle gap to save power. User-selectable in Settings; no
-    # exponential backoff, so reconnection stays prompt when the printer powers on.
-    search_interval_s: float = 5.0
+    # Total scan period while the selected Printer is offline. The 5-second
+    # scan still runs automatically, but a 30-second period leaves the BLE
+    # radio and CPU idle between scans on a battery-powered Bridge. Settings
+    # offers faster and slower choices when latency matters more or less.
+    search_interval_s: float = 30.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -397,6 +397,11 @@ class UiConfig:
     status_sink: StatusSinkKind = StatusSinkKind.LCD
     language: UiLanguage = UiLanguage.EN
     appearance: UiAppearance = UiAppearance.LIGHT
+    unlock_requires_three_presses: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.unlock_requires_three_presses, bool):
+            raise ValueError("[ui].unlock_requires_three_presses must be a boolean")
 
 
 @dataclass(frozen=True, slots=True)
@@ -507,6 +512,17 @@ class AdjustmentsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class CorrectionConfig:
+    """Persistent Printer output compensation, independent of creative Looks."""
+
+    saturation: int = 0
+
+    def __post_init__(self) -> None:
+        if type(self.saturation) is not int or not -100 <= self.saturation <= 100:
+            raise ValueError("[correction].saturation must be an integer in [-100, 100]")
+
+
+@dataclass(frozen=True, slots=True)
 class BridgeConfig:
     """Top-level bridge configuration."""
 
@@ -517,6 +533,7 @@ class BridgeConfig:
     firmware: FirmwareUpdateConfig = FirmwareUpdateConfig()
     ui: UiConfig = UiConfig()
     adjustments: AdjustmentsConfig = AdjustmentsConfig()
+    correction: CorrectionConfig = CorrectionConfig()
     sync: SyncConfig = SyncConfig()
 
 
@@ -534,6 +551,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
         firmware=_load_firmware_config(data.get("firmware", {})),
         ui=_load_ui_config(data.get("ui", {})),
         adjustments=_load_adjustments_config(data.get("adjustments", {})),
+        correction=_load_correction_config(data.get("correction", {})),
         sync=_load_sync_config(data.get("sync", {})),
     )
 
@@ -631,6 +649,8 @@ def render_config(config: BridgeConfig) -> str:
             f"status_sink = {_toml_string(config.ui.status_sink.value)}",
             f"language = {_toml_string(config.ui.language.value)}",
             f"appearance = {_toml_string(config.ui.appearance.value)}",
+            "unlock_requires_three_presses = "
+            f"{_toml_bool(config.ui.unlock_requires_three_presses)}",
             "",
             "[adjustments]",
             f"preset = {_toml_string(config.adjustments.preset)}",
@@ -643,6 +663,9 @@ def render_config(config: BridgeConfig) -> str:
             f"watermark = {_toml_bool(config.adjustments.watermark)}",
             f"watermark_text = {_toml_string(config.adjustments.watermark_text)}",
             f"vignette = {config.adjustments.vignette}",
+            "",
+            "[correction]",
+            f"saturation = {config.correction.saturation}",
             "",
             "[sync]",
             f"destination = {_toml_string(config.sync.destination.value)}",
@@ -702,7 +725,7 @@ def _load_printer_config(data: object) -> PrinterConfig:
     keepalive_interval_s = float(data.get("keepalive_interval_s", 10.0))
     if not isfinite(keepalive_interval_s) or keepalive_interval_s <= 0:
         raise ValueError("[printer].keepalive_interval_s must be a finite value greater than 0")
-    search_interval_s = float(data.get("search_interval_s", 5.0))
+    search_interval_s = float(data.get("search_interval_s", 30.0))
     if not isfinite(search_interval_s) or search_interval_s <= 0:
         raise ValueError("[printer].search_interval_s must be a finite value greater than 0")
     return PrinterConfig(
@@ -796,6 +819,12 @@ def _load_firmware_config(data: object) -> FirmwareUpdateConfig:
     return FirmwareUpdateConfig(trusted_public_keys=tuple(records))
 
 
+def _load_correction_config(data: object) -> CorrectionConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[correction] must be a TOML table")
+    return CorrectionConfig(saturation=data.get("saturation", 0))
+
+
 def _load_adjustments_config(data: object) -> AdjustmentsConfig:
     if not isinstance(data, dict):
         raise ValueError("[adjustments] must be a TOML table")
@@ -852,6 +881,7 @@ def _load_ui_config(data: object) -> UiConfig:
         status_sink=parse_status_sink(data.get("status_sink", StatusSinkKind.LCD.value)),
         language=parse_ui_language(data.get("language", UiLanguage.EN.value)),
         appearance=parse_ui_appearance(data.get("appearance", UiAppearance.LIGHT.value)),
+        unlock_requires_three_presses=data.get("unlock_requires_three_presses", True),
     )
 
 

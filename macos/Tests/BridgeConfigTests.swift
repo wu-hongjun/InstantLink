@@ -1,6 +1,32 @@
 import Foundation
 
 final class BridgeConfigTests {
+    func testUnlockGuardDefaultsTrueForOlderBridgeAndDecodesStrictBoolean() throws {
+        let legacy = try JSONDecoder().decode(
+            BridgeUIConfig.self,
+            from: Data(#"{"appearance":"light","font_size":"medium","language":"en"}"#.utf8)
+        )
+        try expectTrue(legacy.unlockRequiresThreePresses)
+        var changed = legacy
+        changed.unlockRequiresThreePresses = false
+        let decoded = try JSONDecoder().decode(
+            BridgeUIConfig.self, from: JSONEncoder().encode(changed)
+        )
+        try expectFalse(decoded.unlockRequiresThreePresses)
+        for badValue in ["1", #""false""#, "null"] {
+            let payload = """
+            {"appearance":"light","font_size":"medium","language":"en",
+             "unlock_requires_three_presses":\(badValue)}
+            """
+            do {
+                _ = try JSONDecoder().decode(BridgeUIConfig.self, from: Data(payload.utf8))
+                try expectTrue(false, "Invalid unlock guard value decoded: \(badValue)")
+            } catch is DecodingError {
+                // Only a JSON Boolean is accepted when the field exists.
+            }
+        }
+    }
+
     func testBridgeConfigDecodesFullPayload() throws {
         let json = Self.fullConfigJSON
         let config = try JSONDecoder().decode(BridgeConfig.self, from: Data(json.utf8))
@@ -27,6 +53,19 @@ final class BridgeConfigTests {
         let encoded = try JSONEncoder().encode(original)
         let roundTripped = try JSONDecoder().decode(BridgeConfig.self, from: encoded)
         try expectEqual(roundTripped, original)
+    }
+
+    func testCorrectionDefaultsForOlderBridgeAndRoundTripsIndependently() throws {
+        var config = try JSONDecoder().decode(
+            BridgeConfig.self, from: Data(Self.fullConfigJSON.utf8)
+        )
+        try expectEqual(config.correction.saturation, 0)
+        config.correction.saturation = 20
+        let decoded = try JSONDecoder().decode(
+            BridgeConfig.self, from: JSONEncoder().encode(config)
+        )
+        try expectEqual(decoded.correction.saturation, 20)
+        try expectEqual(decoded.adjustments.saturation, 25)
     }
 
     func testFTPReceiveModeAllValuesDecode() throws {

@@ -426,3 +426,18 @@
 "annotate_overlay_show" = "إظهار";
 "annotate_overlay_hide" = "إخفاء";
 "annotate_select_image_overlay" = "اختر صورة كطبقة";
+
+/* Bridge Printer output correction */
+"Printer correction" = "تصحيح الطابعة";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "تعويض إخراج الفيلم بشكل مستقل عن المظهر. الصفر يترك الإخراج دون تغيير.";
+
+/* Bridge workflow and recovery */
+"Workflow" = "سير العمل";
+"Confirmation" = "التأكيد";
+"Confirm each" = "تأكيد كل صورة";
+"Print immediately" = "الطباعة فورًا";
+"Review 5s" = "مراجعة لمدة 5 ثوانٍ";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "لإعادة تشغيل Bridge، أوقف تشغيله ثم شغّله مجددًا باستخدام زر الطاقة في X306.";
+
+/* Bridge unlock protection */
+"Press same button 3 times to unlock" = "اضغط على الزر نفسه 3 مرات لفتح القفل";

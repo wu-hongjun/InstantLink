@@ -427,3 +427,18 @@
 "filter_instant" = "インスタント";
 "filter_process" = "プロセス";
 "filter_transfer" = "トランスファー";
+
+/* Bridge Printer output correction */
+"Printer correction" = "プリンター補正";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "ルックとは別にフィルムの発色を補正します。ゼロでは出力を変更しません。";
+
+/* Bridge workflow and recovery */
+"Workflow" = "ワークフロー";
+"Confirmation" = "確認";
+"Confirm each" = "毎回確認";
+"Print immediately" = "すぐに印刷";
+"Review 5s" = "5秒間確認";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "Bridgeを再起動するには、X306の電源ボタンで電源を切ってから再び入れてください。";
+
+/* Bridge unlock protection */
+"Press same button 3 times to unlock" = "同じボタンを3回押してロック解除";

@@ -38,6 +38,7 @@ struct BridgeSettingsView: View {
                         powerCard
                         uiCard
                         adjustmentsCard
+                        correctionCard
                         diffPreview
                     }
                 }
@@ -234,10 +235,10 @@ struct BridgeSettingsView: View {
     }
 
     private var autoPrintCard: some View {
-        BridgeSettingsSection(title: L("Auto print")) {
+        BridgeSettingsSection(title: L("Workflow")) {
             VStack(alignment: .leading, spacing: 10) {
                 pickerRow(
-                    label: L("Auto-print delay"),
+                    label: L("Confirmation"),
                     selection: Binding<Int>(
                         get: {
                             guard let value = draft.draft?.workflow.autoPrintDelaySeconds else { return -1 }
@@ -254,9 +255,9 @@ struct BridgeSettingsView: View {
                         }
                     ),
                     options: [
+                        (-1, L("Confirm each")),
                         (0, L("Print immediately")),
-                        (5, L("5-second preview")),
-                        (-1, L("Off (wait for confirm)")),
+                        (5, L("Review 5s")),
                     ]
                 )
                 Toggle(
@@ -334,9 +335,37 @@ struct BridgeSettingsView: View {
                         (.chineseSimplified, L("Chinese (Simplified)")),
                     ]
                 )
+                Toggle(
+                    L("Press same button 3 times to unlock"),
+                    isOn: Binding(
+                        get: { draft.draft?.ui.unlockRequiresThreePresses ?? true },
+                        set: { newValue in
+                            updateDraft { $0.ui.unlockRequiresThreePresses = newValue }
+                        }
+                    )
+                )
             }
         } footer: {
-            errorFooter(for: [.uiAppearance, .uiFontSize, .uiLanguage])
+            errorFooter(for: [
+                .uiAppearance, .uiFontSize, .uiLanguage, .uiUnlockRequiresThreePresses,
+            ])
+        }
+    }
+
+    private var correctionCard: some View {
+        BridgeSettingsSection(title: L("Printer correction")) {
+            stepperRow(
+                label: L("Saturation"),
+                value: bindingInt(\.correction.saturation, default: 0),
+                range: -100...100,
+                step: 10,
+                suffix: "%"
+            )
+            Text(L("Compensate for film output independently of your Look. Zero leaves output unchanged."))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        } footer: {
+            errorFooter(for: [.correctionSaturation])
         }
     }
 
@@ -692,7 +721,7 @@ struct BridgeSettingsView: View {
         }
         if loaded.workflow.autoPrintDelaySeconds != draft.workflow.autoPrintDelaySeconds {
             rows.append(.init(
-                field: L("Auto-print delay"),
+                field: L("Confirmation"),
                 before: formatDelay(loaded.workflow.autoPrintDelaySeconds),
                 after: formatDelay(draft.workflow.autoPrintDelaySeconds)
             ))
@@ -739,6 +768,13 @@ struct BridgeSettingsView: View {
                 after: languageLabel(draft.ui.language)
             ))
         }
+        if loaded.ui.unlockRequiresThreePresses != draft.ui.unlockRequiresThreePresses {
+            rows.append(.init(
+                field: L("Press same button 3 times to unlock"),
+                before: loaded.ui.unlockRequiresThreePresses ? L("On") : L("Off"),
+                after: draft.ui.unlockRequiresThreePresses ? L("On") : L("Off")
+            ))
+        }
         if loaded.adjustments.preset != draft.adjustments.preset {
             rows.append(.init(
                 field: L("Preset"),
@@ -772,6 +808,13 @@ struct BridgeSettingsView: View {
                 field: L("Hue"),
                 before: signedBadge(loaded.adjustments.hue),
                 after: signedBadge(draft.adjustments.hue)
+            ))
+        }
+        if loaded.correction.saturation != draft.correction.saturation {
+            rows.append(.init(
+                field: L("Printer correction"),
+                before: signedBadge(loaded.correction.saturation),
+                after: signedBadge(draft.correction.saturation)
             ))
         }
         if loaded.adjustments.vignette != draft.adjustments.vignette {
@@ -817,7 +860,9 @@ struct BridgeSettingsView: View {
     }
 
     private func formatDelay(_ value: Double?) -> String {
-        guard let value else { return L("Off") }
+        guard let value else { return L("Confirm each") }
+        if value == 0 { return L("Print immediately") }
+        if value == 5 { return L("Review 5s") }
         return "\(Int(value)) s"
     }
 }

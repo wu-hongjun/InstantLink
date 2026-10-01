@@ -939,3 +939,188 @@ def test_make_remote_input_injector_maps_action_strings() -> None:
     assert injected == [UiAction.SELECT, UiAction.PAIR]
     assert injector("jump") is False  # unknown strings never reach the queue
     assert injected == [UiAction.SELECT, UiAction.PAIR]
+
+
+@pytest.mark.asyncio
+async def test_locked_manual_confirmation_wait_and_cancel_keep_idle_clock(tmp_path: Path) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    modes: list[str] = []
+    confirming = asyncio.Event()
+    decision: asyncio.Future[PrintEdit | None] = asyncio.get_running_loop().create_future()
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    class WaitingUi(FakePrintUi):
+        async def await_print_confirmation(
+            self,
+            received: ReceivedImage,
+            *,
+            timeout_s: float | None = app.AUTO_PRINT_DELAY_S,
+        ) -> PrintEdit | None:
+            assert timeout_s is None
+            confirming.set()
+            return await decision
+
+    cpu = CpuPerformanceController(setter)
+    cpu.set_power_saving(True)
+    await cpu.start()
+    ui = WaitingUi(should_print=False)
+    received = ReceivedImage(tmp_path / "manual.jpg", "192.168.8.10")
+    task = asyncio.create_task(
+        app.handle_received_image(
+            received,
+            config=BridgeConfig(),
+            ui=ui,
+            pairer=FakePairer([]),
+            printer_sender=_unused_sender,
+            timeout_s=None,
+            cpu_performance=cpu,
+        )
+    )
+    await confirming.wait()
+    assert modes == ["powersave"]
+    decision.set_result(None)
+    await task
+    assert modes == ["powersave"]
+    await cpu.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail", [False, True])
+async def test_dispatch_boosts_accepted_print_through_completion_and_restores_idle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fail: bool,
+) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    modes: list[str] = []
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    class CheckingUi(FakePrintUi):
+        async def print_complete(self, received: ReceivedImage) -> None:
+            assert modes[-1] == "performance"
+            await super().print_complete(received)
+
+        async def print_failed(self, message: str) -> None:
+            assert modes[-1] == "performance"
+            await super().print_failed(message)
+
+    async def target(selected: PairedPrinter) -> PairedPrinter:
+        assert modes[-1] == "performance"
+        return selected
+
+    async def sender(
+        _printer: PairedPrinter,
+        _received: ReceivedImage,
+        _config: BridgeConfig,
+        _edit: PrintEdit,
+        _progress: PrintProgressCallback,
+    ) -> None:
+        assert modes[-1] == "performance"
+        if fail:
+            raise ImagePipelineError("bad image")
+
+    cpu = CpuPerformanceController(setter)
+    cpu.set_power_saving(True)
+    await cpu.start()
+    monkeypatch.setattr(app, "resolve_print_target", target)
+    ui = CheckingUi(should_print=True)
+    await app.dispatch_received_image(
+        ReceivedImage(tmp_path / "accepted.jpg", "192.168.8.10"),
+        snapshot=UiSnapshot(mode=UiMode.READY, ftp_host="192.168.8.1"),
+        config=BridgeConfig(),
+        ui=ui,
+        pairer=FakePairer([PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678")]),
+        outbox=None,
+        printer_sender=sender,
+        cpu_performance=cpu,
+    )
+    assert modes == ["powersave", "performance", "powersave"]
+    assert ui.events[-1] == ("failed:Image unsupported" if fail else "complete:accepted.jpg")
+    await cpu.close()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_accepted_printer_lookup_releases_boost(tmp_path: Path) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+
+    modes: list[str] = []
+    lookup_started = asyncio.Event()
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    class WaitingPairer(FakePairer):
+        async def list_paired(self) -> list[PairedPrinter]:
+            assert modes[-1] == "performance"
+            lookup_started.set()
+            await asyncio.Event().wait()
+            return []
+
+    cpu = CpuPerformanceController(setter)
+    cpu.set_power_saving(True)
+    await cpu.start()
+    task = asyncio.create_task(
+        app.handle_received_image(
+            ReceivedImage(tmp_path / "cancel.jpg", "192.168.8.10"),
+            config=BridgeConfig(),
+            ui=FakePrintUi(should_print=True),
+            pairer=WaitingPairer([]),
+            printer_sender=_unused_sender,
+            cpu_performance=cpu,
+        )
+    )
+    await lookup_started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert modes == ["powersave", "performance", "powersave"]
+    await cpu.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operational_mode", "reply_prefix"),
+    [(UiMode.PRINTING, "450 Printer busy"), (UiMode.ERROR, "451 ")],
+)
+async def test_unlock_overlay_preserves_operational_ftp_preflight_guards(
+    tmp_path: Path, operational_mode: UiMode, reply_prefix: str
+) -> None:
+    from instantlink_bridge.camera.ftp import FtpReceiveService
+    from instantlink_bridge.config import FtpConfig
+    from instantlink_bridge.ui.controller import BridgeUi
+    from instantlink_bridge.ui.display import NullDisplay
+    from instantlink_bridge.ui.input import NullInput
+    from instantlink_bridge.ui.render import can_accept_images
+
+    ui = BridgeUi(BridgeConfig(), display=NullDisplay(), input_device=NullInput())
+    ui._snapshot = UiSnapshot(
+        mode=operational_mode,
+        ftp_host="192.168.8.1",
+        paired_printer=PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678"),
+        film_remaining=7,
+        printer_status_fresh=True,
+        camera_receive_ready=True,
+    )
+    ui._screen_locked = True
+    ui._unlocking = True
+    ui._unlock_presses = 1
+    assert ui.snapshot.mode is UiMode.UNLOCKING
+    assert app.live_ui_snapshot(ui).mode is operational_mode
+
+    service = FtpReceiveService(
+        FtpConfig(incoming_dir=tmp_path),
+        asyncio.Queue(),
+        asyncio.get_running_loop(),
+        bridge_snapshot_provider=lambda: app.live_ui_snapshot(ui),
+    )
+    reply = service._ftp_preflight_reply("192.168.8.2")
+    assert reply is not None
+    assert reply.startswith(reply_prefix)
+    if operational_mode is UiMode.ERROR:
+        assert not can_accept_images(app.live_ui_snapshot(ui))

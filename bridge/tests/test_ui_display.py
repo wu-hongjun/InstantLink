@@ -201,3 +201,53 @@ def _fake_st7789_framebuffer(
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="ascii")
+
+
+@pytest.mark.parametrize("off_stage", ["screen_off", "deep_idle", "poweroff"])
+@pytest.mark.parametrize("power_only", [False, True])
+def test_framebuffer_wake_restores_pixels_before_backlight_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, off_stage: str, power_only: bool
+) -> None:
+    sysfs_root, framebuffer, backlight = _fake_st7789_framebuffer(
+        tmp_path, max_brightness="0\n" if power_only else "7\n", bl_power="0\n"
+    )
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    display.render(UiSnapshot(mode=UiMode.PRINTER_SEARCHING, ftp_host="192.168.8.1"))
+    expected_frame = framebuffer.read_bytes()
+    assert any(expected_frame)
+    display.set_idle_stage(off_stage)
+    assert not any(framebuffer.read_bytes())
+    original_write_text = Path.write_text
+
+    def check_pixels_before_backlight(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        enables_brightness = path == backlight / "brightness" and data.strip() != "0"
+        enables_power = path == backlight / "bl_power" and data.strip() == "0"
+        if enables_brightness or enables_power:
+            assert framebuffer.read_bytes() == expected_frame
+        return original_write_text(path, data, encoding=encoding, errors=errors, newline=newline)
+
+    monkeypatch.setattr(Path, "write_text", check_pixels_before_backlight)
+    display.set_idle_stage("active")
+    assert framebuffer.read_bytes() == expected_frame
+    if power_only:
+        assert (backlight / "bl_power").read_text() == "0\n"
+    else:
+        assert (backlight / "brightness").read_text() == "7\n"
+
+
+def test_framebuffer_repeated_active_stage_does_not_restore_stale_pixels(tmp_path: Path) -> None:
+    sysfs_root, framebuffer, _backlight = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.8.1"))
+    display.set_idle_stage("screen_off")
+    display.set_idle_stage("active")
+    latest_pixels = b"\x01\x02\x03\x04"
+    framebuffer.write_bytes(latest_pixels)
+    display.set_idle_stage("active")
+    assert framebuffer.read_bytes() == latest_pixels

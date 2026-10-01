@@ -468,13 +468,13 @@ def test_ready_footer_exposes_upload_credentials_when_printer_is_paired() -> Non
         )
     )
 
-    assert lines == (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
+    assert lines == (("KEY1 Settings", "KEY2 Lock", "KEY3 Post"),)
 
 
 def test_no_printer_footer_keeps_sync_mode_one_press_away() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.NEEDS_PAIRING, ftp_host="192.168.7.1"))
 
-    assert lines == (("KEY1 Pair", "KEY2 Sync", "KEY3 Pair"),)
+    assert lines == (("KEY1 Settings", "KEY2 Lock", "KEY3 Pair"),)
 
 
 def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
@@ -490,15 +490,15 @@ def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
 def test_pair_failed_footer_uses_retry_and_back_controls() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.PAIR_FAILED, ftp_host="192.168.7.1"))
 
-    assert lines == (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
+    assert lines == (("KEY1 Settings", "KEY2 Back", "KEY3 Pair"),)
 
 
-def test_crop_preview_footer_uses_all_direction_pan_hint() -> None:
+def test_crop_preview_footer_names_print_cancel_and_tool() -> None:
     lines = _footer_label_lines(
         UiSnapshot(mode=UiMode.AWAITING_CONFIRM, ftp_host="192.168.7.1", preview_tool="crop")
     )
 
-    assert lines == (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
+    assert lines == (("KEY1 Print", "KEY2 Cancel", "KEY3 Tool"),)
 
 
 def test_printer_model_text_shows_detected_type() -> None:
@@ -1797,7 +1797,7 @@ def test_footer_iphone_only_offers_settings_and_iphone_pairing() -> None:
         sync_service_state="listening",
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Print", "KEY3 iPhone"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Settings", "KEY2 Lock", "KEY3 iPhone"),)
 
 
 def test_footer_print_mode_without_printer_offers_sync_and_pair() -> None:
@@ -1809,7 +1809,7 @@ def test_footer_print_mode_without_printer_offers_sync_and_pair() -> None:
         sync_service_state="listening",
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Sync", "KEY3 Pair"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Settings", "KEY2 Lock", "KEY3 Pair"),)
 
 
 def test_footer_print_mode_with_printer_keeps_network_shortcut() -> None:
@@ -1822,7 +1822,7 @@ def test_footer_print_mode_with_printer_keeps_network_shortcut() -> None:
         paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Settings", "KEY2 Lock", "KEY3 Post"),)
 
 
 # ---------------------------------------------------------------------------

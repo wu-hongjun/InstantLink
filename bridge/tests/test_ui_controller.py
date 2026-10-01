@@ -20,6 +20,7 @@ from instantlink_bridge.config import (
     PrinterConfig,
     SyncConfig,
     SyncDestination,
+    UiConfig,
     WorkflowConfig,
     load_config,
 )
@@ -538,6 +539,8 @@ async def test_late_preview_rebuild_cannot_overwrite_printing(
     action_task = asyncio.create_task(ui._handle_action(UiAction.UP))
     await asyncio.wait_for(rebuild_started.wait(), timeout=0.5)
 
+    # Editing now suspends auto-print; explicit confirmation ends the session.
+    await ui._handle_action(UiAction.SELECT)
     assert await asyncio.wait_for(task, timeout=0.5) == PrintEdit(zoom=1.25)
 
     await ui.printing_started(received)
@@ -593,6 +596,7 @@ async def test_late_preview_rebuild_cannot_overwrite_newer_preview(
     old_action_task = asyncio.create_task(ui._handle_action(UiAction.UP))
     await asyncio.wait_for(old_rebuild_started.wait(), timeout=0.5)
 
+    await ui._handle_action(UiAction.SELECT)
     assert await asyncio.wait_for(first_task, timeout=0.5) == PrintEdit(zoom=1.25)
 
     second_task = asyncio.create_task(ui.await_print_confirmation(second_received, timeout_s=None))
@@ -999,7 +1003,7 @@ async def test_stale_selected_printer_offers_manual_repair() -> None:
         assert not await ui._refresh_printer_status_in_background(printer)
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_OFFLINE
-    assert display.snapshots[-1].printer_status_message == "Hold K3 to re-pair"
+    assert display.snapshots[-1].printer_status_message == "Check saved Printer"
 
 
 @pytest.mark.asyncio
@@ -1065,7 +1069,7 @@ async def test_searching_text_keeps_updating_across_repeated_misses() -> None:
     assert all(mode is UiMode.PRINTER_SEARCHING for mode in (display.snapshots[-1].mode,))
     assert messages[0] == "Printer seen; connecting"
     assert messages[-1] == "Restart printer"
-    assert "Hold K3 to re-pair" not in messages
+    assert "Check saved Printer" not in messages
 
 
 @pytest.mark.asyncio
@@ -1216,7 +1220,7 @@ def test_min_offline_search_gap_guarantees_event_loop_breathing_room() -> None:
     to service the LCD render and other tasks.
 
     Regression guard: a previous build used `max(0.0, period - elapsed)` in
-    the post-attempt sleep. With the default `search_interval_s == 5.0` and a
+    the post-attempt sleep. With the fastest `search_interval_s == 5.0` and a
     typical 5s BLE scan, that produced 0s sleeps and pegged one core at
     ~88% CPU, starving the UI render and making the LCD look frozen. The
     floor must be > 1s so each cycle yields visibly to other tasks.
@@ -1435,7 +1439,7 @@ async def test_upload_ftp_help_describes_sender_wifi() -> None:
     await ui._handle_action(UiAction.HELP)
 
     assert display.snapshots[-1].settings_title == "Network"
-    assert display.snapshots[-1].settings_message == "Bridge Wi-Fi name to join from camera"
+    assert display.snapshots[-1].help_dialog_body == "Bridge Wi-Fi name to join from camera"
 
 
 @pytest.mark.asyncio
@@ -1459,13 +1463,14 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     await ui._handle_action(UiAction.SELECT)
 
-    # MAIN: Print (0), Network (1), System (2). Accessibility folded into
+    # MAIN: Print (0), Network (1), System (2), Mode (3). Accessibility folded into
     # System after plan 035 phase 1 follow-up — Appearance / Text size /
     # Language now sit under System next to the bridge-state rows.
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
         "Print",
         "Network",
         "System",
+        "Mode",
     ]
 
     # 1 DOWN lands on Network; SELECT enters it.
@@ -1547,7 +1552,8 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
 
     assert display.snapshots[-1].settings_title == "Settings"
     assert display.snapshots[-1].settings_message is None
-    assert all(row.value == "" for row in display.snapshots[-1].settings_rows)
+    assert all(row.value == "" for row in display.snapshots[-1].settings_rows[:3])
+    assert display.snapshots[-1].settings_rows[3].value == "Print"
     # MAIN row 0 = Print; help text describes pairing and print options.
     assert display.snapshots[-1].settings_rows[0].help == "Pairing and photo/print options"
 
@@ -1562,7 +1568,8 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
 
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_message == "KEY1 opens category"
+    assert display.snapshots[-1].mode is UiMode.HELP_DIALOG
+    assert "KEY1 opens category" in (display.snapshots[-1].help_dialog_body or "")
 
 
 @pytest.mark.asyncio
@@ -1579,7 +1586,8 @@ async def test_settings_main_help_message_uses_physical_controls() -> None:
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_message == "KEY1 opens category"
+    assert display.snapshots[-1].mode is UiMode.HELP_DIALOG
+    assert "KEY1 opens category" in (display.snapshots[-1].help_dialog_body or "")
 
 
 @pytest.mark.asyncio
@@ -1607,7 +1615,7 @@ async def test_key3_help_explains_selected_settings_row() -> None:
 
     assert display.snapshots[-1].settings_title == "Transform"
     assert display.snapshots[-1].settings_rows[1].label == "JPEG quality"
-    assert display.snapshots[-1].settings_message == (
+    assert display.snapshots[-1].help_dialog_body == (
         "Trade-off: higher = bigger, sharper. Current: 100"
     )
 
@@ -1626,8 +1634,8 @@ async def test_key3_hold_in_settings_shows_help_not_pairing() -> None:
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.PAIR)
 
-    assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_message == "KEY1 opens category"
+    assert display.snapshots[-1].mode is UiMode.HELP_DIALOG
+    assert "KEY1 opens category" in (display.snapshots[-1].help_dialog_body or "")
 
 
 @pytest.mark.asyncio
@@ -1771,8 +1779,8 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     assert ui.config.workflow.allow_print_without_film
-    assert display.snapshots[-1].settings_rows[1].label == "No-film test"
-    assert display.snapshots[-1].settings_rows[1].value == "On"
+    assert display.snapshots[-1].settings_rows[2].label == "No-film test"
+    assert display.snapshots[-1].settings_rows[2].value == "On"
 
 
 @pytest.mark.asyncio
@@ -1912,6 +1920,9 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     # MAIN: Print (row 0). SELECT enters the Print hub.
     await ui._handle_action(UiAction.SELECT)
     # Print hub: Printer (row 0). SELECT enters the Printer sub-page.
+    # Printer is the last row after daily Post, Transform and Workflow.
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     # PRINTER (paired): 0 Serial  1 Pair/Re-pair  2 Reconnect  3 Forget  4 Printer type.
     # Two DOWN presses lands on Reconnect (RESET_PRINTER_LINK, index 2).
@@ -1978,7 +1989,8 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     # 0 Idle poweroff  1 Refresh status  [skip 2 Personalisation header]
     # 3 Appearance  4 Text size  5 Language  6 About. Five DOWNs lands on
     # About (header is skipped, so the visited indices are 1,3,4,5,6).
-    for _ in range(5):
+    keys = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+    while keys[ui._snapshot.selected_index] is not SettingKey.OPEN_ABOUT:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"
@@ -2002,9 +2014,10 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     assert rows[7].value == "5.82"
 
     await ui._handle_action(UiAction.HELP)
-    assert display.snapshots[-1].settings_message == "Unique ID; used by the desktop app"
+    assert display.snapshots[-1].help_dialog_body == "Unique ID; used by the desktop app"
 
-    # BACK from About goes to its parent (System), not all the way to MAIN.
+    # First dismiss Help, then BACK returns About to its parent System.
+    await ui._handle_action(UiAction.BACK)
     await ui._handle_action(UiAction.BACK)
     assert display.snapshots[-1].settings_title == "System"
 
@@ -2255,6 +2268,9 @@ async def test_forget_printer_requires_second_confirmation() -> None:
     # Print page.
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
+    # Printer is the last row after daily Post, Transform and Workflow.
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     # PRINTER sub-page (paired): 0 SERIAL  1 RE-PAIR  2 RECONNECT  3 FORGET
     #                            4 PRINTER TYPE. Three DOWNs lands on FORGET.
@@ -2312,6 +2328,9 @@ async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None
     # state-aware pair/re-pair row).
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
+    # Printer is the last row after daily Post, Transform and Workflow.
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
@@ -2342,8 +2361,8 @@ async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None
     await ui._handle_action(UiAction.BACK)
     await ui._handle_action(UiAction.PAIR)
 
-    assert display.snapshots == []
     assert ui._snapshot.mode is UiMode.PRINTING
+    assert ui._snapshot.idle_stage == "active"
 
 
 @pytest.mark.asyncio
@@ -2535,16 +2554,8 @@ async def test_key3_press_with_paired_printer_opens_upload_ftp_credentials() -> 
     await ui._handle_action(UiAction.HELP)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
-    assert display.snapshots[-1].settings_message == "Wi-Fi + FTP credentials"
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN ...
-    assert [row.label for row in display.snapshots[-1].settings_rows[1:6]] == [
-        "SSID",
-        "Wi-Fi PIN",
-        "FTP host",
-        "FTP user",
-        "FTP PIN",
-    ]
+    assert ui._settings_page is SettingsPage.POST
+    assert display.snapshots[-1].settings_message is None
 
 
 @pytest.mark.asyncio
@@ -4219,7 +4230,7 @@ async def test_long_press_on_builtin_preset_shows_toast(tmp_path: Path) -> None:
     assert ui._snapshot.settings_title == "Preset"
 
     # Focus row 0 = Default (built-in); long-press.
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.RIGHT)
 
     # No sub-menu; still in the picker; toast displayed.
     assert ui._preset_submenu_slot is None
@@ -4256,7 +4267,7 @@ async def test_long_press_on_user_preset_opens_submenu(tmp_path: Path) -> None:
         await ui._handle_action(UiAction.DOWN)
 
     # Long-press on Custom1.
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.RIGHT)
 
     # Sub-menu opened.
     assert ui._preset_submenu_slot == "Custom1"
@@ -4291,7 +4302,7 @@ async def test_overwrite_preset_two_press_confirm(tmp_path: Path) -> None:
     for _ in range(5):
         await ui._handle_action(UiAction.DOWN)
     # Long-press to open sub-menu.
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.RIGHT)
     assert ui._preset_submenu_slot == "Custom1"
 
     import unittest.mock
@@ -4338,7 +4349,7 @@ async def test_delete_preset_two_press_confirm(tmp_path: Path) -> None:
     # Navigate to Custom1 (index 5).
     for _ in range(5):
         await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.HELP)  # open sub-menu
+    await ui._handle_action(UiAction.RIGHT)  # open sub-menu
 
     # Navigate to Delete row (index 1).
     await ui._handle_action(UiAction.DOWN)
@@ -4616,8 +4627,8 @@ def test_user_preset_picker_hint_specifies_key3_hold(tmp_path: Path) -> None:
     rows = ui._preset_picker_rows(options, "Default")
     # Custom1 is at index 5 (after 5 built-ins).
     custom1_hint = rows[5].hint
-    assert "K3" in custom1_hint, f"Hint must mention K3, got: {custom1_hint!r}"
-    assert "hold" in custom1_hint.lower(), f"Hint must mention hold, got: {custom1_hint!r}"
+    assert "Right" in custom1_hint, f"Hint must mention Right, got: {custom1_hint!r}"
+    assert "manage" in custom1_hint.lower()
 
 
 @pytest.mark.asyncio
@@ -4655,7 +4666,7 @@ async def test_slots_full_toast_mentions_overwrite_path(tmp_path: Path) -> None:
         await ui._handle_action(UiAction.SELECT)
 
     msg = ui._snapshot.settings_message or ""
-    assert "K3" in msg, f"Slots-full toast must mention K3, got: {msg!r}"
+    assert "Right" in msg, f"Slots-full toast must mention Right, got: {msg!r}"
     assert "overwrite" in msg.lower(), f"Slots-full toast must mention overwrite, got: {msg!r}"
 
 
@@ -4664,8 +4675,8 @@ def test_save_preset_help_text_mentions_management(tmp_path: Path) -> None:
     from instantlink_bridge.ui.settings import SettingKey, setting_help_text
 
     text = setting_help_text(SettingKey.ADJUST_SAVE_CUSTOM)
-    assert "K3" in text, f"Help text must mention K3, got: {text!r}"
-    assert "hold" in text.lower(), f"Help text must mention hold, got: {text!r}"
+    assert "Right" in text, f"Help text must mention Right, got: {text!r}"
+    assert "manage" in text.lower()
 
 
 # -----------------------------------------------------------------------------
@@ -5351,7 +5362,7 @@ async def test_preset_overwrite_dialog_includes_slot_name_in_title(tmp_path: Pat
     # Built-ins occupy indices 0..4; Custom1 is at 5, Custom3 at 7.
     for _ in range(7):
         await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.HELP)  # open sub-menu on Custom3
+    await ui._handle_action(UiAction.RIGHT)  # open sub-menu on Custom3
 
     # SELECT on the Overwrite row opens the dialog.
     await ui._handle_action(UiAction.SELECT)
@@ -5417,13 +5428,12 @@ def _test_system_info() -> SystemInfo:
 @pytest.mark.asyncio
 async def test_mode_row_opens_picker_with_two_explicit_options() -> None:
     ui, display = _make_settings_ui(BridgeConfig())
-    ui._show_settings(page=SettingsPage.PRINT)
+    ui._show_settings(page=SettingsPage.MAIN)
 
-    # PRINT hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print
-    #   4 Mode (plan 055).
-    assert display.snapshots[-1].settings_rows[4].label == "Mode"
-    assert display.snapshots[-1].settings_rows[4].value == "Print"
-    for _ in range(4):
+    # Mode is a top-level Settings row after the three category links.
+    assert display.snapshots[-1].settings_rows[3].label == "Mode"
+    assert display.snapshots[-1].settings_rows[3].value == "Print"
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
 
@@ -5452,8 +5462,8 @@ async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path:
     )
     assert ui._snapshot.sync_destination == "print"
 
-    ui._show_settings(page=SettingsPage.PRINT)
-    for _ in range(4):
+    ui._show_settings(page=SettingsPage.MAIN)
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     # Picker opens on the current value (Print, index 0); one DOWN → Sync.
@@ -5465,8 +5475,8 @@ async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path:
     assert applied_sync == [ui.config.sync]
     assert ui._snapshot.sync_destination == "iphone"
     assert display.snapshots[-1].settings_message == "Saved"
-    # The row value reflects the new destination back on the Print hub.
-    assert display.snapshots[-1].settings_rows[4].value == "Sync"
+    # The row value reflects the new destination on the main Settings page.
+    assert display.snapshots[-1].settings_rows[3].value == "Sync"
 
 
 @pytest.mark.asyncio
@@ -6020,7 +6030,7 @@ async def test_hold_key3_opens_iphone_pairing_in_iphone_only_mode(tmp_path: Path
 
 
 @pytest.mark.asyncio
-async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) -> None:
+async def test_key2_locks_no_printer_home_without_switching_mode(tmp_path: Path) -> None:
     display = _FakeDisplay()
     config_path = tmp_path / "config.toml"
     config_path.write_text("", encoding="utf-8")
@@ -6038,20 +6048,24 @@ async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) 
 
     await ui._handle_action(UiAction.BACK)
 
-    assert ui.config.sync.destination is SyncDestination.IPHONE
-    assert load_config(config_path).sync.destination is SyncDestination.IPHONE
-    assert applied == [ui.config.sync]
-    assert ui._snapshot.mode is UiMode.READY
-    assert ui._snapshot.sync_destination == "iphone"
+    assert ui.config.sync.destination is SyncDestination.PRINT
+    assert load_config(config_path).sync.destination is SyncDestination.PRINT
+    assert applied == []
+    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
+    assert ui._snapshot.idle_stage == "screen_off"
+    assert display.idle_stages[-1] == "screen_off"
 
 
 @pytest.mark.asyncio
-async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
+async def test_key2_locks_sync_home_and_first_key_only_wakes_display() -> None:
     display = _FakeDisplay()
     pairer = _FakePairer([])
     applied: list[SyncConfig] = []
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        BridgeConfig(
+            sync=SyncConfig(destination=SyncDestination.IPHONE),
+            ui=UiConfig(unlock_requires_three_presses=False),
+        ),
         display=display,
         input_device=NullInput(),
         pairer=pairer,
@@ -6062,11 +6076,37 @@ async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
 
     await ui._handle_action(UiAction.BACK)
 
-    assert ui.config.sync.destination is SyncDestination.PRINT
-    assert applied == [ui.config.sync]
-    assert pairer.list_calls == 1
-    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
-    assert ui._snapshot.sync_destination == "print"
+    assert ui.config.sync.destination is SyncDestination.IPHONE
+    assert applied == []
+    assert pairer.list_calls == 0
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.idle_stage == "screen_off"
+
+    # FTP or printer events may reset the idle timer, but a manual lock keeps
+    # the physical LCD dark until a key is pressed.
+    rendered_before = len(display.snapshots)
+    ui._apply_idle_stage(IdleStage.ACTIVE)
+    ui._snapshot = replace(ui._snapshot, message="background update")
+    ui._render()
+    assert ui._snapshot.idle_stage == "screen_off"
+    assert display.idle_stages[-1] == "screen_off"
+    assert len(display.snapshots) == rendered_before
+
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.idle_stage == "active"
+    assert display.idle_stages[-1] == "active"
+    assert len(display.snapshots) == rendered_before + 1
+
+
+def test_screen_off_uses_slower_network_status_poll() -> None:
+    ui, _ = _make_settings_ui(BridgeConfig())
+    assert ui._network_status_poll_interval_s() == 1.0
+    ui._apply_idle_stage(IdleStage.SCREEN_OFF)
+    assert ui._network_status_poll_interval_s() == 5.0
+    ui._apply_idle_stage(IdleStage.ACTIVE)
+    ui._lock_screen()
+    assert ui._network_status_poll_interval_s() == 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -6116,7 +6156,7 @@ def test_sync_settings_rows_cross_reference_each_other() -> None:
     )
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_PAIRING]
-        == "Show a QR code to pair your iPhone · Mode: Print page"
+        == "Show a QR code to pair your iPhone · Mode: Settings page"
     )
 
 
@@ -6309,7 +6349,7 @@ async def test_reset_sync_token_key3_help(tmp_path: Path) -> None:
     await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_message == ("New pairing token; unpairs all iPhones")
+    assert display.snapshots[-1].help_dialog_body == ("New pairing token; unpairs all iPhones")
 
 
 @pytest.mark.asyncio

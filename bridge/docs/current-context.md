@@ -1,9 +1,193 @@
-# InstantLink Bridge Current Context
+# Current Bridge Context
 
-Latest source deployment verified: 2026-08-04 on `riverps-rpi-zero-2w` (bridge 0.1.17 on `main`,
-commit `0e1acab` — plan 056 performance work, deployed clean and service-smoked). **A real print
-was completed on this build** (Sony a7C II `.HIF` → Instax Square), which closes several items
-that had stood unverified since 2026-07-22 — see *Live print verified* below.
+## Unlock inactivity timeout, 2026-10-01
+
+Clean runtime **`0c80d83`** now expires an incomplete unlock **10 seconds after its last accepted
+button press**. Every press renews the timer, including a different button resetting the count
+to one. Three consecutive presses of the same button still complete unlocking and cancel the
+timer. Expiry clears progress, keeps the Bridge locked, turns off the LCD and returns idle CPU
+to the supported 600 MHz minimum. Active preparation/printing keeps its boost until completion.
+
+- **1,251 Bridge tests**, Ruff, touched-file formatting, strict mypy (65 source files), whitespace
+  and strict MkDocs passed. The normal pre-commit gate passed. Deterministic timer tests cover
+  stale cancellation, renewal on matching/different presses, dark locked expiry, low idle CPU
+  and active-job boost release. No App or iOS source/config contract changed.
+- Real framebuffer/CPU smoke under `ib` tested both matching and different button identities:
+  first press, six-second wait, second press, then another 4.5-second wait. The prompt remained
+  visible at full performance past the former first-press deadline. With no further input, it
+  returned to dark locked state about 10.19 seconds after the latest press, with idle CPU checked
+  at 600 MHz. Both trials passed; a final same-button triple cancelled the timer and restored
+  the latest screen at 1000 MHz.
+- Inputs were injected into the controller with GPIO identities; real framebuffer, backlight
+  and root CPU helper were exercised. No physical switch or film was used. The service was
+  restored after the smoke and restarted at 11:10 EDT. Bridge, manager, Bluetooth and
+  NetworkManager are active, `NRestarts=0`, throttling `0x0`; hotspot FTP greeting/NOOP passed.
+- Hardware remains Pi Zero 2 W Rev 1.0 / Waveshare ST7789 LCD HAT / X306 2300 mAh, Debian 13.2,
+  kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17. Saved Instax Square
+  was not advertising. Physical GPIO, Sony a7C II upload, film/reconnect and 16-hour discharge
+  acceptance remain pending.
+
+Plan 063 supersedes the fixed first-press timeout recorded below.
+
+## Same-button unlock correction, 2026-10-01
+
+Clean runtime **`8dadb69`** replaces the earlier mixed-button rule. Unlock requires the same
+physical button three consecutive times. Different buttons reset progress to one without
+extending the original 10-second timeout. GPIO pin identity keeps KEY1 distinct from joystick
+press even though both perform Select; remote actions have separate identities. The prompt
+and App toggle explicitly say same button. Default-on protection, opt-out, first-press CPU
+preparation, latest-state restoration and background operations are preserved.
+
+- Local gates: **1,247 Bridge tests**, **154 App tests**, Ruff, touched-file formatting,
+  strict mypy (65 files), whitespace and strict MkDocs passed. The App result was completed
+  independently on the same change. Its duplicate pre-commit compilation was terminated under
+  extreme host load (load average 582); the commit reused the completed checks without changing
+  the configured hook. New wording is translated in all 12 App locales.
+- Film-free on-device smoke under `ib` passed framebuffer restoration, both updated prompts,
+  latest underlying state, same-button completion, alternating GPIO identities resetting to one,
+  KEY1/joystick Select separation, timeout after a changed button, automatic-dark wake and opt-out.
+  GPIO identities were injected into the controller; no physical switch was actuated.
+- Actual CPU checks confirmed 600 MHz locked, 1000 MHz on first press, 600 MHz on expiry and
+  1000 MHz on opt-out wake. The runtime service was restored after the temporary framebuffer
+  smoke stop. Bridge, manager, Bluetooth and NetworkManager remain active, `NRestarts=0`,
+  throttling `0x0`, with a working hotspot FTP greeting and NOOP.
+- Hardware/OS: Raspberry Pi Zero 2 W Rev 1.0, Waveshare 240×240 ST7789 LCD HAT, X306 2300 mAh
+  cell; Debian 13.2, kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17.
+
+See plan 062 and its Pi-rendered synthetic state image. Physical press/hold confirmation,
+Sony a7C II camera upload, Instax Square power-cycle/film checks and 16-hour discharge remain
+pending. The earlier mixed-key smoke below is historical, not acceptance of the corrected rule.
+
+## Reliable wake and three-press unlock, 2026-09-30
+
+Clean runtime `fb1f27e` is deployed on the Raspberry Pi Zero 2 W Rev 1.0 / Waveshare
+240×240 ST7789 LCD HAT / X306 2300 mAh cell, Debian 13.2, kernel 6.12.47+rpt-rpi-v8,
+Python 3.13.5 and BlueZ 5.82. Bridge 0.1.17 restarted at 13:47 EDT after the smoke check.
+The default-enabled guard is live: **Settings → System → Unlock: 3 presses**. The App also
+exposes the toggle. KEY3 remains Reconnect when the saved Printer is offline, and Post when ready.
+
+- Fixed blank wake caused by black framebuffer pixels plus an unchanged cached UI snapshot.
+  The retained frame is restored before the backlight comes on, and wake forces a current redraw.
+- First press shows one filled circle and warms the CPU; second shows two; third restores the
+  latest state. Inputs are consumed. An incomplete sequence expires after 10 seconds.
+- Real framebuffer/backlight smoke passed under the runtime `ib` account with the Bridge service
+  temporarily stopped. Tests verified byte-for-byte frame restoration, visible prompts,
+  `bl_power` 4→0, same-key and mixed-key sequences, and a newer synthetic error state appearing
+  on the third press. One-press opt-out and automatic screen-off wake also passed.
+- Actual governor checks recorded locked `powersave` at 600 MHz, first-press `performance` at
+  1000 MHz, timeout back to 600 MHz, and opt-out wake at 1000 MHz. The service was restarted
+  even if the smoke failed. No film was sent and no production photo/config values were changed.
+- Bridge, manager, Bluetooth and NetworkManager are active, Bridge `NRestarts=0`, throttling
+  `0x0`; hotspot FTP greeting and NOOP passed. The runtime automatically returned to backlight
+  off after the check. The deployed manifest records `dirty=false` and source `fb1f27e`.
+- Final checks: **1,241 Bridge tests**, **154 App tests**, Ruff, touched-file formatting,
+  strict mypy (65 source files) and strict MkDocs. New toggle strings cover all 12 App locales;
+  the global localization checker retains its previously verified baseline gaps.
+
+Frames in plan 061 are Pi-rendered synthetic states. Physical GPIO press/hold confirmation,
+Sony a7C II upload, Instax Square power-cycle/film checks and the 16-hour discharge remain
+unverified. Shared controller tests cover busy/error FTP guards during unlocking; the overlay
+does not replace operational Printer/photo state.
+
+## Post processing and interface implementation, 2026-09-30
+
+Plan 060 implements the plan 059 audit. KEY3 is **Post** on ready Print home, with separate
+Looks and persistent Printer Correction. New correction defaults to zero; existing creative
+adjustments are preserved. A user choice about moving the live +50 saturation to Correction
+remains pending, so the deployment will retain the current Look values.
+
+**Deployed runtime: `10fd031`**, clean archive, Bridge 0.1.17 on Pi Zero 2 W Rev 1.0,
+Debian 13.2 / kernel 6.12.47+rpt-rpi-v8 / Python 3.13.5 / BlueZ 5.82, Waveshare LCD HAT and
+X306 with 2300 mAh cell. The App contract and copy were updated in `7ca015d`.
+
+- Final gates: **1198 Bridge tests**, Ruff lint and touched-file format checks, strict mypy
+  (65 source files), **152 App tests**, whitespace checks and strict MkDocs build pass.
+- The localization checker has pre-existing missing/extra keys at baseline `4f6a8e7`; comparison
+  found no new diagnostic lines. All introduced App strings are present in all 12 locales.
+- On-Pi shared-controller smoke passed Settings without Printer, Post/Looks/Correction navigation,
+  staged Correction cancellation, context Help, wake-only input, locking during a simulated print,
+  and actual killable-worker preview preparation/cancellation. Real root helper transitions were
+  1000/600/1000/600/1000/600 MHz. A dark manual-confirmation wait returned to powersave after
+  preparation; only preparation/rebuild and accepted printing hold the boost.
+- The smoke uses synthetic state and a sample JPEG, installed Pi fonts and actual CPU controls.
+  It does not inject physical GPIO or send film. Its rendered frames exposed clipped instructions
+  and a wide printing title; these were fixed with nine additional font-size layout tests.
+- Bridge, manager, Bluetooth and NetworkManager are active; Bridge `NRestarts=0`, throttling
+  `0x0`, hotspot FTP greeting/NOOP and both manager listeners verified. Runtime automatic
+  screen-off entered powersave at 600 MHz with backlight off.
+- Saved Printer is still Instax Square `INSTAX-52006924`; it was not advertising during checks.
+  Current creative Look is Vivid with saturation +50; Correction is 0. No live image setting was
+  silently reinterpreted. The user can move the compensation to Correction independently.
+
+Physical KEY2/KEY3, Sony a7C II upload with edit/confirmation, Printer power-cycle reconnect and
+film colour output are pending user smoke checks. The 16-hour discharge target remains unmeasured.
+See plan 060 and `docs/assets/bridge-ux-060/validated-screens.png` for details.
+
+## Previous verified context
+
+**2026-09-30 performance tiers deployed and checked:** source commit `892945a` was installed
+through a clean archive and the Bridge restarted successfully (`NRestarts=0`). The root-owned CPU
+helper and constrained sudo rule were installed and validated. Awake/photo work uses 1000 MHz;
+dark/locked idle uses `powersave` at the supported 600 MHz minimum across cores 0–3. The live
+runtime automatically switched to 600 MHz with LCD backlight off (`bl_power=4`), and kept the
+hotspot, FTP, manager, SSH and 30-second BLE searches operational. `throttled=0x0` throughout.
+The policy controller was exercised on-device through awake → locked → boosted job → locked →
+awake transitions. A fresh physical KEY2 cycle with these new tiers remains pending.
+
+Latest recorded real print is `DSC02697.HIF` → Instax Square, logged in the earlier session as
+2026-09-28: send/print 24.837 s (prior reference 24.03 s), prepared preview reused. Upload took
+11.835 s for an 11.26 MB file, compared with 7.56 s for the prior 5.19 MB file. The larger source
+and upload account for most of the observed total-cycle difference. No reduced clock maximum
+or duplicate preparation was found. Same-file preparation trials measured about 9.7 s at fixed
+600 MHz and 5.7 s at fixed 1000 MHz, supporting the photo-job boost. Details and limits are in
+`docs/plans/058-bridge-awake-performance.md`. The sampler now records the governor; it remains
+disabled between discharge tests. The Pi's clock was resynced to the host on 2026-09-30.
+
+Prior source deployment verified: 2026-09-28 on `riverps-rpi-zero-2w` (bridge 0.1.17,
+branch `codex/bridge-battery-day`, commit `4455f53`, clean archive). This source-only deployment
+updated the benchmark script and service unit without restarting the healthy Bridge runtime. The
+prior runtime deployment restarted successfully with `NRestarts=0`; FTP `:21` and manager `:8742`
+listen on the expected addresses.
+The Pi clock was corrected from 2026-09-11 by the deployment script and resynced on 2026-09-28;
+offline wall-clock timestamps drift or reset across boots. The earlier 2026-08-04 Sony a7C II
+`.HIF` → Instax Square reference run is described below.
+
+### Battery session, 2026-09-27
+
+- The X306 now holds a **2300 mAh 18650 cell**. It has no Linux-readable current or charge gauge;
+  the first near-full discharge ran overnight, but the exact unplug time is pending. The battery
+  directly powers the Bridge. The protocol and evidence are in
+  `docs/plans/057-bridge-battery-day.md`. The transient sampler wrote 206 one-minute records through
+  00:07:08 EDT, then stopped at an unplanned reboot. The next boot had no USB carrier and ran the
+  Bridge for 9 h 9 min before an abrupt stop around morning reconnection. The user observed empty
+  battery LEDs and a dark LCD; the Pi nevertheless logged two physical inputs about seven minutes
+  before its last journal entry. The final cutoff time is not independently confirmed. The Bridge
+  recovered automatically after the midnight reset. A new opt-in persistent sampler unit was
+  installed and verified on the Pi; it is disabled between tests and can be enabled for a repeat run.
+- KEY2 now locks the LCD from home/status surfaces; the next key wakes it without also activating
+  a UI action. The Print/Sync Mode picker is on the top Settings page. Locked screens skip physical
+  framebuffer renders, and network status polling slows from 1 s to 5 s while the screen is off.
+  These changes pass 1121 local Bridge tests. **Physical KEY2/backlight behavior is not yet
+  hand-verified**; the Printer was off during deployment.
+- The device's saved Printer search period was changed from 5 s to 30 s (prior config backup:
+  `/etc/InstantLinkBridge/config.toml.bak-battery-baseline`). Automatic BLE search remains active.
+  With the Printer off and the LCD dark, sampled aggregate CPU busy fell from 8.75% (5 s search,
+  four 5 s intervals) to 3.67% (30 s search, seventeen 5 s intervals). This measures activity,
+  **not** battery draw. The updated code also defaults new configs to 30 s and leaves 5/15/30/60
+  s choices in Settings.
+- After the dark-screen network watcher moved to a 5 s cadence, a further seventeen 5 s samples
+  averaged 3.42% aggregate CPU busy and 48.6 °C SoC temperature. That small difference from the
+  3.93% post-boot-diet sample is within short-run variation; it is not a runtime measurement.
+- A powered 5-minute search-rate trial on 2026-09-28 averaged 2.67% aggregate CPU busy at a
+  60-second interval, versus 2.94% across the longer 30-second overnight sample. Different trial
+  conditions prevent translating this into battery savings. The live interval was restored to
+  30 seconds immediately after the trial for faster Printer reconnection.
+- The production boot diet disabled `tailscaled` and the OpenFilmAdvance GitHub Actions runner;
+  user-level `rpi-connect` was disabled separately. USB SSH remains available. Available RAM rose
+  from about 197 MB to 281 MB, and swap use fell from 67 MB to 45 MB. The live Bridge, Bluetooth,
+  Wi-Fi hotspot, FTP, and manager services remained active.
+- The paired Instax Square was not advertising during this session. A timed power-on reconnect,
+  camera FTP upload, and full battery discharge remain the hardware gates.
 
 Print/Sync mode behavior from commit `7a43570` was the prior baseline (2026-07-22). The iPhone
 sync feature from plan 050 + UX audit 051 + virtual LCD 054-A was last exercised on-device with a
@@ -35,7 +219,7 @@ for cameras and the bridge on an existing network.
 
 ## Current Deployed State
 
-- **Current deployment: commit `0e1acab` on `main` (2026-08-04)**, clean tree, `--system --restart`.
+- **Prior deployment: commit `0e1acab` on `main` (2026-08-04)**, clean tree, `--system --restart`.
   Verified on-device: `instantlink-bridge.service` and `instantlink-bridge-manager.service` both
   active with `NRestarts=0`; FTP `:21` and manager `:8742` (on both `192.168.7.1` and
   `192.168.8.1`) listening; no errors in the journal.

@@ -19,6 +19,10 @@ Prices are planning estimates captured for the November 2025 hardware plan; veri
 
 Expected one-off hardware total: about USD 95-125 before printer, film, camera, shipping, tax, and spare cables.
 
+The `riverps-rpi-zero-2w` test Bridge now has a nominal 2300 mAh 18650 cell (2026-09-27).
+The X306 exposes no charge or current telemetry to Linux; its battery LEDs and a timed
+unplugged run are required to establish actual runtime. See plan 057.
+
 ## BOM Reference Links
 
 - Raspberry Pi Zero 2 W product page: `https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/`

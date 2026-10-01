@@ -427,3 +427,18 @@
 "annotate_overlay_show" = "Mostra";
 "annotate_overlay_hide" = "Nascondi";
 "annotate_select_image_overlay" = "Seleziona un'immagine sovrapposta";
+
+/* Bridge Printer output correction */
+"Printer correction" = "Correzione stampante";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "Compensa la resa della pellicola indipendentemente dallo stile. Zero lascia il risultato invariato.";
+
+/* Bridge workflow and recovery */
+"Workflow" = "Flusso di lavoro";
+"Confirmation" = "Conferma";
+"Confirm each" = "Conferma ogni foto";
+"Print immediately" = "Stampa subito";
+"Review 5s" = "Rivedi per 5 s";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "Per riavviare il Bridge, spegnilo e riaccendilo con il pulsante di accensione X306.";
+
+/* Bridge unlock protection */
+"Press same button 3 times to unlock" = "Premi lo stesso pulsante 3 volte per sbloccare";

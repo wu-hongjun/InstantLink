@@ -8,7 +8,7 @@ import math
 import os
 import secrets
 from collections.abc import Awaitable, Callable
-from contextlib import suppress
+from contextlib import nullcontext, suppress
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
@@ -27,7 +27,6 @@ from instantlink_bridge.config import (
     PowerBackend,
     StatusSinkKind,
     SyncConfig,
-    SyncDestination,
     write_config,
 )
 from instantlink_bridge.imaging.pipeline import (
@@ -49,6 +48,7 @@ from instantlink_bridge.power.battery_estimator import (
     BatteryLifeEstimator,
 )
 from instantlink_bridge.power.monitor import BatteryAlert, IdleStage, PowerEvent, PowerEventKind
+from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.power.pisugar import BatteryState
 from instantlink_bridge.printing import PrintProgress
 from instantlink_bridge.system_info import SystemInfo, default_hotspot_ssid, read_system_info
@@ -63,7 +63,14 @@ from instantlink_bridge.system_stats import (
 )
 from instantlink_bridge.ui.display import Display, create_display
 from instantlink_bridge.ui.input import GpioUiInput, NullInput, create_input
-from instantlink_bridge.ui.models import PairedPrinter, SettingsRow, UiAction, UiMode, UiSnapshot
+from instantlink_bridge.ui.models import (
+    PairedPrinter,
+    SettingsRow,
+    UiAction,
+    UiButtonPress,
+    UiMode,
+    UiSnapshot,
+)
 from instantlink_bridge.ui.pairing import (
     BluetoothctlPrinterPairer,
     InstantLinkPrinterSelector,
@@ -98,6 +105,7 @@ from instantlink_bridge.ui.settings import (
     setting_help_text,
     setting_options,
     sync_destination_label,
+    workflow_label,
 )
 from instantlink_bridge.ui.status import (
     BlePrinterStatusProvider,
@@ -127,8 +135,9 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # configured search_interval_s equals the scan window — `period - elapsed`
 # rounds to ~0 and the UI render task starves. 2 seconds gives the asyncio
 # event loop room to service LCD render, FTP, and BLE callbacks without
-# noticeably delaying reconnect when the printer wakes up.
+# noticeably delaying reconnect when the printer wakes up at the 5-second setting.
 MIN_OFFLINE_SEARCH_GAP_S = 2.0
+UNLOCK_TIMEOUT_S = 10.0
 # How long a SystemStatsSnapshot is reused before re-reading /proc and /sys.
 # The About page can re-render at the LCD's ~30 Hz tick when help text toasts or
 # the cursor moves; without a cache that would hammer the filesystem readers
@@ -163,6 +172,7 @@ AUTO_REBOND_COOLDOWN_S = 120.0
 #                          shows the overlay applied (plan 037 phase 3).
 _COLOUR_AXIS_KEYS: frozenset[SettingKey] = frozenset(
     {
+        SettingKey.CORRECTION_SATURATION,
         SettingKey.ADJUST_SATURATION,
         SettingKey.ADJUST_EXPOSURE,
         SettingKey.ADJUST_SHARPNESS,
@@ -201,6 +211,7 @@ RENDER_TICK_S = 0.35
 # printer_status_fresh TTL pattern.
 SYNC_CLIENT_RECENT_TTL_S = 20.0
 USB_STATUS_POLL_S = 1.0
+NETWORK_STATUS_SCREEN_OFF_POLL_S = 5.0
 # Readiness freshness gate: "Ready to print" must be backed by a printer status that succeeded
 # recently, not just stale cached film/mode. If the printer powers off, status polls fail and the
 # last success ages out past this TTL, so the display leaves "Ready" even if a PRINTER_SEARCHING
@@ -240,14 +251,15 @@ STATUS_VISIBLE_MODES = {
     UiMode.PRINTER_OFFLINE,
     UiMode.SETTINGS,
 }
-MODE_SWITCH_MODES = {
+LOCKABLE_HOME_MODES = {
     UiMode.READY,
     UiMode.NO_FILM,
     UiMode.VALIDATION,
     UiMode.NEEDS_PAIRING,
     UiMode.PRINTER_SEARCHING,
     UiMode.PRINTER_OFFLINE,
-    UiMode.ERROR,
+    UiMode.IMAGE_RECEIVED,
+    UiMode.PRINT_COMPLETE,
 }
 
 
@@ -289,6 +301,7 @@ def _default_status_sink(kind: StatusSinkKind) -> StatusSink:
 # ``SettingsRow.label`` values in ``_settings_row_for(key)`` so the
 # dialog header and the underlying settings row agree on naming.
 _ADJUSTMENT_AXIS_LABEL: dict[SettingKey, str] = {
+    SettingKey.CORRECTION_SATURATION: "Correction",
     SettingKey.ADJUST_SATURATION: "Saturation",
     SettingKey.ADJUST_EXPOSURE: "Exposure",
     SettingKey.ADJUST_SHARPNESS: "Sharpness",
@@ -368,6 +381,7 @@ class BridgeUi:
         ftp_activity: FtpActivityTracker | None = None,
         wifi_mode_setter: WifiModeSetter | None = None,
         power_activity_callback: PowerActivityCallback | None = None,
+        cpu_performance: CpuPerformanceController | None = None,
         ftp_config_applied_callback: FtpConfigAppliedCallback | None = None,
         sync_config_applied_callback: SyncConfigAppliedCallback | None = None,
         sync_token_rotated_callback: SyncTokenRotatedCallback | None = None,
@@ -403,6 +417,7 @@ class BridgeUi:
             wifi_mode_setter if wifi_mode_setter is not None else set_wifi_mode_with_helper
         )
         self._power_activity_callback = power_activity_callback
+        self._cpu_performance = cpu_performance
         self._ftp_config_applied_callback = ftp_config_applied_callback
         self._sync_config_applied_callback = sync_config_applied_callback
         self._sync_token_rotated_callback = sync_token_rotated_callback
@@ -420,6 +435,11 @@ class BridgeUi:
         self._bridge_power_alert: str = BatteryAlert.UNKNOWN.value
         self._bridge_external_power: bool | None = None
         self._idle_stage = IdleStage.ACTIVE
+        self._screen_locked = False
+        self._unlocking = False
+        self._unlock_presses = 0
+        self._unlock_button_id: str | None = None
+        self._unlock_timeout_task: asyncio.Task[None] | None = None
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         self._battery_estimator = BatteryLifeEstimator()
         self._battery_minutes_remaining: int | None = None
@@ -428,6 +448,7 @@ class BridgeUi:
         # means the printer just dropped, so we re-search immediately instead of waiting a full
         # search period (see _printer_status_retry_delay).
         self._printer_was_online = False
+        self._printer_check_requested = asyncio.Event()
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at: dict[str, float] = {}
         self._auto_rebond_task: asyncio.Task[None] | None = None
@@ -461,7 +482,7 @@ class BridgeUi:
         # deferred behind SYNC_PAIRING (plan 051 pass 2). One event per QR
         # session — created on entry, set + cleared on exit.
         self._sync_pairing_exit_event: asyncio.Event | None = None
-        self._actions: asyncio.Queue[UiAction] = asyncio.Queue(maxsize=20)
+        self._actions: asyncio.Queue[UiAction | UiButtonPress] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
             printer_model=config.printer.model,
@@ -499,10 +520,15 @@ class BridgeUi:
         self._preview_image: Image.Image | None = None
         self._preview_received: ReceivedImage | None = None
         self._preview_session_token = 0
+        self._preview_build_task: asyncio.Task[None] | None = None
+        self._preview_ready_event = asyncio.Event()
+        self._preview_interaction_event = asyncio.Event()
+        self._preview_manual_confirmation = False
         # The most recent preview's InstantLink-ready image, handed to the
         # print path so it need not re-run the pipeline (plan 056 T1.1).
         self._prepared_print_image: PreparedImage | None = None
         self._prepared_print_key: tuple[Path, PrintEdit] | None = None
+        self._prepared_print_config: tuple[object, ...] | None = None
         self._ignore_actions_until = 0.0
         self._settings_page = SettingsPage.MAIN
         self._settings_indices: dict[SettingsPage, int] = {page: 0 for page in SETTINGS_BY_PAGE}
@@ -528,12 +554,31 @@ class BridgeUi:
 
     @property
     def snapshot(self) -> UiSnapshot:
-        """Read-only access to the current UI snapshot; used by FTP pre-flight (Phase 6).
+        """Read display state, including the shared physical/virtual unlock overlay.
 
-        Safe to call from any thread: UiSnapshot is frozen+slotted, the attribute swap
-        is atomic under the GIL, and a one-mutation-lag is acceptable for FTP replies.
+        Operational callers use ``live_snapshot`` so unlocking does not alter
+        camera readiness or photo dispatch. Frozen snapshots remain safe to read
+        from other threads; an occasional one-mutation lag is acceptable.
         """
+
+        return self._visible_snapshot()
+
+    @property
+    def live_snapshot(self) -> UiSnapshot:
+        """Read operational state beneath the lock overlay for FTP/photo dispatch."""
+
         return self._snapshot
+
+    def _visible_snapshot(self) -> UiSnapshot:
+        if not self._unlocking:
+            return self._snapshot
+        return replace(
+            self._snapshot,
+            mode=UiMode.UNLOCKING,
+            idle_stage=IdleStage.ACTIVE.value,
+            unlock_presses=self._unlock_presses,
+            unlock_required=3,
+        )
 
     def inject_action(self, action: UiAction) -> bool:
         """Inject a UI action from a remote surface (virtual LCD, plan 054).
@@ -615,6 +660,7 @@ class BridgeUi:
             self._proactive_bond_reset_task,
             self._initial_status_task,
             self._credential_hotspot_task,
+            self._unlock_timeout_task,
         ):
             if task is None:
                 continue
@@ -768,53 +814,132 @@ class BridgeUi:
         # two previews of the same file (plan 056 T1.1).
         self._prepared_print_image = None
         self._prepared_print_key = None
+        self._prepared_print_config = None
         self._preview_session_token += 1
         session_token = self._preview_session_token
         loop = asyncio.get_running_loop()
         result: asyncio.Future[PrintEdit | None] = loop.create_future()
         self._pending_print_result = result
-        deadline = None if timeout_s is None else loop.time() + timeout_s
+        self._preview_ready_event = asyncio.Event()
+        self._preview_interaction_event = asyncio.Event()
+        self._preview_manual_confirmation = timeout_s is None
+        ready_task = asyncio.create_task(self._preview_ready_event.wait())
+        interaction_task = asyncio.create_task(self._preview_interaction_event.wait())
+        result_waiter = cast(asyncio.Future[object], result)
+        ready_waiter = cast(asyncio.Future[object], ready_task)
+        interaction_waiter = cast(asyncio.Future[object], interaction_task)
+        self._show_print_preview(received, None, timeout_s, title="Preparing preview")
+        build_task = asyncio.create_task(
+            self._rebuild_print_preview(session_token, received, result)
+        )
+        self._preview_build_task = build_task
+        accepted_edit: PrintEdit | None = None
         try:
-            self._show_print_preview(received, None, timeout_s, title="Preparing preview")
-            try:
-                preview_image = await self._build_preview_image(received, self._preview_edit)
-            except ImagePipelineError:
-                if result.done() or not self._preview_session_is_current(
-                    session_token,
-                    received,
-                    result,
-                ):
-                    return await asyncio.shield(result) if result.done() else None
-                raise
+            # Preparing a large camera image must not consume its review time.
+            # Racing the result also lets Cancel reach the killable worker now.
+            await asyncio.wait({result_waiter, ready_waiter}, return_when=asyncio.FIRST_COMPLETED)
             if result.done():
-                return await asyncio.shield(result)
+                accepted_edit = await asyncio.shield(result)
+                return accepted_edit
             if not self._preview_session_can_apply(session_token, received, result):
                 return None
-            self._preview_image = preview_image
-            if deadline is None:
-                self._show_print_preview(received, None, timeout_s)
-                return await asyncio.shield(result)
+            deadline = None if timeout_s is None else loop.time() + timeout_s
             while True:
+                if self._preview_manual_confirmation or deadline is None:
+                    if self._snapshot.print_title != "Updating preview":
+                        self._show_print_preview(received, None, None)
+                    accepted_edit = await asyncio.shield(result)
+                    return accepted_edit
                 remaining_s = max(0.0, deadline - loop.time())
                 self._show_print_preview(received, remaining_s, timeout_s)
                 if remaining_s <= 0:
                     if self._preview_blocked_by_no_film(received):
                         return None
-                    return self._preview_edit
-                wait_timeout = min(1.0, remaining_s)
-                try:
-                    return await asyncio.wait_for(
-                        asyncio.shield(result),
-                        timeout=wait_timeout,
-                    )
-                except TimeoutError:
-                    continue
+                    accepted_edit = self._preview_edit
+                    # Commit before cleanup yields: a later input must not
+                    # show Cancel/Edit for a photo already accepted to print.
+                    result.set_result(accepted_edit)
+                    return accepted_edit
+                await asyncio.wait(
+                    {result_waiter, interaction_waiter},
+                    timeout=min(1.0, remaining_s),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                if result.done():
+                    accepted_edit = await asyncio.shield(result)
+                    return accepted_edit
         finally:
-            if self._preview_session_is_current(session_token, received, result):
+            for task in (ready_task, interaction_task):
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+            current = self._preview_session_is_current(session_token, received, result)
+            active_build = self._preview_build_task if current else build_task
+            if active_build is not None:
+                active_build.cancel()
+                with suppress(asyncio.CancelledError):
+                    await active_build
+            if result.done() and not result.cancelled():
+                # Cancellation can race a worker failure before the result
+                # await resumes. Consume that exception during cleanup too.
+                result.exception()
+            if current:
                 self._preview_session_token += 1
                 self._pending_print_result = None
+                self._preview_build_task = None
                 self._preview_image = None
                 self._preview_received = None
+                if accepted_edit is None:
+                    self._prepared_print_image = None
+                    self._prepared_print_key = None
+                    self._prepared_print_config = None
+
+    async def _rebuild_print_preview(
+        self,
+        session_token: int,
+        received: ReceivedImage,
+        result: asyncio.Future[PrintEdit | None],
+    ) -> None:
+        """Prepare off the action loop and coalesce edits while a worker runs."""
+
+        try:
+            while self._preview_session_can_apply(session_token, received, result):
+                edit = self._preview_edit
+                try:
+                    preview_image = await self._build_preview_image(received, edit)
+                except Exception as exc:
+                    if not self._preview_session_can_apply(session_token, received, result):
+                        return
+                    if self._preview_image is None:
+                        result.set_exception(exc)
+                    else:
+                        LOGGER.exception("ui.preview_update_failed path=%s", received.path)
+                        result.set_result(None)
+                        self._snapshot = replace(
+                            self._snapshot,
+                            mode=UiMode.ERROR,
+                            message="Preview failed",
+                            preview_image=None,
+                        )
+                        self._render()
+                    return
+                if not self._preview_session_can_apply(session_token, received, result):
+                    return
+                if edit != self._preview_edit:
+                    # New joystick inputs arrived during preparation. Render only
+                    # the latest edit, then reuse those bytes for the actual print.
+                    continue
+                self._preview_image = preview_image
+                self._show_print_preview(received, None, None)
+                self._preview_ready_event.set()
+                return
+        finally:
+            if not result.done() and not self._preview_session_can_apply(
+                session_token, received, result
+            ):
+                # An initial status refresh or a newer preview can supersede
+                # this screen while its worker is running. Release the old job.
+                result.set_result(None)
 
     async def _defer_while_sync_pairing(self, received: ReceivedImage) -> None:
         """Hold the print-confirmation flow while the QR card is on screen.
@@ -851,20 +976,36 @@ class BridgeUi:
         received: ReceivedImage,
         edit: PrintEdit,
     ) -> Image.Image | None:
+        # Prepared previews may wait for a person for hours. Only actual work
+        # holds the boost, so a dark, waiting preview can still save power.
+        context = self._cpu_performance.boost() if self._cpu_performance else nullcontext()
+        async with context:
+            return await self._prepare_preview_image(received, edit)
+
+    async def _prepare_preview_image(
+        self,
+        received: ReceivedImage,
+        edit: PrintEdit,
+    ) -> Image.Image | None:
+        session_token = self._preview_session_token
         model = await self._resolve_printer_model_for_preview()
         if model is None:
             raise ImagePipelineError("printer type unknown")
+        config = self._config
         from dataclasses import replace as _replace
 
-        from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text
+        from instantlink_bridge.imaging.postprocess import (
+            correction_profile,
+            read_exif_datestamp_text,
+        )
         from instantlink_bridge.imaging.presets import resolve_preset
 
-        adjustments = resolve_preset(self._config.adjustments, self._user_presets)
-        if self._config.adjustments.datestamp:
+        adjustments = resolve_preset(config.adjustments, self._user_presets)
+        if config.adjustments.datestamp:
             datestamp_text = read_exif_datestamp_text(
                 received.path,
-                self._config.ui.language.value,
-                fmt=self._config.adjustments.datestamp_format,
+                config.ui.language.value,
+                fmt=config.adjustments.datestamp_format,
             )
             adjustments = _replace(adjustments, datestamp_text=datestamp_text)
         # apply_model_flip=False builds the InstantLink-backend flavour, which
@@ -876,16 +1017,20 @@ class BridgeUi:
         prepared = await prepare_for_instax_async(
             received.path,
             model,
-            fit=self._config.printer.fit,
-            quality=self._config.printer.quality,
+            fit=config.printer.fit,
+            quality=config.printer.quality,
             edit=edit,
             adjustments=adjustments,
+            correction=correction_profile(config.correction),
             timeout_s=PREVIEW_BUILD_TIMEOUT_S,
             apply_model_flip=False,
         )
-        self._prepared_print_image = prepared
-        self._prepared_print_key = (received.path, edit)
-        return await asyncio.to_thread(create_preview_from_prepared, prepared)
+        preview = await asyncio.to_thread(create_preview_from_prepared, prepared)
+        if self._preview_session_token == session_token:
+            self._prepared_print_image = prepared
+            self._prepared_print_key = (received.path, edit)
+            self._prepared_print_config = (config.printer, config.adjustments, config.correction)
+        return preview
 
     def take_prepared_print_image(
         self,
@@ -902,9 +1047,17 @@ class BridgeUi:
 
         prepared = self._prepared_print_image
         key = self._prepared_print_key
+        prepared_config = self._prepared_print_config
         self._prepared_print_image = None
         self._prepared_print_key = None
+        self._prepared_print_config = None
         if prepared is None or key is None:
+            return None
+        if prepared_config != (
+            self._config.printer,
+            self._config.adjustments,
+            self._config.correction,
+        ):
             return None
         if key != (received.path, edit if edit is not None else PrintEdit()):
             return None
@@ -1079,54 +1232,32 @@ class BridgeUi:
                 return
             result.set_result(self._preview_edit)
             return
-        if action in {UiAction.HELP, UiAction.PAIR}:
-            self._preview_tool = _next_preview_tool(self._preview_tool)
-            self._snapshot = replace(
-                self._snapshot,
-                print_detail=self._preview_detail_text(),
-                preview_tool=self._preview_tool,
-            )
-            self._render()
+        if action not in {
+            UiAction.HELP,
+            UiAction.PAIR,
+            UiAction.UP,
+            UiAction.DOWN,
+            UiAction.LEFT,
+            UiAction.RIGHT,
+        }:
             return
-        if action not in {UiAction.UP, UiAction.DOWN, UiAction.LEFT, UiAction.RIGHT}:
-            return
-        self._preview_edit = _adjust_preview_edit(self._preview_edit, self._preview_tool, action)
+        # Editing or choosing a tool opts this photo into explicit confirmation.
+        self._preview_manual_confirmation = True
+        self._preview_interaction_event.set()
         received = self._preview_received
         if received is None:
             return
-        edit = self._preview_edit
+        if action in {UiAction.HELP, UiAction.PAIR}:
+            self._preview_tool = _next_preview_tool(self._preview_tool)
+            title = "Preparing preview" if self._preview_image is None else None
+            self._show_print_preview(received, None, None, title=title)
+            return
+        self._preview_edit = _adjust_preview_edit(self._preview_edit, self._preview_tool, action)
         self._show_print_preview(received, None, None, title="Updating preview")
-        try:
-            preview_image = await self._build_preview_image(received, edit)
-        except ImagePipelineError:
-            if not self._preview_session_can_apply(session_token, received, result):
-                return
-            LOGGER.exception("ui.preview_update_failed path=%s", received.path)
-            result.set_result(None)
-            self._snapshot = replace(
-                self._snapshot,
-                mode=UiMode.ERROR,
-                message="Preview failed",
-                preview_image=None,
+        if self._preview_build_task is None or self._preview_build_task.done():
+            self._preview_build_task = asyncio.create_task(
+                self._rebuild_print_preview(session_token, received, result)
             )
-            self._render()
-            return
-        if not self._preview_session_can_apply(session_token, received, result):
-            return
-        self._preview_image = preview_image
-        if not self._preview_session_can_apply(session_token, received, result):
-            return
-        self._snapshot = replace(
-            self._snapshot,
-            print_detail=self._preview_detail_text(),
-            preview_image=self._preview_image,
-            preview_tool=self._preview_tool,
-            preview_zoom=self._preview_edit.zoom,
-            preview_rotation_degrees=self._preview_edit.rotate_degrees,
-            preview_offset_x=self._preview_edit.offset_x,
-            preview_offset_y=self._preview_edit.offset_y,
-        )
-        self._render()
 
     def _return_to_cached_status_after_preview_cancel(self) -> None:
         self._show_cached_home_status()
@@ -1299,15 +1430,23 @@ class BridgeUi:
 
     async def _run_actions(self) -> None:
         while True:
-            action = await self._actions.get()
+            press = await self._actions.get()
+            action = press.action if isinstance(press, UiButtonPress) else press
+            button_id = press.button_id if isinstance(press, UiButtonPress) else f"remote:{action}"
             try:
+                was_dark = self._screen_is_dark()
                 await self._record_power_activity()
                 loop = asyncio.get_running_loop()
                 if loop.time() < self._ignore_actions_until:
                     LOGGER.info("ui.input_ignored action=%s reason=startup_settle", action)
                     continue
-                LOGGER.info("ui.input action=%s mode=%s", action, self._snapshot.mode)
-                await self._handle_action(action)
+                LOGGER.info(
+                    "ui.input action=%s button=%s mode=%s", action, button_id, self._snapshot.mode
+                )
+                if was_dark:
+                    await self._begin_unlock(button_id)
+                    continue
+                await self._handle_action(action, button_id=button_id)
             finally:
                 self._actions.task_done()
 
@@ -1373,10 +1512,99 @@ class BridgeUi:
 
     def _apply_idle_stage(self, stage: IdleStage) -> None:
         self._idle_stage = stage
-        self._snapshot = replace(self._snapshot, idle_stage=stage.value)
-        self._set_display_idle_stage(stage)
-        if stage is IdleStage.ACTIVE or self._snapshot.mode is UiMode.SETTINGS:
+        effective_stage = self._effective_idle_stage()
+        self._snapshot = replace(self._snapshot, idle_stage=effective_stage.value)
+        self._set_display_idle_stage(effective_stage)
+        if effective_stage is IdleStage.ACTIVE or self._snapshot.mode is UiMode.SETTINGS:
             self._render()
+
+    def _effective_idle_stage(self) -> IdleStage:
+        if self._unlocking:
+            return IdleStage.ACTIVE
+        return IdleStage.SCREEN_OFF if self._screen_locked else self._idle_stage
+
+    def _screen_is_dark(self) -> bool:
+        return self._effective_idle_stage() in {
+            IdleStage.SCREEN_OFF,
+            IdleStage.DEEP_IDLE,
+            IdleStage.POWEROFF,
+        }
+
+    def _lock_screen(self) -> None:
+        self._cancel_unlock_timeout()
+        self._unlocking = False
+        self._unlock_presses = 0
+        self._unlock_button_id = None
+        self._screen_locked = True
+        self._snapshot = replace(self._snapshot, idle_stage=IdleStage.SCREEN_OFF.value)
+        self._set_display_idle_stage(IdleStage.SCREEN_OFF)
+        LOGGER.info("ui.screen_locked")
+
+    def _unlock_screen(self) -> None:
+        self._cancel_unlock_timeout()
+        self._unlocking = False
+        self._unlock_presses = 0
+        self._unlock_button_id = None
+        self._screen_locked = False
+        self._idle_stage = IdleStage.ACTIVE
+        self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
+        self._set_display_idle_stage(IdleStage.ACTIVE)
+        # A dark display may have cleared its pixels. Repaint even when the
+        # live home state equals the last frame seen before locking.
+        self._last_rendered_snapshot = None
+        self._render()
+        LOGGER.info("ui.screen_unlocked")
+
+    def _cancel_unlock_timeout(self) -> None:
+        task = self._unlock_timeout_task
+        self._unlock_timeout_task = None
+        if task is not None:
+            task.cancel()
+
+    def _restart_unlock_timeout(self) -> None:
+        """Relock after ten seconds without an accepted button press."""
+        self._cancel_unlock_timeout()
+        self._unlock_timeout_task = asyncio.create_task(self._expire_unlock_prompt())
+
+    async def _begin_unlock(self, button_id: str) -> None:
+        if not self._config.ui.unlock_requires_three_presses:
+            self._unlock_screen()
+            return
+        self._screen_locked = True
+        self._unlocking = True
+        self._unlock_presses = 1
+        self._unlock_button_id = button_id
+        self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
+        self._set_display_idle_stage(IdleStage.ACTIVE)
+        self._last_rendered_snapshot = None
+        self._render()
+        self._restart_unlock_timeout()
+        # Warm the awake tier on the first press, before later queued presses
+        # can complete unlocking. Normal services continue using the live state.
+        if self._cpu_performance is not None:
+            await self._cpu_performance.start()
+        LOGGER.info("ui.unlock_started button=%s presses=1 required=3", button_id)
+
+    async def _expire_unlock_prompt(self) -> None:
+        await asyncio.sleep(UNLOCK_TIMEOUT_S)
+        self._unlock_timeout_task = None
+        if self._unlocking:
+            self._lock_screen()
+            LOGGER.info("ui.unlock_expired")
+
+    def _advance_unlock(self, button_id: str) -> None:
+        if button_id == self._unlock_button_id:
+            self._unlock_presses += 1
+        else:
+            # A new button starts a new sequence rather than combining presses.
+            self._unlock_button_id = button_id
+            self._unlock_presses = 1
+        LOGGER.info("ui.unlock_progress button=%s presses=%s", button_id, self._unlock_presses)
+        if self._unlock_presses >= 3:
+            self._unlock_screen()
+            return
+        self._restart_unlock_timeout()
+        self._render()
 
     def _apply_shutdown_requested(self, event: PowerEvent) -> None:
         reason = event.shutdown_reason.value if event.shutdown_reason is not None else "shutdown"
@@ -1398,7 +1626,16 @@ class BridgeUi:
             return
         await self._power_activity_callback()
 
-    async def _handle_action(self, action: UiAction) -> None:
+    async def _handle_action(self, action: UiAction, *, button_id: str | None = None) -> None:
+        button_id = button_id if button_id is not None else f"remote:{action}"
+        if self._unlocking:
+            self._advance_unlock(button_id)
+            return
+        if self._screen_is_dark():
+            # Every dark screen consumes the first action, including direct
+            # abstract input. Capture darkness before activity in the queue loop.
+            await self._begin_unlock(button_id)
+            return
         if self._snapshot.mode is UiMode.CONFIRMATION_DIALOG:
             await self._handle_confirmation_dialog_action(action)
             return
@@ -1422,82 +1659,79 @@ class BridgeUi:
             await self._handle_preview_action(action)
             return
         if self._snapshot.mode is UiMode.PRINTING:
+            if action is UiAction.BACK:
+                self._lock_screen()
             return
         if self._snapshot.mode is UiMode.PAIRING:
             if action is UiAction.BACK:
                 await self._cancel_pairing()
             return
-        if action is UiAction.BACK and self._snapshot.mode in MODE_SWITCH_MODES:
-            await self._switch_delivery_mode()
+        if action is UiAction.BACK and self._snapshot.mode in LOCKABLE_HOME_MODES:
+            self._lock_screen()
             return
-        if action is UiAction.PAIR:
-            if not self._config.sync.print_enabled:
-                # iphone-only (plan 051 P2.6): a printer scan is pointless
-                # with printing disabled — hold-KEY3 opens the iPhone
-                # pairing QR instead, matching the "KEY3 iPhone" chip.
-                await self._show_sync_pairing(return_home=True)
-                return
-            await self._start_pairing()
-            return
-        if action is UiAction.HELP:
-            if self._snapshot.mode is UiMode.PAIR_FAILED:
-                await self._start_pairing()
-                return
-            if self._snapshot.mode is UiMode.NEEDS_PAIRING:
-                # Short KEY3 in NEEDS_PAIRING now also starts pairing so a
-                # first-boot user pressing KEY3 gets the same result as the
-                # hold action. Previously HELP was a silent no-op when
-                # paired_printer is None (plan 034 item 2 — Option A).
-                await self._start_pairing()
-                return
-            if not self._config.sync.print_enabled:
-                # iphone-only home surfaces (plan 051 P2.6): short KEY3
-                # opens the iPhone pairing QR — the "KEY3 iPhone" chip.
-                await self._show_sync_pairing(return_home=True)
-                return
-            if self._snapshot.paired_printer is not None:
-                self._show_settings("Wi-Fi + FTP credentials", page=SettingsPage.NETWORK)
-                return
+        if action in {UiAction.HELP, UiAction.PAIR}:
+            await self._handle_home_context_action()
             return
         if action is UiAction.BACK:
-            if self._snapshot.mode is UiMode.PAIR_FAILED:
-                if self._pair_return_page is not None:
-                    page = self._pair_return_page
-                    self._pair_return_page = None
-                    self._show_settings(page=page)
-                    return
-                await self.refresh_printer_status()
-                return
-            await self.refresh_printer_status()
-            return
-        if action in {UiAction.UP, UiAction.DOWN} and self._snapshot.mode in {
-            UiMode.NEEDS_PAIRING,
-            UiMode.PAIR_FAILED,
-        }:
-            next_index = 0 if self._snapshot.mode is UiMode.NEEDS_PAIRING else 1
-            if self._snapshot.mode is UiMode.PAIR_FAILED:
-                next_index = 0
-            self._snapshot = self._build_snapshot(
-                mode=self._snapshot.mode,
-                selected_index=next_index,
-                printer_model=self._snapshot.printer_model,
-                message=self._snapshot.message,
-            )
-            self._render()
+            self._show_cached_home_status()
             return
         if action is UiAction.SELECT:
-            if self._snapshot.mode in {UiMode.NEEDS_PAIRING, UiMode.PAIR_FAILED}:
-                if (
-                    self._snapshot.mode is UiMode.NEEDS_PAIRING
-                    or self._snapshot.selected_index == 0
-                ):
-                    await self._start_pairing()
-                else:
-                    await self.refresh_printer_status()
-            elif self._snapshot.mode is UiMode.PRINT_COMPLETE:
-                self._show_settings()
+            self._show_settings(page=SettingsPage.MAIN)
+
+    async def _handle_home_context_action(self) -> None:
+        """KEY3 performs its visible action; legacy PAIR inputs share it."""
+
+        if not self._config.sync.print_enabled:
+            await self._show_sync_pairing(return_home=True)
+            return
+        if self._snapshot.paired_printer is None:
+            if self._snapshot.mode is UiMode.ERROR:
+                await self.refresh_printer_status()
             else:
-                self._show_settings()
+                await self._start_pairing()
+            return
+        if self._snapshot.mode in {
+            UiMode.PRINTER_SEARCHING,
+            UiMode.PRINTER_OFFLINE,
+            UiMode.ERROR,
+            UiMode.PAIR_FAILED,
+        }:
+            await self._request_saved_printer_check()
+            return
+        if self._snapshot.mode is UiMode.NO_FILM:
+            self._show_help_dialog(
+                title="Printer status",
+                body=(
+                    "Load a new film pack and turn on the Printer. "
+                    "Film status updates automatically."
+                ),
+            )
+            return
+        self._show_settings(page=SettingsPage.POST)
+
+    async def _request_saved_printer_check(self) -> None:
+        """Wake the saved-Printer poll without re-pairing or resending a photo.
+
+        Requests coalesce, reuse any in-flight bounded provider check, and
+        retain the normal minimum scan gap so repeated taps cannot hammer BLE.
+        """
+
+        if self._snapshot.paired_printer is None:
+            return
+        self._snapshot = replace(
+            self._snapshot,
+            mode=UiMode.PRINTER_SEARCHING,
+            message=None,
+            printer_status_message="Searching Printer",
+            print_title=None,
+            print_detail=None,
+            print_progress_percent=None,
+        )
+        self._render()
+        self._printer_check_requested.set()
+        if self._status_task is None or self._status_task.done():
+            await self._schedule_printer_status_refresh()
+        LOGGER.info("ui.printer_check_requested")
 
     def _visible_keys_for_page(self, page: SettingsPage) -> tuple[SettingKey, ...]:
         """Return the settings rows actually shown for ``page``.
@@ -1556,6 +1790,9 @@ class BridgeUi:
             settings_rows=self._settings_rows(),
             settings_message=message,
             adjustments_profile=_AdjProf.from_config(self._config.adjustments),
+            look_name=self._settings_row_for_key(SettingKey.ADJUST_PRESET, "").value,
+            workflow_label=workflow_label(self._config.workflow.auto_print_delay_s),
+            correction_saturation=self._config.correction.saturation,
         )
         self._render()
 
@@ -1682,6 +1919,17 @@ class BridgeUi:
     def _dismiss_help_dialog(self) -> None:
         previous_mode = self._previous_mode_before_dialog or UiMode.SETTINGS
         previous_page = self._previous_page_before_dialog or self._settings_page
+        if previous_mode in {
+            UiMode.READY,
+            UiMode.NO_FILM,
+            UiMode.VALIDATION,
+            UiMode.NEEDS_PAIRING,
+            UiMode.PRINTER_SEARCHING,
+            UiMode.PRINTER_OFFLINE,
+        }:
+            # Status can change behind read-only home guidance (for example,
+            # a film reload). Return to current readiness, not its old mode.
+            previous_mode = self._cached_home_mode()
         self._snapshot = replace(
             self._snapshot,
             mode=previous_mode,
@@ -1732,18 +1980,24 @@ class BridgeUi:
         LOGGER.error("ui.unknown_confirmation_action_key key=%s", action_key)
 
     async def _handle_settings_action(self, action: UiAction) -> None:
-        if self._settings_operation_pending:
+        if self._settings_operation_pending and action not in {UiAction.HELP, UiAction.PAIR}:
             self._show_settings("Please wait")
             return
         if self._settings_picker_key is not None:
             await self._handle_setting_picker_action(action)
             return
         if action in {UiAction.HELP, UiAction.PAIR}:
-            if self._settings_page is SettingsPage.MAIN:
-                self._show_settings("KEY1 opens category")
-                return
             keys = self._visible_keys_for_page(self._settings_page)
-            self._show_settings(self._settings_row_help(keys[self._snapshot.selected_index]))
+            key = keys[self._snapshot.selected_index]
+            self._show_help_dialog(
+                title=self._snapshot.settings_rows[self._snapshot.selected_index].label,
+                body=(
+                    "KEY1 opens category. KEY2 returns. Joystick selects a row."
+                    if self._settings_page is SettingsPage.MAIN
+                    and key is not SettingKey.SYNC_DESTINATION
+                    else self._settings_row_help(key)
+                ),
+            )
             return
         if action in {UiAction.BACK, UiAction.LEFT}:
             if self._settings_page is SettingsPage.MAIN:
@@ -1907,7 +2161,7 @@ class BridgeUi:
                 # "press KEY1 to do nothing" (plan 037 polish #3).
                 hint = ""
             elif is_user:
-                hint = "KEY1 load · K3 hold edit"
+                hint = "KEY1 load · Right manage"
             else:
                 hint = "KEY1 load"
             rows.append(
@@ -1970,6 +2224,8 @@ class BridgeUi:
     def _adjustment_current_value(self, key: SettingKey) -> int:
         """Read the current config integer value for a colour-axis key."""
         adj = self._config.adjustments
+        if key is SettingKey.CORRECTION_SATURATION:
+            return self._config.correction.saturation
         if key is SettingKey.ADJUST_SATURATION:
             return adj.saturation
         if key is SettingKey.ADJUST_EXPOSURE:
@@ -1985,6 +2241,10 @@ class BridgeUi:
     def _apply_adjustment_value(self, key: SettingKey, value: int) -> BridgeConfig:
         """Return a new BridgeConfig with the given axis set to ``value``."""
         adj = self._config.adjustments
+        if key is SettingKey.CORRECTION_SATURATION:
+            return replace(
+                self._config, correction=replace(self._config.correction, saturation=value)
+            )
         if key is SettingKey.ADJUST_SATURATION:
             new_adj = replace(adj, saturation=value)
         elif key is SettingKey.ADJUST_EXPOSURE:
@@ -2028,6 +2288,11 @@ class BridgeUi:
             adjustment_edit_value=original,
             adjustment_edit_original=original,
             adjustments_profile=self._adjustment_edit_preview_profile(key, original),
+            correction_saturation=(
+                original
+                if key is SettingKey.CORRECTION_SATURATION
+                else self._config.correction.saturation
+            ),
         )
         self._render()
 
@@ -2086,6 +2351,11 @@ class BridgeUi:
             self._snapshot,
             adjustment_edit_value=new_value,
             adjustments_profile=self._adjustment_edit_preview_profile(key, new_value),
+            correction_saturation=(
+                new_value
+                if key is SettingKey.CORRECTION_SATURATION
+                else self._config.correction.saturation
+            ),
             settings_message=None,
         )
         self._render()
@@ -2107,6 +2377,11 @@ class BridgeUi:
             self._snapshot,
             adjustment_edit_value=new_value,
             adjustments_profile=self._adjustment_edit_preview_profile(key, new_value),
+            correction_saturation=(
+                new_value
+                if key is SettingKey.CORRECTION_SATURATION
+                else self._config.correction.saturation
+            ),
             settings_message=None,
         )
         self._render()
@@ -2130,17 +2405,27 @@ class BridgeUi:
             new_config = self._apply_adjustment_value(key, working_value)
         self._adjustment_edit_key = None
         # Restore cursor before _set_config so _show_settings picks it up.
-        self._settings_indices[SettingsPage.ADJUSTMENTS] = row_index
-        self._settings_page = SettingsPage.ADJUSTMENTS
+        page = (
+            SettingsPage.CORRECTION
+            if key is SettingKey.CORRECTION_SATURATION
+            else SettingsPage.ADJUSTMENTS
+        )
+        self._settings_indices[page] = row_index
+        self._settings_page = page
         # _set_config → _show_settings("Saved") returns mode=SETTINGS with message.
         await self._set_config(new_config, message="Saved")
 
     def _cancel_adjustment_edit(self) -> None:
         """Cancel edit mode: discard changes and return to Adjustments list."""
         row_index = self._adjustment_edit_row_index
+        page = (
+            SettingsPage.CORRECTION
+            if self._adjustment_edit_key is SettingKey.CORRECTION_SATURATION
+            else SettingsPage.ADJUSTMENTS
+        )
         self._adjustment_edit_key = None
-        self._settings_indices[SettingsPage.ADJUSTMENTS] = row_index
-        self._show_settings(page=SettingsPage.ADJUSTMENTS)
+        self._settings_indices[page] = row_index
+        self._show_settings(page=page)
 
     async def _handle_adjustment_edit_action(self, action: UiAction) -> None:
         """Handle key input while in ADJUSTMENT_EDIT mode."""
@@ -2227,11 +2512,12 @@ class BridgeUi:
             self._show_settings()
             return
         if action in {UiAction.HELP, UiAction.PAIR}:
-            if key is SettingKey.ADJUST_PRESET:
-                # Long-press on a preset picker row.
-                self._handle_preset_long_press(options)
-            else:
-                self._show_setting_picker(key, setting_help_text(key))
+            self._show_help_dialog(
+                title=self._setting_picker_title(key), body=setting_help_text(key)
+            )
+            return
+        if action is UiAction.RIGHT and key is SettingKey.ADJUST_PRESET:
+            self._handle_preset_long_press(options)
             return
         if action in {UiAction.UP, UiAction.DOWN, UiAction.RIGHT}:
             direction = -1 if action is UiAction.UP else 1
@@ -2310,7 +2596,7 @@ class BridgeUi:
         await self._set_config(new_config, message="Saved")
 
     def _handle_preset_long_press(self, options: tuple[SettingOption, ...]) -> None:
-        """Handle a long-press (HELP/PAIR) on the preset picker.
+        """Handle explicit joystick-RIGHT management on the preset picker.
 
         Built-in presets: show an informational toast.
         User custom slots: open the overwrite/delete sub-menu.
@@ -2320,7 +2606,10 @@ class BridgeUi:
         focused = options[self._snapshot.selected_index]
         slot = str(focused.value)
         if slot in BUILTIN_PRESET_NAMES:
-            self._show_preset_picker("Built-in preset cannot be edited")
+            self._snapshot = replace(
+                self._snapshot, settings_message="Built-in preset cannot be edited"
+            )
+            self._render()
             return
         # User custom slot — open sub-menu.
         self._preset_submenu_slot = slot
@@ -2348,6 +2637,11 @@ class BridgeUi:
             self._show_preset_picker()
             return
 
+        if action in {UiAction.HELP, UiAction.PAIR}:
+            self._show_help_dialog(
+                title=slot, body="Overwrite saves the current look. Delete removes the saved look."
+            )
+            return
         if action in {UiAction.UP, UiAction.DOWN}:
             direction = -1 if action is UiAction.UP else 1
             new_index = (self._snapshot.selected_index + direction) % 2
@@ -2498,38 +2792,15 @@ class BridgeUi:
             font_size=config.ui.font_size.value,
             language=config.ui.language.value,
             appearance=config.ui.appearance.value,
+            look_name=self._settings_row_for_key(SettingKey.ADJUST_PRESET, "").value,
+            workflow_label=workflow_label(config.workflow.auto_print_delay_s),
+            correction_saturation=config.correction.saturation,
             sync_destination=config.sync.destination.value,
             sync_service_state=self._sync_service_state,
         )
         if show_settings:
             self._show_settings(message)
         return True
-
-    async def _switch_delivery_mode(self) -> None:
-        """Toggle Print/Sync from a home surface and persist immediately."""
-
-        destination = (
-            SyncDestination.PRINT
-            if self._config.sync.destination is SyncDestination.IPHONE
-            else SyncDestination.IPHONE
-        )
-        updated = replace(
-            self._config,
-            sync=replace(self._config.sync, destination=destination),
-        )
-        LOGGER.info(
-            "ui.delivery_mode_switch previous=%s destination=%s",
-            self._config.sync.destination.value,
-            destination.value,
-        )
-        if not await self._set_config(
-            updated,
-            message=f"{sync_destination_label(destination)} mode",
-            show_settings=False,
-        ):
-            return
-        self._settings_picker_key = None
-        await self.refresh_printer_status()
 
     def _notify_ftp_config_applied(self, config: FtpConfig) -> None:
         if self._ftp_config_applied_callback is None:
@@ -2862,7 +3133,7 @@ class BridgeUi:
                     break
 
             if free_slot is None:
-                self._show_settings("6 custom slots full · K3 hold a slot to overwrite")
+                self._show_settings("6 custom slots full · Right on a slot to overwrite")
                 return
 
             target_slot = free_slot
@@ -3016,6 +3287,10 @@ class BridgeUi:
         return self._setting_picker_rows(key, self._snapshot.selected_index)
 
     def _settings_row_for_key(self, key: SettingKey, printer_name: str) -> SettingsRow:
+        if key is SettingKey.UNLOCK_THREE_PRESSES:
+            return SettingsRow(
+                "Unlock: 3 presses", bool_label(self._config.ui.unlock_requires_three_presses)
+            )
         if key is SettingKey.OPEN_PRINT:
             return SettingsRow("Print", "")
         if key is SettingKey.OPEN_NETWORK:
@@ -3027,12 +3302,20 @@ class BridgeUi:
         # Print hub → sub-page opener rows (plan 035 phase 1).
         if key is SettingKey.OPEN_PRINTER:
             return SettingsRow("Printer", "")
+        if key is SettingKey.OPEN_POST:
+            return SettingsRow("Post", "")
+        if key is SettingKey.OPEN_CORRECTION:
+            return SettingsRow("Correction", "")
+        if key is SettingKey.CORRECTION_SATURATION:
+            return SettingsRow(
+                "Saturation", _format_adjustment_value(key, self._config.correction.saturation)
+            )
         if key is SettingKey.OPEN_ADJUSTMENTS:
-            return SettingsRow("Adjustments", "")
+            return SettingsRow("Looks", "")
         if key is SettingKey.OPEN_TRANSFORM:
             return SettingsRow("Transform", "")
         if key is SettingKey.OPEN_AUTO_PRINT:
-            return SettingsRow("Auto print", "")
+            return SettingsRow("Workflow", "")
         if key is SettingKey.ADJUSTMENTS_COMING_SOON:
             return SettingsRow("Coming soon", "")
         if key is SettingKey.ADJUST_PRESET:
@@ -3161,8 +3444,8 @@ class BridgeUi:
             return SettingsRow("JPEG quality", str(self._config.printer.quality))
         if key is SettingKey.AUTO_PRINT_DELAY:
             return SettingsRow(
-                "Auto print",
-                seconds_label(self._config.workflow.auto_print_delay_s),
+                "Confirmation",
+                workflow_label(self._config.workflow.auto_print_delay_s),
             )
         if key is SettingKey.ALLOW_PRINT_WITHOUT_FILM:
             return SettingsRow(
@@ -3268,10 +3551,12 @@ class BridgeUi:
             return "How to fit photo to film aspect"
         if key is SettingKey.JPEG_QUALITY:
             return f"Trade-off: higher = bigger, sharper. Current: {config.printer.quality}"
+        if key is SettingKey.CORRECTION_SATURATION:
+            return "Printer output compensation; independent of Looks"
         if key is SettingKey.AUTO_PRINT_DELAY:
             value = config.workflow.auto_print_delay_s
             if value == 5.0:
-                return "Editable preview, then prints"
+                return "Review starts when preview is ready. Editing waits for KEY1."
             if value == 0.0:
                 return "Prints immediately on upload"
             return "Waits for K1 press"
@@ -3407,7 +3692,7 @@ class BridgeUi:
         if self._snapshot.paired_printer is None:
             return "not selected"
         message = self._snapshot.printer_status_message
-        if self._snapshot.mode is UiMode.PRINTER_OFFLINE or message == "Hold K3 to re-pair":
+        if self._snapshot.mode is UiMode.PRINTER_OFFLINE or message == "Check saved Printer":
             return "offline"
         if self._snapshot.mode is UiMode.PRINTER_SEARCHING:
             return "searching"
@@ -3576,7 +3861,10 @@ class BridgeUi:
                 if self._sync_service_state == "unavailable"
                 else "Sync starting · try again"
             )
-            self._show_settings(message)
+            if return_home:
+                self._show_help_dialog(title="iPhone status", body=message)
+            else:
+                self._show_settings(message)
             return
 
         from instantlink_bridge.sync.server import load_or_create_sync_token
@@ -3585,7 +3873,10 @@ class BridgeUi:
             token = await asyncio.to_thread(load_or_create_sync_token, self._config.sync.token_path)
         except Exception:
             LOGGER.exception("ui.sync_pairing_token_failed path=%s", self._config.sync.token_path)
-            self._show_settings("Pairing unavailable")
+            if return_home:
+                self._show_help_dialog(title="iPhone status", body="Pairing unavailable")
+            else:
+                self._show_settings("Pairing unavailable")
             return
         payload = self._sync_pairing_payload(token)
         self._cancel_image_reset()
@@ -3870,7 +4161,7 @@ class BridgeUi:
             bridge_power_status=self._bridge_power_status,
             bridge_power_alert=self._bridge_power_alert,
             bridge_external_power=self._bridge_external_power,
-            idle_stage=self._idle_stage.value,
+            idle_stage=self._effective_idle_stage().value,
             message=message,
             allow_print_without_film=self._config.workflow.allow_print_without_film,
             settings_title=settings_title,
@@ -3881,6 +4172,9 @@ class BridgeUi:
             appearance=self._config.ui.appearance.value,
             image_queue_depth=self._image_queue_depth,
             adjustments_profile=adjustments_profile,
+            look_name=self._settings_row_for_key(SettingKey.ADJUST_PRESET, "").value,
+            workflow_label=workflow_label(self._config.workflow.auto_print_delay_s),
+            correction_saturation=self._config.correction.saturation,
             sync_destination=self._config.sync.destination.value,
             sync_outbox_depth=self._sync_outbox_depth,
             sync_client_recent=self._sync_client_is_recent(),
@@ -3913,6 +4207,8 @@ class BridgeUi:
                 attempt_start = self._monotonic()
                 was_online = self._printer_was_online
                 online = await self._refresh_printer_status_in_background(printer, generation)
+                # A tap during this check is already serviced by its result.
+                self._printer_check_requested.clear()
                 # Proactive always-fresh-pair (docs/plans/031): the connected->failed edge is the
                 # moment the link is known down (the fetch above closed any cached FFI session on
                 # failure). The Instax wipes its own pairing on power-off, so the persisted BlueZ
@@ -3931,11 +4227,15 @@ class BridgeUi:
                 # match or ran the full window — and so a fast-failing connect does not hammer.
                 # A MIN_OFFLINE_SEARCH_GAP_S floor guarantees the asyncio event loop gets at least
                 # a couple of seconds to render the LCD and service other tasks even when the
-                # configured period equals the scan window (the default 5s case).
+                # configured period equals the scan window (the optional 5s setting).
                 period = self._printer_status_retry_delay(online)
                 self._printer_was_online = online
                 elapsed = self._monotonic() - attempt_start
-                await asyncio.sleep(max(MIN_OFFLINE_SEARCH_GAP_S, period - elapsed))
+                await asyncio.sleep(MIN_OFFLINE_SEARCH_GAP_S)
+                remaining = period - elapsed - MIN_OFFLINE_SEARCH_GAP_S
+                if remaining > 0:
+                    with suppress(TimeoutError):
+                        await asyncio.wait_for(self._printer_check_requested.wait(), remaining)
         finally:
             await self._status_provider.close()
 
@@ -4060,7 +4360,7 @@ class BridgeUi:
             return 0.0
         # The configured search interval is the total cadence PERIOD between attempt starts; the
         # poll loop subtracts the time each attempt consumed. The minimum 5s option equals the scan
-        # window, so attempts run back-to-back (continuous). No exponential backoff, so a
+        # window, so attempts run with only the minimum gap. No exponential backoff, so a
         # powered-off printer keeps being searched at the chosen period (Settings > Search rate).
         return self._config.printer.search_interval_s
 
@@ -4360,7 +4660,7 @@ class BridgeUi:
         else:
             mode = (
                 UiMode.PRINTER_OFFLINE
-                if message == "Hold K3 to re-pair"
+                if message == "Check saved Printer"
                 else UiMode.PRINTER_SEARCHING
             )
         if self._snapshot.mode is UiMode.SETTINGS:
@@ -4438,7 +4738,7 @@ class BridgeUi:
         Always-auto-scanning means we keep the printer in ``PRINTER_SEARCHING`` and never flip to
         the manual re-pair screen on a transient miss. Only a genuinely absent or stale selected
         printer (per bridge policy, the one case re-pair is appropriate) escalates to the manual
-        ``Hold K3 to re-pair`` affordance. A printer that is visible but failing to connect stays
+        ``Check saved Printer`` affordance. A printer that is visible but failing to connect stays
         searching and, past the threshold, surfaces ``Restart printer`` recovery copy.
         """
 
@@ -4449,7 +4749,7 @@ class BridgeUi:
                 return "Restart printer"
             return printer_unavailable_message(exc)
         if exc.stale_selected and self._printer_status_misses >= OFFLINE_MESSAGE_AFTER_MISSES:
-            return "Hold K3 to re-pair"
+            return "Check saved Printer"
         return printer_unavailable_message(exc)
 
     def _connect_failure_message(self, default: str) -> str:
@@ -4526,8 +4826,21 @@ class BridgeUi:
 
     async def _run_network_status(self) -> None:
         while True:
-            await asyncio.sleep(USB_STATUS_POLL_S)
+            await asyncio.sleep(self._network_status_poll_interval_s())
             await self._refresh_network_status()
+
+    def _network_status_poll_interval_s(self) -> float:
+        # `detect_camera_link_health` launches `ip` for both interfaces. Once
+        # the LCD is dark, a five-second status refresh is enough to track
+        # connectivity without launching those subprocesses every second.
+        # FTP itself remains event-driven and accepts uploads immediately.
+        if self._effective_idle_stage() in {
+            IdleStage.SCREEN_OFF,
+            IdleStage.DEEP_IDLE,
+            IdleStage.POWEROFF,
+        }:
+            return NETWORK_STATUS_SCREEN_OFF_POLL_S
+        return USB_STATUS_POLL_S
 
     async def _run_about_page_refresh(self) -> None:
         """Rebuild the About page rows periodically so live stats tick.
@@ -4642,7 +4955,8 @@ class BridgeUi:
 
     def _render(self) -> None:
         try:
-            state = derive_status(self._snapshot)
+            visible = self._visible_snapshot()
+            state = derive_status(visible)
             # Push every render to the sink (headless GPIO LED, future surfaces).
             # The sink itself dedups; calling it on every render keeps the LCD
             # bar and the side channel in lockstep with no extra plumbing.
@@ -4654,15 +4968,27 @@ class BridgeUi:
             # idle screens. The breath-bypass branch was removed when the
             # pill switched to solid colour: with no time-based tint, an
             # equal snapshot really does render to an identical frame.
-            if self._snapshot == self._last_rendered_snapshot:
+            if visible.idle_stage in {
+                IdleStage.SCREEN_OFF.value,
+                IdleStage.DEEP_IDLE.value,
+                IdleStage.POWEROFF.value,
+            }:
                 return
-            self._display.render(self._snapshot)
-            self._last_rendered_snapshot = self._snapshot
+            if visible == self._last_rendered_snapshot:
+                return
+            self._display.render(visible)
+            self._last_rendered_snapshot = visible
             self._last_status_state = state
         except Exception:
             LOGGER.exception("ui.render_failed mode=%s", self._snapshot.mode)
 
     def _set_display_idle_stage(self, stage: IdleStage) -> None:
+        if stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}:
+            self._last_rendered_snapshot = None
+        if self._cpu_performance is not None:
+            self._cpu_performance.set_power_saving(
+                stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}
+            )
         set_idle_stage = getattr(self._display, "set_idle_stage", None)
         if set_idle_stage is None:
             return

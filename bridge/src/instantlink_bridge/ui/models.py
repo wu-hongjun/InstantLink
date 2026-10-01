@@ -15,6 +15,7 @@ class UiMode(StrEnum):
     """Top-level LCD modes."""
 
     BOOTING = "booting"
+    UNLOCKING = "unlocking"
     SETTINGS = "settings"
     ADJUSTMENT_EDIT = "adjustment_edit"
     NEEDS_PAIRING = "needs_pairing"
@@ -57,6 +58,14 @@ class UiAction(StrEnum):
     BACK = "back"
     HELP = "help"
     PAIR = "pair"
+
+
+@dataclass(frozen=True, slots=True)
+class UiButtonPress:
+    """An abstract action with its physical button identity for unlock protection."""
+
+    action: UiAction
+    button_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +133,8 @@ class UiSnapshot:
     bridge_power_alert: str = "unknown"
     bridge_external_power: bool | None = None
     idle_stage: str = "active"
+    unlock_presses: int = 0
+    unlock_required: int = 3
     message: str | None = None
     print_title: str | None = None
     print_detail: str | None = None
@@ -143,6 +154,9 @@ class UiSnapshot:
     appearance: str = "light"
     image_queue_depth: int = 0
     adjustments_profile: AdjustmentProfile | None = None
+    look_name: str = "Default"
+    workflow_label: str = "Review 5s"
+    correction_saturation: int = 0
     # Focused adjustment-edit mode state (plan 036 phase 4).
     # adjustment_edit_key: which axis is being edited (None outside ADJUSTMENT_EDIT).
     # Use str to avoid circular import with settings.SettingKey.

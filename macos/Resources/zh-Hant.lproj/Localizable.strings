@@ -427,3 +427,18 @@
 "filter_instant" = "即時";
 "filter_process" = "處理";
 "filter_transfer" = "轉印";
+
+/* Bridge Printer output correction */
+"Printer correction" = "印表機校正";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "獨立於風格補償相紙的色彩表現。零表示不改變輸出。";
+
+/* Bridge workflow and recovery */
+"Workflow" = "工作流程";
+"Confirmation" = "確認方式";
+"Confirm each" = "逐張確認";
+"Print immediately" = "立即列印";
+"Review 5s" = "預覽5秒";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "要重新啟動 Bridge，請使用 X306 電源按鈕關閉後再開啟。";
+
+/* Bridge unlock protection */
+"Press same button 3 times to unlock" = "連按同一按鍵3次解鎖";

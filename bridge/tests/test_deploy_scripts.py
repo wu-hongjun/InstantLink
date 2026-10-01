@@ -20,6 +20,19 @@ def run(
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     merged_env = os.environ.copy()
+    # Git passes repository-local variables into hooks. This helper creates
+    # temporary repositories, so inherited paths would make `git add` operate
+    # against the parent worktree's index when pytest runs in pre-commit.
+    for name in (
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_PREFIX",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    ):
+        merged_env.pop(name, None)
     if env is not None:
         merged_env.update(env)
     return subprocess.run(

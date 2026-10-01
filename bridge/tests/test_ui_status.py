@@ -770,7 +770,7 @@ async def test_ble_status_provider_marks_selected_stale_after_repeated_absent_sc
     assert second_exc.value.consecutive_misses == 2
     assert second_exc.value.stale_selected
     assert second_exc.value.retry_after_s == 5.0
-    assert second_exc.value.status_message == "Hold K3 to re-pair"
+    assert second_exc.value.status_message == "Check saved Printer"
     assert third_exc.value.reason is PrinterStatusUnavailableReason.STALE_SELECTED
     assert third_exc.value.consecutive_misses == 3
     assert third_exc.value.retry_after_s == 5.0

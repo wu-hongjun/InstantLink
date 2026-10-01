@@ -175,9 +175,11 @@ install_private_file config/NetworkManager/instantlink-bridge-hotspot.nmconnecti
   /etc/NetworkManager/system-connections/InstantLink Bridge-Hotspot.nmconnection
 install_executable scripts/wifi-mode.sh /usr/local/sbin/instantlink-bridge-wifi-mode
 install_executable scripts/poweroff.sh /usr/local/sbin/instantlink-bridge-poweroff
+install_executable scripts/cpu-mode.sh /usr/local/sbin/instantlink-bridge-cpu-mode
 install_executable scripts/usb-gadget-mode.sh /usr/local/sbin/instantlink-bridge-usb-gadget-mode
 install_sudoers_file config/sudoers-instantlink-bridge-wifi /etc/sudoers.d/instantlink-bridge-wifi
 install_sudoers_file config/sudoers-instantlink-bridge-power /etc/sudoers.d/instantlink-bridge-power
+install_sudoers_file config/sudoers-instantlink-bridge-cpu /etc/sudoers.d/instantlink-bridge-cpu
 install_file udev/99-instantlink-bridge-usb0.rules /etc/udev/rules.d/99-instantlink-bridge-usb0.rules
 install_file udev/60-instantlink-bridge-backlight.rules /etc/udev/rules.d/60-instantlink-bridge-backlight.rules
 install_file udev/61-instantlink-bridge-fb1.rules /etc/udev/rules.d/61-instantlink-bridge-fb1.rules

@@ -322,6 +322,8 @@ for relative in (
     "scripts/boot-diet.sh",
     "scripts/wifi-mode.sh",
     "scripts/poweroff.sh",
+    "scripts/cpu-mode.sh",
+    "config/sudoers-instantlink-bridge-cpu",
 ):
     path = root / relative
     if path.exists():

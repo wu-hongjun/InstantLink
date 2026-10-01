@@ -13,6 +13,7 @@ struct BridgeConfig: Codable, Equatable, Hashable, Sendable {
     var power: BridgePowerConfig
     var ui: BridgeUIConfig
     var adjustments: BridgeAdjustmentsConfig
+    var correction: BridgeCorrectionConfig = .defaults
 
     enum CodingKeys: String, CodingKey {
         case ftp
@@ -21,6 +22,7 @@ struct BridgeConfig: Codable, Equatable, Hashable, Sendable {
         case power
         case ui
         case adjustments
+        case correction
     }
 
     static let defaults = BridgeConfig(
@@ -31,9 +33,42 @@ struct BridgeConfig: Codable, Equatable, Hashable, Sendable {
         ui: .defaults,
         adjustments: .defaults
     )
+
+    init(
+        ftp: BridgeFTPConfig, printer: BridgePrinterConfig,
+        workflow: BridgeWorkflowConfig, power: BridgePowerConfig,
+        ui: BridgeUIConfig, adjustments: BridgeAdjustmentsConfig,
+        correction: BridgeCorrectionConfig = .defaults
+    ) {
+        self.ftp = ftp
+        self.printer = printer
+        self.workflow = workflow
+        self.power = power
+        self.ui = ui
+        self.adjustments = adjustments
+        self.correction = correction
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        ftp = try container.decode(BridgeFTPConfig.self, forKey: .ftp)
+        printer = try container.decode(BridgePrinterConfig.self, forKey: .printer)
+        workflow = try container.decode(BridgeWorkflowConfig.self, forKey: .workflow)
+        power = try container.decode(BridgePowerConfig.self, forKey: .power)
+        ui = try container.decode(BridgeUIConfig.self, forKey: .ui)
+        adjustments = try container.decode(BridgeAdjustmentsConfig.self, forKey: .adjustments)
+        correction = try container.decodeIfPresent(BridgeCorrectionConfig.self, forKey: .correction)
+            ?? .defaults
+    }
 }
 
 // MARK: - Child structs
+
+struct BridgeCorrectionConfig: Codable, Equatable, Hashable, Sendable {
+    var saturation: Int
+
+    static let defaults = BridgeCorrectionConfig(saturation: 0)
+}
 
 struct BridgeFTPConfig: Codable, Equatable, Hashable, Sendable {
     /// Configured FTP receive mode.
@@ -169,11 +204,13 @@ struct BridgeUIConfig: Codable, Equatable, Hashable, Sendable {
     var appearance: BridgeUIAppearance
     var fontSize: BridgeFontSize
     var language: BridgeUILanguage
+    var unlockRequiresThreePresses: Bool = true
 
     enum CodingKeys: String, CodingKey {
         case appearance
         case fontSize = "font_size"
         case language
+        case unlockRequiresThreePresses = "unlock_requires_three_presses"
     }
 
     static let defaults = BridgeUIConfig(
@@ -181,6 +218,26 @@ struct BridgeUIConfig: Codable, Equatable, Hashable, Sendable {
         fontSize: .medium,
         language: .english
     )
+
+    init(
+        appearance: BridgeUIAppearance, fontSize: BridgeFontSize,
+        language: BridgeUILanguage, unlockRequiresThreePresses: Bool = true
+    ) {
+        self.appearance = appearance
+        self.fontSize = fontSize
+        self.language = language
+        self.unlockRequiresThreePresses = unlockRequiresThreePresses
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        appearance = try container.decode(BridgeUIAppearance.self, forKey: .appearance)
+        fontSize = try container.decode(BridgeFontSize.self, forKey: .fontSize)
+        language = try container.decode(BridgeUILanguage.self, forKey: .language)
+        unlockRequiresThreePresses = container.contains(.unlockRequiresThreePresses)
+            ? try container.decode(Bool.self, forKey: .unlockRequiresThreePresses)
+            : true
+    }
 }
 
 struct BridgeFirmwareUpdateConfig: Codable, Equatable, Hashable, Sendable {
@@ -325,8 +382,10 @@ enum BridgeConfigField: String, CaseIterable, Hashable, Sendable {
     case uiAppearance = "ui.appearance"
     case uiFontSize = "ui.font_size"
     case uiLanguage = "ui.language"
+    case uiUnlockRequiresThreePresses = "ui.unlock_requires_three_presses"
 
     case adjustmentsPreset = "adjustments.preset"
+    case correctionSaturation = "correction.saturation"
     case adjustmentsSaturation = "adjustments.saturation"
     case adjustmentsExposure = "adjustments.exposure"
     case adjustmentsSharpness = "adjustments.sharpness"

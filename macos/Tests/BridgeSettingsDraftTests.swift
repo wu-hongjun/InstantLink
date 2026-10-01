@@ -2,6 +2,38 @@ import Foundation
 
 @MainActor
 final class BridgeSettingsDraftTests {
+    func testUnlockGuardDiffAndRevertPreserveOtherSettings() throws {
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+        try expectTrue(draft.draft?.ui.unlockRequiresThreePresses == true)
+        draft.draft?.ui.unlockRequiresThreePresses = false
+        try expectTrue(draft.validate())
+        let ui = try unwrap(draft.diff()["ui"] as? [String: Any])
+        try expectEqual(ui["unlock_requires_three_presses"] as? Bool, false)
+        try expectEqual(ui.count, 1)
+        try expectFalse(draft.diff().keys.contains("power"))
+        try expectFalse(draft.diff().keys.contains("correction"))
+        draft.revert()
+        try expectTrue(draft.draft?.ui.unlockRequiresThreePresses == true)
+        try expectFalse(draft.isDirty)
+    }
+
+    func testCorrectionDiffValidationAndRevertPreserveLook() throws {
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+        draft.draft?.correction.saturation = 20
+        try expectTrue(draft.validate())
+        let correction = try unwrap(draft.diff()["correction"] as? [String: Any])
+        try expectEqual(correction["saturation"] as? Int, 20)
+        try expectFalse(draft.diff().keys.contains("adjustments"))
+        draft.draft?.correction.saturation = 101
+        try expectFalse(draft.validate())
+        try expectTrue(draft.fieldErrors.keys.contains(.correctionSaturation))
+        draft.revert()
+        try expectEqual(draft.draft?.correction.saturation, 0)
+        try expectFalse(draft.isDirty)
+    }
+
     func testLoadSetsDraftEqualToCanonical() throws {
         let draft = BridgeSettingsDraft()
         draft.load(.defaults)

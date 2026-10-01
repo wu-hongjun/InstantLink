@@ -62,6 +62,51 @@ _ZH_HANS: dict[str, str] = {
     "Attention": "注意",
     "Connected": "已连接",
     "Disconnected": "已断开",
+    "KEY3 Tool": "KEY3 工具",
+    "Press KEY3 to pair": "按KEY3配对",
+    "KEY1 load · Right manage": "KEY1载入 · 按右管理",
+    "6 custom slots full · Right on a slot to manage": "预设已满 · 按右管理槽位",
+    "KEY1 apply. Joystick RIGHT manages a saved slot. KEY2 returns.": (
+        "KEY1载入；按右管理已保存槽位；KEY2返回。"
+    ),
+    "Up/Dn ±10": "上/下 ±10",
+    "Up/Dn ±25": "上/下 ±25",
+    "Same button once more": "同一按键再按一次",
+    "Same button twice more": "同一按键再按两次",
+    "Locked": "已锁定",
+    "Press same button": "连按同一按键",
+    "3 times to unlock": "3次以解锁",
+    "{n} more presses": "再按{n}次",
+    "Unlock: 3 presses": "按三次解锁",
+    "Press the same button three times to avoid accidental unlock": "连按同一按键三次以防误触",
+    "Post": "后期",
+    "Looks": "风格",
+    "Correction": "校正",
+    "Look": "风格",
+    "Workflow": "流程",
+    "Confirmation": "打印确认",
+    "Printer battery": "打印机电量",
+    "Print complete": "打印完成",
+    "Photo sent to Printer": "照片已发送至打印机",
+    "Complete": "完成",
+    "Confirm each": "逐张确认",
+    "Print immediately": "立即打印",
+    "Review 5s": "预览5秒",
+    "KEY1 Settings": "KEY1 设置",
+    "KEY3 Post": "KEY3 后期",
+    "KEY3 Check": "KEY3 检查",
+    "KEY3 Reconnect": "KEY3 重连",
+    "KEY3 Status": "KEY3 状态",
+    "iPhone active": "iPhone 活跃",
+    "Check saved Printer": "检查已保存打印机",
+    "Looks and independent Printer correction": "风格与独立打印机校正",
+    "Compensate film colour without changing Looks": "补偿相纸色彩，保留风格",
+    "Printer output compensation; independent of Looks": "打印色彩补偿，独立于风格",
+    "Creative colour and overlay adjustments": "创意色彩与叠加调整",
+    "Review starts when preview is ready. Editing waits for KEY1.": (
+        "预览就绪后开始倒计时；编辑后按KEY1打印。"
+    ),
+    "Save as preset. Right on a saved slot to manage.": "保存为预设。在已保存槽位按右管理。",
     "Ejecting": "退出中",
     "Error": "错误",
     "Finding": "查找中",
@@ -154,8 +199,7 @@ _ZH_HANS: dict[str, str] = {
     "KEY1 Setting": "KEY1 设置",
     "KEY2 Back": "KEY2 返回",
     "KEY2 Cancel": "KEY2 取消",
-    "KEY2 Print": "KEY2 打印",
-    "KEY2 Sync": "KEY2 同步",
+    "KEY2 Lock": "KEY2 锁屏",
     "KEY3 Network": "KEY3 网络",
     "KEY3 Help": "KEY3 帮助",
     "KEY3 Retry": "KEY3 重试",
@@ -167,7 +211,7 @@ _ZH_HANS: dict[str, str] = {
     "Up/Dn Edit": "上/下 编辑",
     "Up/Dn ±10 · K1 OK · K2/Left Cancel": "上下 ±10 · K1 确认 · K2/左 取消",
     # Footer of the read-only help-dialog overlay (any key dismisses).
-    "Press any key": "按任意键关闭",
+    "Press any key to close": "按任意键关闭",
     "KEY1 commit · KEY2 cancel": "按键1 确认 · 按键2 取消",
     # --- Body action / status copy ---------------------------------------
     "Blocked": "已阻止",
@@ -611,8 +655,8 @@ _ZH_HANS: dict[str, str] = {
     "Print or sync received photos · Pair iPhone: Network page": (
         "打印或同步接收的照片 · 配对 iPhone：网络页"
     ),
-    "Show a QR code to pair your iPhone · Mode: Print page": (
-        "显示二维码以配对 iPhone · 模式：打印页"
+    "Show a QR code to pair your iPhone · Mode: Settings page": (
+        "显示二维码以配对 iPhone · 模式：设置页"
     ),
     # --- iPhone sync pass 3 (plan 051 P3.11): token rotation ---------------
     # "Reset sync token" mirrors the Reset-credentials vocabulary (还原);

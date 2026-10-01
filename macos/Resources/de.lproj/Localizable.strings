@@ -426,3 +426,18 @@
 "filter_instant" = "Instant";
 "filter_process" = "Process";
 "filter_transfer" = "Transfer";
+
+/* Bridge Printer output correction */
+"Printer correction" = "Druckerkorrektur";
+"Compensate for film output independently of your Look. Zero leaves output unchanged." = "Filmausgabe unabhängig vom Look korrigieren. Null lässt die Ausgabe unverändert.";
+
+/* Bridge workflow and recovery */
+"Workflow" = "Ablauf";
+"Confirmation" = "Bestätigung";
+"Confirm each" = "Jedes Bild bestätigen";
+"Print immediately" = "Sofort drucken";
+"Review 5s" = "5 s prüfen";
+"To restart the Bridge, turn it off and back on with the X306 power button." = "Zum Neustarten die Bridge mit der X306-Einschalttaste aus- und wieder einschalten.";
+
+/* Bridge unlock protection */
+"Press same button 3 times to unlock" = "Zum Entsperren dieselbe Taste dreimal drücken";

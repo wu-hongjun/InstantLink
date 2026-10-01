@@ -32,7 +32,7 @@ input queue as GPIO — there is no separate phone UI. Gated by `[sync] remote_u
 |   to print           |
 | Waiting for upload   |
 | Next photo in order  |
-| K1 Set · K2 Sync · K3 Net |
+| K1 Set · K2 Lock · K3 Post |
 +----------------------+
 ```
 
@@ -90,12 +90,12 @@ state and concise causes:
 | FTP: no FTP Wi-Fi    |
 | Printer ready 8/10   |
 | Choose FTP Wi-Fi     |
-| K1 Set · K2 Sync · K3 Net |
+| K1 Set · K2 Lock · K3 Post |
 +----------------------+
 ```
 
 The renderer keeps these lines short for the 240x240 LCD. Common causes are `Choose FTP Wi-Fi`,
-`Wait for printer status`, `No printer signal`, `Hold KEY3 to re-pair`, `Replace film
+`Wait for printer status`, `No printer signal`, `Check saved Printer`, `Replace film
 pack`, and `Find printer`.
 
 ### No Film
@@ -107,7 +107,7 @@ pack`, and `Find printer`.
 |    No film left      |
 | Type: Mini           |
 | Replace film pack    |
-| K1 Set · K2 Sync · K3 Pair|
+| K1 Set · K2 Lock · K3 Status|
 +----------------------+
 ```
 
@@ -138,7 +138,7 @@ in Sync mode.
   mid-scan. Exit returns to the originating Settings page, or to the home surface when opened
   with KEY3 from home.
 - **Dead-port guard (plan 051 P2.3).** The action never shows a QR encoding a port nothing
-  listens on. Instead it degrades to a Settings toast: `Switch to Sync mode first` in Print mode,
+  listens on. Instead it opens context help from home, or a Settings message: `Switch to Sync mode first` in Print mode,
   `Sync starting · try again` during the async-start window, and
   `Sync failed · restart bridge` after a failed start.
 - **Idle exemption (plan 051 P2.5).** Aiming a phone at the LCD generates no GPIO/FTP events,
@@ -204,79 +204,38 @@ Shown at boot when no `INSTAX-*` printer is selected.
 ```text
 +----------------------+
 | Settings             |
-| Up/Dn KEY1/Right 1/5|
-| > Printer           >|
-|   Upload FTP        >|
+|                1/4  |
+| > Print             >|
 |   Network           >|
-|   Print             >|
 |   System            >|
+|   Mode         Print |
 | KEY2 Back KEY3 Help  |
 +----------------------+
 ```
 
-Settings is sectioned so upload FTP setup is not mixed with bridge diagnostics:
+Settings has four root entries: **Print**, **Network**, **System**, and **Mode** (Print/Sync).
+It remains accessible without a saved Printer through KEY1.
 
-- Main Settings has five sections: `Printer`, `Upload FTP`, `Network`, `Print`, and `System`. It
-  does not run actions directly and does not show per-row explanatory text. The top line stays
-  `Choose category`; KEY3 on this page shows only page-level help.
-- `Printer`: `Find printer`, `Forget printer`, `Printer type`, and `Keepalive`.
-- `Upload FTP`: starts with hotspot-first setup values, then an explicit `FTP mode` selector. This
-  page shows `Bridge Wi-Fi`, `Wi-Fi PIN`, `FTP host`, `FTP user`, and `FTP pass` so the normal
-  bridge Wi-Fi setup does not require jumping to Network.
-- `Network`: read-only connection diagnostics for `Bridge FTP`, `Bridge Wi-Fi`, `Wi-Fi PIN`,
-  `Bluetooth`, `Same Wi-Fi adv`, and `USB IP`.
-- `Print`: `Auto print`, `Image fit`, `JPEG quality`, and `No-film test`.
-- `System`: `Device ID`, `App version`, `Python`, `BlueZ`, `OS`, and `Refresh status`.
+- Print opens **Post**, **Transform**, **Workflow**, and **Printer**, in that order.
+- Post contains **Looks** (creative colour, saved presets and overlays) and **Correction**
+  (independent Printer saturation compensation). Changing or saving a Look leaves Correction
+  untouched. Correction defaults to zero for compatibility, accepts −100..+100%, and previews
+  the combined result while editing. It applies after the Look at print resolution before JPEG
+  encoding. Sync mode preserves the original camera file.
+- Transform controls image fit and JPEG quality.
+- Workflow names its three stored choices **Confirm each** (`None`), **Print immediately** (`0s`),
+  and **Review 5s** (`5s`). No-film test, Keepalive, and Search rate appear below Advanced.
+- Printer contains Serial, Pair/Re-pair, Reconnect, Forget, and Printer type. Re-pair/Forget use
+  explicit confirmation. Reconnect checks the saved device without changing its identity.
+- Network combines camera Hotspot/Client setup, Wi-Fi/FTP credentials, diagnostics, iPhone
+  pairing, and credential/token reset controls. USB is for administration only.
+- System contains appearance, language, text size, power behavior, `Unlock: 3 presses`, and About
+  diagnostics.
 
-Setting details:
-
-- `Find printer` starts BLE scan immediately. It does not open a second confirmation screen.
-- Adjustable rows open an explicit option list. RIGHT/KEY1 enters the list, UP/DOWN/RIGHT moves the
-  highlighted option, KEY1 selects it, KEY2/LEFT backs out, and KEY3 shows help. Options are never
-  changed by blind cycling on the parent row.
-- `FTP mode`: opens `Bridge Wi-Fi` and `Same Wi-Fi adv` options. `Bridge Wi-Fi` is the normal
-  portable mode and should remain the default. `Same Wi-Fi adv` is for an existing saved Wi-Fi
-  profile.
-- `Bridge Wi-Fi`: switches `wlan0` into bridge AP mode. The sender FTP profile should use
-  host `192.168.8.1`.
-- `Same Wi-Fi adv`: switches `wlan0` back to a saved NetworkManager same-network Wi-Fi profile.
-  Entering a new SSID/password remains a shell/provisioning task.
-- If legacy builds still expose `Auto` or `Wired`, do not document them as v1 upload setup choices.
-  USB gadget networking is admin/SSH/diagnostics only.
-- `Wi-Fi PIN`: shows the 8-digit numeric WPA password from `/etc/InstantLinkBridge/hotspot.psk` on
-  the Upload FTP page.
-- `FTP user` / `FTP pass`: shows the credentials configured in `/etc/InstantLinkBridge/config.toml`.
-  Provisioning generates an 8-digit numeric FTP password when the default sentinel is present.
-- `Printer type`: opens `Auto`, `Mini`, `Mini 3`, `Square`, and `Wide`.
-- `Image fit`: opens `Auto`, `Crop`, `Contain`, and `Stretch`. `Auto` center-crops Square
-  prints, rotates landscape sources for Mini, and rotates portrait sources for Wide before
-  center-cropping.
-- `JPEG quality`: opens `70`, `75`, `80`, `85`, `90`, `95`, and `100`.
-- `Auto print`: opens `Off`, `0s`, and `5s`.
-- `No-film test`: opens `Off` and `On`. When `On`, InstantLink Bridge will still send a print job
-  if the printer reports `0/10` film, for protocol and UX testing without a loaded pack.
-- `Keepalive`: opens `5s`, `10s`, `15s`, and `30s`.
-- `Mode` (Print page, plan 055): opens `Print` and `Sync`. Its KEY3 help cross-references the
-  pairing row: `Print or sync received photos · Pair iPhone: Network page`.
-- `iPhone pairing` (Network page, plan 050): action row that opens the SYNC_PAIRING QR screen
-  (see template above). Its KEY3 help cross-references the destination row:
-  `Show a QR code to pair your iPhone · Mode: Print page`.
-- `Reset sync token` (Network page, plan 051 P3.11): destructive action row next to
-  `Reset credentials` (escalation order — token first, full credentials last). Two-press
-  confirm, then rotates the pairing token and restarts the sync service; see "Token rotation"
-  in the SYNC_PAIRING section. KEY3 help: `New pairing token; unpairs all iPhones`.
-- `Forget printer`: removes the selected printer record and matching BlueZ cache entries.
-- `Device ID`: shows a stable `IB-XXXXXXXX` identifier derived from the target machine ID for
-  support and multi-device setup.
-- `App version`, `Python`, `BlueZ`, and `OS`: show local software versions without requiring
-  network access.
-- Settings rows use visual affordances for categories, read-only info, actions, and adjustable
-  values. The footer always exposes `KEY2 Back` in Settings alongside `Up/Dn`, `KEY1/Right`, and
-  `KEY3 Help`.
-- The row counter sits on the prompt line so it cannot overlap the last visible settings row.
-- KEY3 shows one-line help for the focused Settings row inside subpages. Example: `JPEG quality`
-  help says `JPEG quality sent to printer`. On the first Settings page, KEY3 shows page-level help
-  rather than category-specific descriptions.
+RIGHT/KEY1 opens a category or editor. UP/DOWN selects a row; KEY2/LEFT backs out. KEY3 opens
+context help in a dialog that preserves the selected row, picker and working edit. In saved
+preset pickers, RIGHT opens management; KEY3 remains Help. Settings titles reserve measured
+space for the status dot and counter at all text sizes.
 
 Setting changes persist to `/etc/InstantLinkBridge/config.toml`. Wi-Fi mode switching runs through the
 root-owned helper `/usr/local/sbin/instantlink-bridge-wifi-mode`, limited by
@@ -294,85 +253,71 @@ The UI is designed for the Waveshare 240x240 square LCD HAT, not touch input.
 | Joystick right | 26 | Select focused item / next value |
 | Joystick press | 13 | Select focused item / next value |
 | KEY1 | 21 | Open settings / select focused item |
-| KEY2 | 20 | Switch Print/Sync on home; back/cancel elsewhere |
-| KEY3 press | 16 | Help for selected Settings row |
-| KEY3 hold | 16 | Start pair-printer scan outside Settings |
+| KEY2 | 20 | Lock the LCD on home; back/cancel elsewhere |
+| KEY3 press/hold | 16 | The visible context action; Help in Settings |
 
-Delivery-mode footer semantics on the home/status surfaces (plan 055):
+Home/status footer semantics (plans 059/060):
 
-- Print mode reads `KEY1 Setting · KEY2 Sync · KEY3 Network` when paired, or exposes Printer
-  pairing on KEY1/KEY3 when unpaired.
-- Sync mode reads `KEY1 Setting · KEY2 Print · KEY3 iPhone`. Both short **and** hold KEY3 open
-  the iPhone pairing QR — a Printer scan would be pointless with printing disabled.
-  BACK from a QR opened this way returns to the home surface, not Settings.
+| Surface | KEY1 | KEY2 | KEY3 |
+| --- | --- | --- | --- |
+| Print ready | Settings | Lock | Post |
+| Saved Printer offline | Settings | Lock | Reconnect |
+| No saved Printer | Settings | Lock | Pair |
+| No film | Settings | Lock | Status/reload guidance |
+| Sync home | Settings | Lock | iPhone status/QR |
+| Settings | Select | Back | Help |
+| Preview | Print | Cancel | Tool |
+| Printing | — | Lock | — |
+| Error | Settings | Back | Check (never resend a photo) |
 
-Boot behavior:
+Short and long KEY3 presses perform the same visible action. Manual lock and automatic screen-off
+use the same unlock sequence described below. Locking during a print does not cancel it: active
+preparation and printing stay boosted, then the idle dark Bridge returns to its lowest supported
+clock.
+Home identifies **Printer battery**, current Look, workflow and any nonzero Correction; camera
+setup addresses are in Network. X306 has no charge telemetry, so no Bridge charge is invented.
+The completion screen says **Print complete**, without claiming a separate ejection stage.
 
-- If a selected printer is stored in `/var/lib/InstantLinkBridge/printer.json`, show `Searching` while
-  reconnecting and show `READY` / `Ready to print` only after a successful status read and at
-  least one FTP receive path is visible.
-- When the model is known, show the printer type as `Mini`, `Mini Link 3`, `Square`, or `Wide`.
-- USB gadget status belongs under System or Network diagnostics and must not count as upload
-  readiness. Direct Sony USB-LAN is unsupported for v1 based on the Mac-proven cable/camera retest.
-- Show FTP receive modes distinctly and consistently as `Bridge Wi-Fi` and `Same Wi-Fi adv`.
-- `Bridge FTP 192.168.8.1` means the bridge hotspot is active. `Bridge Wi-Fi off 192.168.8.1`
-  means the bridge hotspot profile exists but is not the active wireless mode.
-- If `[ftp].preferred_wifi_host` is configured, the LCD still shows the actual Same Wi-Fi adv
-  address. If the actual Same Wi-Fi adv address differs from the preferred reservation, draw that line as a
-  warning.
-- If neither Bridge Wi-Fi nor Same Wi-Fi adv is visible, show `WAITING`, `FTP: no FTP Wi-Fi`,
-  and `Choose FTP Wi-Fi` even when the printer is ready.
-- Avoid redundant status copy on the 240x240 display. Compact live state belongs in the top bar.
-  Body content should be action-oriented, such as `Turn printer on` or `Replace film pack`, not a
-  second copy of `Printer offline`.
-- If FTP receive is ready but the printer status is not current or film is unknown, show `WAITING`;
-  do not show `Ready to print`.
-- If film remaining is `0` and `No-film test` is `Off`, show `NO FILM` / `No film left`; do not
-  show `READY`. If `No-film test` is `On`, show ready/test status and allow print transfer.
-  Sync mode ignores film entirely and stays on its own READY/validation surface.
-- If no printer is found, show `Printer setup` with `Find printer` selected.
-- If a selected printer is not currently connected, run short Bleak discovery passes until it
-  appears. The default pass is 0.5 seconds with a 1 second retry pause, and the slower BlueZ
-  fallback is throttled to roughly every 10 seconds so ordinary retry cadence stays close to one
-  BLE scan per second. Keep the search screen and show scanner
-  diagnostics such as `No printer signal`, `Saw other Instax`, or `Printer seen; connecting`;
-  do not call it offline while discovery is still active.
-- Transient missed advertisements and connect timeouts stay on the search/connect screen; do not label the printer offline from a single failed BLE status attempt.
-- If the selected printer is visible but repeatedly disconnects during GATT/service discovery, show
-  `Restart printer` rather than asking the user to re-pair. Re-pairing only helps when the selected
-  printer is absent or stale.
-- When the selected printer is online, keep the BLE connection open and refresh printer status
-  every 10 s by default. This keeps film/battery current and intentionally prevents the printer
-  from idling to sleep while InstantLink Bridge is running.
-- Printer selection is direct: select `Find printer`, press KEY1 on the no-printer screen, or hold
-  KEY3 from a status screen to start scanning immediately.
-- From `Pair failed`, KEY1 and KEY3 retry scanning directly; KEY2 backs out.
-- KEY1 / joystick press opens Settings from normal status screens.
-- In Settings subpages, KEY3 shows help for the selected row. On the first Settings page, KEY3
-  shows page-level help. Holding KEY3 there still shows help and does not start pairing.
-- During BLE scan, show a full-screen printer setup status and keep FTP running in the background.
-- During BLE scan, KEY2 cancels the active printer scan and returns to the boot status
-  screen.
-- On FTP upload, show the configured `AWAITING_CONFIRM` cancel window, then explicit `PRINTING`
-  stages, then `PRINT_COMPLETE`; KEY2 cancels before the BLE print starts.
-- Power idle stages are based on time since last activity: dim the LCD at 30 s, turn the screen off
-  at 90 s, and enter deep idle at 5 min. Optional 10 min poweroff is user-configurable under
-  Settings > System and defaults off on X306. GPIO input, camera Wi-Fi changes, FTP uploads,
-  settings navigation, print workflow activity, and authenticated iPhone sync requests reset the
-  timer and wake the UI to the active brightness state. The SYNC_PAIRING QR screen is exempt from
-  dim/screen-off escalations (plan 051 P2.5, see the iPhone Pairing template); the
-  critical-battery shutdown is not.
+### Lock and unlock
 
-### Error Template
+`Settings → System → Unlock: 3 presses` defaults to **On**. It applies to manual lock and
+automatic screen-off, on both physical and virtual LCDs.
 
-```text
-+----------------------+
-|       ERROR          |
-| BLE not found        |
-| Hold KEY3 to pair    |
-| retrying in 5s       |
-+----------------------+
-```
+1. Press any key once. The LCD wakes to an **Unlock** prompt showing **1 / 3**. The Bridge starts
+   its awake CPU tier immediately and prepares the current interface.
+2. Release and press the **same button** again. The prompt shows **2 / 3**.
+3. Release and press that **same button** a third consecutive time. The latest underlying
+   screen appears. The three successful presses are consumed by unlocking; the next input
+   performs its normal labelled action.
+
+Pressing a different button resets progress to **1 / 3** for the newly pressed button. Every
+accepted press, of the same or a different button, restarts the 10-second inactivity timer. KEY1 and the joystick press are distinct physical buttons,
+even though both normally select an item. Joystick directions are also distinct controls.
+Holding a button counts once; it must be released before another press.
+
+Virtual input uses the same controller: repeat the same `action` three consecutive times. A
+different action resets progress to **1 / 3**. Remote actions have their own control identities
+and do not combine with physical-button presses, so switching input surfaces resets the count.
+
+An incomplete sequence expires after **10 seconds without an accepted button press**. The timer
+restarts after every accepted press, including one that resets the count to a different button.
+FTP, status updates and screen polling do not extend it. On expiry the LCD becomes dark again
+and the count resets. The idle CPU returns to its lowest supported
+clock; active image preparation or printing retains its performance boost. FTP, Sync and
+Printer reconnect continue throughout, and live status or photo changes are retained behind
+the unlock prompt.
+
+Set the toggle to **Off** to use one-press wake: the first input wakes and repaints the latest
+screen without executing a normal action. The next input performs the labelled action.
+
+Wake must repaint even when the current screen is unchanged. Screen-off can clear the physical
+framebuffer, so matching an old cached active snapshot is insufficient evidence that its pixels
+are still present. The display restores its retained frame before enabling the backlight, and
+the controller invalidates its render cache for dark stages and unlock transitions. See
+[plan 061](../../docs/plans/061-bridge-three-press-unlock.md) for the original wake fix and
+[plan 062](../../docs/plans/062-bridge-same-button-unlock.md) for the consecutive-button rule.
+[Plan 063](../../docs/plans/063-bridge-unlock-inactivity-timeout.md) records the corrected inactivity
+timeout and its validation requirements.
 
 ## State Diagram
 
@@ -397,9 +342,11 @@ stateDiagram-v2
 
 ## Auto-Print Timer
 
-- `Auto print = 0s`: skip preview and start printing immediately after FTP receive.
-- `Auto print = 5s`: render preview, allow edits, and auto-advance when the timer expires.
-- `Auto print = Off`: render preview and wait indefinitely for KEY1/joystick press to print.
+- **Print immediately**: skip preview and print after FTP receive.
+- **Review 5s**: start the five-second review after the preview appears. Editing or selecting a
+  tool switches that photo to manual confirmation; press KEY1 to print.
+- **Confirm each**: show a preview and wait for KEY1/joystick press to print.
+- Cancel interrupts preparation through the killable worker and releases the CPU boost promptly.
 - The LCD shows the preview image, `Print in N.Ns` for timed mode, and the active edit tool.
 - KEY3 cycles edit tools: `Zoom`, `Crop`, and `Rotate`.
 - In `Zoom`, joystick up/right zooms in and down/left zooms out.

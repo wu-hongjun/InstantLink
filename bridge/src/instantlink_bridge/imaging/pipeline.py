@@ -16,6 +16,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from instantlink_bridge.ble.models import PrinterModel, spec_for
 from instantlink_bridge.imaging.postprocess import (
     AdjustmentProfile,
+    CorrectionProfile,
+    apply_correction,
     apply_post_fit_adjustments,
     apply_pre_fit_adjustments,
 )
@@ -122,6 +124,7 @@ def prepare_for_instax(
     quality: int = 100,
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
 ) -> PreparedImage:
     """Convert a camera still image into a model-specific Instax JPEG."""
 
@@ -132,6 +135,7 @@ def prepare_for_instax(
         quality=quality,
         edit=edit,
         adjustments=adjustments,
+        correction=correction,
         apply_model_flip=True,
     )
 
@@ -144,6 +148,7 @@ def prepare_for_instantlink_backend(
     quality: int = 100,
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
 ) -> PreparedImage:
     """Prepare an edited, model-sized JPEG for InstantLink to send.
 
@@ -160,6 +165,7 @@ def prepare_for_instantlink_backend(
         quality=quality,
         edit=edit,
         adjustments=adjustments,
+        correction=correction,
         apply_model_flip=False,
     )
 
@@ -172,6 +178,7 @@ def _prepare_for_model(
     quality: int,
     edit: PrintEdit | None,
     adjustments: AdjustmentProfile | None,
+    correction: CorrectionProfile | None,
     apply_model_flip: bool,
 ) -> PreparedImage:
     """Prepare a source image for the given printer model.
@@ -182,15 +189,15 @@ def _prepare_for_model(
     2. ``Image.draft`` hint for JPEG sources
     3. ``ImageOps.exif_transpose`` — correct camera orientation
     4. ``convert("RGB")`` — normalise colour space
-    5. ``apply_pre_fit_adjustments`` — sharpness / vignette / overlays, which
+    5. ``apply_pre_fit_adjustments`` — hue / sharpness / vignette / overlays, which
        must run at working resolution because they are convolutions or have
        frame-relative geometry
     6. ``_apply_print_edit`` — per-photo interactive rotate / zoom / offset
     7. ``_fit_image`` — model-aware crop / contain / stretch to print size
-    8. ``apply_post_fit_adjustments`` — hue / saturation / exposure. These are
-       pointwise, so they give the same pixels here as at working resolution
-       for a fraction of the cost (plan 056 T2.1)
-    9. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
+    8. ``apply_post_fit_adjustments`` — saturation / exposure at print resolution,
+       avoiding the cost of processing the full working image (plan 056 T2.1)
+    9. ``apply_correction`` — independent Printer output compensation at print size
+    10. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
     """
     spec = spec_for(model)
     working_size = _working_size_for_model(spec.width, spec.height)
@@ -221,6 +228,7 @@ def _prepare_for_model(
         # Pointwise colour work belongs at print resolution, not working
         # resolution: same pixels, ~17x less of them (plan 056 T2.1).
         fitted = apply_post_fit_adjustments(fitted, profile)
+        fitted = apply_correction(fitted, correction)
     except IMAGE_DECODE_ERRORS as error:
         raise UnsupportedImageError("unsupported or corrupt image file") from error
     finally:

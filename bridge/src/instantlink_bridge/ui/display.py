@@ -104,13 +104,13 @@ class FramebufferDisplay:
         self._path = path
         self._sysfs_root = sysfs_root
         self._size = _framebuffer_size(path, sysfs_root=sysfs_root)
+        self._last_frame: bytes | None = None
+        self._idle_stage = "active"
         self._framebuffer_name = _framebuffer_name(path, sysfs_root=sysfs_root)
-        self._backlight: _FramebufferBacklight | _GpioBacklight | None = (
-            _framebuffer_backlight(
-                path,
-                framebuffer_name=self._framebuffer_name,
-                sysfs_root=sysfs_root,
-            )
+        self._backlight: _FramebufferBacklight | _GpioBacklight | None = _framebuffer_backlight(
+            path,
+            framebuffer_name=self._framebuffer_name,
+            sysfs_root=sysfs_root,
         )
         if self._framebuffer_name == ST7789_FRAMEBUFFER_NAME and self._backlight is None:
             # The kernel ST7789v driver doesn't always expose a sysfs
@@ -132,7 +132,10 @@ class FramebufferDisplay:
         image = render_snapshot(snapshot)
         if image.size != self._size:
             image = image.resize(self._size)
-        self._path.write_bytes(_rgb565_bytes(image))
+        frame = _rgb565_bytes(image)
+        self._path.write_bytes(frame)
+        self._last_frame = frame
+        self._idle_stage = snapshot.idle_stage
         if snapshot.idle_stage in BACKLIGHT_OFF_STAGES:
             self._turn_backlight_off()
         else:
@@ -143,7 +146,13 @@ class FramebufferDisplay:
             self._path.write_bytes(_rgb565_bytes(Image.new("RGB", self._size, "black")))
             self._turn_backlight_off()
         else:
+            # Screen-off clears the kernel framebuffer, so enabling only the
+            # backlight would expose a blank panel when the UI dedups a frame.
+            # Restore pixels first; the controller can then render newer state.
+            if self._idle_stage in BACKLIGHT_OFF_STAGES and self._last_frame is not None:
+                self._path.write_bytes(self._last_frame)
             self._turn_backlight_on()
+        self._idle_stage = stage
 
     def close(self) -> None:
         return
@@ -275,9 +284,7 @@ class _GpioBacklight:
         try:
             device = OutputDevice(cls.BL_GPIO_PIN, active_high=True, initial_value=True)
         except Exception:
-            LOGGER.warning(
-                "ui.gpio_backlight_open_failed pin=%s", cls.BL_GPIO_PIN, exc_info=True
-            )
+            LOGGER.warning("ui.gpio_backlight_open_failed pin=%s", cls.BL_GPIO_PIN, exc_info=True)
             return None
         return cls(device)
 

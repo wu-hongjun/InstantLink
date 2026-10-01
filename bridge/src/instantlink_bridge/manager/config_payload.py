@@ -29,6 +29,7 @@ from instantlink_bridge.ble.models import PrinterModel, parse_printer_model
 from instantlink_bridge.config import (
     AdjustmentsConfig,
     BridgeConfig,
+    CorrectionConfig,
     DatestampFormat,
     FontSize,
     FtpConfig,
@@ -57,6 +58,7 @@ MASKED_PASSWORD = "__MASKED__"
 # diff applier rejects unknown top-level sections and unknown fields per
 # section to keep the contract additive-only.
 ALLOWED_FIELDS: dict[str, frozenset[str]] = {
+    "correction": frozenset({"saturation"}),
     "ftp": frozenset(
         {
             "mode",
@@ -90,6 +92,7 @@ ALLOWED_FIELDS: dict[str, frozenset[str]] = {
             "appearance",
             "font_size",
             "language",
+            "unlock_requires_three_presses",
         }
     ),
     "adjustments": frozenset(
@@ -143,6 +146,7 @@ def serialize_config(config: BridgeConfig) -> dict[str, Any]:
         "power": _serialize_power(config.power),
         "ui": _serialize_ui(config.ui),
         "adjustments": _serialize_adjustments(config.adjustments),
+        "correction": {"saturation": config.correction.saturation},
         "sync": _serialize_sync(config.sync),
     }
 
@@ -161,6 +165,7 @@ def apply_config_diff(current: BridgeConfig, diff: dict[str, Any]) -> BridgeConf
     new_power = current.power
     new_ui = current.ui
     new_adjustments = current.adjustments
+    new_correction = current.correction
     new_sync = current.sync
 
     for section, body in diff.items():
@@ -210,6 +215,12 @@ def apply_config_diff(current: BridgeConfig, diff: dict[str, Any]) -> BridgeConf
         )
     if "sync" in diff:
         new_sync = _apply_sync(current.sync, cast(dict[str, Any], diff["sync"]), field_errors)
+    if "correction" in diff:
+        raw = diff["correction"].get("saturation", current.correction.saturation)
+        try:
+            new_correction = CorrectionConfig(saturation=raw)
+        except ValueError as exc:
+            field_errors["correction.saturation"] = str(exc)
 
     if field_errors:
         raise ConfigValidationError(field_errors)
@@ -222,6 +233,7 @@ def apply_config_diff(current: BridgeConfig, diff: dict[str, Any]) -> BridgeConf
         firmware=current.firmware,
         ui=new_ui,
         adjustments=new_adjustments,
+        correction=new_correction,
         sync=new_sync,
     )
 
@@ -274,6 +286,7 @@ def _serialize_ui(ui: UiConfig) -> dict[str, Any]:
         "appearance": ui.appearance.value,
         "font_size": ui.font_size.value,
         "language": ui.language.value,
+        "unlock_requires_three_presses": ui.unlock_requires_three_presses,
     }
 
 
@@ -472,6 +485,7 @@ def _apply_ui(
     appearance: UiAppearance = current.appearance
     font_size: FontSize = current.font_size
     language: UiLanguage = current.language
+    unlock_requires_three_presses = current.unlock_requires_three_presses
     if "appearance" in body:
         try:
             appearance = parse_ui_appearance(body["appearance"])
@@ -487,7 +501,19 @@ def _apply_ui(
             language = parse_ui_language(body["language"])
         except ValueError as exc:
             field_errors["ui.language"] = str(exc)
-    return replace(current, appearance=appearance, font_size=font_size, language=language)
+    if "unlock_requires_three_presses" in body:
+        value = body["unlock_requires_three_presses"]
+        if not isinstance(value, bool):
+            field_errors["ui.unlock_requires_three_presses"] = "Must be a boolean."
+        else:
+            unlock_requires_three_presses = value
+    return replace(
+        current,
+        appearance=appearance,
+        font_size=font_size,
+        language=language,
+        unlock_requires_three_presses=unlock_requires_three_presses,
+    )
 
 
 def _apply_sync(

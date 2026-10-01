@@ -41,6 +41,7 @@ nav:
       - Protocol: reference/protocol.md
       - FFI: reference/ffi.md
       - Bridge Sync API: reference/sync-api.md
+      - Bridge Management: reference/bridge-management.md
   - Development:
       - Architecture: development/architecture.md
       - Bridge Firmware Release: development/bridge-firmware-release.md

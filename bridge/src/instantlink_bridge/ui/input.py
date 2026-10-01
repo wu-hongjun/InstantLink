@@ -9,7 +9,7 @@ from contextlib import suppress
 from typing import Protocol, cast
 
 from instantlink_bridge.config import UiSurface
-from instantlink_bridge.ui.models import UiAction
+from instantlink_bridge.ui.models import UiAction, UiButtonPress
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class NullInput:
 
     def start(
         self,
-        queue: asyncio.Queue[UiAction],
+        queue: asyncio.Queue[UiAction | UiButtonPress],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         return
@@ -54,7 +54,7 @@ class GpioUiInput:
 
     def start(
         self,
-        queue: asyncio.Queue[UiAction],
+        queue: asyncio.Queue[UiAction | UiButtonPress],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         from gpiozero import Button, Device
@@ -74,30 +74,14 @@ class GpioUiInput:
         }
         for pin, action in action_pins.items():
             button = cast(_ButtonDevice, Button(pin, pull_up=True, bounce_time=0.05))
-            button.when_pressed = _enqueue(queue, loop, action)
+            button.when_pressed = _enqueue(queue, loop, action, button_id=f"gpio:{pin}")
             self._buttons.append(button)
 
-        pair_button = cast(
-            _ButtonDevice,
-            Button(KEY3, pull_up=True, bounce_time=0.05, hold_time=1.2),
-        )
-        pair_held = False
-
-        def hold_pair() -> None:
-            nonlocal pair_held
-            pair_held = True
-            _enqueue(queue, loop, UiAction.PAIR)()
-
-        def release_help() -> None:
-            nonlocal pair_held
-            if pair_held:
-                pair_held = False
-                return
-            _enqueue(queue, loop, UiAction.HELP)()
-
-        pair_button.when_held = hold_pair
-        pair_button.when_released = release_help
-        self._buttons.append(pair_button)
+        # KEY3 is a single contextual action on press. Holding it does not
+        # emit a second, hidden operation when the button is released.
+        context_button = cast(_ButtonDevice, Button(KEY3, pull_up=True, bounce_time=0.05))
+        context_button.when_pressed = _enqueue(queue, loop, UiAction.HELP, button_id=f"gpio:{KEY3}")
+        self._buttons.append(context_button)
 
     def close(self) -> None:
         for button in self._buttons:
@@ -124,16 +108,18 @@ def create_input(surface: UiSurface | None = None) -> GpioUiInput | NullInput:
 
 
 def _enqueue(
-    queue: asyncio.Queue[UiAction],
+    queue: asyncio.Queue[UiAction | UiButtonPress],
     loop: asyncio.AbstractEventLoop,
     action: UiAction,
+    *,
+    button_id: str,
 ) -> Callable[[], None]:
     def callback() -> None:
         LOGGER.debug("ui.input_press action=%s", action)
 
         def put_action() -> None:
             with suppress(asyncio.QueueFull):
-                queue.put_nowait(action)
+                queue.put_nowait(UiButtonPress(action, button_id))
 
         loop.call_soon_threadsafe(put_action)
 

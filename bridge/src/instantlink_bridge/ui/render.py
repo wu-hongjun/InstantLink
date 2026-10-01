@@ -1200,9 +1200,15 @@ def _unlocking(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    """Three deliberate presses wake the interface without activating a control."""
+    """Three presses of the same button wake without activating a control."""
     lang = snapshot.language
-    _center_lines(draw, [t("Press any key", lang)], 65, fonts["body"], theme.label_primary)
+    _center_lines(
+        draw,
+        [t("Press same button", lang), t("3 times to unlock", lang)],
+        58,
+        fonts["body"],
+        theme.label_primary,
+    )
     required = max(1, min(3, snapshot.unlock_required))
     count = max(0, min(required, snapshot.unlock_presses))
     for i in range(required):
@@ -1214,7 +1220,7 @@ def _unlocking(
             width=2,
         )
     remaining = required - count
-    text = t("Press once more" if remaining == 1 else "Press twice more", lang)
+    text = t("Same button once more" if remaining == 1 else "Same button twice more", lang)
     _center_lines(draw, [text], 158, fonts["small"], theme.label_secondary)
 
 

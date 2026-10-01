@@ -617,7 +617,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_OS_VERSION: "Operating system release",
     SettingKey.SYSTEM_POWER_INFO: "Bridge battery/UPS hardware (legacy)",
     SettingKey.SYSTEM_BATTERY_INFO: "Battery charge if telemetry available",
-    SettingKey.UNLOCK_THREE_PRESSES: "Require three presses to avoid accidental unlock",
+    SettingKey.UNLOCK_THREE_PRESSES: "Press the same button three times to avoid accidental unlock",
     SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
     SettingKey.FONT_SIZE: "Screen text size",
     SettingKey.LANGUAGE: "Screen language (中文 / English)",

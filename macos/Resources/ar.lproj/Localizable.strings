@@ -440,4 +440,4 @@
 "To restart the Bridge, turn it off and back on with the X306 power button." = "لإعادة تشغيل Bridge، أوقف تشغيله ثم شغّله مجددًا باستخدام زر الطاقة في X306.";
 
 /* Bridge unlock protection */
-"Require 3 presses to unlock" = "الضغط 3 مرات لفتح القفل";
+"Press same button 3 times to unlock" = "اضغط على الزر نفسه 3 مرات لفتح القفل";

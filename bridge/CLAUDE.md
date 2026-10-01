@@ -148,8 +148,8 @@ state in v1.
   fit, JPEG quality, auto-print mode/delay, keepalive, and the delivery mode
   (`[sync].destination` — `Mode`: Print / Sync on the main Settings page). KEY2 locks the LCD
   from normal home/status surfaces and during printing. `[ui].unlock_requires_three_presses`
-  defaults to `true` and is editable at System > `Unlock: 3 presses`; all three unlock inputs
-  are consumed. With it disabled, the first input wakes only. The remaining `[sync]`
+  defaults to `true` and is editable at System > `Unlock: 3 presses`; unlocking requires three
+  consecutive presses of the same physical button, and all unlock inputs are consumed. With it disabled, the first input wakes only. The remaining `[sync]`
   fields (`port`, `outbox_dir`, `outbox_budget_mb`, `token_path`, `remote_ui`) are
   provisioning-level and not editable from the LCD.
 - `workflow.allow_print_without_film` is a testing-only escape hatch exposed as `No-film test`.
@@ -187,8 +187,10 @@ state in v1.
   enter the print pipeline.
 - Home footer (plan 057): Print and Sync surfaces advertise `KEY2 Lock`. A deliberate screen lock
   persists through FTP and status activity, while the runtime and automatic Printer reconnect stay active.
-  The shared physical/virtual unlock prompt needs three presses by default; the first press wakes
-  the display and CPU, and an incomplete sequence expires after 10 seconds without cancelling work.
+  The shared physical/virtual unlock prompt needs three consecutive presses of the same control
+  by default. The first wakes the display and CPU; a different control resets progress to one.
+  An incomplete sequence expires 10 seconds after its first press, without extending the timer
+  on control changes or cancelling work.
   In Sync mode short and hold KEY3 both open the iPhone pairing QR, and BACK from that QR returns
   home.
 - iPhone pairing QR (plan 051): never show a QR while nothing listens on the sync port — the
@@ -269,8 +271,10 @@ state in v1.
 ## Current LCD interaction
 
 KEY1 opens Settings, including without a Printer. KEY2 locks home and printing screens. By default,
-any three presses unlock: the first shows a prompt and starts the awake CPU tier, the second
-advances the count, and the third restores the latest live screen. All three inputs are consumed.
+three consecutive presses of the same physical button unlock: the first shows a prompt and
+starts the awake CPU tier, the second advances the count, and the third restores the latest live
+screen. A different button starts a new count at one without extending the original timeout.
+Every input is consumed until unlocking completes.
 System > `Unlock: 3 presses` can disable the gate for one-press wake without a normal action.
 KEY3 uses its visible action: Post when ready, Reconnect when the saved
 Printer is offline, Pair when unpaired, and iPhone status/QR in Sync mode. Hold has no hidden
@@ -282,13 +286,16 @@ Looks; Sync originals are untouched. Review countdown begins after preview prepa
 editing switches to explicit confirmation. See docs/ux-flows.md and plan 060.
 
 
-### Unlock implementation requirements (plan 061)
+### Unlock implementation requirements (plans 061/062)
 
 - The incomplete sequence times out 10 seconds after its first press, returns to a dark locked
   display and resets its count. Idle CPU uses the lowest supported clock; active preparation or
   printing stays boosted. GPIO uses press-only callbacks with 50 ms debounce and no held-key
   or autorepeat events; holding a physical button counts once, with release required before
-  another press. The abstract input contract is unchanged.
+  another press. Preserve the physical GPIO identity: KEY1 and joystick SELECT must not count
+  as the same button. Remote actions use separate `remote:<action>` identities; a remote request
+  and a physical press cannot complete each other's sequence. The remote `{"action": ...}`
+  contract is unchanged, with three repeated identical actions required to unlock.
 - Keep unlock presentation separate from live operational state: `ui.snapshot` contains the
   shared `UNLOCKING` overlay, while `ui.live_snapshot` supplies FTP readiness and photo dispatch.
   Incoming status, photos, Settings and working edits must survive the overlay.

@@ -13,7 +13,7 @@ from instantlink_bridge.config import BridgeConfig, UiConfig
 from instantlink_bridge.power.monitor import IdleStage
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.input import NullInput
-from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiMode
+from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiButtonPress, UiMode
 from instantlink_bridge.ui.settings import SettingKey, SettingsPage
 
 
@@ -134,13 +134,18 @@ async def test_picker_help_preserves_focused_option_and_picker() -> None:
 
 
 @pytest.mark.asyncio
-async def test_gpio_key3_hold_has_no_hidden_pair_or_release_action(
+@pytest.mark.parametrize(
+    "pin,action", [(16, UiAction.HELP), (21, UiAction.SELECT), (13, UiAction.SELECT)]
+)
+async def test_gpio_button_emits_identity_without_hold_or_release_action(
     monkeypatch: pytest.MonkeyPatch,
+    pin: int,
+    action: UiAction,
 ) -> None:
     import sys
     from types import SimpleNamespace
 
-    from instantlink_bridge.ui.input import KEY3, GpioUiInput
+    from instantlink_bridge.ui.input import GpioUiInput
 
     buttons: dict[int, SimpleNamespace] = {}
 
@@ -162,14 +167,14 @@ async def test_gpio_key3_hold_has_no_hidden_pair_or_release_action(
     monkeypatch.setitem(
         sys.modules, "gpiozero.pins.lgpio", SimpleNamespace(LGPIOFactory=PinFactory)
     )
-    queue: asyncio.Queue[UiAction] = asyncio.Queue()
+    queue: asyncio.Queue[UiAction | UiButtonPress] = asyncio.Queue()
     gpio = GpioUiInput()
     gpio.start(queue, asyncio.get_running_loop())
-    buttons[KEY3].when_pressed()
+    buttons[pin].when_pressed()
     await asyncio.sleep(0)
-    assert queue.get_nowait() is UiAction.HELP
-    assert buttons[KEY3].when_held is None
-    assert buttons[KEY3].when_released is None
+    assert queue.get_nowait() == UiButtonPress(action, f"gpio:{pin}")
+    assert buttons[pin].when_held is None
+    assert buttons[pin].when_released is None
     assert queue.empty()
     gpio.close()
 
@@ -306,11 +311,67 @@ async def test_unlock_overlay_preserves_incoming_printer_and_photo_state() -> No
     await ui.printing_started(received)
     assert ui.snapshot.mode is UiMode.UNLOCKING
     assert ui._snapshot.mode is UiMode.PRINTING
-    await ui._handle_action(UiAction.BACK)
-    await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.HELP)
     assert ui.snapshot.mode is UiMode.PRINTING
     assert ui.snapshot.last_image_name == "photo.jpg"
     assert ui._unlock_timeout_task is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "first,second", [(UiAction.SELECT, UiAction.BACK), (UiAction.HELP, UiAction.UP)]
+)
+async def test_different_unlock_button_restarts_count_without_extending_timeout(
+    first: UiAction, second: UiAction
+) -> None:
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._lock_screen()
+    await ui._handle_action(first)
+    timer = ui._unlock_timeout_task
+    await ui._handle_action(first)
+    assert ui.snapshot.unlock_presses == 2
+    await ui._handle_action(second)
+    assert ui.snapshot.mode is UiMode.UNLOCKING
+    assert ui.snapshot.unlock_presses == 1
+    assert ui._unlock_timeout_task is timer
+    await ui._handle_action(second)
+    assert ui.snapshot.unlock_presses == 2
+    await ui._handle_action(second)
+    assert ui.snapshot.mode is UiMode.PRINTER_SEARCHING
+    assert ui._unlock_button_id is None
+    assert ui._unlock_timeout_task is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("other_button", ["gpio:13", "remote:select"])
+async def test_select_buttons_and_remote_select_remain_distinct_in_input_queue(
+    other_button: str,
+) -> None:
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._lock_screen()
+    runner = asyncio.create_task(ui._run_actions())
+    try:
+        for button in ("gpio:21", other_button, "gpio:21"):
+            if button == "remote:select":
+                assert ui.inject_action(UiAction.SELECT)
+            else:
+                ui._actions.put_nowait(UiButtonPress(UiAction.SELECT, button))
+        await asyncio.wait_for(ui._actions.join(), timeout=1)
+        assert ui.snapshot.mode is UiMode.UNLOCKING
+        assert ui.snapshot.unlock_presses == 1
+        for _ in range(2):
+            ui._actions.put_nowait(UiButtonPress(UiAction.SELECT, "gpio:21"))
+        await asyncio.wait_for(ui._actions.join(), timeout=1)
+        assert ui.snapshot.mode is UiMode.PRINTER_SEARCHING
+        ui._actions.put_nowait(UiButtonPress(UiAction.SELECT, "gpio:21"))
+        await asyncio.wait_for(ui._actions.join(), timeout=1)
+        assert ui.snapshot.mode is UiMode.SETTINGS
+    finally:
+        ui._cancel_unlock_timeout()
+        runner.cancel()
+        with suppress(asyncio.CancelledError):
+            await runner
 
 
 @pytest.mark.asyncio

@@ -336,7 +336,7 @@ struct BridgeSettingsView: View {
                     ]
                 )
                 Toggle(
-                    L("Require 3 presses to unlock"),
+                    L("Press same button 3 times to unlock"),
                     isOn: Binding(
                         get: { draft.draft?.ui.unlockRequiresThreePresses ?? true },
                         set: { newValue in
@@ -770,7 +770,7 @@ struct BridgeSettingsView: View {
         }
         if loaded.ui.unlockRequiresThreePresses != draft.ui.unlockRequiresThreePresses {
             rows.append(.init(
-                field: L("Require 3 presses to unlock"),
+                field: L("Press same button 3 times to unlock"),
                 before: loaded.ui.unlockRequiresThreePresses ? L("On") : L("Off"),
                 after: draft.ui.unlockRequiresThreePresses ? L("On") : L("Off")
             ))

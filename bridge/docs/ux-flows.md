@@ -285,13 +285,19 @@ automatic screen-off, on both physical and virtual LCDs.
 
 1. Press any key once. The LCD wakes to an **Unlock** prompt showing **1 / 3**. The Bridge starts
    its awake CPU tier immediately and prepares the current interface.
-2. Press any key again. The prompt shows **2 / 3**.
-3. Press any key a third time. The latest underlying screen appears. All three inputs are
-   consumed by unlocking; a fourth input performs its normal labelled action.
+2. Release and press the **same button** again. The prompt shows **2 / 3**.
+3. Release and press that **same button** a third consecutive time. The latest underlying
+   screen appears. The three successful presses are consumed by unlocking; the next input
+   performs its normal labelled action.
 
-The keys may be the same or different. Physical buttons must be released between presses;
-holding a key counts once. Virtual input uses the same controller and each accepted action is a
-press.
+Pressing a different button resets progress to **1 / 3** for the newly pressed button. It does
+not extend the existing timeout. KEY1 and the joystick press are distinct physical buttons,
+even though both normally select an item. Joystick directions are also distinct controls.
+Holding a button counts once; it must be released before another press.
+
+Virtual input uses the same controller: repeat the same `action` three consecutive times. A
+different action resets progress to **1 / 3**. Remote actions have their own control identities
+and do not combine with physical-button presses, so switching input surfaces resets the count.
 
 An incomplete sequence has a fixed **10-second timeout from the first press**. On expiry the
 LCD becomes dark again and the count resets. The idle CPU returns to its lowest supported
@@ -306,8 +312,9 @@ Wake must repaint even when the current screen is unchanged. Screen-off can clea
 framebuffer, so matching an old cached active snapshot is insufficient evidence that its pixels
 are still present. The display restores its retained frame before enabling the backlight, and
 the controller invalidates its render cache for dark stages and unlock transitions. See
-[plan 061](../../docs/plans/061-bridge-three-press-unlock.md) for the implementation and validation
-record.
+[plan 061](../../docs/plans/061-bridge-three-press-unlock.md) for the original wake fix and
+[plan 062](../../docs/plans/062-bridge-same-button-unlock.md) for the corrected consecutive-button
+rule and validation record.
 
 ## State Diagram
 

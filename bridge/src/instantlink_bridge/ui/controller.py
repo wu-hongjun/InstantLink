@@ -63,7 +63,14 @@ from instantlink_bridge.system_stats import (
 )
 from instantlink_bridge.ui.display import Display, create_display
 from instantlink_bridge.ui.input import GpioUiInput, NullInput, create_input
-from instantlink_bridge.ui.models import PairedPrinter, SettingsRow, UiAction, UiMode, UiSnapshot
+from instantlink_bridge.ui.models import (
+    PairedPrinter,
+    SettingsRow,
+    UiAction,
+    UiButtonPress,
+    UiMode,
+    UiSnapshot,
+)
 from instantlink_bridge.ui.pairing import (
     BluetoothctlPrinterPairer,
     InstantLinkPrinterSelector,
@@ -431,6 +438,7 @@ class BridgeUi:
         self._screen_locked = False
         self._unlocking = False
         self._unlock_presses = 0
+        self._unlock_button_id: str | None = None
         self._unlock_timeout_task: asyncio.Task[None] | None = None
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         self._battery_estimator = BatteryLifeEstimator()
@@ -474,7 +482,7 @@ class BridgeUi:
         # deferred behind SYNC_PAIRING (plan 051 pass 2). One event per QR
         # session — created on entry, set + cleared on exit.
         self._sync_pairing_exit_event: asyncio.Event | None = None
-        self._actions: asyncio.Queue[UiAction] = asyncio.Queue(maxsize=20)
+        self._actions: asyncio.Queue[UiAction | UiButtonPress] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
             printer_model=config.printer.model,
@@ -1422,7 +1430,9 @@ class BridgeUi:
 
     async def _run_actions(self) -> None:
         while True:
-            action = await self._actions.get()
+            press = await self._actions.get()
+            action = press.action if isinstance(press, UiButtonPress) else press
+            button_id = press.button_id if isinstance(press, UiButtonPress) else f"remote:{action}"
             try:
                 was_dark = self._screen_is_dark()
                 await self._record_power_activity()
@@ -1430,11 +1440,13 @@ class BridgeUi:
                 if loop.time() < self._ignore_actions_until:
                     LOGGER.info("ui.input_ignored action=%s reason=startup_settle", action)
                     continue
-                LOGGER.info("ui.input action=%s mode=%s", action, self._snapshot.mode)
+                LOGGER.info(
+                    "ui.input action=%s button=%s mode=%s", action, button_id, self._snapshot.mode
+                )
                 if was_dark:
-                    await self._begin_unlock()
+                    await self._begin_unlock(button_id)
                     continue
-                await self._handle_action(action)
+                await self._handle_action(action, button_id=button_id)
             finally:
                 self._actions.task_done()
 
@@ -1522,6 +1534,7 @@ class BridgeUi:
         self._cancel_unlock_timeout()
         self._unlocking = False
         self._unlock_presses = 0
+        self._unlock_button_id = None
         self._screen_locked = True
         self._snapshot = replace(self._snapshot, idle_stage=IdleStage.SCREEN_OFF.value)
         self._set_display_idle_stage(IdleStage.SCREEN_OFF)
@@ -1531,6 +1544,7 @@ class BridgeUi:
         self._cancel_unlock_timeout()
         self._unlocking = False
         self._unlock_presses = 0
+        self._unlock_button_id = None
         self._screen_locked = False
         self._idle_stage = IdleStage.ACTIVE
         self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
@@ -1547,13 +1561,14 @@ class BridgeUi:
         if task is not None:
             task.cancel()
 
-    async def _begin_unlock(self) -> None:
+    async def _begin_unlock(self, button_id: str) -> None:
         if not self._config.ui.unlock_requires_three_presses:
             self._unlock_screen()
             return
         self._screen_locked = True
         self._unlocking = True
         self._unlock_presses = 1
+        self._unlock_button_id = button_id
         self._snapshot = replace(self._snapshot, idle_stage=IdleStage.ACTIVE.value)
         self._set_display_idle_stage(IdleStage.ACTIVE)
         self._last_rendered_snapshot = None
@@ -1564,7 +1579,7 @@ class BridgeUi:
         # can complete unlocking. Normal services continue using the live state.
         if self._cpu_performance is not None:
             await self._cpu_performance.start()
-        LOGGER.info("ui.unlock_started presses=1 required=3")
+        LOGGER.info("ui.unlock_started button=%s presses=1 required=3", button_id)
 
     async def _expire_unlock_prompt(self) -> None:
         await asyncio.sleep(UNLOCK_TIMEOUT_S)
@@ -1573,8 +1588,15 @@ class BridgeUi:
             self._lock_screen()
             LOGGER.info("ui.unlock_expired")
 
-    def _advance_unlock(self) -> None:
-        self._unlock_presses += 1
+    def _advance_unlock(self, button_id: str) -> None:
+        if button_id == self._unlock_button_id:
+            self._unlock_presses += 1
+        else:
+            # Start a new sequence on the new button without extending the
+            # fixed wake window, so mixed presses cannot accidentally unlock.
+            self._unlock_button_id = button_id
+            self._unlock_presses = 1
+        LOGGER.info("ui.unlock_progress button=%s presses=%s", button_id, self._unlock_presses)
         if self._unlock_presses >= 3:
             self._unlock_screen()
             return
@@ -1600,14 +1622,15 @@ class BridgeUi:
             return
         await self._power_activity_callback()
 
-    async def _handle_action(self, action: UiAction) -> None:
+    async def _handle_action(self, action: UiAction, *, button_id: str | None = None) -> None:
+        button_id = button_id if button_id is not None else f"remote:{action}"
         if self._unlocking:
-            self._advance_unlock()
+            self._advance_unlock(button_id)
             return
         if self._screen_is_dark():
             # Every dark screen consumes the first action, including direct
             # abstract input. Capture darkness before activity in the queue loop.
-            await self._begin_unlock()
+            await self._begin_unlock(button_id)
             return
         if self._snapshot.mode is UiMode.CONFIRMATION_DIALOG:
             await self._handle_confirmation_dialog_action(action)

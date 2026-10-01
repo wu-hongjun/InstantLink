@@ -9,7 +9,7 @@ from contextlib import suppress
 from typing import Protocol, cast
 
 from instantlink_bridge.config import UiSurface
-from instantlink_bridge.ui.models import UiAction
+from instantlink_bridge.ui.models import UiAction, UiButtonPress
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class NullInput:
 
     def start(
         self,
-        queue: asyncio.Queue[UiAction],
+        queue: asyncio.Queue[UiAction | UiButtonPress],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         return
@@ -54,7 +54,7 @@ class GpioUiInput:
 
     def start(
         self,
-        queue: asyncio.Queue[UiAction],
+        queue: asyncio.Queue[UiAction | UiButtonPress],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         from gpiozero import Button, Device
@@ -74,13 +74,13 @@ class GpioUiInput:
         }
         for pin, action in action_pins.items():
             button = cast(_ButtonDevice, Button(pin, pull_up=True, bounce_time=0.05))
-            button.when_pressed = _enqueue(queue, loop, action)
+            button.when_pressed = _enqueue(queue, loop, action, button_id=f"gpio:{pin}")
             self._buttons.append(button)
 
         # KEY3 is a single contextual action on press. Holding it does not
         # emit a second, hidden operation when the button is released.
         context_button = cast(_ButtonDevice, Button(KEY3, pull_up=True, bounce_time=0.05))
-        context_button.when_pressed = _enqueue(queue, loop, UiAction.HELP)
+        context_button.when_pressed = _enqueue(queue, loop, UiAction.HELP, button_id=f"gpio:{KEY3}")
         self._buttons.append(context_button)
 
     def close(self) -> None:
@@ -108,16 +108,18 @@ def create_input(surface: UiSurface | None = None) -> GpioUiInput | NullInput:
 
 
 def _enqueue(
-    queue: asyncio.Queue[UiAction],
+    queue: asyncio.Queue[UiAction | UiButtonPress],
     loop: asyncio.AbstractEventLoop,
     action: UiAction,
+    *,
+    button_id: str,
 ) -> Callable[[], None]:
     def callback() -> None:
         LOGGER.debug("ui.input_press action=%s", action)
 
         def put_action() -> None:
             with suppress(asyncio.QueueFull):
-                queue.put_nowait(action)
+                queue.put_nowait(UiButtonPress(action, button_id))
 
         loop.call_soon_threadsafe(put_action)
 

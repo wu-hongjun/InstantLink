@@ -34,8 +34,9 @@ def test_unlock_prompt_progress_and_text_fit(
     )
     image = render.render_snapshot(snapshot, now=0)
     draw = ImageDraw.Draw(image)
-    assert t("Press any key", language) in [entry[2] for entry in drawn]
-    remaining = "Press twice more" if presses == 1 else "Press once more"
+    assert t("Press same button", language) in [entry[2] for entry in drawn]
+    assert t("3 times to unlock", language) in [entry[2] for entry in drawn]
+    remaining = "Same button twice more" if presses == 1 else "Same button once more"
     assert t(remaining, language) in [entry[2] for entry in drawn]
     assert not any("KEY" in entry[2] for entry in drawn), "Unlock must not offer menu actions"
     for x, y, text, font in drawn:

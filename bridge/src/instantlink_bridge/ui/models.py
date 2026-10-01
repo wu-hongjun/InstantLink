@@ -61,6 +61,14 @@ class UiAction(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class UiButtonPress:
+    """An abstract action with its physical button identity for unlock protection."""
+
+    action: UiAction
+    button_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class PairedPrinter:
     """A selected Bluetooth printer."""
 

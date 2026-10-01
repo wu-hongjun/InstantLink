@@ -3,6 +3,10 @@
 Date: 2026-09-30. Scope: shared physical/virtual LCD lock presentation, input routing, CPU wake,
 framebuffer restoration, stored UI configuration and the App's Bridge management contract.
 
+> Superseded interaction rule (2026-10-01): [plan 062](062-bridge-same-button-unlock.md)
+> requires three consecutive presses of the same physical button (or the same remote action).
+> The mixed-key rule and its earlier evidence below describe the original implementation.
+
 ## User report and decision
 
 After locking, a key press could enable the LCD backlight while leaving a blank display rather

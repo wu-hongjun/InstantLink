@@ -441,4 +441,4 @@
 "To restart the Bridge, turn it off and back on with the X306 power button." = "Bridge를 다시 시작하려면 X306 전원 버튼으로 껐다가 다시 켜세요.";
 
 /* Bridge unlock protection */
-"Require 3 presses to unlock" = "잠금 해제 시 3번 누르기";
+"Press same button 3 times to unlock" = "같은 버튼을 3번 눌러 잠금 해제";

@@ -68,5 +68,6 @@ trusted_public_keys = []
 saturation = 0
 
 [ui]
-# Require three quick key presses to wake a locked screen; disable for one press.
+# Require three consecutive presses of the same button to unlock; disable for one press.
+# A different button resets the count without extending the fixed 10-second timeout.
 unlock_requires_three_presses = true

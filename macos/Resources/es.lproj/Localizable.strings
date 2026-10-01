@@ -440,4 +440,4 @@
 "To restart the Bridge, turn it off and back on with the X306 power button." = "Para reiniciar el Bridge, apágalo y enciéndelo con el botón de encendido del X306.";
 
 /* Bridge unlock protection */
-"Require 3 presses to unlock" = "Pulsar 3 veces para desbloquear";
+"Press same button 3 times to unlock" = "Pulsa el mismo botón 3 veces para desbloquear";

@@ -466,4 +466,4 @@
 "To restart the Bridge, turn it off and back on with the X306 power button." = "要重启 Bridge，请使用 X306 电源按钮关闭后再开启。";
 
 /* Bridge unlock protection */
-"Require 3 presses to unlock" = "连按3次解锁";
+"Press same button 3 times to unlock" = "连按同一按键3次解锁";

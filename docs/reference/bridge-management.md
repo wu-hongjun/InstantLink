@@ -59,12 +59,19 @@ unlock_requires_three_presses = true
 
 The LCD exposes the same setting at **Settings → System → Unlock: 3 presses**.
 
-When enabled, either manual lock or automatic screen-off requires any three presses to unlock.
-The first input wakes the prompt and starts the awake CPU tier; the second advances its count;
-the third restores the latest live screen. All three inputs are consumed, so the next input
-performs a normal action. An incomplete sequence expires 10 seconds after its first press and
-returns to dark idle, with its count reset. Active preparation/printing remains boosted;
-background receive, Sync and Printer reconnect remain operational.
+When enabled, either manual lock or automatic screen-off requires three consecutive presses of
+the **same physical button** to unlock. The first input wakes the prompt and starts the awake CPU
+tier; the second advances its count; the third restores the latest live screen. A different
+button resets progress to one for that button without extending the existing 10-second timer.
+KEY1 and joystick press remain distinct, despite both normally generating Select. Physical
+buttons must be released between presses.
+
+For virtual input, repeat the same action three consecutive times. A different action resets
+progress to one; remote and physical inputs have separate identities and cannot combine their
+presses. All inputs are consumed until unlocking completes, so the next input performs a normal
+action. An incomplete sequence expires 10 seconds after its first press and returns to dark
+idle, with its count reset. Active preparation/printing remains boosted; background receive,
+Sync and Printer reconnect remain operational.
 
 When disabled, one input wakes and repaints the screen without executing its normal action.
 The physical and virtual LCDs share this behavior and the existing abstract input API. This

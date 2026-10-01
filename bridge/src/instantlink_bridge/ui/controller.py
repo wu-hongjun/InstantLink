@@ -1561,6 +1561,11 @@ class BridgeUi:
         if task is not None:
             task.cancel()
 
+    def _restart_unlock_timeout(self) -> None:
+        """Relock after ten seconds without an accepted button press."""
+        self._cancel_unlock_timeout()
+        self._unlock_timeout_task = asyncio.create_task(self._expire_unlock_prompt())
+
     async def _begin_unlock(self, button_id: str) -> None:
         if not self._config.ui.unlock_requires_three_presses:
             self._unlock_screen()
@@ -1573,8 +1578,7 @@ class BridgeUi:
         self._set_display_idle_stage(IdleStage.ACTIVE)
         self._last_rendered_snapshot = None
         self._render()
-        self._cancel_unlock_timeout()
-        self._unlock_timeout_task = asyncio.create_task(self._expire_unlock_prompt())
+        self._restart_unlock_timeout()
         # Warm the awake tier on the first press, before later queued presses
         # can complete unlocking. Normal services continue using the live state.
         if self._cpu_performance is not None:
@@ -1592,14 +1596,14 @@ class BridgeUi:
         if button_id == self._unlock_button_id:
             self._unlock_presses += 1
         else:
-            # Start a new sequence on the new button without extending the
-            # fixed wake window, so mixed presses cannot accidentally unlock.
+            # A new button starts a new sequence rather than combining presses.
             self._unlock_button_id = button_id
             self._unlock_presses = 1
         LOGGER.info("ui.unlock_progress button=%s presses=%s", button_id, self._unlock_presses)
         if self._unlock_presses >= 3:
             self._unlock_screen()
             return
+        self._restart_unlock_timeout()
         self._render()
 
     def _apply_shutdown_requested(self, event: PowerEvent) -> None:

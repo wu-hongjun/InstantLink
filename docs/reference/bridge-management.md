@@ -62,15 +62,17 @@ The LCD exposes the same setting at **Settings → System → Unlock: 3 presses*
 When enabled, either manual lock or automatic screen-off requires three consecutive presses of
 the **same physical button** to unlock. The first input wakes the prompt and starts the awake CPU
 tier; the second advances its count; the third restores the latest live screen. A different
-button resets progress to one for that button without extending the existing 10-second timer.
+button resets progress to one for that button. Every accepted press restarts the 10-second
+inactivity timer, whether it advances or resets the count.
 KEY1 and joystick press remain distinct, despite both normally generating Select. Physical
 buttons must be released between presses.
 
 For virtual input, repeat the same action three consecutive times. A different action resets
 progress to one; remote and physical inputs have separate identities and cannot combine their
 presses. All inputs are consumed until unlocking completes, so the next input performs a normal
-action. An incomplete sequence expires 10 seconds after its first press and returns to dark
-idle, with its count reset. Active preparation/printing remains boosted; background receive,
+action. An incomplete sequence expires 10 seconds after its last accepted press and returns to
+dark locked idle, with its count reset. FTP, status activity and screen polling do not restart the
+unlock timer. Active preparation/printing remains boosted; background receive,
 Sync and Printer reconnect remain operational.
 
 When disabled, one input wakes and repaints the screen without executing its normal action.

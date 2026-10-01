@@ -4,6 +4,10 @@ Date: 2026-10-01. Scope: unlock control identity, the shared physical/virtual in
 live documentation. This corrects the mixed-key behavior recorded in plan 061; its framebuffer
 wake fix, default-on setting and first-press CPU preparation remain applicable.
 
+> Superseded timeout rule (2026-10-01): [plan 063](063-bridge-unlock-inactivity-timeout.md)
+> changes the fixed first-press deadline to a 10-second inactivity timeout after the last accepted
+> press. Every accepted press restarts it. The same-button requirement in this record remains valid.
+
 ## User correction
 
 Unlock must require **the same physical button three consecutive times**. Three arbitrary

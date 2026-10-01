@@ -70,7 +70,9 @@ through `1 / 3`, `2 / 3` and the restored live screen. A different action resets
 `1 / 3` for that action. All inputs are consumed until unlocking completes.
 
 The first input wakes the prompt and starts the awake CPU tier. An incomplete sequence expires
-10 seconds after its first input; changing actions does not extend that timer. Remote actions
+10 seconds after its last accepted input. Every accepted action restarts this inactivity timer,
+including an action change that resets the count. Rejected input requests and screen polling do
+not restart the unlock timer. Remote actions
 use internal `remote:<action>` identities, distinct from physical GPIO buttons, so remote and
 physical inputs cannot combine to finish a sequence. No new request field is required. Physical
 unlock likewise requires the same physical button three consecutive times: KEY1 and joystick

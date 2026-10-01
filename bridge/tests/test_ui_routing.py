@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
+from contextlib import AsyncExitStack, suppress
 from unittest.mock import AsyncMock
 
 import pytest
@@ -322,7 +322,7 @@ async def test_unlock_overlay_preserves_incoming_printer_and_photo_state() -> No
 @pytest.mark.parametrize(
     "first,second", [(UiAction.SELECT, UiAction.BACK), (UiAction.HELP, UiAction.UP)]
 )
-async def test_different_unlock_button_restarts_count_without_extending_timeout(
+async def test_different_unlock_button_restarts_count_and_inactivity_timeout(
     first: UiAction, second: UiAction
 ) -> None:
     ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
@@ -334,7 +334,8 @@ async def test_different_unlock_button_restarts_count_without_extending_timeout(
     await ui._handle_action(second)
     assert ui.snapshot.mode is UiMode.UNLOCKING
     assert ui.snapshot.unlock_presses == 1
-    assert ui._unlock_timeout_task is timer
+    assert ui._unlock_timeout_task is not timer
+    assert timer is not None and timer.cancelling()
     await ui._handle_action(second)
     assert ui.snapshot.unlock_presses == 2
     await ui._handle_action(second)
@@ -372,6 +373,74 @@ async def test_select_buttons_and_remote_select_remain_distinct_in_input_queue(
         runner.cancel()
         with suppress(asyncio.CancelledError):
             await runner
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("next_action", [UiAction.SELECT, UiAction.BACK])
+@pytest.mark.parametrize("active_job", [False, True])
+async def test_unlock_inactivity_timeout_restarts_and_returns_to_low_cpu_when_idle(
+    monkeypatch: pytest.MonkeyPatch, next_action: UiAction, active_job: bool
+) -> None:
+    from instantlink_bridge.power.performance import CpuPerformanceController
+    from instantlink_bridge.ui import controller
+
+    assert controller.UNLOCK_TIMEOUT_S == 10.0
+    waiters: list[asyncio.Future[None]] = []
+    original_sleep = asyncio.sleep
+
+    async def controlled_sleep(delay: float) -> None:
+        if delay != 10.0:
+            await original_sleep(delay)
+            return
+        waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        waiters.append(waiter)
+        await waiter
+
+    monkeypatch.setattr(controller.asyncio, "sleep", controlled_sleep)
+    modes: list[str] = []
+
+    async def setter(mode: str) -> None:
+        modes.append(mode)
+
+    cpu = CpuPerformanceController(setter)
+    ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
+    ui._cpu_performance = cpu
+    jobs = AsyncExitStack()
+    try:
+        await cpu.start()
+        ui._lock_screen()
+        await cpu.start()
+        assert modes[-1] == "powersave"
+        if active_job:
+            await jobs.enter_async_context(cpu.boost())
+        await ui._handle_action(UiAction.SELECT)
+        await original_sleep(0)
+        previous = ui._unlock_timeout_task
+        assert previous is not None and len(waiters) == 1
+        await ui._handle_action(next_action)
+        await original_sleep(0)
+        current = ui._unlock_timeout_task
+        assert current is not None and current is not previous
+        assert previous.cancelled() and waiters[0].cancelled()
+        assert len(waiters) == 2 and not waiters[1].done()
+        assert ui.snapshot.mode is UiMode.UNLOCKING
+        assert ui.snapshot.unlock_presses == (2 if next_action is UiAction.SELECT else 1)
+        assert modes[-1] == "performance"
+        waiters[1].set_result(None)
+        await current
+        await cpu.start()
+        assert ui._screen_locked and not ui._unlocking
+        assert ui.snapshot.idle_stage == "screen_off"
+        assert ui._unlock_presses == 0 and ui._unlock_button_id is None
+        assert ui._unlock_timeout_task is None
+        assert modes[-1] == ("performance" if active_job else "powersave")
+        await jobs.aclose()
+        await cpu.start()
+        assert modes[-1] == "powersave"
+    finally:
+        ui._cancel_unlock_timeout()
+        await jobs.aclose()
+        await cpu.close()
 
 
 @pytest.mark.asyncio

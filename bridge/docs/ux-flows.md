@@ -290,8 +290,8 @@ automatic screen-off, on both physical and virtual LCDs.
    screen appears. The three successful presses are consumed by unlocking; the next input
    performs its normal labelled action.
 
-Pressing a different button resets progress to **1 / 3** for the newly pressed button. It does
-not extend the existing timeout. KEY1 and the joystick press are distinct physical buttons,
+Pressing a different button resets progress to **1 / 3** for the newly pressed button. Every
+accepted press, of the same or a different button, restarts the 10-second inactivity timer. KEY1 and the joystick press are distinct physical buttons,
 even though both normally select an item. Joystick directions are also distinct controls.
 Holding a button counts once; it must be released before another press.
 
@@ -299,8 +299,10 @@ Virtual input uses the same controller: repeat the same `action` three consecuti
 different action resets progress to **1 / 3**. Remote actions have their own control identities
 and do not combine with physical-button presses, so switching input surfaces resets the count.
 
-An incomplete sequence has a fixed **10-second timeout from the first press**. On expiry the
-LCD becomes dark again and the count resets. The idle CPU returns to its lowest supported
+An incomplete sequence expires after **10 seconds without an accepted button press**. The timer
+restarts after every accepted press, including one that resets the count to a different button.
+FTP, status updates and screen polling do not extend it. On expiry the LCD becomes dark again
+and the count resets. The idle CPU returns to its lowest supported
 clock; active image preparation or printing retains its performance boost. FTP, Sync and
 Printer reconnect continue throughout, and live status or photo changes are retained behind
 the unlock prompt.
@@ -313,8 +315,9 @@ framebuffer, so matching an old cached active snapshot is insufficient evidence 
 are still present. The display restores its retained frame before enabling the backlight, and
 the controller invalidates its render cache for dark stages and unlock transitions. See
 [plan 061](../../docs/plans/061-bridge-three-press-unlock.md) for the original wake fix and
-[plan 062](../../docs/plans/062-bridge-same-button-unlock.md) for the corrected consecutive-button
-rule and validation record.
+[plan 062](../../docs/plans/062-bridge-same-button-unlock.md) for the consecutive-button rule.
+[Plan 063](../../docs/plans/063-bridge-unlock-inactivity-timeout.md) records the corrected inactivity
+timeout and its validation requirements.
 
 ## State Diagram
 

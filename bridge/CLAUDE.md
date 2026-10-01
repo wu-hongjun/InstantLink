@@ -149,7 +149,8 @@ state in v1.
   (`[sync].destination` — `Mode`: Print / Sync on the main Settings page). KEY2 locks the LCD
   from normal home/status surfaces and during printing. `[ui].unlock_requires_three_presses`
   defaults to `true` and is editable at System > `Unlock: 3 presses`; unlocking requires three
-  consecutive presses of the same physical button, and all unlock inputs are consumed. With it disabled, the first input wakes only. The remaining `[sync]`
+  consecutive presses of the same physical button, and all unlock inputs are consumed. With it
+  disabled, the first input wakes only. The remaining `[sync]`
   fields (`port`, `outbox_dir`, `outbox_budget_mb`, `token_path`, `remote_ui`) are
   provisioning-level and not editable from the LCD.
 - `workflow.allow_print_without_film` is a testing-only escape hatch exposed as `No-film test`.
@@ -189,8 +190,8 @@ state in v1.
   persists through FTP and status activity, while the runtime and automatic Printer reconnect stay active.
   The shared physical/virtual unlock prompt needs three consecutive presses of the same control
   by default. The first wakes the display and CPU; a different control resets progress to one.
-  An incomplete sequence expires 10 seconds after its first press, without extending the timer
-  on control changes or cancelling work.
+  An incomplete sequence expires 10 seconds after its last accepted press. Every accepted press,
+  including a control change, restarts that inactivity timer without cancelling work.
   In Sync mode short and hold KEY3 both open the iPhone pairing QR, and BACK from that QR returns
   home.
 - iPhone pairing QR (plan 051): never show a QR while nothing listens on the sync port — the
@@ -273,7 +274,8 @@ state in v1.
 KEY1 opens Settings, including without a Printer. KEY2 locks home and printing screens. By default,
 three consecutive presses of the same physical button unlock: the first shows a prompt and
 starts the awake CPU tier, the second advances the count, and the third restores the latest live
-screen. A different button starts a new count at one without extending the original timeout.
+screen. A different button starts a new count at one. Every accepted button press restarts the
+10-second inactivity timeout, whether it advances or resets the counter.
 Every input is consumed until unlocking completes.
 System > `Unlock: 3 presses` can disable the gate for one-press wake without a normal action.
 KEY3 uses its visible action: Post when ready, Reconnect when the saved
@@ -286,10 +288,12 @@ Looks; Sync originals are untouched. Review countdown begins after preview prepa
 editing switches to explicit confirmation. See docs/ux-flows.md and plan 060.
 
 
-### Unlock implementation requirements (plans 061/062)
+### Unlock implementation requirements (plans 061/062/063)
 
-- The incomplete sequence times out 10 seconds after its first press, returns to a dark locked
-  display and resets its count. Idle CPU uses the lowest supported clock; active preparation or
+- The incomplete sequence times out 10 seconds after its last accepted button press, returns to
+  a dark locked display and resets its count. Restart the timer on every accepted press, including
+  different-button resets; FTP, status updates and screen polling must not extend it. Idle CPU
+  uses the lowest supported clock; active preparation or
   printing stays boosted. GPIO uses press-only callbacks with 50 ms debounce and no held-key
   or autorepeat events; holding a physical button counts once, with release required before
   another press. Preserve the physical GPIO identity: KEY1 and joystick SELECT must not count

@@ -69,5 +69,5 @@ saturation = 0
 
 [ui]
 # Require three consecutive presses of the same button to unlock; disable for one press.
-# A different button resets the count without extending the fixed 10-second timeout.
+# A different button resets the count. Relock after 10 seconds without a button press.
 unlock_requires_three_presses = true

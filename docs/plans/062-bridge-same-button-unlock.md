@@ -50,9 +50,11 @@ restoration and background receive/reconnect behavior from plan 061 remain in ef
 
 ## Validation and hardware acceptance
 
-Implementation and integrated validation are in progress at this record's creation. Earlier
-plan 061 mixed-key tests and on-device smoke evidence do not verify this corrected rule.
-Required local regression cases are:
+Final checks passed: **1,247 Bridge tests**, **154 App tests**, Ruff, touched-file formatting,
+strict mypy (65 source files), whitespace and strict MkDocs. App wording covers all 12 locales.
+The duplicate pre-commit App compilation was stopped under extreme host load after the same
+App check had already passed independently; the commit reused those completed results.
+Regression coverage includes:
 
 - Same-button completion with the third press consumed.
 - Mixed-button reset, including KEY1 versus joystick Select.
@@ -60,7 +62,16 @@ Required local regression cases are:
 - Repeated identical remote actions, changed-action reset and physical/remote identity separation.
 - Preserved live state, first-press CPU readiness and one-press opt-out.
 
-Hardware acceptance must verify same-button completion, mixed-button reset, distinct KEY1 and
-joystick press, and timeout after changing buttons on the Raspberry Pi Zero 2 W / Waveshare LCD
-HAT. Record verified hardware and final test results in `bridge/docs/current-context.md`. This
-record does not establish GPIO acceptance, battery consumption or a 16-hour runtime result.
+Clean source `8dadb69` was deployed to the Raspberry Pi Zero 2 W / Waveshare ST7789 LCD HAT
+on Debian 13.2. Film-free smoke under the `ib` account verified real framebuffer/backlight
+restoration, both updated prompts, same-button completion, latest-state redraw, mixed-button
+reset including KEY1/joystick Select identities, timeout after changing buttons, opt-out and
+automatic-dark wake. CPU checks used actual 600/1000 MHz stock tiers. Inputs were injected
+with their GPIO identities; no physical switch was actuated. Services and hotspot FTP are
+healthy after the check. Full hardware details are in `bridge/docs/current-context.md`.
+
+![Pi-rendered same-button unlock sequence](../assets/bridge-ux-062/unlock-sequence.png)
+
+Physical press/release/hold acceptance remains pending, along with camera/Printer/film checks.
+This record does not establish battery consumption or a 16-hour runtime result. Earlier plan 061
+mixed-key smoke is historical evidence and does not verify this corrected rule.

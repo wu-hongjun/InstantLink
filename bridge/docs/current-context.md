@@ -1,5 +1,34 @@
 # Current Bridge Context
 
+## Same-button unlock correction, 2026-10-01
+
+Clean runtime **`8dadb69`** replaces the earlier mixed-button rule. Unlock requires the same
+physical button three consecutive times. Different buttons reset progress to one without
+extending the original 10-second timeout. GPIO pin identity keeps KEY1 distinct from joystick
+press even though both perform Select; remote actions have separate identities. The prompt
+and App toggle explicitly say same button. Default-on protection, opt-out, first-press CPU
+preparation, latest-state restoration and background operations are preserved.
+
+- Local gates: **1,247 Bridge tests**, **154 App tests**, Ruff, touched-file formatting,
+  strict mypy (65 files), whitespace and strict MkDocs passed. The App result was completed
+  independently on the same change. Its duplicate pre-commit compilation was terminated under
+  extreme host load (load average 582); the commit reused the completed checks without changing
+  the configured hook. New wording is translated in all 12 App locales.
+- Film-free on-device smoke under `ib` passed framebuffer restoration, both updated prompts,
+  latest underlying state, same-button completion, alternating GPIO identities resetting to one,
+  KEY1/joystick Select separation, timeout after a changed button, automatic-dark wake and opt-out.
+  GPIO identities were injected into the controller; no physical switch was actuated.
+- Actual CPU checks confirmed 600 MHz locked, 1000 MHz on first press, 600 MHz on expiry and
+  1000 MHz on opt-out wake. The runtime service was restored after the temporary framebuffer
+  smoke stop. Bridge, manager, Bluetooth and NetworkManager remain active, `NRestarts=0`,
+  throttling `0x0`, with a working hotspot FTP greeting and NOOP.
+- Hardware/OS: Raspberry Pi Zero 2 W Rev 1.0, Waveshare 240×240 ST7789 LCD HAT, X306 2300 mAh
+  cell; Debian 13.2, kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17.
+
+See plan 062 and its Pi-rendered synthetic state image. Physical press/hold confirmation,
+Sony a7C II camera upload, Instax Square power-cycle/film checks and 16-hour discharge remain
+pending. The earlier mixed-key smoke below is historical, not acceptance of the corrected rule.
+
 ## Reliable wake and three-press unlock, 2026-09-30
 
 Clean runtime `fb1f27e` is deployed on the Raspberry Pi Zero 2 W Rev 1.0 / Waveshare

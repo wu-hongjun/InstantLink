@@ -561,7 +561,7 @@ def test_hotspot_ftp_status_text_shows_ap_mode_state() -> None:
     )
 
     assert hotspot_ftp_status_text(active) == "Bridge FTP 192.168.8.1"
-    assert hotspot_ftp_status_text(inactive) == "Bridge Wi-Fi off 192.168.8.1"
+    assert hotspot_ftp_status_text(inactive) == "Bridge Wi-Fi unavailable 192.168.8.1"
 
 
 def test_ftp_hint_points_to_alternate_wifi_or_admin_usb() -> None:
@@ -2027,3 +2027,42 @@ def test_sync_pairing_qr_raster_rekeys_on_payload_change() -> None:
     # yields the same raster as the original — the cache key is the payload.
     again = _sync_pairing_qr_image(payload_old, _QR_TARGET_PX)
     assert again.tobytes() == first.tobytes()
+
+
+@pytest.mark.parametrize(
+    "language,headline,cause",
+    [
+        ("en", "Setup needed", "Bridge Wi-Fi unavailable"),
+        ("zh-Hans", "需要设置", "桥接 Wi-Fi 不可用"),
+    ],
+)
+def test_unavailable_hotspot_copy_preserves_blocked_readiness_until_address_returns(
+    monkeypatch: pytest.MonkeyPatch, language: str, headline: str, cause: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.VALIDATION,
+        ftp_host="192.168.7.1",
+        hotspot_ftp_host="192.168.8.1",
+        language=language,
+        paired_printer=PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=7,
+        camera_receive_ready=False,
+        camera_status_message="Bridge Wi-Fi unavailable",
+    )
+    assert not can_accept_images(snapshot)
+    assert readiness_cause_texts(snapshot) == ["Bridge Wi-Fi unavailable"]
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert headline in drawn
+    assert cause in drawn
+    assert not any("Bridge Wi-Fi off" in text or "Wi-Fi 已关闭" in text for text in drawn)
+
+    restored = replace(
+        snapshot,
+        hotspot_host="192.168.8.1",
+        camera_receive_ready=True,
+        camera_status_message="Bridge Wi-Fi ready",
+    )
+    assert can_accept_images(restored)
+    assert readiness_cause_texts(restored) == []
+    assert hotspot_ftp_status_text(restored) == "Bridge FTP 192.168.8.1"

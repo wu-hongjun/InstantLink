@@ -1,5 +1,24 @@
 # Current Bridge Context
 
+## Missing Wi-Fi interface audit, 2026-10-06
+
+The user reported `Setup needed` / `Bridge Wi-Fi off`. USB SSH initially worked. Wi-Fi was
+enabled in NetworkManager, but `wlan0` was absent. Kernel boot logs showed a corrupted SDIO
+RAM image, failed NVRAM download and MMC inhibit timeout before runtime CPU policy began.
+The Bridge, manager and NetworkManager were active; `vcgencmd get_throttled` was `0x0`.
+
+- A manual `modprobe -r brcmfmac` / `modprobe brcmfmac` restored `wlan0`; the existing root
+  Wi-Fi helper then activated the saved hotspot at `192.168.8.1/24`. Bridge `NRestarts=0`.
+  No Bluetooth restart, credential reset or film consumption was required. Instax Square
+  `INSTAX-52006924` was connected with film 6 / battery 95% before USB access disappeared.
+- Plan 064 adds bounded automatic hotspot recovery and truthful unavailable status. Runtime
+  deployment and automatic fault-injection smoke are pending: the Mac's `en8` USB interface
+  disappeared during work, and the user was asked to reconnect micro-USB.
+- Hardware/OS remain Pi Zero 2 W Rev 1.0 / Waveshare ST7789 LCD HAT / X306 2300 mAh,
+  Debian 13.2 / kernel 6.12.47+rpt-rpi-v8 / Python 3.13.5 / BlueZ 5.82 / Bridge 0.1.17.
+  The Pi's wall clock lagged behind the host date; boot-relative kernel timestamps were used
+  for the failure order. This audit establishes no new battery-runtime or camera-upload claim.
+
 ## Unlock inactivity timeout, 2026-10-01
 
 Clean runtime **`0c80d83`** now expires an incomplete unlock **10 seconds after its last accepted

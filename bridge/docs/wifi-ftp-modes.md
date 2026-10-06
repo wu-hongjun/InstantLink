@@ -39,6 +39,20 @@ The upload setup values are visible together on `Settings -> Upload FTP`: `Bridg
 `Wi-Fi PIN`, `FTP host`, `FTP user`, and `FTP pass`. `Settings -> Network` remains a diagnostics
 page for checking whether the hotspot is actually active.
 
+In Bridge Wi-Fi mode, the runtime retries a missing hotspot after a 30-second startup/healthy
+grace period, with retry delays of 30, 60, 120 and then 300 seconds. Recovery runs separately
+from screen polling and defers during photo preparation, printing and recent FTP activity.
+It preserves the saved SSID/PIN and skips an administratively disabled radio. Changing FTP
+mode or stopping the Bridge cancels recovery; Wired, Auto and Same Wi-Fi do not trigger it.
+The runtime rechecks saved configuration before activation, preserving network changes from
+the App even while its own runtime configuration awaits a restart.
+
+The root Wi-Fi helper also handles a Pi SDIO firmware initialization failure: if `wlan0` is
+missing, it reloads `brcmfmac` and waits up to 10 seconds for the interface. A present interface
+is never reloaded. USB administration and Bluetooth are not restarted by this recovery.
+Missing hotspot readiness is shown as `Bridge Wi-Fi unavailable`; uploads remain blocked until
+the expected hotspot address is present. Persistent hardware faults can still require repair.
+
 If the LCD reports a Wi-Fi switch failure and the journal shows `sudo: unable to change to root
 gid`, verify `/etc/systemd/system/instantlink-bridge.service` does not set `CapabilityBoundingSet=`.
 That systemd sandbox strips the setgid capability that `sudo` needs before it can run the

@@ -227,7 +227,10 @@ def test_camera_health_messages_honor_selected_ftp_receive_mode() -> None:
         camera_transport_message_for_health(health, FtpReceiveMode.PEER)
         == "Same Wi-Fi adv 192.168.5.149"
     )
-    assert camera_status_message_for_health(health, FtpReceiveMode.HOTSPOT) == "Bridge Wi-Fi off"
+    assert (
+        camera_status_message_for_health(health, FtpReceiveMode.HOTSPOT)
+        == "Bridge Wi-Fi unavailable"
+    )
 
 
 def test_wired_ftp_mode_does_not_disable_wifi() -> None:

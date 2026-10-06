@@ -3959,7 +3959,7 @@ def hotspot_ftp_status_text(snapshot: UiSnapshot) -> str:
 
     if snapshot.hotspot_host is not None:
         return f"Bridge FTP {snapshot.hotspot_host}"
-    return f"Bridge Wi-Fi off {snapshot.hotspot_ftp_host}"
+    return f"Bridge Wi-Fi unavailable {snapshot.hotspot_ftp_host}"
 
 
 def home_wifi_ftp_status_text(snapshot: UiSnapshot) -> str:

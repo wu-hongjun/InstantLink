@@ -10,6 +10,17 @@ FALLBACK_HOTSPOT_SSID="InstantLink-XXXX"
 PSK_FILE="${INSTANTLINK_BRIDGE_HOTSPOT_PSK_FILE:-/etc/InstantLinkBridge/hotspot.psk}"
 NM_READY_TIMEOUT_S="${INSTANTLINK_BRIDGE_NM_READY_TIMEOUT_S:-30}"
 HOTSPOT_CHANNEL="${INSTANTLINK_BRIDGE_HOTSPOT_CHANNEL:-6}"
+ROOT_CHILD_PID=""
+
+terminate_helper() {
+  trap - TERM INT
+  if [[ -n "${ROOT_CHILD_PID}" ]]; then
+    kill -TERM "${ROOT_CHILD_PID}" 2>/dev/null || true
+  fi
+  exit 143
+}
+
+trap terminate_helper TERM INT
 
 require_nmcli() {
   command -v nmcli >/dev/null || {
@@ -32,11 +43,50 @@ wait_for_networkmanager() {
 }
 
 run_root() {
+  # Wait asynchronously so TERM reaches this trap while nmcli is still running.
+  # Otherwise cancelling a mode switch could leave it activating the old mode.
   if [[ "${EUID}" -eq 0 ]]; then
-    "$@"
+    "$@" &
   else
-    sudo "$@"
+    sudo "$@" &
   fi
+  ROOT_CHILD_PID=$!
+  local result=0
+  wait "${ROOT_CHILD_PID}" || result=$?
+  ROOT_CHILD_PID=""
+  return "${result}"
+}
+
+ensure_wifi_interface() {
+  # A failed SDIO firmware download can leave the driver loaded with no wlan0.
+  # Enabling the radio alone cannot recover that state. Only reload on a Pi
+  # whose interface is missing; a healthy interface must never be interrupted.
+  run_root nmcli radio wifi on
+  local net_path="${INSTANTLINK_BRIDGE_NET_SYSFS:-/sys/class/net}"
+  local model_path="${INSTANTLINK_BRIDGE_MODEL_PATH:-/proc/device-tree/model}"
+  local module_path="${INSTANTLINK_BRIDGE_MODULE_SYSFS:-/sys/module}"
+  if [[ -d "${net_path}/wlan0" ]]; then
+    return
+  fi
+  if [[ ! -r "${model_path}" ]] || ! grep -aq 'Raspberry Pi' "${model_path}"; then
+    echo "Wi-Fi interface wlan0 is unavailable; automatic driver recovery requires a Raspberry Pi" >&2
+    return 1
+  fi
+  echo "Wi-Fi interface missing; recovering brcmfmac driver" >&2
+  if [[ -d "${module_path}/brcmfmac" ]]; then
+    run_root modprobe -r brcmfmac
+  fi
+  run_root modprobe brcmfmac
+  local waited=0
+  while (( waited < 10 )); do
+    if [[ -d "${net_path}/wlan0" ]]; then
+      return
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  echo "Wi-Fi interface wlan0 is still unavailable after driver recovery" >&2
+  return 1
 }
 
 hotspot_ssid() {
@@ -186,7 +236,7 @@ configure_hotspot() {
   host="$(hotspot_host)"
   ssid="$(hotspot_ssid)"
   psk="$(hotspot_psk)"
-  run_root nmcli radio wifi on
+  ensure_wifi_interface
   if ! nmcli -t -f NAME connection show | grep -qxF "${HOTSPOT_CONNECTION}"; then
     run_root nmcli connection add type wifi ifname wlan0 con-name "${HOTSPOT_CONNECTION}" \
       ssid "${ssid}"
@@ -218,7 +268,7 @@ configure_home() {
     echo "Usage: scripts/wifi-mode.sh home <ssid> <password>" >&2
     exit 2
   fi
-  run_root nmcli radio wifi on
+  ensure_wifi_interface
   if nmcli -t -f NAME connection show | grep -qxF "${HOME_CONNECTION}"; then
     run_root nmcli connection modify "${HOME_CONNECTION}" \
       802-11-wireless.ssid "${ssid}" \
@@ -253,7 +303,7 @@ configure_home_saved() {
     echo "No saved home Wi-Fi connection found" >&2
     exit 1
   fi
-  run_root nmcli radio wifi on
+  ensure_wifi_interface
   run_root nmcli connection down "${HOTSPOT_CONNECTION}" >/dev/null 2>&1 || true
   run_root nmcli connection up "${connection}"
   echo "Home Wi-Fi active: connection=${connection}"

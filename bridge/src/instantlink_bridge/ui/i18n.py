@@ -383,6 +383,7 @@ _ZH_HANS: dict[str, str] = {
     "Bridge Wi-Fi name": "桥接 Wi-Fi 名称",
     "Bridge Wi-Fi PIN": "桥接 Wi-Fi 密码",
     "Bridge Wi-Fi off": "桥接 Wi-Fi 已关闭",
+    "Bridge Wi-Fi unavailable": "桥接 Wi-Fi 不可用",
     "Bridge Wi-Fi ready": "桥接 Wi-Fi 已就绪",
     "Bridge Wi-Fi selected": "已选择桥接 Wi-Fi",
     "Bridge Wi-Fi starting": "桥接 Wi-Fi 启动中",

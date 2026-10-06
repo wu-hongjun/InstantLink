@@ -7,6 +7,7 @@ import logging
 import math
 import os
 import secrets
+import time
 from collections.abc import Awaitable, Callable
 from contextlib import nullcontext, suppress
 from dataclasses import replace
@@ -27,6 +28,7 @@ from instantlink_bridge.config import (
     PowerBackend,
     StatusSinkKind,
     SyncConfig,
+    load_config,
     write_config,
 )
 from instantlink_bridge.imaging.pipeline import (
@@ -138,6 +140,8 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # noticeably delaying reconnect when the printer wakes up at the 5-second setting.
 MIN_OFFLINE_SEARCH_GAP_S = 2.0
 UNLOCK_TIMEOUT_S = 10.0
+HOTSPOT_RECOVERY_STARTUP_GRACE_S = 30.0
+HOTSPOT_RECOVERY_BACKOFF_S = (30.0, 60.0, 120.0, 300.0)
 # How long a SystemStatsSnapshot is reused before re-reading /proc and /sys.
 # The About page can re-render at the LCD's ~30 Hz tick when help text toasts or
 # the cursor moves; without a cache that would hammer the filesystem readers
@@ -496,6 +500,11 @@ class BridgeUi:
         self._network_task: asyncio.Task[None] | None = None
         self._about_refresh_task: asyncio.Task[None] | None = None
         self._ftp_mode_task: asyncio.Task[None] | None = None
+        self._hotspot_recovery_task: asyncio.Task[None] | None = None
+        self._wifi_mode_lock = asyncio.Lock()
+        self._hotspot_recovery_enabled = False
+        self._hotspot_recovery_next_at = math.inf
+        self._hotspot_recovery_failures = 0
         self._image_reset_task: asyncio.Task[None] | None = None
         self._initial_status_task: asyncio.Task[None] | None = None
         self._network_refresh_lock = asyncio.Lock()
@@ -605,6 +614,10 @@ class BridgeUi:
     async def start(self) -> None:
         """Start rendering and input handling."""
 
+        self._hotspot_recovery_enabled = True
+        self._hotspot_recovery_next_at = (
+            asyncio.get_running_loop().time() + HOTSPOT_RECOVERY_STARTUP_GRACE_S
+        )
         self._render()
         loop = asyncio.get_running_loop()
         self._ignore_actions_until = loop.time() + 1.5
@@ -646,12 +659,14 @@ class BridgeUi:
         """
 
         TASK_CANCEL_BUDGET_S = 6.0
+        self._hotspot_recovery_enabled = False
         for task in (
             self._action_task,
             self._pairing_task,
             self._status_task,
             self._render_tick_task,
             self._network_task,
+            self._hotspot_recovery_task,
             self._about_refresh_task,
             self._ftp_mode_task,
             self._image_reset_task,
@@ -2769,6 +2784,12 @@ class BridgeUi:
         previous_ftp = self._config.ftp
         previous_sync = self._config.sync
         previous_keepalive = self._config.printer.keepalive_interval_s
+        if config.ftp != previous_ftp:
+            await self._cancel_hotspot_recovery()
+            self._hotspot_recovery_failures = 0
+            self._hotspot_recovery_next_at = (
+                asyncio.get_running_loop().time() + HOTSPOT_RECOVERY_STARTUP_GRACE_S
+            )
         self._config = config
         self._printer_keepalive_interval_s = config.printer.keepalive_interval_s
         if config.ftp != previous_ftp:
@@ -2838,6 +2859,7 @@ class BridgeUi:
         label = ftp_receive_mode_label(mode)
         self._settings_picker_key = None
         self._settings_operation_pending = True
+        await self._cancel_hotspot_recovery()
         self._snapshot = replace(
             self._snapshot,
             settings_rows=self._settings_rows(),
@@ -2866,7 +2888,8 @@ class BridgeUi:
         wifi_mode = _wifi_mode_for_ftp_receive_mode(mode)
         if wifi_mode is None:
             return
-        await self._wifi_mode_setter(wifi_mode)
+        async with self._wifi_mode_lock:
+            await self._wifi_mode_setter(wifi_mode)
 
     async def _apply_configured_ftp_mode_at_start(self) -> None:
         mode = self._config.ftp.mode
@@ -2877,6 +2900,111 @@ class BridgeUi:
             raise
         except Exception:
             LOGGER.warning("ui.ftp_mode_boot_apply_failed mode=%s", mode.value, exc_info=True)
+
+    async def _cancel_hotspot_recovery(self) -> None:
+        task = self._hotspot_recovery_task
+        self._hotspot_recovery_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        for pending in (self._ftp_mode_task, self._credential_hotspot_task):
+            if pending is not None and pending is not asyncio.current_task() and not pending.done():
+                pending.cancel()
+                with suppress(asyncio.CancelledError):
+                    await pending
+
+    def _hotspot_recovery_allowed(self) -> bool:
+        if (
+            not self._hotspot_recovery_enabled
+            or self._config.ftp.mode is not FtpReceiveMode.HOTSPOT
+            or self._hotspot_host is not None
+            or self._settings_operation_pending
+            or self._wifi_mode_lock.locked()
+            or (self._ftp_mode_task is not None and not self._ftp_mode_task.done())
+            or self._image_queue_depth > 0
+            or self._snapshot.mode in {UiMode.IMAGE_RECEIVED, UiMode.PRINTING}
+            or (self._preview_build_task is not None and not self._preview_build_task.done())
+        ):
+            return False
+        # This also protects recent USB camera traffic while wlan0 is missing.
+        # The tracker records login/completion events, not individual packets;
+        # use its full recent window rather than assuming a transfer is finished.
+        if self._ftp_activity is not None:
+            activity = self._ftp_activity.snapshot()
+            if activity.is_recent(time.time()):
+                return False
+        return True
+
+    def _schedule_hotspot_recovery(self) -> None:
+        if self._hotspot_host is not None:
+            self._hotspot_recovery_failures = 0
+            self._hotspot_recovery_next_at = (
+                asyncio.get_running_loop().time() + HOTSPOT_RECOVERY_STARTUP_GRACE_S
+            )
+            return
+        if (
+            not self._hotspot_recovery_allowed()
+            or asyncio.get_running_loop().time() < self._hotspot_recovery_next_at
+            or (self._hotspot_recovery_task is not None and not self._hotspot_recovery_task.done())
+        ):
+            return
+        self._hotspot_recovery_task = asyncio.create_task(
+            self._recover_hotspot(), name="bridge.hotspot_recovery"
+        )
+
+    async def _recover_hotspot(self) -> None:
+        try:
+            # A disabled radio can be a deliberate administrative choice. Only
+            # explicit startup/manual mode changes enable it again.
+            if await detect_wifi_radio_enabled() is not True:
+                self._hotspot_recovery_next_at = (
+                    asyncio.get_running_loop().time() + HOTSPOT_RECOVERY_BACKOFF_S[-1]
+                )
+                return
+            # App management writes config.toml before the running UI reloads.
+            # Read after the radio probe so that persisted mode changes
+            # cannot be overridden by this process's older configuration.
+            if not await self._persisted_hotspot_intent_matches():
+                self._hotspot_recovery_next_at = (
+                    asyncio.get_running_loop().time() + HOTSPOT_RECOVERY_BACKOFF_S[-1]
+                )
+                return
+            if not self._hotspot_recovery_allowed():
+                return
+            LOGGER.info(
+                "ui.hotspot_recovery_attempt attempt=%s", self._hotspot_recovery_failures + 1
+            )
+            await self._apply_ftp_mode_network(FtpReceiveMode.HOTSPOT)
+            await self._refresh_network_status()
+            if self._hotspot_host is not None:
+                LOGGER.info("ui.hotspot_recovery_succeeded")
+                return
+            LOGGER.warning("ui.hotspot_recovery_not_ready")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            LOGGER.warning("ui.hotspot_recovery_failed error_type=%s", type(exc).__name__)
+        # A successful helper exit is insufficient: only the expected IP proves
+        # recovery. Retries remain independent of the one/five-second UI polls.
+        delay = HOTSPOT_RECOVERY_BACKOFF_S[
+            min(self._hotspot_recovery_failures, len(HOTSPOT_RECOVERY_BACKOFF_S) - 1)
+        ]
+        self._hotspot_recovery_failures += 1
+        self._hotspot_recovery_next_at = asyncio.get_running_loop().time() + delay
+
+    async def _persisted_hotspot_intent_matches(self) -> bool:
+        if self._config_path is None:
+            return True
+        try:
+            persisted = await asyncio.to_thread(load_config, self._config_path)
+        except Exception:
+            LOGGER.warning("ui.hotspot_recovery_config_unavailable")
+            return False
+        return (
+            persisted.ftp.mode is FtpReceiveMode.HOTSPOT
+            and persisted.ftp.hotspot_host == self._config.ftp.hotspot_host
+        )
 
     async def _confirm_or_forget_selected_printer(self) -> None:
         """Open the Forget-printer confirmation dialog (plan 040)."""
@@ -3245,23 +3373,9 @@ class BridgeUi:
         self._render()
 
     async def _restart_hotspot_for_credentials(self) -> None:
-        command = (
-            "sudo",
-            "-n",
-            str(WIFI_MODE_HELPER),
-            "hotspot",
-        )
         try:
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            await process.communicate()
-            LOGGER.info(
-                "bridge.credentials_hotspot_restarted returncode=%s",
-                process.returncode,
-            )
+            await self._apply_ftp_mode_network(FtpReceiveMode.HOTSPOT)
+            LOGGER.info("bridge.credentials_hotspot_restarted")
         except Exception:
             LOGGER.exception("bridge.credentials_hotspot_restart_failed")
 
@@ -4909,6 +5023,7 @@ class BridgeUi:
                 and camera_status_message == self._camera_status_message
                 and camera_transport_message == self._camera_transport_message
             ):
+                self._schedule_hotspot_recovery()
                 return
             self._wifi_host = wifi_host
             self._hotspot_host = hotspot_host
@@ -4917,6 +5032,7 @@ class BridgeUi:
             self._camera_connected = camera_connected
             self._camera_status_message = camera_status_message
             self._camera_transport_message = camera_transport_message
+            self._schedule_hotspot_recovery()
             self._snapshot = replace(
                 self._snapshot,
                 ftp_receive_mode=self._config.ftp.mode.value,
@@ -5043,7 +5159,7 @@ def camera_status_message_for_health(
     if mode is FtpReceiveMode.HOTSPOT:
         if health.hotspot_ftp_ready:
             return "Bridge Wi-Fi ready"
-        return "Bridge Wi-Fi off"
+        return "Bridge Wi-Fi unavailable"
     if mode is FtpReceiveMode.PEER:
         if health.ftp_recently_active_for_mode(mode) and health.ftp_activity is not None:
             return f"FTP active {health.ftp_activity.last_remote_ip or 'client'}"
@@ -5082,7 +5198,7 @@ def camera_transport_message_for_health(
     if mode is FtpReceiveMode.HOTSPOT:
         if health.hotspot_ftp_ready and health.hotspot_ipv4 is not None:
             return f"Bridge FTP {health.hotspot_ipv4}"
-        return f"Bridge Wi-Fi off {health.expected_hotspot_ipv4}"
+        return f"Bridge Wi-Fi unavailable {health.expected_hotspot_ipv4}"
     if mode is FtpReceiveMode.PEER:
         if health.home_wifi_ftp_ready and health.home_wifi_ipv4 is not None:
             return f"Same Wi-Fi adv {health.home_wifi_ipv4}"
@@ -5365,13 +5481,62 @@ async def set_wifi_mode_with_helper(mode: WifiMode) -> str:
     )
     try:
         output_bytes, _ = await asyncio.wait_for(process.communicate(), timeout=30.0)
-    except TimeoutError as exc:
+    except (TimeoutError, asyncio.CancelledError) as exc:
         with suppress(ProcessLookupError):
-            process.kill()
-        with suppress(Exception):
-            await process.communicate()
+            process.terminate()
+        try:
+            await asyncio.wait_for(process.communicate(), timeout=2.0)
+        except TimeoutError:
+            with suppress(ProcessLookupError):
+                process.kill()
+            # Descendants can briefly retain the output pipe after sudo exits.
+            # Neither draining that pipe nor reaping may hold input/shutdown.
+            with suppress(TimeoutError):
+                await asyncio.wait_for(process.communicate(), timeout=1.0)
+            with suppress(TimeoutError):
+                await asyncio.wait_for(process.wait(), timeout=1.0)
+        if isinstance(exc, asyncio.CancelledError):
+            raise
         raise TimeoutError("wifi helper timed out") from exc
     output = output_bytes.decode("utf-8", errors="replace") if output_bytes else ""
     if process.returncode != 0:
         raise RuntimeError(output.strip() or f"wifi helper exited {process.returncode}")
     return output
+
+
+async def detect_wifi_radio_enabled() -> bool | None:
+    """Read radio intent without exposing credentials or blocking network polling."""
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "nmcli",
+            "-t",
+            "-f",
+            "WIFI",
+            "radio",
+            env={**os.environ, "LC_ALL": "C"},
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+    except OSError:
+        return None
+    try:
+        output, _ = await asyncio.wait_for(process.communicate(), timeout=2.0)
+    except (TimeoutError, asyncio.CancelledError) as exc:
+        with suppress(ProcessLookupError):
+            process.kill()
+        with suppress(TimeoutError):
+            await asyncio.wait_for(process.communicate(), timeout=1.0)
+        with suppress(TimeoutError):
+            await asyncio.wait_for(process.wait(), timeout=1.0)
+        if isinstance(exc, asyncio.CancelledError):
+            raise
+        return None
+    if process.returncode != 0:
+        return None
+    value = output.decode("utf-8", errors="replace").strip()
+    if value == "enabled":
+        return True
+    if value == "disabled":
+        return False
+    return None

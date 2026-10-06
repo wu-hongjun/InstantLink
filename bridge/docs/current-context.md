@@ -12,7 +12,10 @@ The Bridge, manager and NetworkManager were active; `vcgencmd get_throttled` was
   No Bluetooth restart, credential reset or film consumption was required. Instax Square
   `INSTAX-52006924` was connected with film 6 / battery 95% before USB access disappeared.
 - Plan 064 adds bounded automatic hotspot recovery and truthful unavailable status. Runtime
-  deployment and automatic fault-injection smoke are pending: the Mac's `en8` USB interface
+  implementation `cad66aa` passed **1,282 Bridge tests**, Ruff, strict mypy (65 source files),
+  touched-file formatting, shell syntax, whitespace and strict MkDocs. The normal pre-commit
+  gate passed. No App/iOS contract changed. Deployment and automatic fault-injection smoke
+  are pending: the Mac's `en8` USB interface
   disappeared during work, and the user was asked to reconnect micro-USB.
 - Hardware/OS remain Pi Zero 2 W Rev 1.0 / Waveshare ST7789 LCD HAT / X306 2300 mAh,
   Debian 13.2 / kernel 6.12.47+rpt-rpi-v8 / Python 3.13.5 / BlueZ 5.82 / Bridge 0.1.17.

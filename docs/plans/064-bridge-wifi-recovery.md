@@ -38,12 +38,18 @@ the hotspot profile intentionally has autoconnect disabled to keep FTP modes det
 
 ## Validation
 
+Clean implementation commit `cad66aa` passed the normal pre-commit gate: **1,282 Bridge
+tests**, Ruff and strict mypy (65 source files). Touched-file Ruff formatting, shell syntax,
+whitespace and strict MkDocs also passed. An independent review confirmed the persisted-intent
+and cancellation fixes. No App/iOS schema or API contract changed.
+
 Shell recovery tests exercise healthy-interface preservation, recovery with/without a loaded
 driver, refusal on other hardware, a bounded failed recovery and real child termination.
 Controller tests cover
 grace/backoff, asynchronous scheduling, state guards, explicit mode changes and shutdown.
 Renderer tests preserve setup-needed behavior and translated copy. Hardware deployment and
-automatic fault recovery await restoration of USB access; the manual recovery above succeeded
+automatic fault recovery await restoration of USB access; `cad66aa` is not yet deployed.
+The manual recovery above succeeded
 on Pi Zero 2 W Rev 1.0 / Debian 13.2 / kernel 6.12.47+rpt-rpi-v8, with Waveshare ST7789 LCD HAT
 and X306 2300 mAh battery. Saved Instax Square was connected (film 6, battery 95%). No film
 was consumed. Camera reconnection and a new 16-hour discharge test are not established here.

@@ -1,0 +1,739 @@
+{
+  "source_name": "DSC02825.jpeg",
+  "source_bytes": 3417509,
+  "source_sha256": "8fa2a9787e74cffb64dd9f32e8d693c321d9e801379d5ba9bec5f6e17215ce1a",
+  "boundary": "Installed unmodified Bridge service, same-Pi hotspot-address FTP replay of user-selected JPEG, actual Square BLE print. No camera Wi-Fi airtime or mechanical completion sensor. One sheet requested; no retries.",
+  "deployment": "7249d4e2f720faf95cc6bd8ebebbf7cba4534ee6",
+  "native_sha256": "8d5ee8081dc297f9c588038410941433d3f72a5eebe9b8c5f688dad476e5f75d",
+  "throttled": "throttled=0x0",
+  "data_att_write_count": 570,
+  "data_att_value_bytes": [
+    181,
+    182
+  ],
+  "trial": "baseline",
+  "settings": {
+    "fit": "auto",
+    "quality": 100,
+    "adjustments": {
+      "saturation": 1.5,
+      "exposure": 1.0,
+      "sharpness": 1.0,
+      "hue": 0,
+      "vignette": 0,
+      "datestamp": false,
+      "watermark": false,
+      "datestamp_text": "",
+      "watermark_text": ""
+    },
+    "correction": {
+      "saturation": 1.0
+    }
+  },
+  "film_before": 3,
+  "film_after": 2,
+  "ftp_reply_code": "226",
+  "jpeg": {
+    "bytes": 102846,
+    "dimensions": [
+      800,
+      800
+    ],
+    "quality": 87,
+    "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+    "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+    "exact_reference_python_bytes": true,
+    "square_transport_flip": false
+  },
+  "timings_s": {
+    "local_ftp_upload": 0.04416251182556152,
+    "ftp_start_to_print_complete": 27.93375301361084,
+    "ftp_complete_to_print_complete": 27.88959050178528,
+    "dequeue_to_jpeg_ready": 2.450407028198242,
+    "jpeg_ready_to_print_start": 2.192645788192749,
+    "native_handoff_to_download_start": 0.03764510154724121,
+    "download_start_through_end_ack": 21.836738109588623,
+    "data_first_send_to_last_ack": 21.61123514175415,
+    "last_data_ack_to_download_end_send": 0.15494990348815918,
+    "download_end_ack_to_led_send": 0.0032939910888671875,
+    "led_send_to_print_execute": 1.0314300060272217,
+    "print_execute_to_status_ack": 0.030351877212524414,
+    "native_handoff_to_complete": 23.224096059799194
+  },
+  "data_chunks": 57,
+  "data_ack_wait_s": {
+    "mean": 0.05026578484920033,
+    "min": 0.04549694061279297,
+    "max": 0.07250690460205078,
+    "sum": 2.865149736404419
+  },
+  "data_fragment_span_s": {
+    "sum": 10.004061698913574,
+    "mean": 0.1755098543669048
+  },
+  "inter_chunk_after_ack_s": {
+    "mean": 0.15610756618635996,
+    "min": 0.1540539264678955,
+    "max": 0.17495203018188477,
+    "sum": 8.742023706436157
+  },
+  "led_transaction": {
+    "opcode": "0x3001",
+    "request_start_unix_s": 1791811578.90474,
+    "request_end_unix_s": 1791811578.90474,
+    "request_fragment_span_s": 0.0,
+    "ack_unix_s": 1791811578.93144,
+    "ack_wait_after_final_fragment_s": 0.02670001983642578,
+    "reply_payload_hex": "00"
+  },
+  "execute_transaction": {
+    "opcode": "0x1080",
+    "request_start_unix_s": 1791811579.93617,
+    "request_end_unix_s": 1791811579.93617,
+    "request_fragment_span_s": 0.0,
+    "ack_unix_s": 1791811579.966522,
+    "ack_wait_after_final_fragment_s": 0.030351877212524414,
+    "reply_payload_hex": "000c"
+  },
+  "clock_samples_during_job": 96,
+  "sampled_job_cpu_khz": [
+    1000000
+  ],
+  "transactions": [
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811553.301868,
+      "request_end_unix_s": 1791811553.301868,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811553.327053,
+      "ack_wait_after_final_fragment_s": 0.025185108184814453,
+      "reply_payload_hex": "00022300000c00000000"
+    },
+    {
+      "opcode": "0x1000",
+      "request_start_unix_s": 1791811557.064708,
+      "request_end_unix_s": 1791811557.064708,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811557.091939,
+      "ack_wait_after_final_fragment_s": 0.02723097801208496,
+      "reply_payload_hex": "0000000710"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811557.095764,
+      "request_end_unix_s": 1791811557.259839,
+      "request_fragment_span_s": 0.16407513618469238,
+      "ack_unix_s": 1791811557.316914,
+      "ack_wait_after_final_fragment_s": 0.05707502365112305,
+      "reply_payload_hex": "0000000000"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811557.48671,
+      "request_end_unix_s": 1791811557.649718,
+      "request_fragment_span_s": 0.1630079746246338,
+      "ack_unix_s": 1791811557.706912,
+      "ack_wait_after_final_fragment_s": 0.05719399452209473,
+      "reply_payload_hex": "0000000001"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811557.866906,
+      "request_end_unix_s": 1791811558.02443,
+      "request_fragment_span_s": 0.15752410888671875,
+      "ack_unix_s": 1791811558.081911,
+      "ack_wait_after_final_fragment_s": 0.05748105049133301,
+      "reply_payload_hex": "0000000002"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811558.242005,
+      "request_end_unix_s": 1791811558.399369,
+      "request_fragment_span_s": 0.1573638916015625,
+      "ack_unix_s": 1791811558.456912,
+      "ack_wait_after_final_fragment_s": 0.057543039321899414,
+      "reply_payload_hex": "0000000003"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811558.612629,
+      "request_end_unix_s": 1791811558.774398,
+      "request_fragment_span_s": 0.16176915168762207,
+      "ack_unix_s": 1791811558.831943,
+      "ack_wait_after_final_fragment_s": 0.05754494667053223,
+      "reply_payload_hex": "0000000004"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811558.98685,
+      "request_end_unix_s": 1791811559.161347,
+      "request_fragment_span_s": 0.17449688911437988,
+      "ack_unix_s": 1791811559.221941,
+      "ack_wait_after_final_fragment_s": 0.06059408187866211,
+      "reply_payload_hex": "0000000005"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811559.377226,
+      "request_end_unix_s": 1791811559.539398,
+      "request_fragment_span_s": 0.1621718406677246,
+      "ack_unix_s": 1791811559.596924,
+      "ack_wait_after_final_fragment_s": 0.0575261116027832,
+      "reply_payload_hex": "0000000006"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811559.752499,
+      "request_end_unix_s": 1791811559.91526,
+      "request_fragment_span_s": 0.16276097297668457,
+      "ack_unix_s": 1791811559.97194,
+      "ack_wait_after_final_fragment_s": 0.05667996406555176,
+      "reply_payload_hex": "0000000007"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811560.127165,
+      "request_end_unix_s": 1791811560.289369,
+      "request_fragment_span_s": 0.16220402717590332,
+      "ack_unix_s": 1791811560.346893,
+      "ack_wait_after_final_fragment_s": 0.05752396583557129,
+      "reply_payload_hex": "0000000008"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811560.500947,
+      "request_end_unix_s": 1791811560.664402,
+      "request_fragment_span_s": 0.16345500946044922,
+      "ack_unix_s": 1791811560.736909,
+      "ack_wait_after_final_fragment_s": 0.07250690460205078,
+      "reply_payload_hex": "0000000009"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811560.892447,
+      "request_end_unix_s": 1791811561.084364,
+      "request_fragment_span_s": 0.19191694259643555,
+      "ack_unix_s": 1791811561.141915,
+      "ack_wait_after_final_fragment_s": 0.05755114555358887,
+      "reply_payload_hex": "000000000a"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811561.297434,
+      "request_end_unix_s": 1791811561.471283,
+      "request_fragment_span_s": 0.17384886741638184,
+      "ack_unix_s": 1791811561.51688,
+      "ack_wait_after_final_fragment_s": 0.045597076416015625,
+      "reply_payload_hex": "000000000b"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811561.671133,
+      "request_end_unix_s": 1791811561.846274,
+      "request_fragment_span_s": 0.1751408576965332,
+      "ack_unix_s": 1791811561.891895,
+      "ack_wait_after_final_fragment_s": 0.04562115669250488,
+      "reply_payload_hex": "000000000c"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811562.049434,
+      "request_end_unix_s": 1791811562.221306,
+      "request_fragment_span_s": 0.17187213897705078,
+      "ack_unix_s": 1791811562.266907,
+      "ack_wait_after_final_fragment_s": 0.04560089111328125,
+      "reply_payload_hex": "000000000d"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811562.422074,
+      "request_end_unix_s": 1791811562.596347,
+      "request_fragment_span_s": 0.17427301406860352,
+      "ack_unix_s": 1791811562.641921,
+      "ack_wait_after_final_fragment_s": 0.04557394981384277,
+      "reply_payload_hex": "000000000e"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811562.797232,
+      "request_end_unix_s": 1791811562.971307,
+      "request_fragment_span_s": 0.17407512664794922,
+      "ack_unix_s": 1791811563.016912,
+      "ack_wait_after_final_fragment_s": 0.04560494422912598,
+      "reply_payload_hex": "000000000f"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811563.172238,
+      "request_end_unix_s": 1791811563.361389,
+      "request_fragment_span_s": 0.18915081024169922,
+      "ack_unix_s": 1791811563.406922,
+      "ack_wait_after_final_fragment_s": 0.045533180236816406,
+      "reply_payload_hex": "0000000010"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811563.56181,
+      "request_end_unix_s": 1791811563.736329,
+      "request_fragment_span_s": 0.17451906204223633,
+      "ack_unix_s": 1791811563.781921,
+      "ack_wait_after_final_fragment_s": 0.04559183120727539,
+      "reply_payload_hex": "0000000011"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811563.936804,
+      "request_end_unix_s": 1791811564.126334,
+      "request_fragment_span_s": 0.1895298957824707,
+      "ack_unix_s": 1791811564.171938,
+      "ack_wait_after_final_fragment_s": 0.04560399055480957,
+      "reply_payload_hex": "0000000012"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811564.32711,
+      "request_end_unix_s": 1791811564.501324,
+      "request_fragment_span_s": 0.17421388626098633,
+      "ack_unix_s": 1791811564.546917,
+      "ack_wait_after_final_fragment_s": 0.0455930233001709,
+      "reply_payload_hex": "0000000013"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811564.702653,
+      "request_end_unix_s": 1791811564.891303,
+      "request_fragment_span_s": 0.18865013122558594,
+      "ack_unix_s": 1791811564.951937,
+      "ack_wait_after_final_fragment_s": 0.06063389778137207,
+      "reply_payload_hex": "0000000014"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811565.107096,
+      "request_end_unix_s": 1791811565.296386,
+      "request_fragment_span_s": 0.18929004669189453,
+      "ack_unix_s": 1791811565.341958,
+      "ack_wait_after_final_fragment_s": 0.04557204246520996,
+      "reply_payload_hex": "0000000015"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811565.501469,
+      "request_end_unix_s": 1791811565.67144,
+      "request_fragment_span_s": 0.16997098922729492,
+      "ack_unix_s": 1791811565.716949,
+      "ack_wait_after_final_fragment_s": 0.04550909996032715,
+      "reply_payload_hex": "0000000016"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811565.872051,
+      "request_end_unix_s": 1791811566.046347,
+      "request_fragment_span_s": 0.17429590225219727,
+      "ack_unix_s": 1791811566.091953,
+      "ack_wait_after_final_fragment_s": 0.045606136322021484,
+      "reply_payload_hex": "0000000017"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811566.247033,
+      "request_end_unix_s": 1791811566.421333,
+      "request_fragment_span_s": 0.174299955368042,
+      "ack_unix_s": 1791811566.466969,
+      "ack_wait_after_final_fragment_s": 0.04563593864440918,
+      "reply_payload_hex": "0000000018"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811566.622913,
+      "request_end_unix_s": 1791811566.826324,
+      "request_fragment_span_s": 0.20341110229492188,
+      "ack_unix_s": 1791811566.871953,
+      "ack_wait_after_final_fragment_s": 0.045629024505615234,
+      "reply_payload_hex": "0000000019"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811567.026834,
+      "request_end_unix_s": 1791811567.201411,
+      "request_fragment_span_s": 0.174576997756958,
+      "ack_unix_s": 1791811567.246947,
+      "ack_wait_after_final_fragment_s": 0.045536041259765625,
+      "reply_payload_hex": "000000001a"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811567.402003,
+      "request_end_unix_s": 1791811567.576331,
+      "request_fragment_span_s": 0.17432785034179688,
+      "ack_unix_s": 1791811567.621947,
+      "ack_wait_after_final_fragment_s": 0.04561614990234375,
+      "reply_payload_hex": "000000001b"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811567.777057,
+      "request_end_unix_s": 1791811567.951453,
+      "request_fragment_span_s": 0.17439603805541992,
+      "ack_unix_s": 1791811567.99695,
+      "ack_wait_after_final_fragment_s": 0.04549694061279297,
+      "reply_payload_hex": "000000001c"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811568.152312,
+      "request_end_unix_s": 1791811568.326345,
+      "request_fragment_span_s": 0.17403292655944824,
+      "ack_unix_s": 1791811568.371976,
+      "ack_wait_after_final_fragment_s": 0.04563093185424805,
+      "reply_payload_hex": "000000001d"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811568.527057,
+      "request_end_unix_s": 1791811568.701389,
+      "request_fragment_span_s": 0.1743321418762207,
+      "ack_unix_s": 1791811568.746976,
+      "ack_wait_after_final_fragment_s": 0.04558682441711426,
+      "reply_payload_hex": "000000001e"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811568.902703,
+      "request_end_unix_s": 1791811569.077079,
+      "request_fragment_span_s": 0.1743760108947754,
+      "ack_unix_s": 1791811569.137018,
+      "ack_wait_after_final_fragment_s": 0.059938907623291016,
+      "reply_payload_hex": "000000001f"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811569.293059,
+      "request_end_unix_s": 1791811569.466359,
+      "request_fragment_span_s": 0.17329978942871094,
+      "ack_unix_s": 1791811569.512007,
+      "ack_wait_after_final_fragment_s": 0.04564809799194336,
+      "reply_payload_hex": "0000000020"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811569.686959,
+      "request_end_unix_s": 1791811569.85644,
+      "request_fragment_span_s": 0.1694810390472412,
+      "ack_unix_s": 1791811569.90198,
+      "ack_wait_after_final_fragment_s": 0.04553985595703125,
+      "reply_payload_hex": "0000000021"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811570.057439,
+      "request_end_unix_s": 1791811570.231398,
+      "request_fragment_span_s": 0.17395901679992676,
+      "ack_unix_s": 1791811570.276975,
+      "ack_wait_after_final_fragment_s": 0.04557681083679199,
+      "reply_payload_hex": "0000000022"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811570.432106,
+      "request_end_unix_s": 1791811570.606438,
+      "request_fragment_span_s": 0.1743319034576416,
+      "ack_unix_s": 1791811570.65198,
+      "ack_wait_after_final_fragment_s": 0.045542001724243164,
+      "reply_payload_hex": "0000000023"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811570.806662,
+      "request_end_unix_s": 1791811570.981383,
+      "request_fragment_span_s": 0.17472100257873535,
+      "ack_unix_s": 1791811571.026979,
+      "ack_wait_after_final_fragment_s": 0.04559588432312012,
+      "reply_payload_hex": "0000000024"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811571.182217,
+      "request_end_unix_s": 1791811571.357113,
+      "request_fragment_span_s": 0.1748960018157959,
+      "ack_unix_s": 1791811571.416991,
+      "ack_wait_after_final_fragment_s": 0.05987811088562012,
+      "reply_payload_hex": "0000000025"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811571.572714,
+      "request_end_unix_s": 1791811571.74637,
+      "request_fragment_span_s": 0.17365598678588867,
+      "ack_unix_s": 1791811571.792406,
+      "ack_wait_after_final_fragment_s": 0.0460360050201416,
+      "reply_payload_hex": "0000000026"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811571.948479,
+      "request_end_unix_s": 1791811572.121361,
+      "request_fragment_span_s": 0.172882080078125,
+      "ack_unix_s": 1791811572.181974,
+      "ack_wait_after_final_fragment_s": 0.06061291694641113,
+      "reply_payload_hex": "0000000027"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811572.337609,
+      "request_end_unix_s": 1791811572.511359,
+      "request_fragment_span_s": 0.1737499237060547,
+      "ack_unix_s": 1791811572.556996,
+      "ack_wait_after_final_fragment_s": 0.04563713073730469,
+      "reply_payload_hex": "0000000028"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811572.711914,
+      "request_end_unix_s": 1791811572.886359,
+      "request_fragment_span_s": 0.17444491386413574,
+      "ack_unix_s": 1791811572.931977,
+      "ack_wait_after_final_fragment_s": 0.04561805725097656,
+      "reply_payload_hex": "0000000029"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811573.086788,
+      "request_end_unix_s": 1791811573.26144,
+      "request_fragment_span_s": 0.174652099609375,
+      "ack_unix_s": 1791811573.307005,
+      "ack_wait_after_final_fragment_s": 0.045564889907836914,
+      "reply_payload_hex": "000000002a"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811573.462215,
+      "request_end_unix_s": 1791811573.66638,
+      "request_fragment_span_s": 0.20416498184204102,
+      "ack_unix_s": 1791811573.711974,
+      "ack_wait_after_final_fragment_s": 0.045593976974487305,
+      "reply_payload_hex": "000000002b"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811573.86716,
+      "request_end_unix_s": 1791811574.041381,
+      "request_fragment_span_s": 0.17422080039978027,
+      "ack_unix_s": 1791811574.086979,
+      "ack_wait_after_final_fragment_s": 0.04559803009033203,
+      "reply_payload_hex": "000000002c"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811574.241661,
+      "request_end_unix_s": 1791811574.431395,
+      "request_fragment_span_s": 0.18973398208618164,
+      "ack_unix_s": 1791811574.492025,
+      "ack_wait_after_final_fragment_s": 0.060629844665527344,
+      "reply_payload_hex": "000000002d"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811574.647131,
+      "request_end_unix_s": 1791811574.821417,
+      "request_fragment_span_s": 0.1742861270904541,
+      "ack_unix_s": 1791811574.882018,
+      "ack_wait_after_final_fragment_s": 0.060600996017456055,
+      "reply_payload_hex": "000000002e"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811575.037366,
+      "request_end_unix_s": 1791811575.226431,
+      "request_fragment_span_s": 0.18906497955322266,
+      "ack_unix_s": 1791811575.272035,
+      "ack_wait_after_final_fragment_s": 0.04560399055480957,
+      "reply_payload_hex": "000000002f"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811575.426947,
+      "request_end_unix_s": 1791811575.616408,
+      "request_fragment_span_s": 0.18946099281311035,
+      "ack_unix_s": 1791811575.662036,
+      "ack_wait_after_final_fragment_s": 0.04562783241271973,
+      "reply_payload_hex": "0000000030"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811575.81733,
+      "request_end_unix_s": 1791811575.992134,
+      "request_fragment_span_s": 0.1748042106628418,
+      "ack_unix_s": 1791811576.052032,
+      "ack_wait_after_final_fragment_s": 0.05989789962768555,
+      "reply_payload_hex": "0000000031"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811576.206846,
+      "request_end_unix_s": 1791811576.381487,
+      "request_fragment_span_s": 0.17464089393615723,
+      "ack_unix_s": 1791811576.427041,
+      "ack_wait_after_final_fragment_s": 0.045554161071777344,
+      "reply_payload_hex": "0000000032"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811576.582225,
+      "request_end_unix_s": 1791811576.7564,
+      "request_fragment_span_s": 0.17417502403259277,
+      "ack_unix_s": 1791811576.802003,
+      "ack_wait_after_final_fragment_s": 0.04560279846191406,
+      "reply_payload_hex": "0000000033"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811576.957455,
+      "request_end_unix_s": 1791811577.146479,
+      "request_fragment_span_s": 0.1890239715576172,
+      "ack_unix_s": 1791811577.207034,
+      "ack_wait_after_final_fragment_s": 0.060555219650268555,
+      "reply_payload_hex": "0000000034"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811577.362331,
+      "request_end_unix_s": 1791811577.536402,
+      "request_fragment_span_s": 0.1740710735321045,
+      "ack_unix_s": 1791811577.582289,
+      "ack_wait_after_final_fragment_s": 0.045886993408203125,
+      "reply_payload_hex": "0000000035"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811577.736808,
+      "request_end_unix_s": 1791811577.911392,
+      "request_fragment_span_s": 0.17458391189575195,
+      "ack_unix_s": 1791811577.957001,
+      "ack_wait_after_final_fragment_s": 0.0456089973449707,
+      "reply_payload_hex": "0000000036"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811578.112012,
+      "request_end_unix_s": 1791811578.286415,
+      "request_fragment_span_s": 0.17440319061279297,
+      "ack_unix_s": 1791811578.332025,
+      "ack_wait_after_final_fragment_s": 0.04560995101928711,
+      "reply_payload_hex": "0000000037"
+    },
+    {
+      "opcode": "0x1001",
+      "request_start_unix_s": 1791811578.487378,
+      "request_end_unix_s": 1791811578.661402,
+      "request_fragment_span_s": 0.17402410507202148,
+      "ack_unix_s": 1791811578.706999,
+      "ack_wait_after_final_fragment_s": 0.045597076416015625,
+      "reply_payload_hex": "0000000038"
+    },
+    {
+      "opcode": "0x1002",
+      "request_start_unix_s": 1791811578.861949,
+      "request_end_unix_s": 1791811578.861949,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811578.901446,
+      "ack_wait_after_final_fragment_s": 0.03949713706970215,
+      "reply_payload_hex": "00"
+    },
+    {
+      "opcode": "0x3001",
+      "request_start_unix_s": 1791811578.90474,
+      "request_end_unix_s": 1791811578.90474,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811578.93144,
+      "ack_wait_after_final_fragment_s": 0.02670001983642578,
+      "reply_payload_hex": "00"
+    },
+    {
+      "opcode": "0x1080",
+      "request_start_unix_s": 1791811579.93617,
+      "request_end_unix_s": 1791811579.93617,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811579.966522,
+      "ack_wait_after_final_fragment_s": 0.030351877212524414,
+      "reply_payload_hex": "000c"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811579.970439,
+      "request_end_unix_s": 1791811579.970439,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811579.99736,
+      "ack_wait_after_final_fragment_s": 0.02692103385925293,
+      "reply_payload_hex": "000223127f0c00000000"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811580.516185,
+      "request_end_unix_s": 1791811580.516185,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811581.467064,
+      "ack_wait_after_final_fragment_s": 0.9508788585662842,
+      "reply_payload_hex": "000102410000"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811581.470627,
+      "request_end_unix_s": 1791811581.470627,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811581.497066,
+      "ack_wait_after_final_fragment_s": 0.02643895149230957,
+      "reply_payload_hex": "000223127f0c00000000"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811581.500777,
+      "request_end_unix_s": 1791811581.500777,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811581.527051,
+      "ack_wait_after_final_fragment_s": 0.02627396583557129,
+      "reply_payload_hex": "00030000004100000012"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811590.002021,
+      "request_end_unix_s": 1791811590.002021,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811590.032278,
+      "ack_wait_after_final_fragment_s": 0.030256986618041992,
+      "reply_payload_hex": "000222127f0c00000000"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811590.516564,
+      "request_end_unix_s": 1791811590.516564,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811590.542263,
+      "ack_wait_after_final_fragment_s": 0.025699138641357422,
+      "reply_payload_hex": "000102410000"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811590.545563,
+      "request_end_unix_s": 1791811590.545563,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811590.572261,
+      "ack_wait_after_final_fragment_s": 0.02669811248779297,
+      "reply_payload_hex": "000222127f0c00000000"
+    },
+    {
+      "opcode": "0x2",
+      "request_start_unix_s": 1791811590.575484,
+      "request_end_unix_s": 1791811590.575484,
+      "request_fragment_span_s": 0.0,
+      "ack_unix_s": 1791811590.602251,
+      "ack_wait_after_final_fragment_s": 0.02676701545715332,
+      "reply_payload_hex": "00030000004100000012"
+    }
+  ],
+  "data_hci_acl_packet_count": 3990,
+  "data_hci_acl_payload_lengths": {
+    "27": 3933,
+    "26": 57
+  }
+}

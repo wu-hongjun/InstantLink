@@ -184,3 +184,37 @@ InstantLink's production runtime is BLE-only. The packet structure has also been
 - [linssenste/instax-link-web](https://github.com/linssenste/instax-link-web)
 - [dgwilson/ESP32-Instax-Bridge](https://github.com/dgwilson/ESP32-Instax-Bridge)
 - [Reverse Engineering Guide](../development/reverse-engineering.md)
+
+## Negotiated BLE Fragment Size
+
+Protocol packets and model JPEG chunks are distinct from individual GATT writes. Their bytes,
+checksums, indexes, padding and ACK order do not change when the write payload limit changes.
+
+On Linux, each new connection performs a bounded one-second BlueZ query for the exact connected
+device, unique Instax service and write characteristic. The characteristic must advertise
+write-without-response and expose a valid 23–517-byte MTU. The selected payload is `MTU − 3`,
+capped at 236 bytes. The diagnostic download/cancel probe can explicitly compare up to 244 bytes.
+The 236-byte production ceiling avoids extra HCI fragmentation on the tested Pi controller. A known smaller MTU is honored (23 selects 20). Missing, malformed,
+ambiguous or unavailable metadata uses the existing 182-byte path. Other platforms retain 182 bytes.
+[BlueZ 5.82 characteristic API](https://raw.githubusercontent.com/bluez/bluez/5.82/doc/org.bluez.GattCharacteristic.rst).
+
+The query has no per-fragment shell or D-Bus lookup. At most one blocking bus open may be
+outstanding; late results own their unspawned resources, and live query/listener tasks have
+cleanup guards. Every connection discovers its own capability again. Raw sends and complete
+send/ACK transactions share the transport command lock.
+
+A failed, timed-out or cancelled delivery poisons the session. No uncertain packet or print
+job is replayed. Before reuse, a new transport requires a bounded disconnect and an authoritative
+disconnected result. If an actual enlarged fragment was attempted, that exact device uses
+conservative fragments on its next connection for the process lifetime. A tiny status failure
+requires link reset without disabling larger writes. Known smaller MTUs still clamp conservative
+fragments. The recovery cache holds at most 128 device identities; saturation selects conservative
+fragments and reset for all new connections, preserving safety without unbounded growth.
+
+Disconnect immediately closes the transport to new commands and marks uncertain teardown for
+fresh-link reset. Physical disconnect is attempted before querying connection state; an authoritative
+disconnected result permits idempotent cleanup even when the disconnect RPC reports an error.
+Cancellation or an unknown/still-connected result retains the reset requirement.
+
+This does not reduce protocol chunk pacing or pre-execute waits. Printer firmware acceptance
+of larger fragments requires physical validation in addition to a negotiated ATT MTU.

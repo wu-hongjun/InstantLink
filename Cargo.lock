@@ -923,6 +923,8 @@ version = "0.1.50"
 dependencies = [
  "async-trait",
  "btleplug",
+ "dbus",
+ "dbus-tokio",
  "futures",
  "image",
  "libdbus-sys",

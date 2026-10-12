@@ -21,6 +21,9 @@ turbojpeg-sys = { version = "1.2.0", default-features = false, features = ["cmak
 # Enables vendored libdbus for Linux cross-builds from macOS. Without this, libdbus-sys
 # requires a target-specific dbus-1.pc sysroot just to build the BlueZ backend.
 libdbus-sys = { workspace = true }
+# Read negotiated BlueZ characteristic MTU without shell commands or blocking the reactor.
+dbus = "0.9.10"
+dbus-tokio = "0.7.6"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

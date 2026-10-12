@@ -3,6 +3,11 @@
 //! Handles service/characteristic discovery, notification subscription,
 //! send/receive with timeouts, and MTU fragmentation.
 
+use std::collections::BTreeMap;
+use std::future::Future;
+use std::num::NonZeroUsize;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{LazyLock, Mutex as StdMutex};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -19,7 +24,7 @@ use uuid::Uuid;
 #[cfg(target_os = "linux")]
 use std::process::Stdio;
 
-use crate::commands::ResponseExpectation;
+use crate::commands::{Command, ResponseExpectation};
 use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::error::{PrinterError, Result};
 use crate::protocol::{self, PacketAssembler};
@@ -110,6 +115,185 @@ pub const DEFAULT_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Timeout to wait for the listener task to exit gracefully after cancellation.
 const LISTENER_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
+#[cfg(target_os = "linux")]
+const MTU_DISCOVERY_TIMEOUT: Duration = Duration::from_secs(1);
+#[cfg(target_os = "linux")]
+static MTU_BUS_OPEN: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(1);
+const MAX_FALLBACK_DEVICES: usize = 128;
+
+#[derive(Default)]
+struct FallbackDevices {
+    devices: BTreeMap<String, bool>,
+    reset_required: std::collections::BTreeSet<String>,
+    /// Once capacity is reached, use conservative fragments for all new devices
+    /// rather than evicting a device whose larger writes were unsafe.
+    saturated: bool,
+}
+
+static FALLBACK_DEVICES: LazyLock<StdMutex<FallbackDevices>> =
+    LazyLock::new(|| StdMutex::new(FallbackDevices::default()));
+
+impl FallbackDevices {
+    fn contains(&self, device: &str) -> bool {
+        self.saturated || self.devices.get(device).copied().unwrap_or(false)
+    }
+
+    fn requires_reset(&self, device: &str) -> bool {
+        self.saturated || self.reset_required.contains(device)
+    }
+
+    fn reset_completed(&mut self, device: &str) {
+        self.reset_required.remove(device);
+        if self.devices.get(device) == Some(&false) {
+            self.devices.remove(device);
+        }
+    }
+
+    fn insert(&mut self, device: &str, enlarged: bool) {
+        if let Some(conservative) = self.devices.get_mut(device) {
+            *conservative |= enlarged;
+            self.reset_required.insert(device.to_owned());
+        } else if self.devices.len() < MAX_FALLBACK_DEVICES {
+            self.devices.insert(device.to_owned(), enlarged);
+            self.reset_required.insert(device.to_owned());
+        } else {
+            self.saturated = true;
+        }
+    }
+}
+
+fn conservative_device(device: &str) -> bool {
+    FALLBACK_DEVICES
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .contains(device)
+}
+
+struct WriteSession {
+    device: String,
+    payload_size: NonZeroUsize,
+    poisoned: AtomicBool,
+    enlarged_attempted: AtomicBool,
+}
+
+impl WriteSession {
+    fn require_link_reset(&self) {
+        self.poisoned.store(true, Ordering::Release);
+        FALLBACK_DEVICES
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(&self.device, false);
+    }
+
+    fn delivery(&self) -> Result<DeliveryGuard<'_>> {
+        if self.poisoned.load(Ordering::Acquire) {
+            return Err(PrinterError::Ble(
+                "previous BLE delivery was interrupted; reconnect before sending".into(),
+            ));
+        }
+        self.enlarged_attempted.store(false, Ordering::Release);
+        Ok(DeliveryGuard {
+            session: self,
+            armed: true,
+        })
+    }
+
+    fn interrupt(&self) {
+        self.poisoned.store(true, Ordering::Release);
+        FALLBACK_DEVICES
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(
+                &self.device,
+                self.enlarged_attempted.load(Ordering::Acquire),
+            );
+    }
+}
+
+/// Cancellation and errors may leave an uncertain prefix in the Printer. Never
+/// restart that message or let another command use this transport afterward.
+struct DeliveryGuard<'a> {
+    session: &'a WriteSession,
+    armed: bool,
+}
+
+impl DeliveryGuard<'_> {
+    fn complete(mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for DeliveryGuard<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.session.interrupt();
+        }
+    }
+}
+
+/// Teardown uncertainty requires a fresh link, without attributing a previously
+/// successful large write to a fragmentation failure.
+struct LinkResetGuard<'a> {
+    session: &'a WriteSession,
+    armed: bool,
+}
+
+impl LinkResetGuard<'_> {
+    fn complete(mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for LinkResetGuard<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.session.require_link_reset();
+        }
+    }
+}
+
+async fn disconnect_and_verify<D, DFut, Q, QFut>(disconnect: D, query_connected: Q) -> Result<()>
+where
+    D: FnOnce() -> DFut,
+    DFut: Future<Output = Result<()>>,
+    Q: FnOnce() -> QFut,
+    QFut: Future<Output = Result<bool>>,
+{
+    // Never gate the action on a preliminary status RPC: BlueZ can stop
+    // answering that query while still holding a physical connection open.
+    let disconnect_error =
+        match tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, disconnect()).await {
+            Ok(Ok(())) => None,
+            Ok(Err(error)) => Some(error),
+            Err(_) => Some(PrinterError::Timeout),
+        };
+    match tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, query_connected()).await {
+        Ok(Ok(false)) => Ok(()),
+        Ok(Ok(true)) => Err(disconnect_error.unwrap_or_else(|| {
+            PrinterError::Ble("BLE link remained connected after disconnect".into())
+        })),
+        Ok(Err(error)) => Err(disconnect_error.unwrap_or(error)),
+        Err(_) => Err(disconnect_error.unwrap_or(PrinterError::Timeout)),
+    }
+}
+
+async fn write_fragments<F, Fut>(data: &[u8], session: &WriteSession, mut write: F) -> Result<()>
+where
+    F: FnMut(Vec<u8>) -> Fut,
+    Fut: Future<Output = Result<()>>,
+{
+    let delivery = session.delivery()?;
+    for fragment in protocol::fragment_with_size(data, session.payload_size) {
+        if fragment.len() > protocol::MTU_SIZE {
+            session.enlarged_attempted.store(true, Ordering::Release);
+        }
+        tokio::time::timeout(DEFAULT_WRITE_TIMEOUT, write(fragment))
+            .await
+            .map_err(|_| PrinterError::Timeout)??;
+    }
+    delivery.complete();
+    Ok(())
+}
 /// Maximum time to wait for the Instax GATT characteristics to be exported by
 /// the OS BLE stack after service discovery. BlueZ exports characteristics
 /// incrementally, so they may not all be present immediately after connect.
@@ -267,14 +451,142 @@ fn is_android_advertisement(name: &str) -> bool {
     name.trim().to_ascii_uppercase().ends_with("(ANDROID)")
 }
 
+#[cfg(target_os = "linux")]
+type BluezObjects = std::collections::HashMap<
+    dbus::Path<'static>,
+    std::collections::HashMap<String, dbus::arg::PropMap>,
+>;
+
+#[cfg(target_os = "linux")]
+fn bluez_write_mtu(objects: &BluezObjects, device_path: &str) -> Option<u16> {
+    use dbus::arg::prop_cast;
+    let device = objects
+        .get(&dbus::Path::new(device_path).ok()?)?
+        .get("org.bluez.Device1")?;
+    if !*prop_cast::<bool>(device, "Connected")? {
+        return None;
+    }
+    let mut services = objects.iter().filter_map(|(path, interfaces)| {
+        let service = interfaces.get("org.bluez.GattService1")?;
+        if &**prop_cast::<dbus::Path<'static>>(service, "Device")? != device_path
+            || !path.starts_with(&format!("{device_path}/"))
+            || Uuid::parse_str(prop_cast::<String>(service, "UUID")?).ok()? != SERVICE_UUID
+        {
+            return None;
+        }
+        Some(path)
+    });
+    // btleplug indexes services by UUID as well; duplicate services make its
+    // choice ambiguous even when only one exports a writable characteristic.
+    let selected_service = services.next()?;
+    if services.next().is_some() {
+        return None;
+    }
+    let mut matches = objects.iter().filter_map(|(path, interfaces)| {
+        let characteristic = interfaces.get("org.bluez.GattCharacteristic1")?;
+        let uuid = Uuid::parse_str(prop_cast::<String>(characteristic, "UUID")?).ok()?;
+        if uuid != WRITE_CHAR_UUID {
+            return None;
+        }
+        let service_path = prop_cast::<dbus::Path<'static>>(characteristic, "Service")?;
+        // Verify path ancestry and explicit parent properties; a matching UUID
+        // on another adapter/device/service must never select this Printer's MTU.
+        if service_path != selected_service || !path.starts_with(&format!("{service_path}/")) {
+            return None;
+        }
+        Some(characteristic)
+    });
+    // Duplicate identities are ambiguous even if one lacks Flags or MTU.
+    let characteristic = matches.next()?;
+    if matches.next().is_some() {
+        return None;
+    }
+    let flags = prop_cast::<Vec<String>>(characteristic, "Flags")?;
+    if !flags.iter().any(|flag| flag == "write-without-response") {
+        return None;
+    }
+    prop_cast::<u16>(characteristic, "MTU").copied()
+}
+
+struct AbortOnDrop(Option<JoinHandle<()>>);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        if let Some(handle) = self.0.take() {
+            handle.abort();
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+async fn negotiated_write_mtu(
+    peripheral: &Peripheral,
+    characteristic: &Characteristic,
+) -> Option<u16> {
+    use dbus::nonblock::stdintf::org_freedesktop_dbus::ObjectManager;
+    if characteristic.uuid != WRITE_CHAR_UUID || characteristic.service_uuid != SERVICE_UUID {
+        return None;
+    }
+    let device_path = format!("/org/bluez/{}", peripheral.id());
+    let discovery = async {
+        // libdbus opens the bus synchronously. Its late result owns its resource
+        // without spawning a task, so timeout/cancellation cannot leak an IO task.
+        let permit = MTU_BUS_OPEN.try_acquire().ok()?;
+        let (resource, connection) = tokio::task::spawn_blocking(move || {
+            let _permit = permit;
+            dbus_tokio::connection::new_system_sync()
+        })
+        .await
+        .ok()?
+        .ok()?;
+        let _resource_guard = AbortOnDrop(Some(tokio::spawn(async move {
+            let error = resource.await;
+            log::debug!("MTU discovery D-Bus resource ended: {error}");
+        })));
+        let proxy = dbus::nonblock::Proxy::new("org.bluez", "/", MTU_DISCOVERY_TIMEOUT, connection);
+        let objects = proxy.get_managed_objects().await.ok()?;
+        bluez_write_mtu(&objects, &device_path)
+    };
+    match tokio::time::timeout(MTU_DISCOVERY_TIMEOUT, discovery).await {
+        Ok(mtu) => mtu,
+        Err(_) => {
+            log::debug!("MTU discovery timed out; using established BLE payload fallback");
+            None
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn negotiated_write_mtu(
+    _peripheral: &Peripheral,
+    _characteristic: &Characteristic,
+) -> Option<u16> {
+    None
+}
+
+fn diagnostic_command_allowed(command: &Command) -> bool {
+    matches!(
+        command,
+        Command::ImageSupportInfo
+            | Command::BatteryStatus
+            | Command::PrinterFunctionInfo
+            | Command::HistoryInfo
+            | Command::DownloadStart { .. }
+            | Command::Data { .. }
+            | Command::DownloadEnd
+            | Command::DownloadCancel
+    )
+}
+
 /// Real BLE transport backed by btleplug.
 pub struct BleTransport {
     peripheral: Peripheral,
     write_char: Characteristic,
-    notify_char: Characteristic,
     rx: tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>,
     assembler: tokio::sync::Mutex<PacketAssembler>,
     command_lock: Mutex<()>,
+    write_session: WriteSession,
+    diagnostic_payload_size: NonZeroUsize,
     /// DIS Model Number string, if available.
     dis_model_number: Option<String>,
     /// Cancellation token signalled during `disconnect()` to stop the listener.
@@ -294,7 +606,38 @@ impl BleTransport {
         peripheral: Peripheral,
         progress: Option<&ConnectProgressCallback>,
     ) -> Result<Self> {
-        let already_connected = peripheral.is_connected().await.unwrap_or(false);
+        let device_key = peripheral.id().to_string();
+        let conservative = conservative_device(&device_key);
+        let reset_required = FALLBACK_DEVICES
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .requires_reset(&device_key);
+        // A retained reset marker may originate from this very status RPC
+        // wedging during teardown. Do not ask it again before the physical reset.
+        let mut already_connected = if reset_required {
+            false
+        } else {
+            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.is_connected())
+                .await
+                .ok()
+                .and_then(|result| result.ok())
+                .unwrap_or(false)
+        };
+        if reset_required {
+            // Always attempt a bounded disconnect and require authoritative
+            // disconnected state, even if the initial connection query failed.
+            let _ = tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.disconnect()).await;
+            tokio::time::sleep(Duration::from_millis(250)).await;
+            match tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.is_connected()).await
+            {
+                Ok(Ok(false)) => already_connected = false,
+                _ => {
+                    return Err(PrinterError::Ble(
+                        "could not reset BLE link after interrupted delivery".into(),
+                    ));
+                }
+            }
+        }
         if !already_connected {
             emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
             if let Err(error) = peripheral.connect().await {
@@ -387,7 +730,11 @@ impl BleTransport {
             );
         }
 
-        let write_char = match chars.iter().find(|c| c.uuid == WRITE_CHAR_UUID).cloned() {
+        let write_char = match chars
+            .iter()
+            .find(|c| c.uuid == WRITE_CHAR_UUID && c.service_uuid == SERVICE_UUID)
+            .cloned()
+        {
             Some(characteristic) => characteristic,
             None => {
                 Self::disconnect_quietly(&peripheral, None).await;
@@ -395,7 +742,11 @@ impl BleTransport {
             }
         };
 
-        let notify_char = match chars.iter().find(|c| c.uuid == NOTIFY_CHAR_UUID).cloned() {
+        let notify_char = match chars
+            .iter()
+            .find(|c| c.uuid == NOTIFY_CHAR_UUID && c.service_uuid == SERVICE_UUID)
+            .cloned()
+        {
             Some(characteristic) => characteristic,
             None => {
                 Self::disconnect_quietly(&peripheral, None).await;
@@ -469,21 +820,111 @@ impl BleTransport {
             }
             log::debug!("Notification listener task exited");
         });
+        let mut listener_guard = AbortOnDrop(Some(handle));
 
         // Brief delay to let the BLE connection stabilize
         tokio::time::sleep(Duration::from_millis(200)).await;
 
+        let negotiated_mtu = negotiated_write_mtu(&peripheral, &write_char).await;
+        let payload_size = protocol::fragment_payload_size(negotiated_mtu, conservative);
+        let diagnostic_payload_size =
+            protocol::diagnostic_fragment_payload_size(negotiated_mtu, conservative);
+        log::info!(
+            "BLE write payload selected: device={} mtu={:?} payload={} conservative={}",
+            device_key,
+            negotiated_mtu,
+            payload_size,
+            conservative
+        );
+
+        if reset_required {
+            FALLBACK_DEVICES
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .reset_completed(&device_key);
+        }
+
         Ok(Self {
             peripheral,
             write_char,
-            notify_char,
             rx: tokio::sync::Mutex::new(rx),
             assembler: tokio::sync::Mutex::new(PacketAssembler::new()),
             command_lock: Mutex::new(()),
+            write_session: WriteSession {
+                device: device_key,
+                payload_size: NonZeroUsize::new(payload_size).expect("selected payload is nonzero"),
+                poisoned: AtomicBool::new(false),
+                enlarged_attempted: AtomicBool::new(false),
+            },
+            diagnostic_payload_size: NonZeroUsize::new(diagnostic_payload_size)
+                .expect("selected diagnostic payload is nonzero"),
             dis_model_number,
             cancel_token,
-            listener_handle: Mutex::new(Some(handle)),
+            listener_handle: Mutex::new(listener_guard.0.take()),
         })
+    }
+
+    /// Caller holds command_lock through the entire protocol transaction.
+    async fn send_bytes(&self, data: &[u8]) -> Result<()> {
+        self.send_bytes_with_session(data, &self.write_session)
+            .await
+    }
+
+    async fn send_bytes_with_session(&self, data: &[u8], session: &WriteSession) -> Result<()> {
+        log::debug!(
+            "Sending {} bytes: {:02x?}",
+            data.len(),
+            &data[..data.len().min(20)]
+        );
+        write_fragments(data, session, |fragment| async move {
+            self.peripheral
+                .write(&self.write_char, &fragment, WriteType::WithoutResponse)
+                .await
+                .map_err(|e| PrinterError::Ble(format!("write failed: {e}")))
+        })
+        .await
+    }
+
+    /// Current negotiated ATT write ceiling for explicit download-only diagnostics.
+    /// This includes previous device-specific downgrade, but allows comparison
+    /// above the production preference without changing normal sends.
+    pub fn diagnostic_payload_limit(&self) -> NonZeroUsize {
+        self.diagnostic_payload_size
+    }
+
+    /// Compare fragments within this connection's negotiated diagnostic ceiling
+    /// without changing its production preference.
+    /// Printing and other actuator commands are rejected before any write. The
+    /// whole command and ACK are serialized; errors/cancellation poison the real
+    /// transport and preserve the same no-replay recovery policy as normal sends.
+    pub async fn diagnostic_command_with_payload_limit(
+        &self,
+        command: &Command,
+        payload_limit: NonZeroUsize,
+    ) -> Result<protocol::Packet> {
+        if !diagnostic_command_allowed(command) {
+            return Err(PrinterError::Ble(
+                "command is not allowed in download-only diagnostics".into(),
+            ));
+        }
+        let encoded = command.encode()?;
+        let expectation = command.response_expectation().ok_or_else(|| {
+            PrinterError::UnexpectedResponse("diagnostic command has no response".into())
+        })?;
+        let _guard = self.command_lock.lock().await;
+        let real_delivery = self.write_session.delivery()?;
+        let session = WriteSession {
+            device: self.write_session.device.clone(),
+            payload_size: payload_limit.min(self.diagnostic_payload_size),
+            poisoned: AtomicBool::new(false),
+            enlarged_attempted: AtomicBool::new(false),
+        };
+        let diagnostic_delivery = session.delivery()?;
+        self.send_bytes_with_session(&encoded, &session).await?;
+        let packet = receive_expected_from_transport(self, DEFAULT_TIMEOUT, expectation).await?;
+        diagnostic_delivery.complete();
+        real_delivery.complete();
+        Ok(packet)
     }
 
     /// Try to read the DIS Model Number characteristic from the peripheral.
@@ -566,8 +1007,12 @@ impl BleTransport {
 }
 
 fn has_instax_characteristics(chars: &std::collections::BTreeSet<Characteristic>) -> bool {
-    chars.iter().any(|c| c.uuid == WRITE_CHAR_UUID)
-        && chars.iter().any(|c| c.uuid == NOTIFY_CHAR_UUID)
+    chars
+        .iter()
+        .any(|c| c.uuid == WRITE_CHAR_UUID && c.service_uuid == SERVICE_UUID)
+        && chars
+            .iter()
+            .any(|c| c.uuid == NOTIFY_CHAR_UUID && c.service_uuid == SERVICE_UUID)
 }
 
 fn format_characteristic_uuids(chars: &std::collections::BTreeSet<Characteristic>) -> String {
@@ -668,24 +1113,8 @@ impl Drop for BleTransport {
 #[async_trait]
 impl Transport for BleTransport {
     async fn send(&self, data: &[u8]) -> Result<()> {
-        log::debug!(
-            "Sending {} bytes: {:02x?}",
-            data.len(),
-            &data[..data.len().min(20)]
-        );
-        // Fragment into MTU-sized sub-packets
-        let fragments = protocol::fragment(data);
-        for frag in fragments {
-            tokio::time::timeout(
-                DEFAULT_WRITE_TIMEOUT,
-                self.peripheral
-                    .write(&self.write_char, &frag, WriteType::WithoutResponse),
-            )
-            .await
-            .map_err(|_| PrinterError::Timeout)?
-            .map_err(|e| PrinterError::Ble(format!("write failed: {e}")))?;
-        }
-        Ok(())
+        let _guard = self.command_lock.lock().await;
+        self.send_bytes(data).await
     }
 
     async fn receive(&self, timeout: Duration) -> Result<protocol::Packet> {
@@ -696,8 +1125,11 @@ impl Transport for BleTransport {
 
     async fn send_and_receive(&self, data: &[u8], timeout: Duration) -> Result<protocol::Packet> {
         let _guard = self.command_lock.lock().await;
-        self.send(data).await?;
-        self.receive(timeout).await
+        let delivery = self.write_session.delivery()?;
+        self.send_bytes(data).await?;
+        let packet = self.receive(timeout).await?;
+        delivery.complete();
+        Ok(packet)
     }
 
     async fn send_and_receive_expected(
@@ -707,28 +1139,48 @@ impl Transport for BleTransport {
         expectation: ResponseExpectation,
     ) -> Result<protocol::Packet> {
         let _guard = self.command_lock.lock().await;
-        self.send(data).await?;
-        receive_expected_from_transport(self, timeout, expectation).await
+        let delivery = self.write_session.delivery()?;
+        self.send_bytes(data).await?;
+        let packet = receive_expected_from_transport(self, timeout, expectation).await?;
+        delivery.complete();
+        Ok(packet)
     }
 
     async fn disconnect(&self) -> Result<()> {
+        // Close this transport before any await. Even cancellation by the FFI
+        // deadline must not allow its old session to send or be blindly reused.
+        let reset_guard = LinkResetGuard {
+            session: &self.write_session,
+            armed: true,
+        };
+        self.write_session.require_link_reset();
         // Shut down the listener before touching the peripheral so it doesn't
         // try to forward notifications after the BLE connection is gone.
         self.shutdown_listener().await;
 
-        Self::unsubscribe_quietly(&self.peripheral, &self.notify_char).await;
-        let is_connected =
-            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, self.peripheral.is_connected())
-                .await
-                .map_err(|_| PrinterError::Timeout)?
-                .map_err(|e| PrinterError::Ble(format!("is_connected failed: {e}")))?;
-        if is_connected {
-            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, self.peripheral.disconnect())
-                .await
-                .map_err(|_| PrinterError::Timeout)?
-                .map_err(|e| PrinterError::Ble(format!("disconnect failed: {e}")))?;
-            tokio::time::sleep(Duration::from_millis(250)).await;
-        }
+        // Prioritize physical disconnect over StopNotify within the outer FFI
+        // deadline. BlueZ may retain notification ownership across a disconnect;
+        // setup clears it before every subsequent subscription.
+        disconnect_and_verify(
+            || async {
+                self.peripheral
+                    .disconnect()
+                    .await
+                    .map_err(|e| PrinterError::Ble(format!("disconnect failed: {e}")))
+            },
+            || async {
+                self.peripheral
+                    .is_connected()
+                    .await
+                    .map_err(|e| PrinterError::Ble(format!("disconnect verification failed: {e}")))
+            },
+        )
+        .await?;
+        FALLBACK_DEVICES
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .reset_completed(&self.write_session.device);
+        reset_guard.complete();
         Ok(())
     }
 
@@ -1077,3 +1529,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "transport_adversarial_tests.rs"]
+mod adversarial_tests;

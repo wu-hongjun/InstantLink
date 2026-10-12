@@ -1,5 +1,35 @@
 # Current Bridge Context
 
+## Live HIF-to-Printer benchmark, 2026-10-12
+
+The user powered on INSTAX-52006924; the installed **`7249d4e`** runtime automatically
+reconnected with film 4 / battery 65%. One real 11.26 MB saved Sony HIF was printed through
+production FTP/UI/review/native BLE. No production code/settings/artifact change or service restart.
+Plan 072 and `docs/assets/bridge-audit-072/measurements.json` record the measurements.
+
+- Same-Pi hotspot-address STOR through Bridge completion: **32.005 s** (upload 0.153 s).
+  This excludes camera Wi-Fi airtime and does not time mechanical ejection/development.
+- Worker pipeline 5.850 s: source 5.222 / transform 0.297 / JPEG 0.331 s. Dequeue through
+  JPEG-ready 6.618 s includes CPU wake/worker setup; review/UI/lookup adds 2.060 s.
+- Native handoff through completion **23.151 s**: actual BLE download **21.811 s**, LED ACK
+  **0.026 s**, then the existing one-second pre-execute delay, PrintStatus ACK **0.031 s**.
+- Reconstructed actual outgoing JPEG is exactly the prior 102,303-byte Square reference,
+  800×800 / quality 76 / no transport flip, identical JPEG and decoded RGB hashes. All 57
+  ordered chunks/ACKs/padding/checksums verified. Film **4→3**, confirmed by later live polls.
+- User confirmed developed film is **upright, unmirrored, and free of unusual colour or detail
+  problems**. One Square photo / saved Vivid settings; no film photograph or colour instrument.
+- Next target is BLE transfer: within-chunk fragment spans **10.089 s**, final-fragment ACK
+  waits **2.785 s**, post-ACK waits **8.865 s** including the last chunk. Read-only negotiated
+  MTU was **247**, but application fragments are fixed at 182 bytes. MTU-aware transport could reduce
+  writes (10→8 per full Square chunk at 244 bytes), subject to Printer firmware/reconnect validation.
+  Shorter 150 ms sleeps need separate multi-photo/model reliability tests. Neither was changed.
+- During the job all 128 retained clock samples were 1000 MHz, throttle 0x0. Final services/PIDs
+  unchanged, NRestarts=0, FTP listening, dark powersave 600 MHz / GPIO24 low. Temporary probes/trace/
+  duplicate upload removed; original retained. FFI hash remains `8d5ee808…e5f75d` from clean `6ca7035`.
+- Film 3 polling continued through 08:28:13 EDT. Printer became unavailable at 08:28:23 and then
+  stopped advertising; cause unobserved. Normal Bridge reconnect/search continues. This does
+  not establish indefinite radio uptime or the 16-hour battery target. Hardware/OS unchanged.
+
 ## Prepared JPEG native handoff, 2026-10-12
 
 Clean code **`6ca7035`** is committed, pushed and deployed with newly built arm64 FFI/CLI.

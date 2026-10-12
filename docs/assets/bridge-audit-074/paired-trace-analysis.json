@@ -1,0 +1,113 @@
+{
+  "rounds": [
+    {
+      "round_order": 1,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 15364.328861236572,
+      "inter_chunk_gap_ms": {
+        "min": 29.182910919189453,
+        "mean": 29.89060538155692,
+        "max": 31.631946563720703,
+        "sum": 1673.8739013671875
+      },
+      "last_chunk_to_end_gap_ms": 154.91890907287598,
+      "fragment_spans_ms_sum": 10651.904106140137,
+      "post_last_fragment_ack_ms_sum": 2790.6229496002197,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 2,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 22300.137996673584,
+      "inter_chunk_gap_ms": {
+        "min": 154.00099754333496,
+        "mean": 154.8257725579398,
+        "max": 156.75711631774902,
+        "sum": 8670.243263244629
+      },
+      "last_chunk_to_end_gap_ms": 154.94179725646973,
+      "fragment_spans_ms_sum": 10614.926815032959,
+      "post_last_fragment_ack_ms_sum": 2746.43611907959,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 3,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 22225.292921066284,
+      "inter_chunk_gap_ms": {
+        "min": 153.99909019470215,
+        "mean": 154.91363406181335,
+        "max": 156.30102157592773,
+        "sum": 8675.163507461548
+      },
+      "last_chunk_to_end_gap_ms": 154.62112426757812,
+      "fragment_spans_ms_sum": 10418.095111846924,
+      "post_last_fragment_ack_ms_sum": 2878.11541557312,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 4,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 15325.64902305603,
+      "inter_chunk_gap_ms": {
+        "min": 29.126882553100586,
+        "mean": 30.183217355183192,
+        "max": 33.24317932128906,
+        "sum": 1690.2601718902588
+      },
+      "last_chunk_to_end_gap_ms": 155.05313873291016,
+      "fragment_spans_ms_sum": 9910.16960144043,
+      "post_last_fragment_ack_ms_sum": 3471.229076385498,
+      "cancel_ack": "00"
+    }
+  ],
+  "film_before": 1,
+  "film_after": 1,
+  "history_before": 67,
+  "history_after": 67,
+  "print_image_command_count": 0,
+  "request_opcodes": {
+    "0x2": 7,
+    "0x1000": 4,
+    "0x1001": 228,
+    "0x1002": 4,
+    "0x1003": 4
+  },
+  "boundary": "No-film download/end/cancel; outboundJPEGbytes and indexedACKverified; no storedimage or physicalfilmmeasurement"
+}

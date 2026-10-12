@@ -762,10 +762,10 @@ async fn linux_physical_disconnect_can_complete_after_bluez_two_second_timer() {
 
 #[test]
 fn fast_pacing_context_is_limited_to_verified_linux_square_payload() {
-    assert!(PREFERRED_SQUARE_CHUNK_DELAY_MS <= PrinterModel::Square.spec().packet_delay_ms);
+    assert_eq!(PREFERRED_SQUARE_CHUNK_DELAY_MS, 25);
     assert_eq!(
         data_packet_delay_ms_for_context(PrinterModel::Square, true, 236, false, false),
-        PREFERRED_SQUARE_CHUNK_DELAY_MS
+        25
     );
     for payload in [0, 20, 182, 235, 237, 244, usize::MAX] {
         assert_eq!(

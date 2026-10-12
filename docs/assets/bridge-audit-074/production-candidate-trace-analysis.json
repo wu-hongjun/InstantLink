@@ -1,0 +1,65 @@
+{
+  "rounds": [
+    {
+      "round_order": 1,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 14853.377103805542,
+      "inter_chunk_gap_ms": {
+        "min": 29.018878936767578,
+        "mean": 29.929987021854945,
+        "max": 31.903982162475586,
+        "sum": 1676.079273223877
+      },
+      "last_chunk_to_end_gap_ms": 154.41298484802246,
+      "fragment_spans_ms_sum": 10244.343757629395,
+      "post_last_fragment_ack_ms_sum": 2686.0439777374268,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 2,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 14830.322980880737,
+      "inter_chunk_gap_ms": {
+        "min": 28.93209457397461,
+        "mean": 30.022991555077688,
+        "max": 31.75806999206543,
+        "sum": 1681.2875270843506
+      },
+      "last_chunk_to_end_gap_ms": 154.02603149414062,
+      "fragment_spans_ms_sum": 9594.6683883667,
+      "post_last_fragment_ack_ms_sum": 3300.6670475006104,
+      "cancel_ack": "00"
+    }
+  ],
+  "film_before": 1,
+  "film_after": 1,
+  "history_before": 67,
+  "history_after": 67,
+  "print_image_command_count": 0,
+  "request_opcodes": {
+    "0x2": 7,
+    "0x1000": 2,
+    "0x1001": 114,
+    "0x1002": 2,
+    "0x1003": 2
+  },
+  "boundary": "No-film download/end/cancel; outboundJPEGbytes and indexedACKverified; no storedimage or physicalfilmmeasurement"
+}

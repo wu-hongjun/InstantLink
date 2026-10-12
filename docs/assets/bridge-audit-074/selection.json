@@ -1,0 +1,62 @@
+{
+  "sweep": [
+    {
+      "intermediate_delay_ms": 150,
+      "samples_ms": [
+        25281.484053,
+        21523.669783999998
+      ],
+      "mean_ms": 23402.5769185
+    },
+    {
+      "intermediate_delay_ms": 100,
+      "samples_ms": [
+        19588.344785,
+        19004.189733
+      ],
+      "mean_ms": 19296.267259
+    },
+    {
+      "intermediate_delay_ms": 75,
+      "samples_ms": [
+        17413.867545999998,
+        17338.162806
+      ],
+      "mean_ms": 17376.015176
+    },
+    {
+      "intermediate_delay_ms": 50,
+      "samples_ms": [
+        15688.634473,
+        15718.49864
+      ],
+      "mean_ms": 15703.5665565
+    },
+    {
+      "intermediate_delay_ms": 25,
+      "samples_ms": [
+        14789.021660999999,
+        15104.012755
+      ],
+      "mean_ms": 14946.517208
+    },
+    {
+      "intermediate_delay_ms": 0,
+      "samples_ms": [
+        13138.678693,
+        13138.562703
+      ],
+      "mean_ms": 13138.620697999999
+    }
+  ],
+  "selected_ms": 25,
+  "reason": "0ms also accepted;25ms retains intermediate settling margin while materially reducing wait. Final150ms and pre-execute1000ms remain.",
+  "baseline_limit": "First150ms sample25.28s was slower than second21.52s; repeat paired comparison before claiming typical gain.",
+  "no_film_limit": "Outbound JPEG/RGB identity and protocol acceptance measured, not Printer storedimage or mechanical/developedfilm.",
+  "paired_mean_ms": {
+    "150": 22266.231736499998,
+    "25": 15348.640202499999
+  },
+  "paired_savings_ms": 6917.591533999999,
+  "paired_savings_percent": 31.06763468494902
+}

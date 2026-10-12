@@ -1,18 +1,25 @@
 # Current Bridge Context
 
-## Chunk-pacing preparation, 2026-10-12
+## Chunk-pacing selection, 2026-10-12
 
-Plan 074 is prepared with three subagents and independent review. The production preferred delay
-is still **150 ms**; a smaller value has not been selected or deployed. Core adds Square-indexed
-ACK correlation, full-transfer cancellation/reset and separate bounded pacing fallback, with a
-no-film diagnostic using the shared production transfer loop and strict Cancel ACK.
+Plan 074 selected **25 ms** intermediate pacing for Square/Linux/236-byte/indexed-ACK sessions,
+with final **150 ms** and pre-execute **1000 ms** unchanged. Legacy/unknown/smaller/conservative
+connections and other models/platforms retain their model baseline. Separate bounded pacing
+fallback and full-transfer guards handle uncertain errors/cancellation without replay; known
+external film/cover/battery rejection requires reset without falsely penalizing pacing.
 
-Offline gates passed: **278 Rust tests**, build/fmt/Clippy/header drift and strict docs; **52**
-mock transport/diagnostic/lifecycle tests passed on Pi arm64. No unresolved P1/P2 review issue.
-Pi and both services remain reachable/active on the prior firmware. INSTAX-52006924 is unavailable
-and not advertising; user power-on is pending for the real 150/100/75/50/25/0 ms sweep, reconnect
-validation and final deployment. Only temporary files were staged; no film commands were sent.
-Prepared DSC02825.jpeg remains the exact prior 102,846-byte / quality 87 Square JPEG.
+- Twelve no-film sweep transfers plus four reversed fresh-connection repeats passed exact JPEG,
+  RGB, indexes, padding, checksums and End/Cancel ACKs. Film **1**, history **67** unchanged.
+- Paired mean **22.266 → 15.349 s**, saving **6.918 s / 31.1%** for download/end/cancel. This
+  excludes camera upload, processing/review, pre-execute and mechanical/developed-film time.
+- Shared production-loop candidate passed two runs **14.875 / 14.850 s**, exact 56×25 ms plus
+  final 150 ms, no LED/PrintImage/reset/shutdown. All samples 1000 MHz / throttle 0x0.
+- One setup attempt lost its connection before model/Data (HCI reason 0x3e). No image command
+  ran; normal Bridge recovered automatically. Harness now verifies prior link closed before
+  each controlled fresh trial. Failed setup is recorded, not treated as a timing sample.
+- Independent final review and pinned timing/model/fallback/cancellation tests passed. Offline
+  baseline gates were Rust278, Bridge1524, Pi52, build/fmt/Clippy/header drift and strict docs.
+  Clean selected-code build, installed verification and final deployment record follow.
 
 ## MTU-aware Bluetooth transport, 2026-10-12
 

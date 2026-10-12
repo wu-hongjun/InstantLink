@@ -12,7 +12,7 @@ use instantlink_core::commands::{
 };
 use instantlink_core::device::BlePrinterDevice;
 use instantlink_core::protocol::{self, Packet};
-use instantlink_core::transport::Transport;
+use instantlink_core::transport::{Transport, data_packet_delay_ms_for_context};
 use instantlink_core::{PrinterDevice, PrinterError, PrinterModel, Result};
 use tokio::sync::Notify;
 use tokio::time::Instant;
@@ -248,8 +248,26 @@ fn sent_opcodes(state: &Arc<Mutex<State>>) -> Vec<u16> {
 #[tokio::test(start_paused = true)]
 async fn every_model_waits_after_matching_chunk_ack_and_preserves_pre_execute_delay() {
     for &model in PrinterModel::all() {
+        let (baseline_delay, pre_execute_delay) = match model {
+            PrinterModel::Mini => (0, 0),
+            PrinterModel::MiniLink3 => (75, 1000),
+            PrinterModel::Square => (150, 1000),
+            PrinterModel::Wide => (150, 0),
+        };
+        assert_eq!(model.spec().packet_delay_ms, baseline_delay);
+        assert_eq!(model.spec().pre_execute_delay_ms, pre_execute_delay);
+        let preferred_delay = data_packet_delay_ms_for_context(model, true, 236, false, false);
         let jpeg = jpeg(model);
-        let (device, state, _, _) = device(model, false, None).await;
+        let (device, state, _, _) = device_with_options(
+            model,
+            false,
+            None,
+            Options {
+                delay: Some(preferred_delay),
+                ..Options::default()
+            },
+        )
+        .await;
         device
             .print_prepared_jpeg(&jpeg, model, model.spec().flip_vertical, 0, None)
             .await
@@ -280,7 +298,7 @@ async fn every_model_waits_after_matching_chunk_ack_and_preserves_pre_execute_de
             if index + 1 < data_sent.len() {
                 assert_eq!(
                     data_sent[index + 1].at - acked.at,
-                    Duration::from_millis(model.spec().packet_delay_ms)
+                    Duration::from_millis(preferred_delay)
                 );
             }
         }
@@ -291,7 +309,7 @@ async fn every_model_waits_after_matching_chunk_ack_and_preserves_pre_execute_de
             .unwrap();
         assert_eq!(
             end.at - data_acked.last().unwrap().at,
-            Duration::from_millis(model.spec().packet_delay_ms)
+            Duration::from_millis(baseline_delay)
         );
         let led = state
             .events
@@ -303,10 +321,7 @@ async fn every_model_waits_after_matching_chunk_ack_and_preserves_pre_execute_de
             .iter()
             .find(|event| event.sent && event.packet.opcode == OP_PRINT_IMAGE)
             .unwrap();
-        assert_eq!(
-            print.at - led.at,
-            Duration::from_millis(model.spec().pre_execute_delay_ms)
-        );
+        assert_eq!(print.at - led.at, Duration::from_millis(pre_execute_delay));
         assert_eq!(
             state
                 .events
@@ -432,12 +447,13 @@ async fn wrong_model_or_flip_declaration_never_reaches_download_even_with_fast_m
 async fn shared_production_download_preserves_final_settle_and_cancel_ack_without_led_or_print() {
     let model = PrinterModel::Square;
     let bytes = jpeg(model);
+    let preferred_delay = data_packet_delay_ms_for_context(model, true, 236, false, false);
     let (device, state, _, _) = device_with_options(
         model,
         false,
         None,
         Options {
-            delay: Some(50),
+            delay: Some(preferred_delay),
             ..Options::default()
         },
     )
@@ -461,7 +477,7 @@ async fn shared_production_download_preserves_final_settle_and_cancel_ack_withou
     for index in 0..sent.len() - 1 {
         assert_eq!(
             sent[index + 1].at - acked[index].at,
-            Duration::from_millis(50)
+            Duration::from_millis(preferred_delay)
         );
     }
     let end = state
@@ -475,7 +491,9 @@ async fn shared_production_download_preserves_final_settle_and_cancel_ack_withou
     );
     assert_eq!(
         started.elapsed(),
-        Duration::from_millis((sent.len() as u64 - 1) * 50 + 150 + sent.len() as u64 * 17 + 9)
+        Duration::from_millis(
+            (sent.len() as u64 - 1) * preferred_delay + 150 + sent.len() as u64 * 17 + 9
+        )
     );
     assert_eq!(state.hooks.first(), Some(&"started"));
     assert_eq!(state.hooks.last(), Some(&"completed"));
@@ -485,7 +503,11 @@ async fn shared_production_download_preserves_final_settle_and_cancel_ack_withou
             .iter()
             .filter(|hook| **hook == "short-gap")
             .count(),
-        sent.len() - 1
+        if preferred_delay < 150 {
+            sent.len() - 1
+        } else {
+            0
+        }
     );
     assert!(!state.hooks.contains(&"failed"));
     let opcodes: Vec<_> = state

@@ -245,8 +245,9 @@ the status byte. Stale/future or malformed indexed replies do not advance the tr
 the original transaction deadline. Exact one-byte legacy status replies remain supported. Other
 models retain their existing response-tail compatibility until their format is verified.
 
-Production pacing remains at the existing model values while shorter Square timings await
-hardware validation. The last chunk retains its model settling delay, and pre-execute waits are
+Validated Linux Square connections using the 236-byte payload use a **25 ms** intermediate
+gap after an indexed ACK. Other platforms/models, smaller/unknown payloads and conservative
+sessions retain model pacing (Square 150 ms). The last chunk retains its model settling delay, and pre-execute waits are
 separate. Legacy replies cannot authorize a shorter gap. A full-transfer guard handles interrupted
 Start/Data/End/handoff/execute, including cancellation between ACKs: require a fresh link, never
 replay the uncertain image, and restore baseline pacing after accelerated uncertainty. Pacing and

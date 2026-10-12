@@ -1,0 +1,10 @@
+{
+  "phase": "Before model detection or image transfer",
+  "error": "BLE write failed:Not connected",
+  "report_model": null,
+  "production_rounds": [],
+  "hci_disconnect_reason": "0x3e ConnectionFailedToBeEstablished",
+  "image_commands_sent": 0,
+  "recovery": "Probe verified closed; harness restarted Bluetooth and restored Bridge. NormalBridge returned freshfilm1/battery50. Freshretry passed.",
+  "causal_limit": "No fastgap or Data command ran; not evidence of pacing failure. Fresh-link verification added to harness without claiming the old timer caused this event."
+}

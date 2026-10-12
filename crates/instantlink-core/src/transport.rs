@@ -216,9 +216,9 @@ fn conservative_device(device: &str) -> bool {
         .contains(device)
 }
 
-/// Kept at the established baseline until download-only hardware evidence
-/// selects a smaller preferred gap for this narrowly eligible transport.
-pub const PREFERRED_SQUARE_CHUNK_DELAY_MS: u64 = 150;
+/// Validated Square/Linux/236-byte intermediate gap. Keep model final settling
+/// and pre-execute waits, and retain baseline for unverified or failed sessions.
+pub const PREFERRED_SQUARE_CHUNK_DELAY_MS: u64 = 25;
 
 pub fn data_packet_delay_ms_for_context(
     model: PrinterModel,

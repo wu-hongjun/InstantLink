@@ -122,3 +122,26 @@ HCI shows connection establishment followed by reason 0x3e; no host Disconnect o
 Normal Bridge recovered automatically. The harness now explicitly closes/verifies the prior link
 before a fresh probe; this is controlled handoff, not proof that an old disconnect timer caused
 the event. The failed setup is retained separately and excluded from timing means.
+
+
+## Clean firmware deployment
+
+Selected source **f574445968e963ae35231d64d5f784ac1f5a5b28** was committed, pushed and deployed
+using the standard arm64 artifact build and Bridge deploy script. The manifest records a clean
+worktree and locked release build; the installed FFI SHA-256 matches
+`b601ec6a8b14138617ebbae5e5c74b892bb461ee2d2747dbfc6ed181f253bacb`.
+
+Selected code passed Rust **278** workspace tests, all **52** targeted arm64 tests on the real Pi,
+format/Clippy/header checks and strict docs. The normal source-commit hook also passed Bridge
+**1,524** tests, lint and mypy. Three subagents implemented, tested and independently reviewed.
+
+Initial installed health: both services active, NRestarts 0, correct USB/hotspot addresses,
+FTP 220 / NOOP 200, no throttle or working caches. After the normal 60-second idle timeout,
+the screen was off (GPIO24 low) and CPU was **600 MHz / powersave**, with FTP/Wi-Fi still ready.
+The Printer had stopped advertising during the build, so these initial health records explicitly
+show it disconnected and do not establish post-deployment Printer reconnect.
+
+The first installed probe stopped before discovery/image commands because its temporary harness
+required a cached BlueZ device. An absent cache now permits fresh discovery; a connected cache
+still prevents starting a fresh probe. No production-source change or film consumption resulted.
+Installed production-loop and FFI reconnect checks remain pending Printer power-on.

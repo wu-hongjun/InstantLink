@@ -19,7 +19,14 @@ external film/cover/battery rejection requires reset without falsely penalizing 
   each controlled fresh trial. Failed setup is recorded, not treated as a timing sample.
 - Independent final review and pinned timing/model/fallback/cancellation tests passed. Offline
   baseline gates were Rust278, Bridge1524, Pi52, build/fmt/Clippy/header drift and strict docs.
-  Clean selected-code build, installed verification and final deployment record follow.
+  Clean selected code **f574445** is pushed and installed. FFI SHA-256
+  `b601ec6a8b14138617ebbae5e5c74b892bb461ee2d2747dbfc6ed181f253bacb` matches
+  the official clean ARM release manifest. Both services active / NRestarts 0, FTP 220 / NOOP
+  200, correct USB/hotspot, throttle 0x0 and zero working caches. After 60 seconds idle:
+  screen off / GPIO24 low, powersave **600 MHz**, Wi-Fi/FTP operational. Printer stopped
+  advertising during build; installed production-loop and FFI reconnect checks await power-on.
+  Initial health records explicitly show Printer disconnected. A temporary harness cached-device
+  precheck failed before any scan/image command; absent cache now permits fresh discovery.
 
 ## MTU-aware Bluetooth transport, 2026-10-12
 

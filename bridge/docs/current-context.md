@@ -1,5 +1,22 @@
 # Current Bridge Context
 
+## One-second default review, 2026-10-11
+
+Clean runtime **`4574aa9`** is deployed. New/missing configuration defaults to **Review 1s**;
+Bridge/App settings now offer manual, immediate, 1-second and 5-second review. The live Bridge
+was changed from 5 to 1 under `ib`. Editing still requires manual confirmation, and the countdown
+begins only after the photo is ready. Print transport and CPU tiers are unchanged.
+
+- **1,324 Bridge tests**, **156 App tests**, Ruff, touched-file formatting, strict mypy
+  (65 files), whitespace and strict MkDocs passed. The App label is translated in all 12 locales;
+  the global localization checker still reports pre-existing discrepancies.
+- On-Pi software timing smoke loaded the saved config, used a synthetic prepared photo with
+  NullDisplay/NullInput, and observed **Print in 1s**, **Review 1s**, acceptance **1.002 s** after
+  the first photo frame. No Printer sender or film was used.
+- Bridge/manager are active after restart, Bridge NRestarts=0, hotspot 192.168.8.1/24,
+  throttling 0x0. Hardware/OS remain as below. App source was updated/tested; no App release
+  installation or new physical-print benchmark was performed. See plan 066.
+
 ## Simplified printing and locked Wi-Fi recovery, 2026-10-11
 
 Clean runtime **`cbffa65`** is deployed, including pending Wi-Fi recovery and plan 065's shorter

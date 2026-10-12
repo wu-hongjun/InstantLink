@@ -815,3 +815,54 @@ async def test_remote_ui_routes_fire_activity_callback(tmp_path: Path) -> None:
         assert service.last_client_seen_monotonic is not None
     finally:
         await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("initial_registration", [False, True])
+async def test_slow_discovery_probe_does_not_block_authenticated_status_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, initial_registration: bool
+) -> None:
+    import asyncio
+    import threading
+
+    _install_fake_zeroconf(monkeypatch)
+    started = threading.Event()
+    release = threading.Event()
+    calls = 0
+
+    def addresses() -> list[str]:
+        nonlocal calls
+        calls += 1
+        started.set()
+        if not release.wait(timeout=2):
+            raise AssertionError("discovery blocked event loop")
+        return ["192.168.8.1"]
+
+    service = SyncService(
+        SyncOutbox(tmp_path / "outbox", budget_mb=64),
+        port=0,
+        token_path=tmp_path / "sync.token",
+        device_id="IB-TEST",
+        enable_zeroconf=True,
+        address_provider=addresses,
+    )
+    client = TestClient(TestServer(service.build_app()))
+    await client.start_server()
+    task = asyncio.create_task(
+        service._register_zeroconf() if initial_registration else service.refresh_zeroconf()
+    )
+    try:
+        assert await asyncio.to_thread(started.wait, 1)
+        response = await asyncio.wait_for(
+            client.get("/v1/status", headers={"Authorization": f"Bearer {service.token}"}), 0.5
+        )
+        assert response.status == 200
+        assert not task.done()
+        release.set()
+        await asyncio.wait_for(task, 1)
+        assert calls == 1  # late registration reuses the same snapshot
+    finally:
+        release.set()
+        await task
+        await client.close()
+        await service.stop()

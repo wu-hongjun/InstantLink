@@ -5,11 +5,46 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+from collections.abc import Iterable
 from ipaddress import IPv4Interface
 from pathlib import Path
 from typing import Any
 
 LOGGER = logging.getLogger(__name__)
+
+
+def detect_ipv4_interfaces_by_interface(
+    interfaces: Iterable[str],
+) -> dict[str, list[IPv4Interface]]:
+    """Read requested interfaces from one consistent, bounded address snapshot."""
+
+    names = tuple(dict.fromkeys(interfaces))
+    addresses: dict[str, list[IPv4Interface]] = {name: [] for name in names}
+    if not names:
+        return addresses
+    try:
+        result = subprocess.run(
+            ["ip", "-j", "-4", "addr", "show"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=1.5,
+        )
+        if result.returncode != 0:
+            return addresses
+        data = json.loads(result.stdout)
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        LOGGER.debug("network.ip_snapshot_failed", exc_info=True)
+        return addresses
+    if not isinstance(data, list):
+        return addresses
+    for interface in data:
+        if not isinstance(interface, dict):
+            continue
+        name = interface.get("ifname")
+        if isinstance(name, str) and name in addresses:
+            addresses[name].extend(ipv4_interfaces_from_ip_json([interface]))
+    return addresses
 
 
 def detect_ipv4_for_interface(interface: str = "wlan0") -> str | None:

@@ -101,6 +101,7 @@ from instantlink_bridge.ui.settings import (
     config_with_setting_value,
     fit_label,
     ftp_receive_mode_label,
+    idle_shutdown_duration,
     language_label,
     model_label,
     seconds_label,
@@ -393,6 +394,7 @@ class BridgeUi:
         sync_token_rotated_callback: SyncTokenRotatedCallback | None = None,
         system_info: SystemInfo | None = None,
         ready_event: asyncio.Event | None = None,
+        bluetooth_ready_event: asyncio.Event | None = None,
         status_sink: StatusSink | None = None,
     ) -> None:
         self._config = config
@@ -435,6 +437,7 @@ class BridgeUi:
         self._cached_system_stats: SystemStatsSnapshot | None = None
         self._cached_system_stats_at: float = 0.0
         self._ready_event = ready_event
+        self._bluetooth_ready_event = bluetooth_ready_event
         self._bridge_battery_percent: int | None = None
         self._bridge_power_model: str | None = power_backend_label(config.power.backend)
         self._bridge_power_status: str | None = None
@@ -500,6 +503,8 @@ class BridgeUi:
         self._status_generation = 0
         self._render_tick_task: asyncio.Task[None] | None = None
         self._network_task: asyncio.Task[None] | None = None
+        self._startup_network_task: asyncio.Task[None] | None = None
+        self._cpu_sampler_task: asyncio.Task[None] | None = None
         self._about_refresh_task: asyncio.Task[None] | None = None
         self._ftp_mode_task: asyncio.Task[None] | None = None
         self._hotspot_recovery_task: asyncio.Task[None] | None = None
@@ -509,6 +514,8 @@ class BridgeUi:
         self._hotspot_recovery_failures = 0
         self._image_reset_task: asyncio.Task[None] | None = None
         self._initial_status_task: asyncio.Task[None] | None = None
+        self._printer_backend_ready_event = asyncio.Event()
+        self._settings_status_task: asyncio.Task[None] | None = None
         self._network_refresh_lock = asyncio.Lock()
         self._settings_operation_pending = False
         self._settings_picker_key: SettingKey | None = None
@@ -628,25 +635,23 @@ class BridgeUi:
         except Exception:
             LOGGER.exception("ui.input_start_failed")
         self._reload_user_presets()
-        await self._refresh_network_status()
-        # Warm the CPU sampler off the event loop so the first user-facing
-        # About-page render already has a real baseline (the very first
-        # `/proc/stat` read needs a 100 ms gap to a second read before it
-        # can produce a percentage). Running this once at start moves the
-        # blocking sleep off the asyncio main thread; subsequent calls
-        # hit the warm sampler and never block.
+        self._action_task = asyncio.create_task(self._run_actions())
+        self._render_tick_task = asyncio.create_task(self._run_render_tick())
+        self._network_task = asyncio.create_task(self._run_network_status())
+        self._startup_network_task = asyncio.create_task(self._refresh_network_status())
+        self._cpu_sampler_task = asyncio.create_task(self._prewarm_cpu_sampler())
+        self._about_refresh_task = asyncio.create_task(self._run_about_page_refresh())
+        if self._config.ftp.mode is not FtpReceiveMode.AUTO:
+            self._ftp_mode_task = asyncio.create_task(self._apply_configured_ftp_mode_at_start())
+        self._initial_status_task = asyncio.create_task(self._deferred_initial_status())
+        LOGGER.info("bridge.ui.ready surface=%s", self._config.ui.surface.value)
+
+    async def _prewarm_cpu_sampler(self) -> None:
+        """Read an About-page baseline without delaying input or core readiness."""
         try:
             await asyncio.to_thread(self._cpu_sampler.sample)
         except Exception:
             LOGGER.warning("ui.cpu_sampler_prewarm_failed", exc_info=True)
-        self._action_task = asyncio.create_task(self._run_actions())
-        self._render_tick_task = asyncio.create_task(self._run_render_tick())
-        self._network_task = asyncio.create_task(self._run_network_status())
-        self._about_refresh_task = asyncio.create_task(self._run_about_page_refresh())
-        if self._config.ftp.mode is not FtpReceiveMode.AUTO:
-            self._ftp_mode_task = asyncio.create_task(self._apply_configured_ftp_mode_at_start())
-        await self._configure_printer_keepalive()
-        self._initial_status_task = asyncio.create_task(self._deferred_initial_status())
 
     async def stop(self) -> None:
         """Stop background UI tasks.
@@ -668,6 +673,8 @@ class BridgeUi:
             self._status_task,
             self._render_tick_task,
             self._network_task,
+            self._startup_network_task,
+            self._cpu_sampler_task,
             self._hotspot_recovery_task,
             self._about_refresh_task,
             self._ftp_mode_task,
@@ -676,6 +683,7 @@ class BridgeUi:
             self._silent_link_recovery_task,
             self._proactive_bond_reset_task,
             self._initial_status_task,
+            self._settings_status_task,
             self._credential_hotspot_task,
             self._unlock_timeout_task,
         ):
@@ -695,35 +703,16 @@ class BridgeUi:
         self._display.close()
 
     async def _deferred_initial_status(self) -> None:
-        """Run the first printer status poll AFTER BridgeUi.start() returns.
+        """Load/configure the Printer backend after core and agent readiness.
 
-        Deferring the trigger (not the dlopen itself) moves the ~1 s FFI
-        dlopen+init cost out of the critical path to ``READY=1``.  The
-        InstantLinkBackend already uses a lazy ``_library()`` pattern; the
-        only change here is that ``app.notifier.ready()`` in ``app.py`` fires
-        before the first call that exercises that lazy load.
-
-        When ``_ready_event`` is set (production path), we wait for it
-        explicitly so the ordering is an invariant rather than a CPython
-        event-loop implementation detail.  Without it (test / backward-compat
-        path) a cooperative yield is used as a best-effort fallback.
-
-        The outer ``except Exception`` block is the safety net for programming
-        errors that escape ``refresh_printer_status``.  Routine failures (BLE
-        lookup failures, printer offline, etc.) are handled and rendered by
-        ``refresh_printer_status`` itself; anything that reaches HERE is
-        unexpected and logged at CRITICAL so it stands out from the routine
-        ``ui.paired_printer_lookup_failed`` path.
-
-        Plan 033 L2 / Sprint 3.
+        Keepalive configuration loads the FFI library, so it belongs here,
+        before status polling and outside the LCD/FTP startup critical path.
         """
-        if self._ready_event is not None:
-            await self._ready_event.wait()
-        else:
-            # Backward-compat / test path: best-effort ordering via cooperative yield.
-            await asyncio.sleep(0)
+        await self._wait_for_bluetooth_ready()
         try:
-            await self.refresh_printer_status()
+            await self._configure_printer_keepalive()
+            self._printer_backend_ready_event.set()
+            await self._load_initial_printer_selection()
         except asyncio.CancelledError:
             raise  # let stop() cancellation propagate
         except Exception:
@@ -732,6 +721,49 @@ class BridgeUi:
             # distinctly so it does not get confused with the routine
             # 'ui.paired_printer_lookup_failed' path inside refresh_printer_status.
             LOGGER.critical("ui.deferred_initial_status_unexpected_exception", exc_info=True)
+
+    async def _wait_for_bluetooth_ready(self) -> None:
+        if self._ready_event is not None:
+            await self._ready_event.wait()
+        if self._bluetooth_ready_event is not None:
+            await self._bluetooth_ready_event.wait()
+
+    async def _wait_for_printer_backend(self) -> None:
+        await self._wait_for_bluetooth_ready()
+        if self._initial_status_task is not None:
+            await self._printer_backend_ready_event.wait()
+
+    async def _load_initial_printer_selection(self) -> None:
+        """Discover the saved Printer while preserving any screen opened at boot."""
+        if self._snapshot.mode is UiMode.PAIRING:
+            return
+        if not self._config.sync.print_enabled:
+            if self._snapshot.mode is UiMode.BOOTING:
+                self._show_cached_home_status()
+            return
+        try:
+            printers = await self._pairer.list_paired()
+        except Exception:
+            LOGGER.exception("ui.paired_printer_lookup_failed")
+            if self._snapshot.mode is UiMode.BOOTING:
+                await self.print_failed("Bluetooth lookup failed")
+            return
+        if self.live_snapshot.mode is UiMode.PAIRING:
+            return
+        printer = self._select_printer(printers)
+        mode = self._snapshot.mode
+        if mode is UiMode.BOOTING or mode in LOCKABLE_HOME_MODES:
+            mode = UiMode.NEEDS_PAIRING if printer is None else UiMode.PRINTER_SEARCHING
+        self._snapshot = replace(
+            self._snapshot,
+            mode=mode,
+            paired_printer=printer,
+            printer_model=(printer.model if printer is not None else None)
+            or self._config.printer.model,
+            printer_status_message="Searching Printer" if printer is not None else None,
+        )
+        self._render()
+        await self._schedule_printer_status_refresh()
 
     async def refresh_printer_status(self) -> None:
         """Detect whether an Instax printer is already paired."""
@@ -1023,7 +1055,8 @@ class BridgeUi:
 
         adjustments = resolve_preset(config.adjustments, self._user_presets)
         if config.adjustments.datestamp:
-            datestamp_text = read_exif_datestamp_text(
+            datestamp_text = await asyncio.to_thread(
+                read_exif_datestamp_text,
                 received.path,
                 config.ui.language.value,
                 fmt=config.adjustments.datestamp_format,
@@ -1939,7 +1972,10 @@ class BridgeUi:
     def _dismiss_help_dialog(self) -> None:
         previous_mode = self._previous_mode_before_dialog or UiMode.SETTINGS
         previous_page = self._previous_page_before_dialog or self._settings_page
-        if previous_mode in {
+        startup_finished = self._printer_backend_ready_event.is_set() or (
+            self._config.sync.sync_enabled and self._sync_service_state != "starting"
+        )
+        if (previous_mode is UiMode.BOOTING and startup_finished) or previous_mode in {
             UiMode.READY,
             UiMode.NO_FILM,
             UiMode.VALIDATION,
@@ -2021,7 +2057,7 @@ class BridgeUi:
             return
         if action in {UiAction.BACK, UiAction.LEFT}:
             if self._settings_page is SettingsPage.MAIN:
-                await self.refresh_printer_status()
+                self._show_cached_home_status()
             else:
                 # Multi-level nesting: ABOUT lives under SYSTEM, so BACK from
                 # ABOUT returns to SYSTEM rather than jumping all the way to
@@ -2103,7 +2139,11 @@ class BridgeUi:
             await self._show_sync_pairing()
             return
         if key in INFO_SETTING_KEYS:
-            self._show_settings(self._info_message_for_setting(key))
+            row = self._settings_row_for_key(key, "")
+            self._show_help_dialog(
+                title=row.label,
+                body=row.value or self._info_message_for_setting(key),
+            )
             return
         # Slider rows on the Adjustments page always enter focused edit mode
         # (plan 036 phase 5: the Custom read-only gate has been removed).
@@ -2135,7 +2175,7 @@ class BridgeUi:
             selected_index=selected_index,
             settings_title=self._setting_picker_title(key),
             settings_rows=self._setting_picker_rows(key, selected_index),
-            settings_message=message or "Choose option",
+            settings_message=message,
         )
         self._render()
 
@@ -2160,7 +2200,7 @@ class BridgeUi:
             selected_index=selected_index,
             settings_title="Preset",
             settings_rows=self._preset_picker_rows(options, current_preset),
-            settings_message=message or "Choose option",
+            settings_message=message,
         )
         self._render()
 
@@ -2809,7 +2849,9 @@ class BridgeUi:
             if not config.sync.print_enabled:
                 await self._cancel_status_refresh()
             self._notify_sync_config_applied(config.sync)
-        if config.printer.keepalive_interval_s != previous_keepalive:
+        if config.printer.keepalive_interval_s != previous_keepalive and (
+            self._initial_status_task is None or self._printer_backend_ready_event.is_set()
+        ):
             await self._configure_printer_keepalive()
         self._snapshot = replace(
             self._snapshot,
@@ -3438,9 +3480,9 @@ class BridgeUi:
         if key is SettingKey.OPEN_ADJUSTMENTS:
             return SettingsRow("Looks", "")
         if key is SettingKey.OPEN_TRANSFORM:
-            return SettingsRow("Transform", "")
+            return SettingsRow("Image quality", "")
         if key is SettingKey.OPEN_AUTO_PRINT:
-            return SettingsRow("Workflow", "")
+            return SettingsRow("Printer options", "")
         if key is SettingKey.ADJUSTMENTS_COMING_SOON:
             return SettingsRow("Coming soon", "")
         if key is SettingKey.ADJUST_PRESET:
@@ -3592,7 +3634,7 @@ class BridgeUi:
         if key is SettingKey.SYSTEM_DEVICE_ID:
             return SettingsRow("Device ID", self._system_info_snapshot().device_id)
         if key is SettingKey.SYSTEM_APP_VERSION:
-            return SettingsRow("App version", self._system_info_snapshot().app_version)
+            return SettingsRow("Bridge version", self._system_info_snapshot().app_version)
         if key is SettingKey.SYSTEM_CPU:
             stats = self._system_stats_snapshot()
             return SettingsRow("CPU", format_cpu_percent(stats.cpu_percent))
@@ -3621,7 +3663,11 @@ class BridgeUi:
         if key is SettingKey.SYSTEM_IDLE_POWEROFF:
             # Plan 037 phase 1, #2: dedicated explicit values that read like a
             # toggle with a known timeout rather than the generic "On/Off".
-            value = "After 10 min" if self._config.power.idle_poweroff_enabled else "Off"
+            value = (
+                f"After {idle_shutdown_duration(self._config.power.idle_poweroff_after_s)}"
+                if self._config.power.idle_poweroff_enabled
+                else "Off"
+            )
             return SettingsRow("Idle poweroff", value)
         if key is SettingKey.REFRESH_STATUS:
             # Value is empty to match every other action row (Pair, Reconnect,
@@ -3680,7 +3726,7 @@ class BridgeUi:
             return "Printer output compensation; independent of Looks"
         if key is SettingKey.AUTO_PRINT_DELAY:
             value = config.workflow.auto_print_delay_s
-            if value == 5.0:
+            if value is not None and value > 0:
                 return "Review starts when preview is ready. Editing waits for KEY1."
             if value == 0.0:
                 return "Prints immediately on upload"
@@ -3693,7 +3739,8 @@ class BridgeUi:
             return f"Scans every {int(config.printer.search_interval_s)}s when printer offline"
         if key is SettingKey.SYSTEM_IDLE_POWEROFF:
             if config.power.idle_poweroff_enabled:
-                return "Shuts down after 10 min idle"
+                duration = idle_shutdown_duration(config.power.idle_poweroff_after_s)
+                return f"Shuts down after {duration} idle"
             return "Stays on indefinitely"
         if key is SettingKey.FONT_SIZE:
             return "Screen text size"
@@ -3751,7 +3798,7 @@ class BridgeUi:
         if key is SettingKey.OPEN_PRINT:
             return "Pairing and photo/print options"
         if key is SettingKey.OPEN_SYSTEM:
-            return "Bridge health, personalisation, updates"
+            return "Screen, lock and shutdown settings"
         return setting_help_text(key)
 
     def _system_info_snapshot(self) -> SystemInfo:
@@ -4068,17 +4115,28 @@ class BridgeUi:
         self._show_settings(page=page)
 
     async def _refresh_status_from_settings(self) -> None:
+        if self._bluetooth_ready_event is not None and not self._bluetooth_ready_event.is_set():
+            self._show_settings("Starting Bluetooth")
+            if self._settings_status_task is None or self._settings_status_task.done():
+                self._settings_status_task = asyncio.create_task(
+                    self._refresh_settings_after_bluetooth_ready(self._settings_page)
+                )
+            return
         page = self._settings_page
         self._show_settings("Refreshing status")
         try:
             await self._refresh_network_status()
         except Exception:
             LOGGER.exception("ui.network_status_refresh_failed_from_settings")
+        if self._snapshot.mode is not UiMode.SETTINGS or self._settings_page is not page:
+            return
         try:
             printers = await self._pairer.list_paired()
         except Exception:
             LOGGER.exception("ui.paired_printer_lookup_failed")
             self._show_settings("Refresh failed", page=page)
+            return
+        if self._snapshot.mode is not UiMode.SETTINGS or self._settings_page is not page:
             return
         printer = self._select_printer(printers)
         if printer is None:
@@ -4103,6 +4161,11 @@ class BridgeUi:
         )
         await self._schedule_printer_status_refresh()
         self._show_settings("Status refreshed", page=page)
+
+    async def _refresh_settings_after_bluetooth_ready(self, page: SettingsPage) -> None:
+        await self._wait_for_printer_backend()
+        if self._snapshot.mode is UiMode.SETTINGS and self._settings_page is page:
+            await self._refresh_status_from_settings()
 
     async def _reset_printer_link_from_settings(self) -> None:
         page = self._settings_page
@@ -4155,7 +4218,10 @@ class BridgeUi:
             self._pair_return_page = None
             self._show_settings("Pairing cancelled", page=page)
             return
-        await self.refresh_printer_status()
+        if self._bluetooth_ready_event is not None and not self._bluetooth_ready_event.is_set():
+            self._show_cached_home_status()
+        else:
+            await self.refresh_printer_status()
 
     async def _pair_in_background(
         self,
@@ -4167,6 +4233,7 @@ class BridgeUi:
         if previous_printer is None:
             previous_printer = self._snapshot.paired_printer
         try:
+            await self._wait_for_printer_backend()
             printer = await self._pairer.pair_first_available()
         except PrinterPairingError as exc:
             LOGGER.warning("ui.printer_pair_failed error=%s", exc)
@@ -4319,6 +4386,7 @@ class BridgeUi:
 
     async def _poll_printer_status(self, printer: PairedPrinter, generation: int) -> None:
         try:
+            await self._wait_for_printer_backend()
             while True:
                 if generation != self._status_generation:
                     return

@@ -226,16 +226,17 @@ normal status polling detects reloaded film. Errors and stalled/restarting statu
 Settings has four root entries: **Print**, **Network**, **System**, and **Mode** (Print/Sync).
 It remains accessible without a saved Printer through KEY1.
 
-- Print opens **Post**, **Transform**, **Workflow**, and **Printer**, in that order.
+- Print opens **Post**, **Image fit**, **Confirmation**, and **Printer**. An Advanced section
+  contains **Image quality** and **Printer options**. Fit and confirmation open their pickers directly.
 - Post contains **Looks** (creative colour, saved presets and overlays) and **Correction**
   (independent Printer saturation compensation). Changing or saving a Look leaves Correction
   untouched. Correction defaults to zero for compatibility, accepts −100..+100%, and previews
   the combined result while editing. It applies after the Look at print resolution before JPEG
   encoding. Sync mode preserves the original camera file.
-- Transform controls image fit and JPEG quality.
-- Workflow offers **Confirm each** (`None`), **Print immediately** (`0s`), **Review 1s** (`1s`,
-  default) and **Review 5s** (`5s`). No-film test, Keepalive and Search rate appear below Advanced.
-- Printer contains Serial, Pair/Re-pair, Reconnect, Forget, and Printer type. Re-pair/Forget use
+- Image quality controls JPEG quality; image dimensions and processing order are unchanged.
+- Confirmation offers **Confirm each** (`None`), **Print immediately** (`0s`), **Review 1s** (`1s`,
+  default) and **Review 5s** (`5s`). No-film test, Keepalive and Search rate live in Printer options.
+- Printer contains Serial, Pair/Re-pair, Reconnect, and Forget, with Printer type below Advanced. Re-pair/Forget use
   explicit confirmation. Reconnect checks the saved device without changing its identity.
 - Network combines camera Hotspot/Client setup, Wi-Fi/FTP credentials, diagnostics, iPhone
   pairing, and credential/token reset controls. USB is for administration only.
@@ -243,7 +244,11 @@ It remains accessible without a saved Printer through KEY1.
   diagnostics.
 
 RIGHT/KEY1 opens a category or editor. UP/DOWN selects a row; KEY2/LEFT backs out. KEY3 opens
-context help in a dialog that preserves the selected row, picker and working edit. In saved
+context help in a dialog that preserves the selected row, picker and working edit. Ordinary
+pages omit the helper paragraph; saved/error notices remain. Selecting a read-only information
+row opens its full value in Help, including wrapped Wi-Fi credentials. Closing Settings restores
+the cached live home without starting another Printer scan. Background startup/status updates
+keep Settings, Help and pairing screens open. In saved
 preset pickers, RIGHT opens management; KEY3 remains Help. Settings titles reserve measured
 space for the status dot and counter at all text sizes.
 

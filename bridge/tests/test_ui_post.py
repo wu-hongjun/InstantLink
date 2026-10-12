@@ -54,10 +54,9 @@ def test_workflow_names_describe_preserved_values() -> None:
     )
     assert UiSnapshot(mode=UiMode.READY, ftp_host="192.168.7.1").workflow_label == "Review 1s"
     assert t("Review 1s", "zh-Hans") == "预览1秒"
-    keys = SETTINGS_BY_PAGE[SettingsPage.AUTO_PRINT]
-    assert keys.index(SettingKey.ALLOW_PRINT_WITHOUT_FILM) > keys.index(
-        SettingKey.PRINT_ADVANCED_HEADER
-    )
+    keys = SETTINGS_BY_PAGE[SettingsPage.PRINT]
+    assert keys.index(SettingKey.OPEN_AUTO_PRINT) > keys.index(SettingKey.PRINT_ADVANCED_HEADER)
+    assert SettingKey.ALLOW_PRINT_WITHOUT_FILM in SETTINGS_BY_PAGE[SettingsPage.AUTO_PRINT]
 
 
 @pytest.mark.parametrize("size", ["small", "medium", "large"])

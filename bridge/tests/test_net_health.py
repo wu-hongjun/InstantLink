@@ -3,6 +3,8 @@ from __future__ import annotations
 from ipaddress import IPv4Interface
 from pathlib import Path
 
+import pytest
+
 from instantlink_bridge.config import FtpReceiveMode, FtpSourceKind
 from instantlink_bridge.net.health import (
     DnsmasqLease,
@@ -404,3 +406,32 @@ def test_read_dnsmasq_leases_uses_first_discoverable_file(tmp_path: Path) -> Non
             client_id="01:aabb",
         )
     ]
+
+
+def test_health_probe_reads_wifi_and_usb_from_single_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import json
+    import subprocess
+
+    from instantlink_bridge.net import addresses, health
+
+    calls: list[list[str]] = []
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        records = [
+            {"ifname": "usb0", "addr_info": [{"local": "192.168.7.1", "prefixlen": 24}]},
+            {"ifname": "wlan0", "addr_info": [{"local": "10.42.5.2", "prefixlen": 22}]},
+        ]
+        return subprocess.CompletedProcess(command, 0, json.dumps(records))
+
+    monkeypatch.setattr(addresses.subprocess, "run", run)
+    monkeypatch.setattr(health, "detect_link_carrier", lambda _: True)
+    snapshot = health.probe_connection_health(
+        expected_usb_ipv4="192.168.7.1", dnsmasq_lease_paths=(), clock=lambda: 1000
+    )
+    assert snapshot.usb_configured
+    assert snapshot.home_wifi_ipv4 == "10.42.5.2"
+    assert snapshot.wifi_ipv4_interfaces == (IPv4Interface("10.42.5.2/22"),)
+    assert len(calls) == 1

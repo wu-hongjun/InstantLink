@@ -105,17 +105,11 @@ class SettingKey(StrEnum):
 
 
 class SettingsPage(StrEnum):
-    """Settings menu pages.
+    """Settings pages shared by physical and virtual LCDs.
 
-    PRINTER (pairing/print options) and CAMERA (FTP credentials) merged
-    into PRINT and NETWORK respectively; the obsolete enum values were
-    removed. MAIN now has four top-level entries: Print, Network, System,
-    Accessibility.
-
-    Phase 1 (plan 035): PRINT becomes a hub with four sub-pages —
-    PRINTER, ADJUSTMENTS, TRANSFORM, AUTO_PRINT. BACK from any sub-page
-    returns to PRINT (wired via SETTINGS_PARENT_PAGE), and BACK from
-    PRINT returns to MAIN.
+    MAIN contains Print, Network, System and Mode. Print exposes everyday
+    fit/review choices directly and keeps image quality and Printer options
+    on their existing advanced pages. Post retains Looks and Correction.
     """
 
     MAIN = "main"
@@ -155,13 +149,16 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.OPEN_SYSTEM,
         SettingKey.SYNC_DESTINATION,
     ),
-    # PRINT is a 4-row hub (plan 035 phase 1). Each row opens a
-    # dedicated sub-page; BACK from any sub-page returns here.
+    # Daily choices are direct pickers; existing diagnostic pages remain
+    # under Advanced so common edits need one fewer navigation step.
     SettingsPage.PRINT: (
         SettingKey.OPEN_POST,
+        SettingKey.IMAGE_FIT,
+        SettingKey.AUTO_PRINT_DELAY,
+        SettingKey.OPEN_PRINTER,
+        SettingKey.PRINT_ADVANCED_HEADER,
         SettingKey.OPEN_TRANSFORM,
         SettingKey.OPEN_AUTO_PRINT,
-        SettingKey.OPEN_PRINTER,
     ),
     SettingsPage.POST: (SettingKey.OPEN_ADJUSTMENTS, SettingKey.OPEN_CORRECTION),
     SettingsPage.CORRECTION: (SettingKey.CORRECTION_SATURATION,),
@@ -178,6 +175,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.PAIR_PRINTER,
         SettingKey.RESET_PRINTER_LINK,
         SettingKey.FORGET_PRINTER,
+        SettingKey.PRINT_ADVANCED_HEADER,
         SettingKey.PRINTER_MODEL,
     ),
     # ADJUSTMENTS: preset picker (top) + four colour/tone knobs + two overlay
@@ -197,19 +195,10 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.ADJUST_WATERMARK,
         SettingKey.ADJUST_SAVE_CUSTOM,
     ),
-    # TRANSFORM: image-fit mode and JPEG encode quality.
-    SettingsPage.TRANSFORM: (
-        SettingKey.IMAGE_FIT,
-        SettingKey.JPEG_QUALITY,
-    ),
-    # AUTO_PRINT: workflow behaviour and BLE polling knobs.
-    # PRINT_ADVANCED_HEADER separates the power-user polling knobs
-    # (Keepalive, Search rate) from the common workflow options so they
-    # read as developer knobs rather than everyday settings (plan 034
-    # item 18, Option B; kept here under the Auto print sub-page).
+    # TRANSFORM keeps the advanced encoding choice on its existing page.
+    SettingsPage.TRANSFORM: (SettingKey.JPEG_QUALITY,),
+    # AUTO_PRINT keeps diagnostics and polling intervals off the daily page.
     SettingsPage.AUTO_PRINT: (
-        SettingKey.AUTO_PRINT_DELAY,
-        SettingKey.PRINT_ADVANCED_HEADER,
         SettingKey.ALLOW_PRINT_WITHOUT_FILM,
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
@@ -285,8 +274,8 @@ PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.ADJUSTMENTS: "Looks",
     SettingsPage.POST: "Post",
     SettingsPage.CORRECTION: "Correction",
-    SettingsPage.TRANSFORM: "Transform",
-    SettingsPage.AUTO_PRINT: "Workflow",
+    SettingsPage.TRANSFORM: "Image quality",
+    SettingsPage.AUTO_PRINT: "Printer options",
 }
 
 PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
@@ -536,7 +525,7 @@ def setting_action_hint(key: SettingKey) -> str:
 SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_NETWORK: "Wi-Fi, FTP credentials, Bluetooth, USB",
     SettingKey.OPEN_PRINT: "Pairing and photo/print options",
-    SettingKey.OPEN_SYSTEM: "Bridge health, personalisation, updates",
+    SettingKey.OPEN_SYSTEM: "Screen, lock and shutdown settings",
     SettingKey.OPEN_ABOUT: "Versions and device identity",
     # Print hub → sub-page opener help strings (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: "Pairing and printer model",
@@ -544,8 +533,8 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_POST: "Looks and independent Printer correction",
     SettingKey.OPEN_CORRECTION: "Compensate film colour without changing Looks",
     SettingKey.CORRECTION_SATURATION: "Printer output compensation; independent of Looks",
-    SettingKey.OPEN_TRANSFORM: "Fit-to-film and JPEG quality",
-    SettingKey.OPEN_AUTO_PRINT: "Auto-print delay and connection knobs",
+    SettingKey.OPEN_TRANSFORM: "JPEG encoding quality",
+    SettingKey.OPEN_AUTO_PRINT: "No-film testing and connection intervals",
     # Adjustments placeholder help (phase 1 only — no longer surfaced in any page).
     SettingKey.ADJUSTMENTS_COMING_SOON: "Saturation, exposure, sharpness coming in v2",
     # Adjustments sub-page rows (plan 035 phase 3). Help strings explain
@@ -618,7 +607,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_POWER_INFO: "Bridge battery/UPS hardware (legacy)",
     SettingKey.SYSTEM_BATTERY_INFO: "Battery charge if telemetry available",
     SettingKey.UNLOCK_THREE_PRESSES: "Press the same button three times to avoid accidental unlock",
-    SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
+    SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after the configured idle timeout",
     SettingKey.FONT_SIZE: "Screen text size",
     SettingKey.LANGUAGE: "Screen language (中文 / English)",
     SettingKey.APPEARANCE: "Auto: light 07-19, dark overnight",
@@ -980,3 +969,13 @@ def language_label(language: UiLanguage) -> str:
         UiLanguage.ZH_HANS: "中文",
     }
     return labels[language]
+
+
+def idle_shutdown_duration(seconds: float) -> str:
+    """Format the actual configured shutdown timeout in compact units."""
+
+    if seconds % 3600 == 0:
+        return f"{seconds / 3600:g}h"
+    if seconds % 60 == 0:
+        return f"{seconds / 60:g}min"
+    return f"{seconds:g}s"

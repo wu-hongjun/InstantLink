@@ -30,7 +30,7 @@ from aiohttp import web
 from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
-from instantlink_bridge.net.addresses import detect_ipv4_addresses_for_interface
+from instantlink_bridge.net.addresses import detect_ipv4_interfaces_by_interface
 from instantlink_bridge.sync.outbox import SyncOutbox
 
 if TYPE_CHECKING:
@@ -398,7 +398,7 @@ class SyncService:
         if not self._enable_zeroconf:
             return
         try:
-            addresses = self._address_provider()
+            addresses = await asyncio.to_thread(self._address_provider)
         except Exception:
             LOGGER.warning("sync.zeroconf_address_lookup_failed", exc_info=True)
             return
@@ -407,7 +407,7 @@ class SyncService:
             # the registration during a transient interface flap.
             return
         if self._zeroconf is None:
-            await self._register_zeroconf()
+            await self._register_zeroconf(addresses)
             return
         if addresses == self._advertised_addresses:
             return
@@ -440,12 +440,13 @@ class SyncService:
             server=f"InstantLink-{self._device_id}.local.",
         )
 
-    async def _register_zeroconf(self) -> None:
-        try:
-            addresses = self._address_provider()
-        except Exception:
-            LOGGER.warning("sync.zeroconf_address_lookup_failed", exc_info=True)
-            return
+    async def _register_zeroconf(self, addresses: list[str] | None = None) -> None:
+        if addresses is None:
+            try:
+                addresses = await asyncio.to_thread(self._address_provider)
+            except Exception:
+                LOGGER.warning("sync.zeroconf_address_lookup_failed", exc_info=True)
+                return
         if not addresses:
             LOGGER.warning("sync.zeroconf_skipped reason=no_ipv4_address")
             return
@@ -499,8 +500,10 @@ def _advertise_addresses() -> list[str]:
     """Return non-loopback IPv4 addresses to advertise over mDNS."""
 
     addresses: list[str] = []
+    interfaces = detect_ipv4_interfaces_by_interface(_ADVERTISE_INTERFACES)
     for interface in _ADVERTISE_INTERFACES:
-        for address in detect_ipv4_addresses_for_interface(interface):
+        for value in interfaces[interface]:
+            address = str(value.ip)
             if not address.startswith("127.") and address not in addresses:
                 addresses.append(address)
     return addresses

@@ -17,8 +17,7 @@ from instantlink_bridge.config import (
     ipv4_24_network,
 )
 from instantlink_bridge.net.addresses import (
-    detect_ipv4_addresses_for_interface,
-    detect_ipv4_interfaces_for_interface,
+    detect_ipv4_interfaces_by_interface,
     detect_link_carrier,
 )
 
@@ -451,13 +450,14 @@ def probe_connection_health(
 
     checked_at = clock()
     leases = read_dnsmasq_leases(dnsmasq_lease_paths)
-    wifi_ipv4_interfaces = detect_ipv4_interfaces_for_interface(wifi_interface)
+    addresses = detect_ipv4_interfaces_by_interface((wifi_interface, usb_interface))
+    wifi_ipv4_interfaces = addresses[wifi_interface]
     return build_connection_health(
         checked_at=checked_at,
         expected_usb_ipv4=expected_usb_ipv4,
         expected_hotspot_ipv4=expected_hotspot_ipv4,
         usb_carrier=detect_link_carrier(usb_interface),
-        usb_ipv4_addresses=detect_ipv4_addresses_for_interface(usb_interface),
+        usb_ipv4_addresses=[str(address.ip) for address in addresses[usb_interface]],
         wifi_ipv4_addresses=[str(address.ip) for address in wifi_ipv4_interfaces],
         wifi_ipv4_interfaces=wifi_ipv4_interfaces,
         leases=leases,

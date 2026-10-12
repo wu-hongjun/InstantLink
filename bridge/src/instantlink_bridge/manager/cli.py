@@ -39,6 +39,7 @@ from instantlink_bridge.manager.status import (
 )
 
 LOGGER = logging.getLogger(__name__)
+BIND_RETRY_DELAYS_S = (1.0, 2.0, 5.0, 10.0, 30.0)
 
 
 def main(
@@ -278,21 +279,66 @@ async def serve(
     stop_event = asyncio.Event()
     install_signal_handlers(stop_event)
     try:
-        started = 0
-        for host in hosts:
-            site = web.TCPSite(runner, host, port)
-            try:
-                await site.start()
-            except OSError:
-                LOGGER.warning("manager.bind_failed host=%s port=%s", host, port, exc_info=True)
-                continue
-            started += 1
-            LOGGER.info("manager.listening host=%s port=%s", host, port)
-        if started == 0:
+        configured_hosts = tuple(dict.fromkeys(hosts))
+        missing_hosts = [
+            host
+            for host in configured_hosts
+            if not await start_listener(runner, host, port, report_failure=True)
+        ]
+        if len(missing_hosts) == len(configured_hosts):
             raise RuntimeError("manager could not bind any configured host")
+        await retry_missing_listeners(runner, missing_hosts, port, stop_event)
         await stop_event.wait()
     finally:
         await runner.cleanup()
+
+
+async def start_listener(
+    runner: web.AppRunner,
+    host: str,
+    port: int,
+    *,
+    report_failure: bool = False,
+) -> bool:
+    """Bind exactly the configured address, including USB's local-auth boundary."""
+
+    site = web.TCPSite(runner, host, port)
+    try:
+        await site.start()
+    except OSError as exc:
+        # aiohttp registers a site before binding its socket. Remove failed
+        # attempts so startup retries cannot accumulate registered dead sites.
+        await site.stop()
+        if report_failure:
+            LOGGER.warning("manager.bind_pending host=%s port=%s errno=%s", host, port, exc.errno)
+        return False
+    LOGGER.info("manager.listening host=%s port=%s", host, port)
+    return True
+
+
+async def retry_missing_listeners(
+    runner: web.AppRunner,
+    missing_hosts: Sequence[str],
+    port: int,
+    stop_event: asyncio.Event,
+) -> None:
+    """Keep healthy listeners serving while late hotspot/USB addresses appear."""
+
+    pending = list(missing_hosts)
+    attempt = 0
+    while pending and not stop_event.is_set():
+        delay = BIND_RETRY_DELAYS_S[min(attempt, len(BIND_RETRY_DELAYS_S) - 1)]
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=delay)
+            return
+        except TimeoutError:
+            pass
+        for host in tuple(pending):
+            if stop_event.is_set():
+                return
+            if await start_listener(runner, host, port):
+                pending.remove(host)
+        attempt += 1
 
 
 def install_signal_handlers(stop_event: asyncio.Event) -> None:

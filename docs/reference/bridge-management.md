@@ -4,6 +4,14 @@ The Bridge manager exposes authenticated configuration at `/v1/config`. The App 
 configuration, validates a draft and applies a field diff. The independent Printer correction
 section is additive; older configurations and older responses without it default to zero.
 
+## Listener recovery
+
+The manager binds configured device addresses individually. If USB is available before the
+hotspot address, it serves USB immediately and retries only the missing address, with backoff
+from 1 to 30 seconds. Once all listeners bind, retries stop. A missing address does not widen
+the bind to a wildcard or change USB-local authentication. If no configured address can bind,
+the service fails for its existing systemd restart policy. API payloads are unchanged.
+
 ## Print review delay
 
 `workflow.auto_print_delay_s` defaults to **1 second** when absent. Management updates accept

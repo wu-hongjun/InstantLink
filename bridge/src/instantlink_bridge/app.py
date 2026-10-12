@@ -180,6 +180,7 @@ class AsyncStartStopService(Protocol):
 async def run_ftp_receive_slice(config_path: Path) -> None:
     """Run the first vertical slice: FTP upload -> logged file path."""
 
+    LOGGER.info("bridge.boot.start")
     config = load_config(config_path)
     queue: asyncio.Queue[ReceivedImage] = asyncio.Queue(maxsize=IMAGE_QUEUE_MAXSIZE)
     loop = asyncio.get_running_loop()
@@ -195,6 +196,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     cpu_performance = CpuPerformanceController()
     service: FtpReceiveService | None = None
     bluez_agent: AsyncStopService | None = None
+    bluetooth_task: asyncio.Task[None] | None = None
     sync_outbox: SyncOutbox | None = None
     sync_service: SyncService | None = None
     sync_setup_task: asyncio.Task[None] | None = None
@@ -236,6 +238,10 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     def apply_runtime_sync_config(sync_config: SyncConfig) -> None:
         nonlocal sync_desired
         sync_desired = sync_config.sync_enabled
+        if sync_service is None and (sync_setup_task is None or not sync_setup_task.done()):
+            # Construction follows core readiness. The setup worker reads the
+            # latest desired state; this pending service is still starting.
+            return
         task = loop.create_task(
             apply_sync_destination_change(sync_config, service=sync_service, ui=ui)
         )
@@ -281,6 +287,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # Sync is secondary to printing: any failure here logs an error and
         # leaves the bridge running print-only.
         nonlocal sync_outbox, sync_service
+        await ready_event.wait()
         try:
             sync_outbox, sync_service = await asyncio.to_thread(_build_sync_service_sync)
         except Exception:
@@ -295,6 +302,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             await start_sync_service_guarded(sync_service, reason="startup", ui=ui)
 
     ready_event = asyncio.Event()
+    bluetooth_ready_event = asyncio.Event()
     ui = BridgeUi(
         config,
         config_path=config_path,
@@ -306,6 +314,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         sync_config_applied_callback=apply_runtime_sync_config,
         sync_token_rotated_callback=on_sync_token_rotated,
         ready_event=ready_event,
+        bluetooth_ready_event=bluetooth_ready_event,
     )
     power_monitor = build_power_monitor(config, ui=ui)
 
@@ -338,48 +347,53 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             bridge_snapshot_provider=lambda: live_ui_snapshot(ui),
         )
         ftp_service.start()  # blocks until the FTP thread's listener is bound
+        LOGGER.info("bridge.ftp.ready bind_host=%s port=%s", config.ftp.bind_host, config.ftp.port)
         return ftp_service
 
     async def start_ftp_service() -> FtpReceiveService:
         return await asyncio.to_thread(_setup_ftp_service_sync)
 
-    async def start_ble_stack() -> AsyncStopService | None:
-        agent = await start_bluez_agent_if_needed()
-        await ui.start()
-        return agent
+    async def start_bluetooth() -> None:
+        nonlocal bluez_agent
+        bluez_agent = await start_bluez_agent_if_needed()
+        bluetooth_ready_event.set()
+        LOGGER.info("bridge.bluetooth.ready agent_registered=%s", bluez_agent is not None)
+
+    async def bluetooth_ready_for_print() -> bool:
+        if bluetooth_task is None:
+            return False
+        stop_waiter = asyncio.create_task(stop_event.wait())
+        try:
+            done, _ = await asyncio.wait(
+                {bluetooth_task, stop_waiter}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if stop_waiter in done:
+                return False
+            await bluetooth_task
+            return True
+        finally:
+            stop_waiter.cancel()
+            with suppress(asyncio.CancelledError):
+                await stop_waiter
 
     try:
-        # Run FTP-server startup and BLE/UI startup concurrently. Use return_exceptions
-        # so a failure in one branch does not prevent us from capturing the other
-        # branch's already-constructed resources (FTP server, BlueZ agent), which the
-        # outer finally still needs to tear down cleanly.
-        #
-        # Plan 033 Sprint 6 attempted a third "BLE warmup" branch here to pre-load the
-        # FFI library in parallel; both gather-blocked (v1) and fire-and-forget (v2)
-        # variants regressed bridge.ready by 2 s, because the warmup's 2 s scan held
-        # InstantLinkBackend._lock during ui.start()'s configure_printer_keepalive call.
-        # Reverted 2026-05-28. The Sprint 3 deferred status poll already moves the FFI
-        # load off the critical path post-ready_event; Phase 6 (FTP-as-signal) absorbs
-        # the remaining gap from the user's perspective via Sony's 4xx auto-retry.
-        #
-        # Sync (plan 050) starts as a fire-and-forget sibling task instead of a
-        # third gather branch: it must never delay bridge.ready, its imports run
-        # off-loop in a worker thread, and it holds no BLE locks (the failure
-        # mode that sank the Sprint 6 warmup branch).
+        # UI and FTP are the core service; Bluetooth initializes independently.
+        # Separate readiness events prevent early Printer operations without
+        # keeping the LCD/input path waiting for BlueZ. Sync imports begin after
+        # core readiness so their CPU/I/O cost does not compete with these paths.
         await cpu_performance.start()
+        bluetooth_task = asyncio.create_task(start_bluetooth(), name="bridge.bluetooth_start")
         sync_setup_task = asyncio.create_task(setup_sync_service())
-        ftp_result, ble_result = await asyncio.gather(
+        ftp_result, ui_result = await asyncio.gather(
             start_ftp_service(),
-            start_ble_stack(),
+            ui.start(),
             return_exceptions=True,
         )
         if not isinstance(ftp_result, BaseException):
             service = ftp_result
-        if not isinstance(ble_result, BaseException):
-            bluez_agent = ble_result
         # If BOTH primary branches failed, log the secondary failure before re-raising the
         # primary so the second exception is never silently dropped (codex finding 1).
-        failures = [exc for exc in (ftp_result, ble_result) if isinstance(exc, BaseException)]
+        failures = [exc for exc in (ftp_result, ui_result) if isinstance(exc, BaseException)]
         for exc in failures[1:]:
             LOGGER.error("bridge.startup_secondary_failure", exc_info=exc)
         if failures:
@@ -387,6 +401,8 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # Robust runtime guard (not just `assert`, which would be stripped under `python -O`).
         if service is None:
             raise RuntimeError("BUG: FTP service not assigned after successful gather")
+        if bluetooth_task.done():
+            await bluetooth_task
         notifier.ready()
         ready_event.set()
         watchdog_task = asyncio.create_task(run_watchdog_heartbeat(stop_event, notifier))
@@ -399,6 +415,8 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             config.ftp.incoming_dir,
         )
         while not stop_event.is_set():
+            if bluetooth_task.done():
+                await bluetooth_task
             service.raise_if_failed()
             try:
                 received = await asyncio.wait_for(queue.get(), timeout=0.5)
@@ -417,6 +435,11 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             )
             await power_monitor.record_activity()
             try:
+                if ui.config.sync.print_enabled:
+                    # Receipt/listener readiness does not mean the BlueZ agent
+                    # can authorize a Printer connection yet.
+                    if not await bluetooth_ready_for_print():
+                        continue
                 await dispatch_received_image(
                     received,
                     snapshot=live_ui_snapshot(ui),
@@ -455,6 +478,10 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 await sync_setup_task
         await stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
         await ui.stop()
+        if bluetooth_task is not None:
+            bluetooth_task.cancel()
+            with suppress(asyncio.CancelledError, Exception):
+                await bluetooth_task
         await cpu_performance.close()
         await close_default_instantlink_backend()
         if bluez_agent is not None:
@@ -474,7 +501,13 @@ async def start_bluez_agent_if_needed() -> AsyncStopService | None:
         from instantlink_bridge.ble.agent import BluezAgentService
 
         agent = BluezAgentService()
-        await agent.start()
+        try:
+            await agent.start()
+        except BaseException:
+            # Registration can be canceled during shutdown after opening D-Bus
+            # but before returning ownership to the caller.
+            await agent.stop()
+            raise
         return agent
     except Exception:
         LOGGER.exception("bluetooth.agent_start_failed")
@@ -1026,7 +1059,8 @@ async def send_print_to_printer(
     # If datestamp is enabled, read EXIF and format the date now so
     # apply_adjustments stays locale-agnostic.
     if config.adjustments.datestamp:
-        datestamp_text = read_exif_datestamp_text(
+        datestamp_text = await asyncio.to_thread(
+            read_exif_datestamp_text,
             received.path,
             config.ui.language.value,
             fmt=config.adjustments.datestamp_format,

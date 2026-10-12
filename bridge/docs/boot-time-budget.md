@@ -1,6 +1,7 @@
 # Boot-Time Budget
 
-Target: cold boot to `Ready` in 7 s or less on Raspberry Pi Zero 2 W with X306 hardware power-on.
+Design target: cold boot to print readiness in 7 s or less on Raspberry Pi Zero 2 W with X306
+hardware power-on. This target has not been achieved on the current hardware.
 
 ## Budget
 
@@ -155,13 +156,22 @@ an undocumented target mutation.
 Add application milestones through structured logs:
 
 - `bridge.boot.start`
-- `bridge.usb.ready`
-- `bridge.bt.scanning`
-- `bridge.bt.connected`
+- `bridge.ftp.ready` (listener bound; not proof of an active camera receive path)
+- `bridge.bluetooth.ready` (agent initialized; not Printer connection)
 - `bridge.ui.ready`
 - `bridge.ready`
 
-The product metric is time from X306 button press to the LCD showing Ready.
+`bridge.boot.start` follows Python imports. `bridge.ui.ready` confirms the initial LCD draw;
+`bridge.ready` confirms UI and FTP initialization for systemd. Bluetooth, Printer status, hotspot
+address and Sync readiness are separate. Plan 067 moves Bluetooth registration, Printer
+keepalive, health probing and optional Sync construction off the UI/FTP critical path.
+
+The product metric is time from X306 button press to the LCD showing Ready with healthy FTP and
+Printer status. Kernel-monotonic reboot measurements exclude power-button/firmware latency.
+The 2026-10-11 controlled baseline at runtime `4574aa9` reached core readiness at 16.146 s,
+FTP at 13.964 s, hotspot receive readiness at 18.625 s and manager listeners at 19.131 s.
+See plan 067 for the post-change hardware comparison; the older May measurements below are
+historical observations, not the baseline for this audit.
 
 ## Earliest LCD Output
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import signal
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,6 +109,7 @@ class _WorkerHandle:
     process: _ManagedProcess
     result_reader: _ResultReader
     parent_writer: _Closable | None = None
+    isolated_process_group: bool = False
 
 
 _ProcessFactory = Callable[[ImagePreparationRequest], _WorkerHandle]
@@ -178,6 +181,7 @@ class ImagePreparationWorker:
         process = handle.process
         self._active_process = process
         started = False
+        terminated = False
 
         try:
             process.start()
@@ -191,7 +195,9 @@ class ImagePreparationWorker:
             try:
                 return await asyncio.wait_for(result, timeout=timeout_s)
             except TimeoutError as error:
-                terminated = await self._terminate_process(process)
+                terminated = await self._terminate_process(
+                    process, isolated_process_group=handle.isolated_process_group
+                )
                 if not terminated:
                     self._termination_failed = True
                     raise ImageWorkerError(
@@ -201,13 +207,17 @@ class ImagePreparationWorker:
                     f"image preparation timed out after {timeout_s:.2f}s"
                 ) from error
         except asyncio.CancelledError:
-            terminated = await self._terminate_process(process)
+            terminated = await self._terminate_process(
+                process, isolated_process_group=handle.isolated_process_group
+            )
             if not terminated:
                 self._termination_failed = True
             raise
         finally:
             if started:
-                await self._finalize_process(process)
+                await self._finalize_process(
+                    process, isolated_process_group=handle.isolated_process_group and not terminated
+                )
             else:
                 _close_quietly(process)
             if handle.parent_writer is not None:
@@ -235,24 +245,56 @@ class ImagePreparationWorker:
 
             await asyncio.sleep(self._poll_interval_s)
 
-    async def _finalize_process(self, process: _ManagedProcess) -> None:
+    async def _finalize_process(
+        self, process: _ManagedProcess, *, isolated_process_group: bool = False
+    ) -> None:
+        group_cleaned = False
         if process.is_alive():
             exited = await self._wait_for_exit(process, self._shutdown_grace_s)
             if not exited:
-                terminated = await self._terminate_process(process)
+                terminated = await self._terminate_process(
+                    process, isolated_process_group=isolated_process_group
+                )
                 if not terminated:
                     self._termination_failed = True
                     return
+                group_cleaned = True
+        if isolated_process_group and not group_cleaned:
+            _kill_isolated_process_group(process.pid)
         process.join(0.0)
         _close_quietly(process)
 
-    async def _terminate_process(self, process: _ManagedProcess) -> bool:
+    async def _terminate_process(
+        self, process: _ManagedProcess, *, isolated_process_group: bool = False
+    ) -> bool:
         if not process.is_alive():
+            if isolated_process_group:
+                _kill_isolated_process_group(process.pid)
             process.join(0.0)
             return True
 
-        process.terminate()
-        if await self._wait_for_exit(process, self._shutdown_grace_s):
+        group_id: int | None = None
+        if isolated_process_group and process.pid is not None:
+            try:
+                # The child creates its session before decoding/spawning. If
+                # cancelled before that point, terminate only the worker; never
+                # signal the Bridge's own inherited process group.
+                if os.getpgid(process.pid) == process.pid:
+                    os.killpg(process.pid, signal.SIGTERM)
+                    group_id = process.pid
+            except ProcessLookupError:
+                pass
+        if group_id is None:
+            process.terminate()
+        exited = await self._wait_for_exit(process, self._shutdown_grace_s)
+        if group_id is not None:
+            # A decoder can outlive its Python parent or ignore TERM. Always
+            # finish the isolated group before another preparation can begin.
+            try:
+                os.killpg(group_id, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if exited:
             return True
 
         process.kill()
@@ -269,6 +311,21 @@ class ImagePreparationWorker:
 
 
 _default_worker: ImagePreparationWorker | None = None
+
+
+def _kill_isolated_process_group(pid: int | None) -> None:
+    """Stop descendants even after their isolated worker parent has exited.
+
+    A child cancelled before setsid still belongs to the Bridge group, whose
+    id differs from its own pid. Targeting only the worker pid can never hit
+    that inherited group; a missing worker-owned group is a harmless no-op.
+    """
+    if pid is None or pid == os.getpgrp():
+        return
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def default_image_preparation_worker() -> ImagePreparationWorker:
@@ -330,7 +387,7 @@ def _create_process(request: ImagePreparationRequest) -> _WorkerHandle:
 
     receive_connection, send_connection = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
-        target=_run_prepare_in_child,
+        target=_run_isolated_prepare_in_child,
         args=(send_connection, request),
         daemon=True,
     )
@@ -338,7 +395,17 @@ def _create_process(request: ImagePreparationRequest) -> _WorkerHandle:
         process=cast(_ManagedProcess, process),
         result_reader=cast(_ResultReader, receive_connection),
         parent_writer=cast(_Closable, send_connection),
+        isolated_process_group=os.name == "posix",
     )
+
+
+def _run_isolated_prepare_in_child(
+    result_writer: Connection,
+    request: ImagePreparationRequest,
+) -> None:
+    if os.name == "posix":
+        os.setsid()
+    _run_prepare_in_child(result_writer, request)
 
 
 def _run_prepare_in_child(

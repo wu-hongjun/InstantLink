@@ -80,6 +80,14 @@ _ZH_HANS: dict[str, str] = {
     "Unlock: 3 presses": "按三次解锁",
     "Press the same button three times to avoid accidental unlock": "连按同一按键三次以防误触",
     "Post": "后期",
+    "Image quality": "图像质量",
+    "Printer options": "打印机选项",
+    "Bridge version": "桥接版本",
+    "Screen, lock and shutdown settings": "屏幕、锁屏和关机设置",
+    "After {time}": "{time}后",
+    "Shuts down after {time} idle": "空闲{time}后关机",
+    "JPEG encoding quality": "JPEG 编码质量",
+    "No-film testing and connection intervals": "无相纸测试与连接间隔",
     "Looks": "风格",
     "Correction": "校正",
     "Look": "风格",
@@ -235,6 +243,7 @@ _ZH_HANS: dict[str, str] = {
     "Close phone app if it fails": "失败时请关闭手机 App",
     "Close phone app or phone BT": "请关闭手机 App 或手机蓝牙",
     "Connecting": "正在连接",
+    "Starting Bluetooth": "正在启动蓝牙",
     "Do not power off": "请勿断电",
     "FTP and printer ready": "FTP 与打印机已就绪",
     "Failed": "失败",
@@ -705,6 +714,13 @@ def t(text: str, language: Language | str = Language.EN) -> str:
             return text
     if language is Language.EN:
         return text
+    translations = _TRANSLATIONS.get(language, {})
+    if text in translations:
+        return translations[text]
+    if text.startswith("After "):
+        return t("After {time}", language).format(time=text[6:])
+    if text.startswith("Shuts down after ") and text.endswith(" idle"):
+        return t("Shuts down after {time} idle", language).format(time=text[17:-5])
     return _TRANSLATIONS.get(language, {}).get(text, text)
 
 

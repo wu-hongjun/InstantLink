@@ -192,7 +192,7 @@ print_app_milestones() {
   printf '\nInstantLink Bridge boot milestones\n'
   if command -v journalctl >/dev/null 2>&1; then
     journalctl --boot -o short-monotonic -u instantlink-bridge.service 2>/dev/null |
-      grep -E 'bridge\.(boot\.start|usb\.ready|bt\.scanning|bt\.connected|ui\.ready|ready)' ||
+      grep -E 'bridge\.(boot\.start|ftp\.ready|bluetooth\.ready|ui\.ready|ready)' ||
       echo "No bridge.* boot milestones found in this boot journal."
   else
     echo "journalctl not found"

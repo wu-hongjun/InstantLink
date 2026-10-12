@@ -1820,13 +1820,14 @@ def _settings(
     row_height = max(1, round(_BASE_ROW_HEIGHT * row_scale))
 
     selected = min(snapshot.selected_index, len(rows) - 1)
-    selected_row = rows[selected]
 
     # Toast (settings_message) takes priority over help text. Both share a
     # dedicated strip *below* the rounded card so they can never overlap the
     # card's rounded borders.
     toast_message = snapshot.settings_message
-    help_text = selected_row.help if selected_row.help else ""
+    # Detailed explanations live behind KEY3 Help. Keep this strip for
+    # saved/error notices only, leaving more space for the actual choices.
+    help_text = ""
     # Destructive confirms now use the iOS-style dialog overlay (plan 040), so
     # ``settings_message`` here is informational only ("Saved", "Choose
     # action", etc.) — always rendered in the existing accent_yellow help
@@ -1992,14 +1993,13 @@ def _adjustments(
     row_height = min(17, max(1, round(_BASE_ROW_HEIGHT * row_scale)))
 
     selected = min(snapshot.selected_index, len(rows) - 1)
-    selected_row = rows[selected]
 
     # Toast / help strip (same logic as _settings). Destructive confirms
     # now use the dialog overlay (plan 040), so ``settings_message`` here is
     # informational only ("Saved", "Choose action", etc.) and always renders
     # in the existing accent_yellow help tint.
     toast_message = snapshot.settings_message
-    help_text = selected_row.help if selected_row.help else ""
+    help_text = ""
     if toast_message is not None:
         bottom_text = toast_message
         bottom_color = theme.accent_yellow
@@ -2860,7 +2860,18 @@ def _wrap_lines(
     budget so the truncation is visible.
     """
 
-    words = text.split()
+    words: list[str] = []
+    for word in text.split():
+        # Credentials and device names often have no spaces. Split them
+        # by measured width so a detail dialog can show every character.
+        while word and _text_width(draw, word, font) > max_width:
+            end = 1
+            while end < len(word) and _text_width(draw, word[: end + 1], font) <= max_width:
+                end += 1
+            words.append(word[:end])
+            word = word[end:]
+        if word:
+            words.append(word)
     if not words:
         return []
     lines: list[str] = []

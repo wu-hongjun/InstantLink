@@ -1331,12 +1331,9 @@ async def test_settings_menu_persists_adjusted_image_fit(tmp_path: Path) -> None
     # MAIN: Print (0), Network (1), System (2), Accessibility (3).
     # 0 DOWNs lands on Print; SELECT enters the Print hub.
     await ui._handle_action(UiAction.SELECT)
-    # Print hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print.
-    # Navigate into Transform (row 2) where Image fit lives.
-    # Option B: navigate directly to Transform sub-page for row content test.
-    ui._show_settings(page=SettingsPage.TRANSFORM)
-    # TRANSFORM: 0 Image fit  1 JPEG quality.
-    # 0 DOWNs lands on Image fit (already selected at index 0).
+    keys = ui._visible_keys_for_page(SettingsPage.PRINT)
+    while keys[ui.snapshot.selected_index] is not SettingKey.IMAGE_FIT:
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     assert _printer_fit(ui) is FitMode.CROP
     assert display.snapshots[-1].settings_title == "Image fit"
@@ -1382,9 +1379,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     # is that a config-write failure keeps the runtime value intact, not that
     # the navigation path to Keepalive is exercised.
     ui._show_settings(page=SettingsPage.AUTO_PRINT)
-    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
-    # Three DOWN presses from Auto print lands on Keepalive (index 3).
-    for _ in range(3):
+    keys = ui._visible_keys_for_page(SettingsPage.AUTO_PRINT)
+    while keys[ui.snapshot.selected_index] is not SettingKey.KEEPALIVE:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.RIGHT)
@@ -1393,8 +1389,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     assert ui.config.printer.keepalive_interval_s == 10.0
     assert load_config(config_path).printer.keepalive_interval_s == 10.0
     assert display.snapshots[-1].settings_message == "Config not writable"
-    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[3].value == "10s"
+    assert display.snapshots[-1].settings_rows[1].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[1].value == "10s"
 
 
 @pytest.mark.asyncio
@@ -1530,14 +1526,12 @@ async def test_settings_rows_show_action_specific_hints() -> None:
 
     # Option B: navigate directly to AUTO_PRINT sub-page to check
     # Keepalive's hint — the test intent is the hint value, not the path.
-    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
     ui._show_settings(page=SettingsPage.AUTO_PRINT)
-    # Three DOWN presses lands on Keepalive (index 3, an adjustable picker row).
-    for _ in range(3):
+    keys = ui._visible_keys_for_page(SettingsPage.AUTO_PRINT)
+    while keys[ui.snapshot.selected_index] is not SettingKey.KEEPALIVE:
         await ui._handle_action(UiAction.DOWN)
-
-    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[3].hint == "Right/KEY1 choose"
+    assert display.snapshots[-1].settings_rows[1].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[1].hint == "Right/KEY1 choose"
 
 
 @pytest.mark.asyncio
@@ -1616,8 +1610,8 @@ async def test_key3_help_explains_selected_settings_row() -> None:
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Transform"
-    assert display.snapshots[-1].settings_rows[1].label == "JPEG quality"
+    assert display.snapshots[-1].settings_title == "Image quality"
+    assert display.snapshots[-1].settings_rows[0].label == "JPEG quality"
     assert display.snapshots[-1].help_dialog_body == (
         "Trade-off: higher = bigger, sharper. Current: 100"
     )
@@ -1773,8 +1767,7 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     # No-film test — the test intent is toggling the value, not the path.
     # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
     ui._show_settings(page=SettingsPage.AUTO_PRINT)
-    # 1 DOWN lands on No-film test (index 1).
-    await ui._handle_action(UiAction.DOWN)
+    # No-film test is first on the advanced Printer options page.
     await ui._handle_action(UiAction.RIGHT)
     assert not ui.config.workflow.allow_print_without_film
     assert display.snapshots[-1].settings_title == "No-film test"
@@ -1782,8 +1775,8 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     assert ui.config.workflow.allow_print_without_film
-    assert display.snapshots[-1].settings_rows[2].label == "No-film test"
-    assert display.snapshots[-1].settings_rows[2].value == "On"
+    assert display.snapshots[-1].settings_rows[0].label == "No-film test"
+    assert display.snapshots[-1].settings_rows[0].value == "On"
 
 
 @pytest.mark.asyncio
@@ -2002,7 +1995,7 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     # CPU/RAM/Storage/SoC live stats sit between identity and version blocks.
     assert [row.label for row in rows[:9]] == [
         "Device ID",
-        "App version",
+        "Bridge version",
         "CPU",
         "Memory",
         "Storage",
@@ -2242,11 +2235,11 @@ async def test_settings_system_page_can_toggle_idle_poweroff(tmp_path: Path) -> 
 
     assert ui.config.power.idle_poweroff_enabled
     assert load_config(config_path).power.idle_poweroff_enabled
-    # Plan 037 phase 1, #2: the row value now reads "After 10 min" / "Off"
+    # Plan 037 phase 1, #2: the row value now reads "After 30min" / "Off"
     # rather than the generic On/Off picker label so it tells the user how
     # long the idle window actually is.
     assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].value == (
-        "After 10 min"
+        "After 30min"
     )
 
 
@@ -4749,13 +4742,13 @@ def test_idle_poweroff_row_value_off() -> None:
 def test_idle_poweroff_row_value_after_10_min() -> None:
     """Plan 037 #2: enabled idle poweroff renders the timeout explicitly."""
 
-    config = BridgeConfig(power=PowerConfig(idle_poweroff_enabled=True))
+    config = BridgeConfig(power=PowerConfig(idle_poweroff_enabled=True, idle_poweroff_after_s=600))
     ui, _ = _make_settings_ui(config)
 
     row = ui._settings_row_for_key(SettingKey.SYSTEM_IDLE_POWEROFF, "")
 
     assert row.label == "Idle poweroff"
-    assert row.value == "After 10 min"
+    assert row.value == "After 10min"
 
 
 def test_system_idle_info_enum_removed() -> None:

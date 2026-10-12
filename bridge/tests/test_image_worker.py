@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -218,3 +220,117 @@ async def test_worker_preserves_image_too_large_outcome(tmp_path: Path) -> None:
     assert error.value.size == 25_000_000
     assert error.value.maximum == 24_000_000
     assert error.value.unit == "pixels"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.name != "posix", reason="POSIX isolated process groups")
+@pytest.mark.parametrize("outcome", ["cancel", "timeout", "parent_crash"])
+async def test_hif_decoder_descendant_stops_with_worker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    import signal
+    import sys
+    import time
+
+    from PIL import Image
+
+    decoder_pid = tmp_path / "decoder.pid"
+    decoder = tmp_path / "heif-thumbnailer"
+    decoder.write_text(
+        f"#!{sys.executable}\n"
+        "import os, pathlib, signal, time\n"
+        "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+        f"pathlib.Path({str(decoder_pid)!r}).write_text(str(os.getpid()))\n"
+        + ("os.kill(os.getppid(), signal.SIGKILL)\n" if outcome == "parent_crash" else "")
+        + "time.sleep(30)\n"
+    )
+    decoder.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    source = tmp_path / "source.hif"
+    source.write_bytes(b"fake decoder fixture")
+    worker = ImagePreparationWorker(poll_interval_s=0.005, shutdown_grace_s=0.05)
+    task = asyncio.create_task(
+        worker.prepare(source, PrinterModel.SQUARE, timeout_s=3 if outcome == "timeout" else None)
+    )
+    pid: int | None = None
+
+    def running(pid: int) -> bool:
+        status = Path(f"/proc/{pid}/stat")
+        try:
+            if status.exists() and status.read_text().split()[2] == "Z":
+                return False
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        return True
+
+    try:
+        deadline = time.monotonic() + 5
+        while not decoder_pid.exists() and time.monotonic() < deadline and not task.done():  # noqa: ASYNC110 - external process writes the file
+            await asyncio.sleep(0.01)
+        assert decoder_pid.exists(), "decoder did not start"
+        pid = int(decoder_pid.read_text())
+        if outcome == "cancel":
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(task, 1)
+        elif outcome == "timeout":
+            with pytest.raises(ImagePreparationTimeoutError):
+                await asyncio.wait_for(task, 4)
+        else:
+            with pytest.raises((image_worker.ImageWorkerError, EOFError)):
+                await asyncio.wait_for(task, 1)
+        deadline = time.monotonic() + 1
+        while running(pid) and time.monotonic() < deadline:  # noqa: ASYNC110 - external process exit
+            await asyncio.sleep(0.01)
+        assert not running(pid), "decoder kept consuming resources after worker exit"
+        # Cancellation leaves the worker ready for the next image; no changed pixels.
+        jpeg = tmp_path / "next.jpg"
+        Image.new("RGB", (30, 30), "orange").save(jpeg)
+        assert (
+            await worker.prepare(jpeg, PrinterModel.SQUARE, timeout_s=5)
+        ).model is PrinterModel.SQUARE
+    finally:
+        if not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        if pid is not None and running(pid):
+            os.kill(pid, signal.SIGKILL)
+        await worker.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.name != "posix", reason="POSIX isolated process groups")
+async def test_cancellation_before_worker_isolation_never_signals_bridge_group(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = FakeProcess()
+    process.pid = os.getpid() + 1
+    process.start()
+    bridge_group = os.getpgrp()
+    calls: list[int] = []
+    monkeypatch.setattr(image_worker.os, "getpgid", lambda _: bridge_group)
+    monkeypatch.setattr(image_worker.os, "killpg", lambda group, _: calls.append(group))
+    worker = ImagePreparationWorker()
+    assert await worker._terminate_process(process, isolated_process_group=True)
+    assert process.terminated
+    assert calls == []
+    await worker._finalize_process(process, isolated_process_group=True)
+    assert calls == [process.pid]
+    assert bridge_group not in calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.name != "posix", reason="POSIX isolated process groups")
+async def test_termination_of_already_exited_worker_still_cleans_owned_group(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = FakeProcess()
+    process.pid = os.getpid() + 1
+    process.finish()
+    calls: list[int] = []
+    monkeypatch.setattr(image_worker.os, "killpg", lambda group, _: calls.append(group))
+    worker = ImagePreparationWorker()
+    assert await worker._terminate_process(process, isolated_process_group=True)
+    assert calls == [process.pid]

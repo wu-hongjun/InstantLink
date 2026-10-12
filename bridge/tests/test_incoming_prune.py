@@ -49,6 +49,17 @@ def test_no_op_when_already_within_budget(tmp_path: Path) -> None:
     assert kept.exists()
 
 
+def test_owned_original_survives_age_and_budget_pressure_until_released(tmp_path: Path) -> None:
+    held = _write(tmp_path, "held.hif", size=2 * MB, age_s=30 * 86400)
+    obsolete = _write(tmp_path, "obsolete.hif", size=MB, age_s=31 * 86400)
+    removed = prune_incoming_dir(
+        tmp_path, budget_bytes=0, keep_newest=0, grace_s=0, protected_paths=[held]
+    )
+    assert removed == [obsolete]
+    assert held.exists()
+    assert prune_incoming_dir(tmp_path, budget_bytes=0, keep_newest=0, grace_s=0) == [held]
+
+
 def test_recent_files_are_exempt_even_over_budget(tmp_path: Path) -> None:
     """The guarantee that protects a queued or mid-print file."""
 

@@ -15,7 +15,7 @@ from test_ui_controller import (
 
 from instantlink_bridge import app
 from instantlink_bridge.camera import ftp
-from instantlink_bridge.camera.ftp import ReceivedImage
+from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
 from instantlink_bridge.config import BridgeConfig, FtpConfig, SyncConfig, SyncDestination
 from instantlink_bridge.sync import outbox, server
 from instantlink_bridge.ui.controller import BridgeUi
@@ -37,6 +37,7 @@ class Runtime:
         self.heartbeat = asyncio.Event()
         self.events: list[str] = []
         self.ui: Any = None
+        self.queue: asyncio.Queue[ReceivedImage] | None = None
         self.switch_to_sync = False
         self.fail_ui = False
         self.fail_bluetooth = False
@@ -89,6 +90,7 @@ class Runtime:
                 **_kwargs: object,
             ) -> None:
                 self.queue = queue
+                runtime.queue = queue
                 self.loop = loop
 
             def start(self) -> None:
@@ -98,11 +100,18 @@ class Runtime:
                         self.queue.put_nowait, ReceivedImage(Path("photo.jpg"), "camera")
                     )
 
+            def begin_stopping(self) -> None:
+                runtime.events.append("ftp-stopping")
+
             def stop(self) -> None:
                 runtime.events.append("ftp-stop")
 
             def raise_if_failed(self) -> None:
                 return
+
+            def release_received_image(self, path: Path) -> bool:
+                runtime.events.append(f"release:{path.name}")
+                return True
 
         class Cpu:
             async def start(self) -> None:
@@ -267,6 +276,38 @@ async def test_shutdown_cancels_pending_agent_even_when_photo_is_waiting(
     assert "agent-cancel" in runtime.events
     assert not runtime.dispatched.is_set()
     assert "ftp-stop" in runtime.events and "ui-stop" in runtime.events
+    assert "release:photo.jpg" in runtime.events
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["success", "failure", "cancel"])
+async def test_photo_ownership_is_released_after_each_processing_outcome(
+    monkeypatch: pytest.MonkeyPatch,
+    outcome: str,
+) -> None:
+    runtime = Runtime(monkeypatch, upload=True)
+    runtime.bluetooth_release.set()
+    job_started = asyncio.Event()
+
+    async def process(*_args: object, **_kwargs: object) -> None:
+        job_started.set()
+        if outcome == "failure":
+            raise RuntimeError("injected photo failure")
+        if outcome == "cancel":
+            try:
+                await asyncio.Event().wait()
+            finally:
+                runtime.events.append("job-cancel")
+
+    monkeypatch.setattr(app, "dispatch_received_image", process)
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    await asyncio.wait_for(job_started.wait(), 1)
+    await asyncio.sleep(0)
+    runtime.stop.set()
+    await asyncio.wait_for(task, 2)
+    assert runtime.events.count("release:photo.jpg") == 1
+    if outcome == "cancel":
+        assert runtime.events.index("job-cancel") < runtime.events.index("release:photo.jpg")
 
 
 @pytest.mark.asyncio
@@ -498,3 +539,162 @@ def test_help_opened_at_boot_preserves_starting_until_background_readiness() -> 
     ui._show_help_dialog(title="Startup", body="Starting services")
     ui._dismiss_help_dialog()
     assert ui.live_snapshot.mode is UiMode.BOOTING
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("boundary", ["queue-notify", "power-activity"])
+@pytest.mark.parametrize("outcome", ["failure", "cancel"])
+async def test_photo_ownership_cleanup_covers_post_dequeue_awaits(
+    monkeypatch: pytest.MonkeyPatch, boundary: str, outcome: str
+) -> None:
+    runtime = Runtime(monkeypatch, upload=True)
+    entered = asyncio.Event()
+
+    async def fault(*_args: object, **_kwargs: object) -> None:
+        entered.set()
+        if outcome == "failure":
+            raise RuntimeError("post-dequeue failure")
+        await asyncio.Event().wait()
+
+    if boundary == "queue-notify":
+        monkeypatch.setattr(app, "notify_image_queue_changed", fault)
+    else:
+
+        class Power:
+            async def run(self, stop: asyncio.Event) -> None:
+                await stop.wait()
+
+            record_activity = fault
+
+        monkeypatch.setattr(app, "build_power_monitor", lambda *_args, **_kwargs: Power())
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    await asyncio.wait_for(entered.wait(), 1)
+    if outcome == "cancel":
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, 2)
+    else:
+        runtime.stop.set()
+        await asyncio.wait_for(task, 2)
+    assert runtime.events.count("release:photo.jpg") == 1
+    assert not runtime.dispatched.is_set()
+    assert runtime.queue is not None
+    await asyncio.wait_for(runtime.queue.join(), 0.1)
+    assert runtime.events.index("ftp-stopping") < runtime.events.index("ui-stop")
+
+
+@pytest.mark.asyncio
+async def test_ftp_admission_stops_before_slow_shared_resource_cleanup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    runtime = Runtime(monkeypatch)
+    services: list[FtpReceiveService] = []
+
+    class SilentFtp(FtpReceiveService):
+        def __init__(
+            self,
+            config: FtpConfig,
+            queue: asyncio.Queue[ReceivedImage],
+            loop: asyncio.AbstractEventLoop,
+            **kwargs: object,
+        ) -> None:
+            super().__init__(
+                replace(config, incoming_dir=tmp_path / "incoming"), queue, loop, **kwargs
+            )
+            services.append(self)
+
+        def start(self) -> None:
+            return
+
+    monkeypatch.setattr(ftp, "FtpReceiveService", SilentFtp)
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    await asyncio.wait_for(runtime.ready.wait(), 1)
+    cleanup_started, cleanup_release = asyncio.Event(), asyncio.Event()
+
+    async def slow_stop() -> None:
+        cleanup_started.set()
+        await cleanup_release.wait()
+
+    runtime.ui.stop = slow_stop
+    runtime.stop.set()
+    await asyncio.wait_for(cleanup_started.wait(), 1)
+    service = services[0]
+    incoming = service.config.incoming_dir
+    incoming.mkdir(parents=True)
+    late = incoming / "late.hif"
+    late.write_bytes(b"original")
+    try:
+        reply = service._ftp_preflight_reply(path=late)
+        assert reply is not None and reply.startswith("451")
+        service._handle_received_file(str(late), "192.168.8.10")
+        service._pin_received_image(late)
+        service._handoff_received_image(late, "192.168.8.10")
+        await asyncio.sleep(0)
+        assert service._queue.empty()
+        assert not service._pending_paths
+        assert late.read_bytes() == b"original"
+    finally:
+        cleanup_release.set()
+        await asyncio.wait_for(task, 2)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("waiting_for", ["bluetooth", "manual-review"])
+async def test_shutdown_releases_active_and_multiple_queued_sources_without_deleting(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, waiting_for: str
+) -> None:
+    runtime = Runtime(monkeypatch)
+    services: list[FtpReceiveService] = []
+    photos: list[Path] = []
+    dequeued, reviewing = asyncio.Event(), asyncio.Event()
+
+    class QueuedFtp(FtpReceiveService):
+        def __init__(
+            self,
+            config: FtpConfig,
+            queue: asyncio.Queue[ReceivedImage],
+            loop: asyncio.AbstractEventLoop,
+            **kwargs: object,
+        ) -> None:
+            super().__init__(
+                replace(config, incoming_dir=tmp_path / "incoming"), queue, loop, **kwargs
+            )
+            services.append(self)
+            runtime.queue = queue
+
+        def start(self) -> None:
+            self.config.incoming_dir.mkdir(parents=True)
+            for index in range(5):
+                path = self.config.incoming_dir / f"photo-{index}.hif"
+                path.write_bytes(b"original")
+                photos.append(path)
+                self._handle_received_file(str(path), "192.168.8.10")
+
+    async def notify(*_args: object, **_kwargs: object) -> None:
+        dequeued.set()
+
+    async def manual_review(*_args: object, **_kwargs: object) -> None:
+        reviewing.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(ftp, "FtpReceiveService", QueuedFtp)
+    monkeypatch.setattr(app, "notify_image_queue_changed", notify)
+    monkeypatch.setattr(app, "dispatch_received_image", manual_review)
+    if waiting_for == "manual-review":
+        runtime.bluetooth_release.set()
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    try:
+        await asyncio.wait_for(dequeued.wait(), 1)
+        if waiting_for == "manual-review":
+            await asyncio.wait_for(reviewing.wait(), 1)
+        assert runtime.queue is not None and runtime.queue.qsize() == 4
+    finally:
+        runtime.stop.set()
+        await asyncio.wait_for(task, 2)
+    service = services[0]
+    assert not service._pending_paths
+    assert runtime.queue is not None
+    await asyncio.wait_for(runtime.queue.join(), 0.1)
+    assert runtime.queue.empty()
+    assert len(photos) == 5
+    assert all(photo.read_bytes() == b"original" for photo in photos)

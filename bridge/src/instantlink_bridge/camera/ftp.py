@@ -46,6 +46,7 @@ def prune_incoming_dir(
     grace_s: float = INCOMING_PRUNE_GRACE_S,
     max_age_s: float = INCOMING_MAX_AGE_S,
     now: float | None = None,
+    protected_paths: Iterable[Path] = (),
 ) -> list[Path]:
     """Delete the oldest received originals until the directory fits its budget.
 
@@ -62,9 +63,11 @@ def prune_incoming_dir(
       well under budget.
     * **budget** — oldest first until the total fits ``budget_bytes``.
 
-    ``grace_s`` exempts recently-modified files from *both*, which is what
-    keeps a queued or mid-print file safe: the receive queue is drained one
-    job at a time and a print takes tens of seconds, so the margin is wide.
+    ``protected_paths`` exempts active uploads and queued/current sources
+    from both rules, including long manual review. The budget remains soft
+    while owned originals alone exceed it; releasing a job restores normal
+    eligibility on the next sweep. ``grace_s`` also exempts recently-modified
+    files from both rules.
     ``keep_newest`` exempts the most recent files from budget eviction only —
     deliberately not from age, or a unit holding a handful of months-old
     originals would never retire any of them.
@@ -76,8 +79,9 @@ def prune_incoming_dir(
     """
 
     moment = time.time() if now is None else now
+    protected = frozenset(path.resolve() for path in protected_paths)
     try:
-        candidates = [entry for entry in incoming_dir.iterdir() if entry.is_file()]
+        candidates = [entry for entry in incoming_dir.resolve().iterdir() if entry.is_file()]
     except OSError:
         LOGGER.warning("ftp.incoming_prune_scan_failed dir=%s", incoming_dir, exc_info=True)
         return []
@@ -111,7 +115,7 @@ def prune_incoming_dir(
     survivors: list[tuple[float, int, Path]] = []
     for mtime, size, path in stats:
         age = moment - mtime
-        if age < grace_s:
+        if path in protected or age < grace_s:
             survivors.append((mtime, size, path))
             continue
         if age > max_age_s:
@@ -123,7 +127,7 @@ def prune_incoming_dir(
     for mtime, size, path in survivors:
         if total_bytes <= budget_bytes:
             break
-        if path in newest or moment - mtime < grace_s:
+        if path in protected or path in newest or moment - mtime < grace_s:
             continue
         drop(path, size, "budget")
 
@@ -221,6 +225,9 @@ class FtpReceiveService:
     ) -> None:
         self._config = config
         self._config_lock = Lock()
+        self._pending_paths_lock = Lock()
+        self._pending_paths: dict[Path, int] = {}
+        self._upload_owners: dict[Path, object] = {}
         self._queue = queue
         self._loop = loop
         self._activity_tracker = activity_tracker
@@ -280,10 +287,14 @@ class FtpReceiveService:
         if self._failure is not None:
             raise FtpServiceFailedError("FTP receive service stopped") from self._failure
 
+    def begin_stopping(self) -> None:
+        """Stop admission immediately before async shared-resource teardown."""
+        self._stopping = True
+
     def stop(self) -> None:
         """Stop the FTP server."""
 
-        self._stopping = True
+        self.begin_stopping()
         server = self._server
         if server is not None:
             server.close_all()
@@ -294,6 +305,9 @@ class FtpReceiveService:
 
     def _handoff_received_image(self, path: Path, remote_ip: str) -> None:
         def enqueue() -> None:
+            if self._stopping:
+                self.release_received_image(path)
+                return
             received = ReceivedImage(path=path, remote_ip=remote_ip)
             try:
                 self._queue.put_nowait(received)
@@ -312,12 +326,57 @@ class FtpReceiveService:
                         self._queue_overflow_callback(received, queue_depth, queue_max_size)
                     except Exception:
                         LOGGER.exception("ftp.queue_overflow_callback_failed path=%s", path)
-                try:
-                    path.unlink(missing_ok=True)
-                except OSError:
-                    LOGGER.exception("ftp.queue_full_cleanup_failed path=%s", path)
+                if self.release_received_image(path):
+                    try:
+                        path.unlink(missing_ok=True)
+                    except OSError:
+                        LOGGER.exception("ftp.queue_full_cleanup_failed path=%s", path)
 
-        self._loop.call_soon_threadsafe(enqueue)
+        try:
+            self._loop.call_soon_threadsafe(enqueue)
+        except RuntimeError:
+            self.release_received_image(path)
+            LOGGER.warning("ftp.handoff_unavailable path=%s", path)
+
+    def _pin_received_image(self, path: Path) -> None:
+        canonical = path.resolve()
+        with self._pending_paths_lock:
+            self._pending_paths[canonical] = self._pending_paths.get(canonical, 0) + 1
+
+    def release_received_image(self, path: Path) -> bool:
+        """Release one queued/current job; return whether no job owns the source."""
+        canonical = path.resolve()
+        with self._pending_paths_lock:
+            count = self._pending_paths.get(canonical, 0)
+            if count > 1:
+                self._pending_paths[canonical] = count - 1
+                return False
+            self._pending_paths.pop(canonical, None)
+            return True
+
+    def _received_path_is_owned(self, path: Path) -> bool:
+        canonical = path.resolve()
+        with self._pending_paths_lock:
+            return canonical in self._pending_paths
+
+    def _reserve_upload(self, path: Path, owner: object) -> bool:
+        """Atomically reserve a target before pyftpdlib opens or truncates it."""
+        canonical = path.resolve()
+        with self._pending_paths_lock:
+            if (
+                self._stopping
+                or canonical in self._pending_paths
+                or canonical in self._upload_owners
+            ):
+                return False
+            self._upload_owners[canonical] = owner
+            return True
+
+    def _release_upload(self, path: Path, owner: object) -> None:
+        canonical = path.resolve()
+        with self._pending_paths_lock:
+            if self._upload_owners.get(canonical) is owner:
+                del self._upload_owners[canonical]
 
     def _source_decision(self, remote_ip: str) -> FtpSourceDecision:
         config = self.config
@@ -390,6 +449,9 @@ class FtpReceiveService:
         return True
 
     def _handle_received_file(self, file: str, remote_ip: str) -> None:
+        if self._stopping:
+            LOGGER.info("ftp.completed_after_stop path=%s", file)
+            return
         path = self._normalize_received_file_path(Path(file), remote_ip)
         if path is None:
             return
@@ -428,9 +490,9 @@ class FtpReceiveService:
             self.config.mode.value,
             self._queue.qsize(),
         )
-        # Prune before handing off, so the directory is bounded even if this
-        # job is the one that dies. The file just received is inside the
-        # keep-newest/grace window, so it is never a prune candidate.
+        # Own the source before pruning/handoff. Grace/newest limits alone
+        # cannot protect a queued photo or hours-long manual review.
+        self._pin_received_image(path)
         self._prune_incoming()
         self._handoff_received_image(path, remote_ip)
 
@@ -441,9 +503,12 @@ class FtpReceiveService:
         # is deliberately at the call site so the pruner stays honest about
         # its own failures rather than swallowing them internally.
         try:
+            with self._pending_paths_lock:
+                protected_paths = (*self._pending_paths, *self._upload_owners)
             prune_incoming_dir(
                 self._config.incoming_dir,
                 budget_bytes=self._config.incoming_budget_mb * 1024 * 1024,
+                protected_paths=protected_paths,
             )
         except Exception:
             LOGGER.warning("ftp.incoming_prune_failed", exc_info=True)
@@ -508,7 +573,9 @@ class FtpReceiveService:
             return
         self._failure = error
 
-    def _ftp_preflight_reply(self, remote_ip: str | None = None) -> str | None:
+    def _ftp_preflight_reply(
+        self, remote_ip: str | None = None, *, path: Path | None = None
+    ) -> str | None:
         """Return an FTP error reply string if the bridge cannot accept a print job right now.
 
         Check ordering follows the architect's Phase 6 rationale: hard-fail states first
@@ -521,6 +588,13 @@ class FtpReceiveService:
 
         Gracefully degrades to None when no bridge_snapshot_provider is wired.
         """
+        if self._stopping:
+            return "451 Bridge stopping, try again later."
+
+        if path is not None and self._received_path_is_owned(path):
+            reply = "450 Photo busy. Retry after this photo finishes."
+            LOGGER.info("ftp.preflight_rejected reply=%r remote_ip=%s", reply, remote_ip)
+            return reply
         if self._bridge_snapshot_provider is None:
             return None
 
@@ -596,6 +670,7 @@ class FtpReceiveService:
 
         class InstantLinkBridgeFtpHandler(FTPHandler):  # type: ignore[misc]
             def on_connect(self) -> None:
+                self._reserved_upload_paths: set[Path] = set()
                 if not service._accept_connection_source(
                     self.remote_ip,
                     event="ftp.connection_rejected",
@@ -609,15 +684,44 @@ class FtpReceiveService:
                     self.respond("530 InstantLink Bridge FTP source rejected for receive mode.")
                     self.close_when_done()
 
+            def _release_transfer(self, file: str) -> None:
+                path = Path(file).resolve()
+                service._release_upload(path, self)
+                self._reserved_upload_paths.discard(path)
+
             def on_file_received(self, file: str) -> None:
-                service._handle_received_file(file, self.remote_ip)
+                try:
+                    # Accepted-source ownership is acquired before releasing
+                    # the upload lease, including root-upload relocation.
+                    service._handle_received_file(file, self.remote_ip)
+                finally:
+                    self._release_transfer(file)
+
+            def on_incomplete_file_received(self, file: str) -> None:
+                self._release_transfer(file)
+
+            def on_disconnect(self) -> None:
+                for path in tuple(self._reserved_upload_paths):
+                    self._release_transfer(str(path))
 
             def ftp_STOR(self, file: str, mode: str = "w") -> object:
-                reply = service._ftp_preflight_reply(self.remote_ip)
+                reply = service._ftp_preflight_reply(self.remote_ip, path=Path(file))
                 if reply is not None:
                     self.respond(reply)
                     return None
-                return super().ftp_STOR(file, mode)
+                path = Path(file).resolve()
+                if not service._reserve_upload(path, self):
+                    self.respond("450 Photo busy. Retry after this photo finishes.")
+                    return None
+                self._reserved_upload_paths.add(path)
+                try:
+                    result = super().ftp_STOR(file, mode)
+                except BaseException:
+                    self._release_transfer(file)
+                    raise
+                if result is None:
+                    self._release_transfer(file)
+                return result
 
         try:
             authorizer = DummyAuthorizer()

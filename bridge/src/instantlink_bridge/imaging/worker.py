@@ -3,28 +3,38 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import math
 import os
 import signal
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Literal, Protocol, cast
 
 if TYPE_CHECKING:
     from multiprocessing.connection import Connection
 
-from instantlink_bridge.ble.models import PrinterModel
+from instantlink_bridge.ble.models import PrinterModel, spec_for
 from instantlink_bridge.imaging.pipeline import (
+    HEIF_SUFFIXES,
     FitMode,
     ImagePipelineError,
     ImageTooLargeError,
     PreparedImage,
     PrintEdit,
+    SourceIdentity,
     UnsupportedImageError,
+    WorkingImageCache,
+    _working_size_for_model,
     prepare_for_instantlink_backend,
     prepare_for_instax,
+    source_identity,
 )
 from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ImageWorkerError(ImagePipelineError):
@@ -46,6 +56,7 @@ class ImagePreparationRequest:
     edit: PrintEdit | None = None
     adjustments: AdjustmentProfile | None = None
     correction: CorrectionProfile | None = None
+    working_cache: WorkingImageCache | None = None
     # False selects the InstantLink-backend flavour, which leaves the
     # model transport flip to InstantLink itself (plan 056 T1.1).
     apply_model_flip: bool = True
@@ -124,7 +135,10 @@ class ImagePreparationWorker:
         process_factory: _ProcessFactory | None = None,
         poll_interval_s: float = 0.01,
         shutdown_grace_s: float = 0.5,
+        working_cache_ttl_s: float = 300.0,
     ) -> None:
+        if not math.isfinite(working_cache_ttl_s) or working_cache_ttl_s < 0:
+            raise ValueError("working cache TTL must be finite and nonnegative")
         self._process_factory = process_factory or _create_process
         self._poll_interval_s = poll_interval_s
         self._shutdown_grace_s = shutdown_grace_s
@@ -133,6 +147,11 @@ class ImagePreparationWorker:
         self._active_prepare_task: asyncio.Task[PreparedImage] | None = None
         self._termination_failed = False
         self._closed = False
+        self._working_cache_ttl_s = working_cache_ttl_s
+        self._working_cache_dir: TemporaryDirectory[str] | None = None
+        self._working_cache: WorkingImageCache | None = None
+        self._working_cache_key: tuple[SourceIdentity, PrinterModel, tuple[int, int]] | None = None
+        self._working_cache_expiry_task: asyncio.Task[None] | None = None
 
     async def prepare(
         self,
@@ -149,25 +168,26 @@ class ImagePreparationWorker:
     ) -> PreparedImage:
         """Prepare an image asynchronously in a killable worker process."""
 
-        request = ImagePreparationRequest(
-            source_path=source_path,
-            model=model,
-            fit=fit,
-            quality=quality,
-            edit=edit,
-            adjustments=adjustments,
-            correction=correction,
-            apply_model_flip=apply_model_flip,
-        )
         async with self._lock:
             if self._closed:
                 raise ImageWorkerError("image worker is closed")
             if self._termination_failed:
                 raise ImageWorkerError("image worker unavailable after failed termination")
+            request = ImagePreparationRequest(
+                source_path=source_path,
+                model=model,
+                fit=fit,
+                quality=quality,
+                edit=edit,
+                adjustments=adjustments,
+                correction=correction,
+                working_cache=self._working_cache_for(source_path, model),
+                apply_model_flip=apply_model_flip,
+            )
             task = asyncio.create_task(self._prepare_locked(request, timeout_s))
             self._active_prepare_task = task
             try:
-                return await asyncio.shield(task)
+                prepared = await asyncio.shield(task)
             except asyncio.CancelledError:
                 if not task.done() and not task.cancelling():
                     task.cancel()
@@ -183,9 +203,15 @@ class ImagePreparationWorker:
                         break
                 if not task.cancelled():
                     task.exception()
+                self._drop_working_cache()
+                raise
+            except BaseException:
+                self._drop_working_cache()
                 raise
             finally:
                 self._active_prepare_task = None
+            self._schedule_working_cache_expiry()
+            return prepared
 
     async def aclose(self) -> None:
         """Stop active preparation and its descendants without waiting for its job deadline."""
@@ -204,8 +230,67 @@ class ImagePreparationWorker:
                 if not task.done():
                     raise
         async with self._lock:
+            expiry = self._working_cache_expiry_task
+            self._drop_working_cache()
+            if expiry is not None:
+                try:
+                    await expiry
+                except asyncio.CancelledError:
+                    pass
             if self._termination_failed:
                 raise ImageWorkerError("image worker could not be terminated")
+
+    def _working_cache_for(self, source: Path, model: PrinterModel) -> WorkingImageCache | None:
+        if self._working_cache_ttl_s <= 0 or source.suffix.lower() not in HEIF_SUFFIXES:
+            self._drop_working_cache()
+            return None
+        try:
+            identity = source_identity(source)
+        except OSError:
+            self._drop_working_cache()
+            return None
+        spec = spec_for(model)
+        key = (identity, model, _working_size_for_model(spec.width, spec.height))
+        if key != self._working_cache_key:
+            self._drop_working_cache()
+            try:
+                directory = TemporaryDirectory(prefix="instantlink-bridge-working-")
+            except OSError:
+                LOGGER.debug("image.working_cache_unavailable", exc_info=True)
+                return None
+            self._working_cache_dir = directory
+            self._working_cache_key = key
+            self._working_cache = WorkingImageCache(
+                Path(directory.name) / "working.bmp", identity, model
+            )
+        return self._working_cache
+
+    def _schedule_working_cache_expiry(self) -> None:
+        if self._working_cache is None:
+            return
+        if self._working_cache_expiry_task is not None:
+            self._working_cache_expiry_task.cancel()
+        self._working_cache_expiry_task = asyncio.create_task(self._expire_working_cache())
+
+    async def _expire_working_cache(self) -> None:
+        await asyncio.sleep(self._working_cache_ttl_s)
+        async with self._lock:
+            self._drop_working_cache()
+
+    def _drop_working_cache(self) -> None:
+        expiry = self._working_cache_expiry_task
+        self._working_cache_expiry_task = None
+        if expiry is not None and expiry is not asyncio.current_task():
+            expiry.cancel()
+        directory = self._working_cache_dir
+        self._working_cache_dir = None
+        self._working_cache = None
+        self._working_cache_key = None
+        if directory is not None:
+            try:
+                directory.cleanup()
+            except OSError:
+                LOGGER.debug("image.working_cache_cleanup_failed", exc_info=True)
 
     async def _prepare_locked(
         self,
@@ -459,6 +544,7 @@ def _run_prepare_in_child(
             edit=request.edit,
             adjustments=request.adjustments,
             correction=request.correction,
+            working_cache=request.working_cache,
         )
         result_writer.send(_PreparedImageResult(prepared))
     except ImageTooLargeError as error:

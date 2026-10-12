@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from enum import StrEnum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Thread
 from typing import Any, Protocol, cast
 
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -21,6 +25,32 @@ from instantlink_bridge.imaging.postprocess import (
     apply_post_fit_adjustments,
     apply_pre_fit_adjustments,
 )
+
+LOGGER = logging.getLogger(__name__)
+SourceIdentity = tuple[str, int, int, int, int, int]
+
+
+@dataclass(frozen=True, slots=True)
+class WorkingImageCache:
+    """One parent's ephemeral, lossless normalized source for repeated photo edits."""
+
+    path: Path
+    source_identity: SourceIdentity
+    model: PrinterModel
+
+
+def source_identity(path: Path) -> SourceIdentity:
+    """Include replacement and same-size edits, without hashing or decoding the source."""
+    resolved = path.resolve()
+    info = resolved.stat()
+    return (
+        str(resolved),
+        info.st_dev,
+        info.st_ino,
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+    )
 
 
 class ImagePipelineError(RuntimeError):
@@ -125,6 +155,7 @@ def prepare_for_instax(
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
     correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
 ) -> PreparedImage:
     """Convert a camera still image into a model-specific Instax JPEG."""
 
@@ -136,6 +167,7 @@ def prepare_for_instax(
         edit=edit,
         adjustments=adjustments,
         correction=correction,
+        working_cache=working_cache,
         apply_model_flip=True,
     )
 
@@ -149,6 +181,7 @@ def prepare_for_instantlink_backend(
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
     correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
 ) -> PreparedImage:
     """Prepare an edited, model-sized JPEG for InstantLink to send.
 
@@ -166,6 +199,7 @@ def prepare_for_instantlink_backend(
         edit=edit,
         adjustments=adjustments,
         correction=correction,
+        working_cache=working_cache,
         apply_model_flip=False,
     )
 
@@ -179,6 +213,7 @@ def _prepare_for_model(
     edit: PrintEdit | None,
     adjustments: AdjustmentProfile | None,
     correction: CorrectionProfile | None,
+    working_cache: WorkingImageCache | None,
     apply_model_flip: bool,
 ) -> PreparedImage:
     """Prepare a source image for the given printer model.
@@ -203,8 +238,14 @@ def _prepare_for_model(
     working_size = _working_size_for_model(spec.width, spec.height)
     minimum_source_edge = max(spec.width, spec.height)
     image: Image.Image | None = None
+    cache_writer: Thread | None = None
+    preparation_started = time.perf_counter()
     try:
-        image = _open_source_image(source_path, working_size, minimum_source_edge)
+        cache = working_cache if _cache_matches(source_path, model, working_cache) else None
+        image = _read_working_cache(cache, working_size)
+        cache_hit = image is not None
+        if image is None:
+            image = _open_source_image(source_path, working_size, minimum_source_edge)
         if image.format == "JPEG":
             image.draft("RGB", working_size)
         if not _is_supported_source_format(source_path, image):
@@ -221,6 +262,12 @@ def _prepare_for_model(
         # object and never aliases the buffer closed in the `finally` below.
         transposed = _exif_transposed(image)
         prepared = transposed if transposed.mode == "RGB" else transposed.convert("RGB")
+        # Materialize lazy decoders before recording the source stage or
+        # sharing the normalized pixels with the cache writer.
+        prepared.load()
+        if not cache_hit:
+            cache_writer = _write_working_cache_in_background(prepared, cache, working_size)
+        source_done = time.perf_counter()
         profile = adjustments if adjustments is not None else AdjustmentProfile()
         prepared = apply_pre_fit_adjustments(prepared, profile)
         prepared = _apply_print_edit(prepared, edit)
@@ -232,13 +279,30 @@ def _prepare_for_model(
     except IMAGE_DECODE_ERRORS as error:
         raise UnsupportedImageError("unsupported or corrupt image file") from error
     finally:
+        if cache_writer is not None:
+            cache_writer.join()
         if image is not None:
             image.close()
 
     if apply_model_flip and spec.flip_vertical:
         fitted = ImageOps.flip(fitted)
 
+    transforms_done = time.perf_counter()
     data, final_quality = _encode_jpeg_with_size_limit(fitted, quality, spec.max_image_size)
+    finished = time.perf_counter()
+    LOGGER.info(
+        "image.prepared path=%s model=%s cache_hit=%s source_ms=%.1f "
+        "transform_ms=%.1f jpeg_ms=%.1f total_ms=%.1f bytes=%s quality=%s",
+        source_path,
+        model.value,
+        cache_hit,
+        (source_done - preparation_started) * 1000,
+        (transforms_done - source_done) * 1000,
+        (finished - transforms_done) * 1000,
+        (finished - preparation_started) * 1000,
+        len(data),
+        final_quality,
+    )
     return PreparedImage(
         data=data,
         model=model,
@@ -247,6 +311,83 @@ def _prepare_for_model(
         quality=final_quality,
         fit=fit,
     )
+
+
+def _cache_matches(source: Path, model: PrinterModel, cache: WorkingImageCache | None) -> bool:
+    if cache is None or cache.model is not model or source.suffix.lower() not in HEIF_SUFFIXES:
+        return False
+    try:
+        return source_identity(source) == cache.source_identity
+    except OSError:
+        return False
+
+
+def _read_working_cache(
+    cache: WorkingImageCache | None, working_size: tuple[int, int]
+) -> Image.Image | None:
+    if cache is None or not cache.path.exists():
+        return None
+    image: Image.Image | None = None
+    try:
+        # Only our bounded RGB BMP is trusted. Incomplete writes use a separate
+        # name and never become a cache hit.
+        if cache.path.stat().st_size > working_size[0] * working_size[1] * 4 + 1024:
+            return None
+        image = Image.open(cache.path)
+        if (
+            image.format != "BMP"
+            or image.mode != "RGB"
+            or image.width > working_size[0]
+            or image.height > working_size[1]
+        ):
+            image.close()
+            return None
+        image.load()
+        return image
+    except IMAGE_DECODE_ERRORS:
+        if image is not None:
+            image.close()
+        LOGGER.debug("image.working_cache_read_failed", exc_info=True)
+        return None
+
+
+def _write_working_cache_in_background(
+    image: Image.Image, cache: WorkingImageCache | None, working_size: tuple[int, int]
+) -> Thread | None:
+    if cache is None or image.width > working_size[0] or image.height > working_size[1]:
+        return None
+
+    # Pillow's HEIF fallback can still be lazy after RGB/orientation no-ops.
+    # Finish its stateful decode before save() and the foreground fit both
+    # access the same pixels. This is a no-op for materialized thumbnailer RGB.
+    image.load()
+
+    def write() -> None:
+        pending = cache.path.with_suffix(".pending")
+        try:
+            # A BMP stores exactly these normalized RGB pixels. It avoids a
+            # second lossy encode and expensive PNG compression. The writer
+            # overlaps Look/edit/fit work, which never mutates this input.
+            image.save(pending, format="BMP")
+            if source_identity(Path(cache.source_identity[0])) == cache.source_identity:
+                os.replace(pending, cache.path)
+        except (OSError, ValueError):
+            LOGGER.debug("image.working_cache_write_failed", exc_info=True)
+        finally:
+            try:
+                pending.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    thread = Thread(target=write, name="image-working-cache", daemon=True)
+    try:
+        thread.start()
+    except RuntimeError:
+        # This optimization must not make an otherwise printable photo fail
+        # when the OS cannot allocate another writer thread.
+        LOGGER.debug("image.working_cache_writer_unavailable", exc_info=True)
+        return None
+    return thread
 
 
 def create_preview_image(

@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PIL import Image, ImageDraw, ImageFont
@@ -548,9 +549,20 @@ def read_exif_datestamp_text(
     * everything else (default EN): ``MMM d, yyyy`` (e.g. ``"May 3, 2026"``)
     """
     try:
+        if isinstance(path, str | Path) and Path(path).suffix.lower() in {".hif", ".heif", ".heic"}:
+            # The normal decoder runs in an isolated worker (often through
+            # heif-thumbnailer), so it does not register a parent-process
+            # Pillow opener for this metadata-only read.
+            from instantlink_bridge.imaging.pipeline import _register_heif_opener
+
+            _register_heif_opener()
         with Image.open(path) as img:  # type: ignore[arg-type]
             exif = img.getexif()
             raw = exif.get(36867)  # DateTimeOriginal
+            if not raw:
+                # Camera files normally place DateTimeOriginal in ExifIFD,
+                # while older Bridge fixtures used the root TIFF directory.
+                raw = exif.get_ifd(34665).get(36867)
     except Exception:
         return ""
     if not raw or not isinstance(raw, str):

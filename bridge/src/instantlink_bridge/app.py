@@ -450,13 +450,13 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 received.remote_ip,
                 queue.qsize(),
             )
-            await notify_image_queue_changed(
-                ui,
-                depth=queue.qsize(),
-                max_size=queue.maxsize,
-            )
-            await power_monitor.record_activity()
             try:
+                await notify_image_queue_changed(
+                    ui,
+                    depth=queue.qsize(),
+                    max_size=queue.maxsize,
+                )
+                await power_monitor.record_activity()
                 if ui.config.sync.print_enabled:
                     # Receipt/listener readiness does not mean the BlueZ agent
                     # can authorize a Printer connection yet.
@@ -482,7 +482,19 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 )
             finally:
                 queue.task_done()
+                service.release_received_image(received.path)
     finally:
+        if service is not None:
+            service.begin_stopping()
+            # The consumer has exited. Retain abandoned originals on disk,
+            # but release every queued job's ownership and queue accounting.
+            while True:
+                try:
+                    abandoned = queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+                queue.task_done()
+                service.release_received_image(abandoned.path)
         notifier.stopping()
         stop_event.set()
         if watchdog_task is not None:

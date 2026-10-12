@@ -374,6 +374,13 @@ stateDiagram-v2
 - Any BLE disconnect pauses transition and surfaces `ERROR_BLE`.
 - New uploads while waiting are queued by path and processed one by one after the current preview or
   print finishes. The runtime queue accepts up to `100` completed FTP uploads.
+- Queued and current originals are protected from incoming-file cleanup. Uploading over an
+  active or queued filename returns FTP `450`; shutdown returns `451` and retains abandoned
+  originals. Protected files may temporarily exceed the soft incoming storage budget.
+- Repeated edits to the same HIF reuse a temporary lossless normalized source. Looks, fit,
+  edits and Correction still run for each preview; output quality and processing order are
+  preserved. A new photo/model, source replacement, cancellation or five minutes idle drops
+  the cache. HIF dates use the camera's nested EXIF date without decoding pixels.
 - If the Bridge already knows the selected Printer has `0/10` film when an image arrives in Print
   mode, it shows `No film left` and skips BLE transfer. In Sync mode the print path is skipped
   entirely and the image spools to the sync outbox.

@@ -144,4 +144,32 @@ show it disconnected and do not establish post-deployment Printer reconnect.
 The first installed probe stopped before discovery/image commands because its temporary harness
 required a cached BlueZ device. An absent cache now permits fresh discovery; a connected cache
 still prevents starting a fresh probe. No production-source change or film consumption resulted.
-Installed production-loop and FFI reconnect checks remain pending Printer power-on.
+At this stage, the post-deploy shared-core probe and installed FFI reconnect checks awaited
+the next Printer power-on.
+
+
+## Final installed validation after Printer power-on
+
+The shared-core no-film probe rebuilt from clean **f574445** passed two post-deploy transfers:
+**14.950 / 15.104 s**, 236-byte payload and exactly 56×25 ms plus final150 ms waits each.
+An independent decoder verified 114 exact indexed ACKs, unchanged canonical JPEG/RGB hashes,
+ordered requests/replies, padding/checksums and two successful End/Cancel pairs. Zero actuator
+commands, film1/history67 unchanged, all sampled CPU clocks1000MHz and throttle0x0.
+
+The actual installed FFI separately passed two status/disconnect/fresh-reconnect cycles:
+Square, MTU247/payload236/conservativefalse, film1/history67, return code0 and authoritative
+closed state in **2.769 / 2.206 s**. Independent HCI decoding confirmed two physical Disconnect
+Complete events and only support-info commands, with no Download/PrintImage/LED/reset/shutdown.
+The shared-core probe exercises the installed source's transfer loop; it does not call the FFI
+print API. No new physical-film appearance or mechanical print timing was measured.
+
+The normal Bridge automatically reconnected after probe restoration. Final idle state:
+**600 MHz / powersave**, screen off/GPIO24 low, Printer connected, fresh film1/battery35 status
+following the powersave transition. Both services active with unchanged PIDs/NRestarts0,
+Wi-Fi/USB addresses correct, FTP220/NOOP200, throttle0x0 and zero working caches. Runtime docs
+commit61925ba and native sourcef574445 are both clean; installed FFI hash matches the official
+manifest. The final independent adversarial review found no unresolved issue.
+
+Sanitized evidence is in `docs/assets/bridge-audit-074/`. Temporary test binaries, duplicate
+photo uploads and raw captures are removed after review; the user's original DSC02825.jpeg
+is retained. The Bridge remains running normally with the selected 25 ms policy.

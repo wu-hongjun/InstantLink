@@ -23,10 +23,20 @@ external film/cover/battery rejection requires reset without falsely penalizing 
   `b601ec6a8b14138617ebbae5e5c74b892bb461ee2d2747dbfc6ed181f253bacb` matches
   the official clean ARM release manifest. Both services active / NRestarts 0, FTP 220 / NOOP
   200, correct USB/hotspot, throttle 0x0 and zero working caches. After 60 seconds idle:
-  screen off / GPIO24 low, powersave **600 MHz**, Wi-Fi/FTP operational. Printer stopped
-  advertising during build; installed production-loop and FFI reconnect checks await power-on.
-  Initial health records explicitly show Printer disconnected. A temporary harness cached-device
-  precheck failed before any scan/image command; absent cache now permits fresh discovery.
+  screen off / GPIO24 low, powersave **600 MHz**, Wi-Fi/FTP operational and Printer connected
+  with fresh film1 / battery35 status following the powersave transition.
+- The post-deploy same-source shared-core no-film probe passed **14.950 / 15.104 s**, each
+  56×25 ms plus final 150 ms, exact JPEG/RGB/padding/checksums and 114 indexed ACKs total.
+  Actual installed FFI passed two fresh status/disconnect cycles: MTU247 / payload236,
+  film1/history67, RC0, authoritative closed state and physical Disconnect Complete,
+  **2.769 / 2.206 s**. Normal Bridge automatically reconnected. Final services/PIDs unchanged,
+  Wi-Fi/FTP ready, throttle0x0, caches0. Final independent review has no unresolved issue.
+  Transfer probe uses the shared core from the installed source; installed FFI was checked
+  with status/teardown, not a film-consuming print call.
+- The Printer stopped advertising during build; power-on resolved final validation. An absent
+  BlueZ cache aborted a temporary harness precheck before discovery/image commands; fresh
+  discovery is now permitted when the cache is absent. Initial disconnected health remains
+  recorded separately. No production-source change or film use resulted.
 
 ## MTU-aware Bluetooth transport, 2026-10-12
 

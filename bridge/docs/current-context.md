@@ -1,21 +1,43 @@
 # Current Bridge Context
 
-## Print-flow simplification and reconnect attempt, 2026-10-11
+## Simplified printing and locked Wi-Fi recovery, 2026-10-11
 
-Plan 065 reduces one-photo UI transitions to Review (when enabled), one Printing layout,
-and Home with a brief Printed notice. Duplicate receipt/Printer-check frames and verbose
-progress text are removed. Preparation and edits stay in the same photo card; meaningful
-errors and stalled/restarting feedback remain. Completion/no-film timers no longer interrupt
-navigation. Both LCD surfaces share this controller/render path; no App/iOS contract changes.
+Clean runtime **`cbffa65`** is deployed, including pending Wi-Fi recovery and plan 065's shorter
+photo flow: Review (when enabled), one Printing layout, then Home with Printed feedback.
+Receipt/duplicate Printer-check frames and verbose progress text are removed. Preparation and
+edits stay in the same card; meaningful errors and stalled/restarting messages remain.
+Completion/no-film timers no longer interrupt navigation. Physical/virtual LCD share this path.
 
-The Mac has not detected the Pi USB gadget in this session (`en8` is absent and no InstantLink
-USB device is enumerated); SSH to `192.168.7.1` timed out. The user was asked to use a data cable
-on the Pi's USB micro-USB port and leave the Printer powered on. Both the pending Wi-Fi fix
-and this print-flow change await deployment. A mocked regression confirms recovery can update
-hotspot readiness while the controller remains locked/dark, keeps the idle CPU policy, and
-preserves its Printer state. Real locked recovery with uninterrupted BLE remains unverified.
+- **1,307 Bridge tests**, Ruff, touched-file formatting, strict mypy (65 source files), shell
+  syntax, whitespace and strict MkDocs passed; normal pre-commit gates passed. Independent
+  review found no remaining actionable issue. No App/iOS contract changed.
+- Camera FTP login exposed a five-minute deferral after hotspot loss. Past hotspot activity now
+  allows recovery of its failed link; active jobs and recent traffic on other transports remain
+  guarded. No new camera upload or film print was performed.
+- Live missing-interface testing exposed the `brcmfmac_wcc` module holding the base driver.
+  The helper unloads that fixed Wi-Fi extension before `brcmfmac`, only if `wlan0` is missing.
+  Its next background retry recovered the existing fault without a Bridge/Bluetooth restart.
+- Accepted locked tests: deactivating the saved hotspot restored IP/readiness in **32.90 s**;
+  unbinding SDIO function 1 (missing `wlan0`, driver loaded) restored it in **31.99 s**. Across
+  60/59 samples including 31 seconds of post-recovery observation, CPU remained powersave/600 MHz,
+  GPIO24 remained low, the controller stayed locked, Printer status advanced and BlueZ stayed
+  connected. Final driver-trial D-Bus monitoring saw no connection-loss event. Bridge PID
+  remained unchanged in both tests; film remained **4**.
+- Tests used a temporary observation wrapper around the real app and its normal KEY2 abstract
+  action. LCD/backlight, CPU, network and Rust FFI/Printer were real; no mocks or physical key
+  actuation. The wrapper/drop-in/probe files were removed and normal service restored afterward.
+- The Printer stopped advertising during the extended earlier failed dependency trial; the user
+  powered it back on and automatic reconnection succeeded. Accepted tests establish connection
+  continuity through those faults, not indefinite Printer uptime or battery-runtime acceptance.
+- Hardware/OS: Pi Zero 2 W Rev 1.0 / Waveshare ST7789 LCD HAT / X306 2300 mAh, Debian 13,
+  kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17. Instax Square
+  INSTAX-52006924; camera profile Sony a7C II. USB SSH returned after data-port reconnection.
+- Normal service restored at 21:43 EDT: Bridge/manager/Bluetooth/NetworkManager active, Bridge
+  NRestarts=0, Printer connected with film 4/battery 65%, throttling 0x0. Hotspot FTP greeting
+  and NOOP passed. Debian 13.2 and BlueZ 5.82 were rechecked.
 
-No film was consumed or camera upload performed. October 6 below remains the last device audit.
+See plan 065 and its recorded observations/rendered contact sheet. Physical GPIO, a new camera
+upload, film colour output and the controlled 16-hour discharge remain pending.
 
 ## Missing Wi-Fi interface audit, 2026-10-06
 

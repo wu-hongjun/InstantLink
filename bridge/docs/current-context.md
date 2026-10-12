@@ -2,7 +2,7 @@
 
 ## MTU-aware Bluetooth transport, 2026-10-12
 
-Clean code **`dd68c57`** is committed, pushed and deployed with new arm64 FFI/CLI. Plan 073 and
+Clean final code **`a24b8b7`** is committed, pushed and deployed with new arm64 FFI/CLI. Plan 073 and
 `docs/assets/bridge-audit-073/` record the paired physical prints and no-film crossover.
 
 - Linux discovers the exact connected Instax write MTU once per connection with a bounded
@@ -29,21 +29,29 @@ Clean code **`dd68c57`** is committed, pushed and deployed with new arm64 FFI/CL
   query. No uncertain packet/job replay; only actual enlarged-write uncertainty downgrades size.
 - Three subagents implemented, tested and reviewed. No remaining P1/P2 review issue. Rust
   **251 tests**, build/fmt/Clippy/header drift, App **156 tests**, strict docs and normal
-  pre-commit passed. **44** independent transport/diagnostic tests passed on real Pi arm64.
+  pre-commit passed. **51** independent transport/diagnostic/history tests passed on real Pi arm64.
 - Hardware/OS unchanged: Pi Zero 2 W / ST7789 / X306 2300 mAh, Debian 13.2, kernel
   6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17, Instax Square INSTAX-52006924.
 
-Installed FFI SHA-256 `f217afd16687dce664c35d455e3ec6be34dc860ee07d9f43e274222da238ca7b`;
-native and deployment manifests record clean `dd68c57`. Both services active/NRestarts=0,
-hotspot/USB addresses correct, FTP 220/NOOP 200, throttle 0x0 and zero working caches.
-Temporary candidate-library override removed. Printer is currently unavailable/not advertising;
-Two status-only cycles with the Linux five-second physical budget verified disconnection and
-fresh reconnect: D-Bus replies took **2.473 / 2.309 s**, HCI confirms two local-host Disconnect
-Complete events, film stayed 1. This identified BlueZ's delayed teardown as the deadline issue.
-Linux FFI now allows eight seconds; short query/write/CCCD budgets remain unchanged. The
-observed Square history decoder is corrected in core and diagnostic Python fallback; the
-public u16 contract is retained, with explicit malformed/overflow failure. Final installed
-follow-up validation is recorded below after clean deployment.
+Installed FFI SHA-256 `3c283840887b985c4a21dfabfb0af418f4615516049074fb57ec92d8c205b204`;
+native and deployment manifests record clean `a24b8b7`. Both services active / NRestarts=0,
+hotspot/USB addresses correct, FTP 220 / NOOP 200, throttle 0x0 and zero working caches.
+Temporary candidate-library override removed. Final screen-off state: powersave **600 MHz**,
+GPIO24 low, Printer connected with fresh status, services unchanged after probe restoration.
+Temporary probes, raw captures and duplicate test uploads removed; original user photo retained.
+
+Two status-only cycles verified physical disconnection and fresh reconnect: D-Bus replies took
+**2.473 / 2.309 s**, with two HCI Disconnect Complete events and unchanged film. This confirmed
+BlueZ's delayed teardown exceeded the old deadline. Linux FFI now allows eight seconds; short
+query/write/CCCD budgets remain unchanged. Square history decoding is corrected in core and
+Python fallback, preserving the public u16 contract with explicit malformed/overflow failure.
+
+The installed FFI passed two cycles: MTU **247**, payload **236**, conservative mode false;
+film **1**, history **67**, disconnect return code **0**, authoritative closed state at
+**1.987 / 2.133 s**. HCI confirms two Disconnect Complete events and no Download or PrintImage.
+The normal Bridge then automatically reconnected with fresh film 1 / battery 50% status.
+Bridge **1,524 tests**, lint, mypy (65 files) and touched-file formatting passed. Full formatting
+reports 16 untouched baseline files. No further film consumed.
 
 ## Live HIF-to-Printer benchmark, 2026-10-12
 

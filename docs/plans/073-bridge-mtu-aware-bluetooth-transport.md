@@ -100,3 +100,13 @@ recognizes the observed eight-byte body and reads its leading big-endian 32-bit 
 checked conversion to the existing public u16. Exact two-byte legacy replies remain supported;
 malformed/overflow replies fail explicitly. Diagnostic Python fallback uses the same rule.
 Trailing history bytes remain uninterpreted; no public ABI change or broader protocol claim.
+
+
+Final clean code **a24b8b7** and rebuilt arm64 CLI/FFI deployed. Installed FFI selected
+MTU 247 / payload 236, returned film 1 / history 67, completed two disconnects with return code 0
+and authoritative closed state (1.987 / 2.133 s). The normal Bridge automatically reconnected
+with fresh status. HCI confirms two Disconnect Complete events and zero download/print commands.
+Rust 251 tests, Bridge 1,524 tests/lint/mypy (65 files), touched-file formatting, header drift and
+51 independent Pi cases passed; App 156 and strict docs passed. Full Python formatting flags
+16 untouched baseline files. Sanitized installed validation/health and clean artifact manifest
+accompany the measurements.

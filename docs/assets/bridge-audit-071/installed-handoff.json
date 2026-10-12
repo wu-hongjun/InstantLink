@@ -1,0 +1,104 @@
+{
+  "success": true,
+  "python": "3.13.5",
+  "bridge_version": "0.1.17",
+  "production_module": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/instantlink.py",
+  "ffi_library": "/opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+  "source_sha256": "be61822b823e8525eeb872e9b439773048fdba4e945c6df5cb284384ac21ba12",
+  "abi_rejections": {
+    "null_pointer": -5,
+    "zero_length": -5,
+    "invalid_model": -5,
+    "invalid_flip": -5
+  },
+  "models": [
+    {
+      "model": "mini",
+      "quality": 95,
+      "dimensions": [
+        600,
+        800
+      ],
+      "worker_seconds": 0.2013,
+      "upright_mean_rgb_error": 0.0,
+      "lcd_logical_orientation": true,
+      "handoff": {
+        "bytes": 5191,
+        "sha256": "f7194d58c2f6eefc5a69e5c6a9c065781a785d6ca58bffd4e83da07b58c1241d",
+        "model_code": 0,
+        "transport_flip": 0,
+        "print_option": 7,
+        "real_ffi_result": -1
+      }
+    },
+    {
+      "model": "mini_link3",
+      "quality": 95,
+      "dimensions": [
+        600,
+        800
+      ],
+      "worker_seconds": 0.1683,
+      "upright_mean_rgb_error": 0.0,
+      "lcd_logical_orientation": true,
+      "handoff": {
+        "bytes": 5194,
+        "sha256": "c5aff506c90c0b7e041d116533d91457aa43000d7c9a794ba7d1421035a9d3b8",
+        "model_code": 1,
+        "transport_flip": 1,
+        "print_option": 7,
+        "real_ffi_result": -1
+      }
+    },
+    {
+      "model": "square",
+      "quality": 95,
+      "dimensions": [
+        800,
+        800
+      ],
+      "worker_seconds": 0.2101,
+      "upright_mean_rgb_error": 0.0,
+      "lcd_logical_orientation": true,
+      "handoff": {
+        "bytes": 6535,
+        "sha256": "439ce713855dd75426d435a61f5b82fb79a568c0adb7afc311988fcc6693410c",
+        "model_code": 2,
+        "transport_flip": 0,
+        "print_option": 7,
+        "real_ffi_result": -1
+      }
+    },
+    {
+      "model": "wide",
+      "quality": 95,
+      "dimensions": [
+        1260,
+        840
+      ],
+      "worker_seconds": 0.3201,
+      "upright_mean_rgb_error": 0.0,
+      "lcd_logical_orientation": true,
+      "handoff": {
+        "bytes": 11210,
+        "sha256": "699e760f7c3ba25c9a646f31ae187f51c5c174a5833cff303c5c3f8c025ce1c5",
+        "model_code": 3,
+        "transport_flip": 0,
+        "print_option": 7,
+        "real_ffi_result": -1
+      }
+    }
+  ],
+  "boundaries": {
+    "actual_production_worker_and_ctypes": true,
+    "actual_prepared_c_export": true,
+    "connected_printer": false,
+    "ble_connect_or_send": false,
+    "film_consumed": false,
+    "jpeg_integrity_validation_inside_core": false,
+    "connected_model_validation_inside_core": false,
+    "native_progress_callback_dispatch": false,
+    "gpio_or_physical_lcd": false,
+    "camera_ftp": false
+  }
+}

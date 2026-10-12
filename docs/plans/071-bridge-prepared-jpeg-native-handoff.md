@@ -91,6 +91,25 @@ No throttling (0x0); benchmark restores powersave at completion and removes temp
 - App harness: 156 tests; existing file-based ABI reviewed for compatibility.
 - Nine independent native tests passed on the Pi (2.10 seconds).
 
-Deployment verification will record clean source/native provenance and installed capability,
-orientation/handoff, services, FTP, hotspot/USB and idle clock checks. The saved Printer is not
-advertising, so physical BLE/film speed and colour remain unmeasured. No film was consumed.
+Clean code commit **`6ca7035`** was pushed and deployed with newly built arm64 CLI/FFI artifacts.
+[Native provenance](../assets/bridge-audit-071/native-provenance.json) records that source commit,
+`dirty=false`, locked release build and artifact hashes. Installed FFI SHA-256:
+`8d5ee8081dc297f9c588038410941433d3f72a5eebe9b8c5f688dad476e5f75d`.
+All three exports are present. The validator has no new dynamic JPEG dependency on the Pi.
+
+[Installed production worker/ctypes smoke](../assets/bridge-audit-071/installed-handoff.json)
+passed for all four models using an asymmetric synthetic image: correct dimensions/budget,
+exact in-memory bytes/model/flip, upright decoded LCD render and Link 3-only transport flip.
+The actual C export rejects null/zero/invalid declarations with -5 and valid calls with -1
+in its separate no-device process. Connect/model lookup were observed at the Python boundary;
+no actual BLE connection, connected transaction, progress dispatch or physical LCD was tested
+by that smoke. The separate nine native arm64 integration tests cover strict JPEG validation
+and transaction rejection. No film was consumed.
+
+[Post-deploy health](../assets/bridge-audit-071/installed-health.json): Bridge/manager active,
+NRestarts=0, hotspot 192.168.8.1 and USB 192.168.7.1, FTP greeting 220 / NOOP 200,
+dark powersave 600 MHz, GPIO24 low, throttling 0x0 and zero working cache directories.
+Python/Pillow/pillow-heif/pyftpdlib versions are unchanged. Temporary candidate libraries,
+benchmark binaries, source overlays and probes are removed after verification.
+Subsequent documentation-only deployment carries identical verified runtime code and artifacts.
+The saved Printer is not advertising, so physical BLE/film speed and colour remain unmeasured.

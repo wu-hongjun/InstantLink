@@ -1,5 +1,42 @@
 # Current Bridge Context
 
+## Prepared JPEG native handoff, 2026-10-12
+
+Clean code **`6ca7035`** is committed, pushed and deployed with newly built arm64 FFI/CLI.
+Subsequent documentation-only deployment carries identical verified runtime code and artifacts.
+Plan 071 and `docs/assets/bridge-audit-071/` contain sanitized benchmark, provenance and smoke results.
+
+- Three additive FFI exports strictly validate exact model, transport-flip declaration,
+  dimensions/byte limit and complete baseline RGB JPEG before Printer writes. Prepared bytes
+  are transmitted unchanged; no native resize/flip/colour correction or JPEG re-encode.
+- Mini Link 3 flips before final Python encoding; LCD preview reverses only that transport
+  flip. All four models passed asymmetric-image installed worker/ctypes handoff checks.
+  Old native builds retain their legacy file path. Cancellation retains buffer/callback/lock;
+  errors never fall back to another send.
+- Adversarial review caught permissive entropy recovery and replaced it with a bounded static
+  TurboJPEG decode treating warnings as errors. Nine independent native tests also passed on
+  the Pi. Final review has no remaining P1/P2 issue. FTP test-fixture timing/teardown was repaired
+  without product changes or weaker assertions (300 stress cases passed).
+- Real 11.26 MB HIF, five same-release interleaved native measurements per model at verified
+  1000 MHz: median Mini **738.49 → 13.47 ms**, Link 3 **612.31 → 10.78 ms**,
+  Square **943.30 → 15.56 ms**, Wide **1609.59 → 28.87 ms**. About 98% less native preparation
+  time; first HIF decode and physical BLE/ejection are outside this measurement.
+- All new JPEG hashes equal their Python prepared input. Square retains the existing reference
+  102,303-byte JPEG, quality 76 and RGB hash; old native re-encoding produced 104,628 bytes.
+  Chunk counts Mini 116→115 / Link 3 61→61 / Square 58→57 / Wide 248→242. No protocol sleep,
+  persistent SD cache, swap, public config/sync API or App/iOS behavior change.
+- Rust 205 tests, build/fmt/Clippy/header drift, Bridge **1,497 tests**, Ruff/format/mypy 65,
+  App 156 tests, strict docs and normal pre-commit passed. Static validator adds CMake/compiler
+  build requirements (NASM on x86), documented and installed in CI; no new Pi runtime package.
+- Installed FFI SHA-256 `8d5ee8081dc297f9c588038410941433d3f72a5eebe9b8c5f688dad476e5f75d`;
+  native manifest records clean `6ca7035`. Services active/NRestarts=0, hotspot/USB correct,
+  FTP 220/NOOP 200, powersave **600 MHz**, GPIO24 low, throttle 0x0, zero working caches.
+- Printer remains off/not advertising. Installed smoke uses a separate no-device process and
+  real C ABI; it does not establish physical BLE/film speed, colour, connected progress or GPIO
+  acceptance. No film consumed. Hardware/OS remain Pi Zero 2 W / ST7789 / X306 2300 mAh,
+  Debian 13.2, kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17,
+  Sony a7C II profile and Instax Square INSTAX-52006924.
+
 ## Full print-cycle and SD cache audit, 2026-10-12
 
 Firmware code **`a7f5fc1`** was committed, pushed and deployed cleanly. **1,471 Bridge tests**,

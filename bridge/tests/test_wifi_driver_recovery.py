@@ -13,13 +13,21 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "wifi-mode.sh"
 
 
 @pytest.mark.parametrize(
-    ("interface_present", "pi_model", "driver_loaded", "reload_succeeds", "expected_success"),
+    (
+        "interface_present",
+        "pi_model",
+        "driver_loaded",
+        "vendor_holder",
+        "reload_succeeds",
+        "expected_success",
+    ),
     [
-        (True, True, True, True, True),
-        (False, True, True, True, True),
-        (False, True, False, True, True),
-        (False, False, True, True, False),
-        (False, True, True, False, False),
+        (True, True, True, True, True, True),
+        (False, True, True, False, True, True),
+        (False, True, True, True, True, True),
+        (False, True, False, False, True, True),
+        (False, False, True, False, True, False),
+        (False, True, True, False, False, False),
     ],
 )
 def test_wifi_driver_recovery(
@@ -27,6 +35,7 @@ def test_wifi_driver_recovery(
     interface_present: bool,
     pi_model: bool,
     driver_loaded: bool,
+    vendor_holder: bool,
     reload_succeeds: bool,
     expected_success: bool,
 ) -> None:
@@ -38,6 +47,8 @@ def test_wifi_driver_recovery(
     modules.mkdir()
     if driver_loaded:
         (modules / "brcmfmac").mkdir()
+    if vendor_holder:
+        (modules / "brcmfmac" / "holders" / "brcmfmac_wcc").mkdir(parents=True)
     model = tmp_path / "model"
     model.write_bytes(b"Raspberry Pi Zero 2 W\x00" if pi_model else b"Other computer\x00")
     calls = tmp_path / "calls"
@@ -69,6 +80,8 @@ ensure_wifi_interface
     else:
         expected = ["nmcli radio wifi on"]
         if driver_loaded:
+            if vendor_holder:
+                expected.append("modprobe -r brcmfmac_wcc")
             expected.append("modprobe -r brcmfmac")
         expected.append("modprobe brcmfmac")
         assert operations == expected

@@ -74,6 +74,11 @@ ensure_wifi_interface() {
   fi
   echo "Wi-Fi interface missing; recovering brcmfmac driver" >&2
   if [[ -d "${module_path}/brcmfmac" ]]; then
+    # The vendor extension can retain a reference after a once-healthy radio
+    # loses its SDIO binding. Unload it before the base driver, not Bluetooth.
+    if [[ -d "${module_path}/brcmfmac/holders/brcmfmac_wcc" ]]; then
+      run_root modprobe -r brcmfmac_wcc
+    fi
     run_root modprobe -r brcmfmac
   fi
   run_root modprobe brcmfmac

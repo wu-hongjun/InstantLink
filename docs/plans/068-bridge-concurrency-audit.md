@@ -54,3 +54,47 @@ Final local validation: **1,406 Bridge tests**, Ruff, strict mypy (65 source fil
 formatting, whitespace and strict MkDocs passed. Three independent agents reviewed separate
 boundaries and the integrated cancellation/startup paths. No App/iOS or FFI ABI changes; sync
 API response/endpoint review confirmed the existing contract is unchanged.
+
+## Deployment and on-device checks
+
+Clean runtime **473a62c** deployed with its normal pre-commit gate passing. Hardware/OS:
+Pi Zero 2 W Rev 1.0 / Waveshare ST7789 / X306 2300 mAh, Debian 13.2, kernel
+6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17. Native artifacts/dependencies
+and saved configuration were preserved. The saved Printer is Instax Square INSTAX-52006924;
+Sony a7C II remains the camera profile.
+
+Software smoke ran under **ib** with production methods and injected gates, without GPIO input,
+a camera upload or a Printer send. Settings Refresh overlapped two injected 250 ms waits,
+completing in **271.9 ms**. Existing sync depth/get/ack completed in **3.1 ms** while a new
+checksum was held. Repeated cancellation retained the FFI lock and kept the next operation
+queued until the first worker exited. Real Linux image-worker/Pillow preparation produced an
+800×800, 4,037-byte synthetic JPEG; closed workers rejected new work. These are controlled
+concurrency checks, not a physical print-speed or battery benchmark.
+
+First reboot: core ready **14.429 s**, UI **14.406 s**, FTP listener **14.076 s**, Bluetooth
+agent **14.462 s**, hotspot receive-ready **18.797 s**, manager **19.344 s**. Systemd total
+**17.152 s**. Results remain within plan 067's prior range: this pass adds no measurable
+boot-speed improvement. Performance governor was applied at **13.464 s**, before the first UI
+frame; normal idle later returned to powersave/600 MHz and GPIO24 low. Both services were
+active with NRestarts=0; throttling 0x0; hotspot FTP 220 greeting and NOOP/200 passed.
+
+[Sanitized measurements](../assets/bridge-audit-068/measurements.json) and
+[About loading/ready frames](../assets/bridge-audit-068/about.png) accompany this record.
+The About values are illustrative rendered states, not physical LCD photographs.
+
+The user powered the Printer on for a second reboot. Core ready **14.224 s**, UI **14.205 s**,
+FTP **13.870 s**, Bluetooth agent **14.262 s**; first valid Printer status **17.321 s**,
+hotspot receive-ready **18.620 s**, manager **19.252 s**, total systemd **16.991 s**.
+Both receive and Printer status were therefore available by **18.620 s** after kernel start.
+BlueZ reported Connected=yes; subsequent status reads retained film **4** / battery **65%**.
+This confirms fresh power-on boot reconnection at the latest runtime; no physical print was sent.
+The preceding baseline had no advertising Printer and cannot establish a before/after connection
+speedup. Approximate 4.5-minute Printer idle auto-off remains an external limitation.
+
+Final live hotspot-loss test used normal automatic dark idle (no observation wrapper or injected
+key). After deactivating the saved hotspot, its IP recovered in **29.75 s**.
+Across **38 samples** including 10 seconds after recovery, CPU stayed **600 MHz**,
+GPIO24 stayed low and BlueZ stayed connected. Bridge PID was unchanged; status reads continued
+with film **4** / battery **65%**. These are sampled connection observations, not a claim that
+every subsecond radio event was monitored. The temporary probes were removed; no config,
+service wrapper or drop-in remained.

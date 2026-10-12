@@ -1,5 +1,45 @@
 # Current Bridge Context
 
+## Concurrency audit, 2026-10-11
+
+Clean runtime **`473a62c`** is deployed (plan 068), with **1,406 Bridge tests**, Ruff,
+touched-file formatting, strict mypy (65 source files), whitespace and strict MkDocs passing.
+The normal pre-commit gate passed. No schema/API, App/iOS, native artifact or image-rule changes.
+
+- CPU helper, FTP setup and Bluetooth start concurrently; first UI/core READY wait for maximum
+  performance. Settings Refresh overlaps network/Printer lookup, shares repeated actions and
+  permits navigation. Network callers share one probe; changed mode/config invalidates results.
+- About version/metric reads run concurrently off loop; one cached collector. QR identity is
+  independent, bounded and always real. Model detection and enabled date metadata overlap.
+- New sync photo hashing no longer blocks existing-photo reads/acks. Metadata publication and
+  arrival order remain atomic/serialized. Large image pipelines and Printer commands remain
+  serialized for memory, film order and protocol correctness.
+- Shutdown cancels UI tasks together within a fixed six-second budget. Active photo/sender,
+  mutating thread and image-worker cleanup retain ownership through repeated cancellation.
+  FFI cancellation holds its lock through the original five-second grace; another command
+  cannot enter while its blocking call is alive.
+- On-Pi controlled software probes under ib passed: two injected 250 ms Settings waits overlapped
+  in **271.9 ms**, existing sync depth/get/ack completed in **3.1 ms** during held hashing,
+  repeated cancellation retained the FFI lock, real synthetic JPEG worker produced 800×800 /
+  4,037 bytes, and closed workers rejected new work. No Printer send or GPIO input was used.
+- Reboots reached core readiness **14.429 / 14.224 s**, hotspot **18.797 / 18.620 s**;
+  total systemd **17.152 / 16.991 s**. No additional measurable boot improvement versus plan 067.
+  Maximum-performance mode was applied before UI; normal dark idle returned to **600 MHz**,
+  GPIO24 low. Services active/NRestarts=0, throttling 0x0, hotspot FTP greeting/NOOP passed.
+- User supplied fresh Printer power-on for the second reboot. Automatic reconnection yielded
+  first status at **17.321 s**, film **4**, battery **65%**, BlueZ Connected=yes. Combined receive
+  and Printer status were available by **18.620 s** after kernel start, excluding firmware and
+  power-button delay. This resolves the prior pending boot-to-Printer check. Printer's own
+  approximate 4.5-minute idle auto-off remains; no physical print-speed claim.
+- Latest locked hotspot-loss test recovered IP in **29.75 s** across
+  38 samples including 10 s after recovery: CPU 600 MHz, GPIO24 low, Printer
+  connected, same Bridge PID and continuing film 4 / battery 65% status. Sampled checks
+  establish continuity at each sample; no subsecond radio trace or film print.
+- Hardware/OS: Pi Zero 2 W Rev 1.0 / Waveshare ST7789 / X306 2300 mAh, Debian 13.2,
+  kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17. Instax Square
+  INSTAX-52006924; Sony a7C II camera profile. Physical keys, new camera upload, film colour
+  output and the controlled 16-hour discharge remain separate acceptance work.
+
 ## Startup and Settings audit, 2026-10-11
 
 Clean runtime **`8eb962d`** is deployed (plan 067). UI/FTP startup is independent of BlueZ;

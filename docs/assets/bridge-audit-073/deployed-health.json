@@ -1,0 +1,22 @@
+{
+  "runtime_commit": "dd68c57ecb113544b9b3678f35dc628a0e72a3b2",
+  "dirty": false,
+  "cpu_governor": "performance",
+  "cpu_khz": 1000000,
+  "temperature_c": 45.084,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | hi // GPIO24 = output",
+  "services": "MainPID=3634\nNRestarts=0\nActiveState=active\n\nMainPID=3632\nNRestarts=0\nActiveState=active\n",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "ffi_sha256": "f217afd16687dce664c35d455e3ec6be34dc860ee07d9f43e274222da238ca7b",
+  "packages": {
+    "Pillow": "11.3.0",
+    "pillow-heif": "1.3.0",
+    "pyftpdlib": "2.2.0",
+    "instantlink-bridge": "0.1.17"
+  },
+  "working_cache_directories": 0,
+  "addresses": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \nusb0             UP             192.168.7.1/24 \nwlan0            UP             192.168.8.1/24 \n",
+  "printer_connected": false
+}

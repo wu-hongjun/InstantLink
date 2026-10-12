@@ -1,5 +1,44 @@
 # Current Bridge Context
 
+## MTU-aware Bluetooth transport, 2026-10-12
+
+Clean code **`dd68c57`** is committed, pushed and deployed with new arm64 FFI/CLI. Plan 073 and
+`docs/assets/bridge-audit-073/` record the paired physical prints and no-film crossover.
+
+- Linux discovers the exact connected Instax write MTU once per connection with a bounded
+  query. Production ceiling **236 bytes**; unknown/non-Linux fallback **182**, known small
+  MTU clamped. Protocol/JPEG bytes, orientation, ACK ordering and 150 ms / pre-execute waits
+  unchanged. No FFI ABI, config, sync contract, App/iOS UI or SD cache change.
+- Full production FTP paired prints of user-selected DSC02825.jpeg, saved Vivid/neutral
+  Correction: 182 **27.934 s** versus 244 **28.375 s** start→Bridge completion; native download
+  **21.837→22.724 s**. Same-Pi FTP excludes camera Wi-Fi airtime and mechanical/development time.
+  244 had 20% fewer GATT writes but was slower, so it is diagnostic-only.
+- Pi controller LE buffers are 27 bytes with no Data Length Extension support. Full Square
+  packet costs 70 HCI packets at 182/236 versus 75 at 244. Two no-film rounds per size on one
+  connection: means **182 21.896 / 244 22.784 / 236 21.778 s**. Small 0.117 s improvement, not
+  a large demonstrated full-print gain. Remaining protocol waits/controller scheduling dominate;
+  SD cache does not address this bottleneck. No battery-energy or radio-retransmission measurement.
+- All transfers used identical 102,846-byte / 800×800 / quality 87 JPEG and decoded RGB hashes,
+  exact ordered chunks/ACKs/checksums/padding. User confirmed second physical film upright,
+  unmirrored, same colour/detail. Film 3→2→1. Crossover contained zero PrintImage commands,
+  film 1/history 67 unchanged. All-model orientation/bytes covered locally; only Square physical.
+- Crossover completed all data/counters, then teardown timed out before native JSON emission.
+  Retained measurements were independently reconstructed from progress/HCI with that failure
+  explicit. Fixed state-query gate before physical disconnect, close/reset marker before awaits,
+  cancellation-safe recovery and JSON retention. Fresh reset skips the stalled preliminary
+  query. No uncertain packet/job replay; only actual enlarged-write uncertainty downgrades size.
+- Three subagents implemented, tested and reviewed. No remaining P1/P2 review issue. Rust
+  **245 tests**, build/fmt/Clippy/header drift, App **156 tests**, strict docs and normal
+  pre-commit passed. **44** independent transport/diagnostic tests passed on real Pi arm64.
+- Hardware/OS unchanged: Pi Zero 2 W / ST7789 / X306 2300 mAh, Debian 13.2, kernel
+  6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17, Instax Square INSTAX-52006924.
+
+Installed FFI SHA-256 `f217afd16687dce664c35d455e3ec6be34dc860ee07d9f43e274222da238ca7b`;
+native and deployment manifests record clean `dd68c57`. Both services active/NRestarts=0,
+hotspot/USB addresses correct, FTP 220/NOOP 200, throttle 0x0 and zero working caches.
+Temporary candidate-library override removed. Printer is currently unavailable/not advertising;
+final status-only hardware teardown/reconnect verification awaits power-on and is not yet claimed.
+
 ## Live HIF-to-Printer benchmark, 2026-10-12
 
 The user powered on INSTAX-52006924; the installed **`7249d4e`** runtime automatically

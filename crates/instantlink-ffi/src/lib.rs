@@ -41,6 +41,10 @@ static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static DEVICE: OnceLock<DeviceLock> = OnceLock::new();
 static KEEPALIVE_INTERVAL: OnceLock<KeepaliveIntervalLock> = OnceLock::new();
 static KEEPALIVE_TASK: OnceLock<KeepaliveTaskLock> = OnceLock::new();
+// Linux: listener <=250ms, physical disconnect <=5s, verification <=2s.
+#[cfg(target_os = "linux")]
+const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(8);
+#[cfg(not(target_os = "linux"))]
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const DEFAULT_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 

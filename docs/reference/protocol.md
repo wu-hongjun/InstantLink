@@ -53,7 +53,15 @@ Response format: `[return_code] [sub_index] [string_length] [ASCII bytes...]`
 | `0x00` | Image Support Info | Width(2B), Height(2B) |
 | `0x01` | Battery Status | State(1B), Level(1B) |
 | `0x02` | Printer Function Info | Film remaining in bits `0...3`, charging in bit `7` |
-| `0x03` | Print Count | Print count(2B, big-endian) |
+| `0x03` | Print Count | Exact 2B legacy count, or observed Square 8B data: count(4B, big-endian) + 4B uninterpreted |
+
+The Square Link's observed history data is eight bytes: a leading big-endian
+32-bit counter followed by four bytes whose meaning is unverified. For example,
+`00 03 00 00 00 43 00 00 00 12` (including status and InfoType) reports 67. The
+exact two-byte legacy count remains supported. The core's public count remains
+`u16` (0–65,535); larger counters and ambiguous payload lengths are rejected,
+rather than truncated. The diagnostic Python backend applies the same limit.
+No FFI signature changes.
 
 #### Status Response Payload Format
 
@@ -194,7 +202,8 @@ On Linux, each new connection performs a bounded one-second BlueZ query for the 
 device, unique Instax service and write characteristic. The characteristic must advertise
 write-without-response and expose a valid 23–517-byte MTU. The selected payload is `MTU − 3`,
 capped at 236 bytes. The diagnostic download/cancel probe can explicitly compare up to 244 bytes.
-The 236-byte production ceiling avoids extra HCI fragmentation on the tested Pi controller. A known smaller MTU is honored (23 selects 20). Missing, malformed,
+The 236-byte production ceiling avoids extra HCI fragmentation on the tested Pi controller.
+A known smaller MTU is honored (23 selects 20). Missing, malformed,
 ambiguous or unavailable metadata uses the existing 182-byte path. Other platforms retain 182 bytes.
 [BlueZ 5.82 characteristic API](https://raw.githubusercontent.com/bluez/bluez/5.82/doc/org.bluez.GattCharacteristic.rst).
 
@@ -214,7 +223,17 @@ fragments and reset for all new connections, preserving safety without unbounded
 Disconnect immediately closes the transport to new commands and marks uncertain teardown for
 fresh-link reset. Physical disconnect is attempted before querying connection state; an authoritative
 disconnected result permits idempotent cleanup even when the disconnect RPC reports an error.
-Cancellation or an unknown/still-connected result retains the reset requirement.
+Cancellation or an unknown/still-connected result retains the reset requirement. Linux allows
+five seconds for physical disconnect and the FFI allows eight seconds for full teardown,
+covering BlueZ's delayed disconnect. State queries retain their two-second budget. Other
+platforms retain the existing two-second action / three-second FFI budgets.
 
 This does not reduce protocol chunk pacing or pre-execute waits. Printer firmware acceptance
 of larger fragments requires physical validation in addition to a negotiated ATT MTU.
+
+### Print-history replies
+
+The observed Square reply body has eight bytes: the leading four form a big-endian print
+counter, followed by four uninterpreted bytes. Exact two-byte legacy counters are also accepted.
+The current public count type remains u16; larger counters and malformed lengths are rejected
+rather than truncated. The no-film probe compares before/after counts as well as film remaining.

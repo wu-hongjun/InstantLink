@@ -1,0 +1,49 @@
+{
+  "status_only_runs": [
+    {
+      "exit_code": 0,
+      "report": {
+        "available_payload": 244,
+        "benchmark_complete": true,
+        "benchmark_error": null,
+        "cleanup_error": null,
+        "disconnected": true,
+        "film_after": 1,
+        "film_before": 1,
+        "history_after": 0,
+        "history_before": 0,
+        "mode": "download-only; no print execution",
+        "model": "Square",
+        "rounds": []
+      },
+      "stderr": ""
+    },
+    {
+      "exit_code": 0,
+      "report": {
+        "available_payload": 244,
+        "benchmark_complete": true,
+        "benchmark_error": null,
+        "cleanup_error": null,
+        "disconnected": true,
+        "film_after": 1,
+        "film_before": 1,
+        "history_after": 0,
+        "history_before": 0,
+        "mode": "download-only; no print execution",
+        "model": "Square",
+        "rounds": []
+      },
+      "stderr": ""
+    }
+  ],
+  "disconnect_call_to_reply_s": [
+    2.472796,
+    2.308966
+  ],
+  "hci_disconnect_complete_count": 2,
+  "physical_disconnect_reason": "ConnectionTerminatedByLocalHost",
+  "film_printing_permitted": false,
+  "wire_history_counter_before_after": 67,
+  "legacy_decoded_counter_note": "0 above comes from preexistingdecoder; corrected in subsequentcommit."
+}

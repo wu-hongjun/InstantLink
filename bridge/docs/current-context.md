@@ -24,11 +24,11 @@ Clean code **`dd68c57`** is committed, pushed and deployed with new arm64 FFI/CL
   film 1/history 67 unchanged. All-model orientation/bytes covered locally; only Square physical.
 - Crossover completed all data/counters, then teardown timed out before native JSON emission.
   Retained measurements were independently reconstructed from progress/HCI with that failure
-  explicit. Fixed state-query gate before physical disconnect, close/reset marker before awaits,
+  explicit. Moved physical disconnect ahead of state queries, added a close/reset marker before awaits,
   cancellation-safe recovery and JSON retention. Fresh reset skips the stalled preliminary
   query. No uncertain packet/job replay; only actual enlarged-write uncertainty downgrades size.
 - Three subagents implemented, tested and reviewed. No remaining P1/P2 review issue. Rust
-  **245 tests**, build/fmt/Clippy/header drift, App **156 tests**, strict docs and normal
+  **251 tests**, build/fmt/Clippy/header drift, App **156 tests**, strict docs and normal
   pre-commit passed. **44** independent transport/diagnostic tests passed on real Pi arm64.
 - Hardware/OS unchanged: Pi Zero 2 W / ST7789 / X306 2300 mAh, Debian 13.2, kernel
   6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17, Instax Square INSTAX-52006924.
@@ -37,7 +37,13 @@ Installed FFI SHA-256 `f217afd16687dce664c35d455e3ec6be34dc860ee07d9f43e274222da
 native and deployment manifests record clean `dd68c57`. Both services active/NRestarts=0,
 hotspot/USB addresses correct, FTP 220/NOOP 200, throttle 0x0 and zero working caches.
 Temporary candidate-library override removed. Printer is currently unavailable/not advertising;
-final status-only hardware teardown/reconnect verification awaits power-on and is not yet claimed.
+Two status-only cycles with the Linux five-second physical budget verified disconnection and
+fresh reconnect: D-Bus replies took **2.473 / 2.309 s**, HCI confirms two local-host Disconnect
+Complete events, film stayed 1. This identified BlueZ's delayed teardown as the deadline issue.
+Linux FFI now allows eight seconds; short query/write/CCCD budgets remain unchanged. The
+observed Square history decoder is corrected in core and diagnostic Python fallback; the
+public u16 contract is retained, with explicit malformed/overflow failure. Final installed
+follow-up validation is recorded below after clean deployment.
 
 ## Live HIF-to-Printer benchmark, 2026-10-12
 

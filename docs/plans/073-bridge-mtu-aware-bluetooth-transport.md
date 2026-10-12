@@ -62,7 +62,8 @@ SD cache does not address this transport bottleneck.
 
 The original crossover completed counters but exited with a teardown Timeout before its JSON
 was emitted. HCI capture independently verifies completed measurements; retained JSON explicitly
-records that nonzero exit. Physical Disconnect was never dispatched after StopNotify. The fix
+records that nonzero exit. No HCI Disconnect was recorded before the teardown timeout/recovery. The original capture
+did not identify which D-Bus stage expired. The fix
 attempts bounded physical disconnect first and verifies authoritative disconnected state; it
 closes the old transport and marks reset before any await. Cancellation preserves reset, and
 forced reset skips a potentially stuck preliminary state query. The diagnostic now prints
@@ -82,3 +83,20 @@ Evidence: `docs/assets/bridge-audit-073/physical-{baseline,candidate}.json`,
 `download-crossover.json`, `controller.json`. Personal pixels and raw Bluetooth captures are not
 committed. Sources: [BlueZ characteristic API](https://raw.githubusercontent.com/bluez/bluez/5.82/doc/org.bluez.GattCharacteristic.rst),
 [Bluetooth Link Layer](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-54/out/en/low-energy-controller/link-layer-specification.html).
+
+### Follow-up from live teardown validation
+
+The first status-only check still timed out. Filtered D-Bus capture proved Disconnect was
+received by BlueZ, but no reply or HCI disconnect occurred before the two-second application
+budget. BlueZ 5.82 deliberately schedules radio teardown with a two-second GLib seconds timer,
+which can run after our deadline. Linux now allows five seconds for physical disconnect and
+eight seconds around the FFI teardown; state queries/notification cleanup remain two seconds,
+other platforms retain prior budgets. All waits stay bounded and cancellation retains reset.
+[BlueZ device implementation](https://raw.githubusercontent.com/bluez/bluez/5.82/src/device.c).
+
+Status-only evidence also exposed an existing history decoder error: observed Square data is
+`00000043 00000012`; reading its first two bytes incorrectly returned zero. The narrow correction
+recognizes the observed eight-byte body and reads its leading big-endian 32-bit counter with
+checked conversion to the existing public u16. Exact two-byte legacy replies remain supported;
+malformed/overflow replies fail explicitly. Diagnostic Python fallback uses the same rule.
+Trailing history bytes remain uninterpreted; no public ABI change or broader protocol claim.

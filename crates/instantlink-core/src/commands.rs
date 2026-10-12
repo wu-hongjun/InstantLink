@@ -308,14 +308,25 @@ impl Response {
                         }
                     }
                     INFO_PRINT_HISTORY => {
-                        if data.len() < 2 {
-                            return Response::Unknown {
+                        // Square Link returns a leading big-endian u32 followed by
+                        // four uninterpreted bytes. Keep the exact two-byte legacy
+                        // format and the public u16 count contract; never truncate
+                        // an overflow or guess from an ambiguous payload length.
+                        let count = match data.len() {
+                            2 => Some(u16::from_be_bytes([data[0], data[1]])),
+                            8 => u16::try_from(u32::from_be_bytes([
+                                data[0], data[1], data[2], data[3],
+                            ]))
+                            .ok(),
+                            _ => None,
+                        };
+                        match count {
+                            Some(count) => Response::HistoryInfo { count },
+                            None => Response::Unknown {
                                 opcode: packet.opcode,
                                 payload: packet.payload.clone(),
-                            };
-                        };
-                        let count = u16::from_be_bytes([data[0], data[1]]);
-                        Response::HistoryInfo { count }
+                            },
+                        }
                     }
                     _ => Response::Unknown {
                         opcode: packet.opcode,

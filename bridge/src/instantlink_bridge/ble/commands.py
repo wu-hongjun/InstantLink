@@ -188,10 +188,14 @@ def _decode_support_function_info(payload: bytes) -> DecodedResponse:
             film_remaining=data[0] & 0x0F,
             is_charging=bool(data[0] & 0x80),
         )
-    if info_type == INFO_PRINT_HISTORY and len(data) >= 2:
-        return DecodedResponse(
-            kind=ResponseKind.HISTORY_INFO,
-            payload=payload,
-            print_count=int.from_bytes(data[0:2], "big"),
-        )
+    if info_type == INFO_PRINT_HISTORY and len(data) in (2, 8):
+        # Square Link supplies a leading u32 and four uninterpreted bytes.
+        # Preserve the native backend's u16 contract and exact legacy format.
+        count = int.from_bytes(data[:4] if len(data) == 8 else data, "big")
+        if count <= 0xFFFF:
+            return DecodedResponse(
+                kind=ResponseKind.HISTORY_INFO,
+                payload=payload,
+                print_count=count,
+            )
     return DecodedResponse(kind=ResponseKind.UNKNOWN, payload=payload)

@@ -599,7 +599,7 @@ async fn authoritative_disconnected_state_accepts_timed_out_disconnect_rpc() {
     disconnect_and_verify(std::future::pending::<Result<()>>, || async { Ok(false) })
         .await
         .unwrap();
-    assert_eq!(start.elapsed(), DEFAULT_DISCONNECT_TIMEOUT);
+    assert_eq!(start.elapsed(), DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT);
 }
 
 #[tokio::test]
@@ -641,7 +641,10 @@ async fn disconnect_and_verification_have_independent_bounded_deadlines() {
         .await
         .is_err()
     );
-    assert_eq!(start.elapsed(), DEFAULT_DISCONNECT_TIMEOUT * 2);
+    assert_eq!(
+        start.elapsed(),
+        DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT + DEFAULT_DISCONNECT_TIMEOUT
+    );
 }
 
 #[tokio::test]
@@ -735,4 +738,23 @@ async fn confirmed_teardown_clears_reset_and_preserves_existing_fragment_prefere
             if already_conservative { 182 } else { 244 }
         );
     }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test(start_paused = true)]
+async fn linux_physical_disconnect_can_complete_after_bluez_two_second_timer() {
+    let closed = AtomicBool::new(false);
+    let start = tokio::time::Instant::now();
+    disconnect_and_verify(
+        || async {
+            tokio::time::sleep(Duration::from_millis(2800)).await;
+            closed.store(true, Ordering::Release);
+            Ok(())
+        },
+        || async { Ok(!closed.load(Ordering::Acquire)) },
+    )
+    .await
+    .unwrap();
+    assert_eq!(start.elapsed(), Duration::from_millis(2800));
+    assert!(closed.load(Ordering::Acquire));
 }

@@ -110,8 +110,14 @@ pub const DEFAULT_SCAN_DURATION: Duration = Duration::from_secs(5);
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Timeout for individual BLE write operations.
 pub const DEFAULT_WRITE_TIMEOUT: Duration = Duration::from_secs(2);
-/// Timeout for BLE disconnect/cleanup operations.
+/// Timeout for BLE state queries and notification cleanup.
 pub const DEFAULT_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+/// BlueZ deliberately delays physical disconnect using a two-second GLib timer.
+/// Allow timer/controller completion without extending state-query budgets.
+#[cfg(target_os = "linux")]
+pub const DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+#[cfg(not(target_os = "linux"))]
+pub const DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT: Duration = DEFAULT_DISCONNECT_TIMEOUT;
 
 /// Timeout to wait for the listener task to exit gracefully after cancellation.
 const LISTENER_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
@@ -262,7 +268,7 @@ where
     // Never gate the action on a preliminary status RPC: BlueZ can stop
     // answering that query while still holding a physical connection open.
     let disconnect_error =
-        match tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, disconnect()).await {
+        match tokio::time::timeout(DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT, disconnect()).await {
             Ok(Ok(())) => None,
             Ok(Err(error)) => Some(error),
             Err(_) => Some(PrinterError::Timeout),
@@ -626,7 +632,9 @@ impl BleTransport {
         if reset_required {
             // Always attempt a bounded disconnect and require authoritative
             // disconnected state, even if the initial connection query failed.
-            let _ = tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.disconnect()).await;
+            let _ =
+                tokio::time::timeout(DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT, peripheral.disconnect())
+                    .await;
             tokio::time::sleep(Duration::from_millis(250)).await;
             match tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.is_connected()).await
             {
@@ -956,7 +964,9 @@ impl BleTransport {
                 .and_then(|result| result.ok())
                 .unwrap_or(false);
         if is_connected {
-            let _ = tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, peripheral.disconnect()).await;
+            let _ =
+                tokio::time::timeout(DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT, peripheral.disconnect())
+                    .await;
             tokio::time::sleep(Duration::from_millis(250)).await;
         }
     }

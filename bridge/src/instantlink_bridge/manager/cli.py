@@ -39,7 +39,7 @@ from instantlink_bridge.manager.status import (
 )
 
 LOGGER = logging.getLogger(__name__)
-BIND_RETRY_DELAYS_S = (1.0, 2.0, 5.0, 10.0, 30.0)
+BIND_RETRY_DELAYS_S = (1.0, 2.0, 5.0, 10.0)
 
 
 def main(

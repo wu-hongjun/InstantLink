@@ -57,7 +57,10 @@ Mini Link 3 for protocol timing/flip behavior. Otherwise, report it as Mini form
   temporary JPEGs. Pass those files to InstantLink with fit mode `stretch` so InstantLink performs
   only its model-specific transport transforms.
 - Keep the BLE connection open and poll status every 10 s by default while the selected printer is
-  online. This keeps film/battery current on the LCD and is the v1 printer-awake mechanism.
+  online. This keeps film/battery current on the LCD. It does not prevent the observed
+  approximately 4.5-minute idle auto-power-off; status and a benign LED-off write did not reset
+  that timer. There is no documented wake-lock command. The Bridge reconnects automatically
+  when the Printer is powered on again.
 
 ## Implementation Status
 

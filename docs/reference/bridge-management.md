@@ -8,7 +8,7 @@ section is additive; older configurations and older responses without it default
 
 The manager binds configured device addresses individually. If USB is available before the
 hotspot address, it serves USB immediately and retries only the missing address, with backoff
-from 1 to 30 seconds. Once all listeners bind, retries stop. A missing address does not widen
+from 1 to 10 seconds. Once all listeners bind, retries stop. A missing address does not widen
 the bind to a wildcard or change USB-local authentication. If no configured address can bind,
 the service fails for its existing systemd restart policy. API payloads are unchanged.
 

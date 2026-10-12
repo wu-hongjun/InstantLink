@@ -98,4 +98,30 @@ or battery discharge is claimed. Hardware/OS: Pi Zero 2 W Rev 1.0 / Waveshare ST
 2300 mAh, Debian 13.2, kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17;
 Sony a7C II profile, Instax Square INSTAX-52006924.
 
-Final local gates, deployment and on-Pi changed-path checks are recorded below after verification.
+## Final validation and deployment
+
+Firmware code **a7f5fc1** committed, pushed and cleanly deployed; subsequent documentation-only
+firmware deployment includes identical runtime code. **1,471 Bridge tests**, normal pre-commit,
+Ruff, touched-file formatting, strict mypy (65 source files), whitespace and strict MkDocs passed.
+Independent cross-review found no actionable P1/P2 finding. Test groups reported by agents overlap
+and are not added together as an inflated total. Existing sync API and App/iOS contract unchanged.
+
+[On-Pi state smoke](../assets/bridge-audit-070/state-smoke.json) exercised real HIF review and
+an actual active image child. SELECT during the zoom 1.25 update remained pending until its result,
+then completed in **0.739 s**; two preparations used **one** source decode and handed the edited
+103,366-byte, quality-80 JPEG over unchanged. The controller used abstract input, NullDisplay and
+seeded Square status; no physical Printer send or GPIO action occurred. A synthetic real HEIF with
+an embedded **160×120** thumbnail retried primary **1600×1200**, with exact primary RGB parity.
+
+[Deployed seven-file dataset](../assets/bridge-audit-070/hif-dataset.json) retained exact baseline
+JPEG/decoded RGB, dimensions and quality for initial and edited output. First preparation
+**3.116–5.813 s**, cached edits **0.638–0.693 s**; every retained clock sample across 21 jobs
+read 1000 MHz. All dates present, worker cache cleanup passed; final benchmark 47.236°C,
+throttling 0x0. No first-photo speedup is claimed.
+
+[Verified health](../assets/bridge-audit-070/health.json): clean deployment, Bridge/manager active,
+NRestarts=0, hotspot/USB present, authenticated FTP 220/NOOP 200, GPIO24 low, powersave/600 MHz,
+throttling 0x0, no working-cache directories. Config/dependencies and native FFI SHA are unchanged.
+Temporary benchmark scripts/directories and synthetic fixture were removed. Physical Printer
+remained not advertising, so native send/LED/ejection and two-photo mechanical readiness were not
+benchmarked. No boot/swap settings changed.

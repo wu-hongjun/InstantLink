@@ -1,0 +1,33 @@
+{
+  "boundary": "Production UI/worker using saved real HIF; seeded Square status, abstract input, NullDisplay; no GPIO/Printer send",
+  "review_acceptance": {
+    "real_hif": true,
+    "latest_edit_zoom": 1.25,
+    "confirmation_pending_during_build": true,
+    "select_to_prepared_s": 0.7387940100006745,
+    "worker_count": 2,
+    "source_decode_count": 1,
+    "prepared_handoff": true,
+    "output": {
+      "bytes": 103366,
+      "quality": 80,
+      "jpeg_sha256": "ee3be63bf1e1a4f996d12dfd6b7f87e5edb1d352f76e3eb803015839e79c3fc6"
+    }
+  },
+  "synthetic_actual_heif_primary_fallback": {
+    "embedded_size": [
+      160,
+      120
+    ],
+    "primary_size": [
+      1600,
+      1200
+    ],
+    "fallback_size": [
+      1600,
+      1200
+    ],
+    "primary_pixels_equal": true
+  },
+  "throttled": "throttled=0x0"
+}

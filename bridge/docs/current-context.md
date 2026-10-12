@@ -1,5 +1,45 @@
 # Current Bridge Context
 
+## Full print-cycle and SD cache audit, 2026-10-12
+
+Firmware code **`a7f5fc1`** was committed, pushed and deployed cleanly. **1,471 Bridge tests**,
+Ruff, touched-file formatting, strict mypy (65 source files), whitespace, strict MkDocs and normal
+pre-commit passed. Three agents audited receive/queue/Sync, review/UI and imaging/native states;
+independent final cross-review found no actionable P1/P2 issue. Plan 070 contains the state matrix.
+Subsequent documentation-only deployment carries the same verified runtime code.
+
+- Early Sync uploads wait for outbox setup inside their cancellable source-ownership scope.
+  Construction completes its handoff before cancellation; repeated outer cancellation joins
+  one teardown. Failed setup shows `Sync unavailable`, retains the original and keeps Printer
+  polling stopped in Sync mode. No endpoint/schema or iOS/App change.
+- Print during a pending edit freezes it and reuses the matching completed JPEG. No-op edits
+  stop timed printing without another encode. Superseded reviews cannot repaint over a newer
+  screen. Immediate auto-model printing now overlaps preparation/connect using a cached model
+  hint, with explicit override precedence and actual detected-model validation retained.
+- On-Pi production UI/worker smoke using the real 11.26 MB HIF: SELECT during an active edit
+  completed in **0.739 s**, two image workers / **one source decode**, matching edited prepared
+  handoff (103,366 bytes, quality 80). Seeded Square status, abstract actions and NullDisplay:
+  no GPIO press, native Printer send or film. Synthetic real HEIF with a 160×120 embedded
+  thumbnail correctly retried its 1600×1200 primary; exact primary RGB pixels matched.
+- All **seven** saved HIFs retained exact prior JPEG/RGB hashes, dimensions and quality across
+  21 preparations. First preparation **3.116–5.813 s**, cached edits **0.638–0.693 s**; all
+  sampled frequencies 1000 MHz, no throttling, dates present and cache cleanup passed.
+- SD experiment confirmed active cache is already tmpfs. Edits averaged **0.665 s** from tmpfs,
+  **0.667 s** from an SD file with warm pages, **0.876 s** after requesting file-page eviction.
+  All output hashes matched. SD durable flush cost **0.245–0.259 s** outside edit timing. Keep
+  the active-photo cache in RAM; persistent SD reuse would help only an older-photo revisit
+  after expiry/replacement/restart and requires versioned source/model/profile keys.
+- Verified services active/NRestarts=0, hotspot/USB addresses correct, FTP 220/NOOP 200,
+  dark idle powersave/600 MHz, GPIO24 low, throttling 0x0, zero remaining working caches.
+  Saved configuration, dependencies and native artifact SHA were preserved. Temporary probes
+  and fixtures were removed. No boot, swap, protocol delay or native ABI change.
+- Remaining candidates require separate measurements: native redundant JPEG re-encoding,
+  optional LED ACK wait/overlap, mechanical completion and small FTP/Bluetooth lookups. Printer
+  remains off/not advertising; physical BLE/film timing, new camera Wi-Fi upload, colour,
+  GPIO acceptance and controlled 16-hour discharge remain unverified. Hardware/OS unchanged:
+  Pi Zero 2 W Rev 1.0 / ST7789 / X306 2300 mAh, Debian 13.2, kernel 6.12.47+rpt-rpi-v8,
+  Python 3.13.5, BlueZ 5.82, Bridge 0.1.17; Sony a7C II profile, Instax Square INSTAX-52006924.
+
 ## HIF flow benchmark, 2026-10-12
 
 Clean runtime **`738a088`** is deployed (plan 069), with **1,448 Bridge tests**, Ruff,

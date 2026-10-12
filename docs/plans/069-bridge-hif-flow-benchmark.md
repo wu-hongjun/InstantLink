@@ -93,4 +93,33 @@ Sony Wi-Fi transfer, native BLE send and mechanical ejection require an awake Pr
 their physical duration remains unmeasured in this pass. No claim of improved battery runtime,
 whole-flow physical print speed or film colour validation follows from the software timings.
 
-Final deployment, dataset checks and local gate results are recorded below after verification.
+## Final deployment and validation
+
+Clean runtime **738a088** deployed with native artifacts, dependencies and saved configuration
+preserved. **1,448 Bridge tests**, Ruff, touched-file formatting, strict mypy (65 source files),
+whitespace, strict MkDocs and normal pre-commit passed. Independent final review confirmed the
+lazy-source timing correction and found no new correctness or material performance risk.
+
+All seven saved HIFs passed on the deployed runtime. First preparation **3.103–5.802 s**;
+cached edits **0.649–0.703 s**; uncached corresponding edits **3.146–5.875 s**. Every edit
+matched exact JPEG, decoded RGB, dimensions and quality. All 621 clock samples across the 21
+preparations read 1000 MHz; final benchmark temperature 48.850°C, throttling 0x0. Cache cleanup
+on worker close passed. Date metadata was present in all seven files: first opener registration
+and header read **247.6 ms**, subsequent reads **16.9–28.7 ms**. An earlier dataset trial had
+an idle CPU transition and was excluded from performance results; its parity still passed.
+
+Deployed FTP/controller replay: **7.106 / 7.038 / 7.035 s** to sender boundary, HIF/preview
+**5.977 / 5.897 / 5.902 s**, review/lookup **1.004 / 1.005 / 1.005 s**, one preparation per
+photo. All output hashes matched the baseline and all 211 clock samples read 1000 MHz. These
+fresh-photo times remain within variation of the baseline; no improvement is asserted.
+
+Additional real-socket checks under ib on the Pi verified root and incoming overlapping STOR
+rejection, queued byte preservation, separate root destinations, interrupted retry, shutdown
+451 and cleared pins/reservations. Production services remained active with NRestarts=0 and
+unchanged post-deploy PIDs. Hotspot and USB addresses, authenticated FTP 220/NOOP 200 passed.
+Final dark idle was restored to powersave/600 MHz, GPIO24 low, throttling 0x0; no working cache
+or benchmark listener remained. Printer scans continued to report no advertising device.
+
+[Sanitized measurements](../assets/bridge-audit-069/measurements.json) include complete
+trials, settings, hashes, versions and final service state. Photos and credentials are excluded.
+BLE/film, real Sony transfer and battery runtime remain outside the measured boundary.

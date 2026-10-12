@@ -1,5 +1,47 @@
 # Current Bridge Context
 
+## HIF flow benchmark, 2026-10-12
+
+Clean runtime **`738a088`** is deployed (plan 069), with **1,448 Bridge tests**, Ruff,
+touched-file formatting, strict mypy (65 source files), whitespace and strict MkDocs passing.
+Normal pre-commit passed; independent adversarial review has no remaining P1/P2 findings.
+No public config/API, App/iOS, Rust FFI or native artifact changes.
+
+- One temporary lossless normalized HIF source is reused for later edits. It expires after
+  five minutes idle and is removed on cancellation/close or photo/model/source replacement.
+  Looks/edit/fit/Correction and JPEG size rules remain; large image jobs stay serialized.
+- Largest real HIF (11.26 MB, primary 7008×4672): first preparation remains about **5.8 s**.
+  Interleaved A/B same-photo edits improved from **5.75–5.80 s to 0.666–0.676 s**, about
+  **88% less time**, with identical JPEG and decoded RGB hashes. Cache size 5,131,254 bytes.
+  Source opening remains dominant: **5.115 s**, including 4.793 s external HEIF decode/PNG
+  write, about 89% of profiled preparation. No first-photo speedup is claimed.
+- All **seven** saved real camera HIFs passed deployed cache parity and nested EXIF date checks.
+  Clock-verified first preparation **3.10–5.80 s**, edits **0.649–0.703 s**, all 621 sampled
+  frequencies 1000 MHz, throttling 0x0. Cold metadata registration/read was 248 ms; later
+  metadata-only reads 17–29 ms. No pixel decode is required for the date.
+- Three deployed isolated FTP/controller/HIF/review trials reached the sender boundary in
+  **7.106 / 7.038 / 7.035 s**, versus **7.069 / 7.033 / 7.006 s** before; fresh-photo
+  performance is unchanged within variation. Review remained 1.004–1.005 s, one preparation
+  per photo and exact reference JPEG reuse. Replay uses a same-Pi hotspot-address client,
+  seeded Square identity/status and observer sender: no Sony Wi-Fi airtime, native BLE send
+  or mechanical ejection measurement. The actual saved Printer remains off/not advertising;
+  physical camera-to-print speed is unmeasured in this pass. No film consumed.
+- Queued/current originals are protected from pruning. Atomic STOR reservations reject
+  overlapping/owned destinations with 450; shutdown rejects uploads with 451 before teardown.
+  Pins/reservations release on every completion/failure/cancel/overflow/shutdown path. On-Pi
+  real socket checks passed root/incoming overlap, byte preservation, interrupted retry,
+  shutdown rejection and zero remaining ownership. Protected originals can exceed the soft
+  incoming storage quota while the up-to-100-job queue is held.
+- Final normal service: Bridge/manager active, NRestarts=0, same post-deploy PIDs, hotspot
+  192.168.8.1/24 and USB 192.168.7.1/24, FTP 220/NOOP 200, GPIO24 low, **600 MHz**,
+  throttling 0x0, no remaining working-cache directories or benchmark listener. Native FFI
+  preserved (SHA-256 a974372ec276fdd3e21eab28fdf5f769b68e5216c5bcdec6f63bec9568e1cc96).
+  Pillow 11.3.0, pillow-heif 1.3.0, pyftpdlib 2.2.0, heif-thumbnailer/libheif1 1.19.8-1.
+- Hardware/OS remain Pi Zero 2 W Rev 1.0 / Waveshare ST7789 / X306 2300 mAh, Debian 13.2,
+  kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17; Sony a7C II profile,
+  Instax Square INSTAX-52006924. Physical print timing/colour, GPIO acceptance and controlled
+  16-hour discharge are still separate hardware acceptance work.
+
 ## Concurrency audit, 2026-10-11
 
 Clean runtime **`473a62c`** is deployed (plan 068), with **1,406 Bridge tests**, Ruff,

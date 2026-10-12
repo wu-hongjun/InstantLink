@@ -1,5 +1,37 @@
 # Current Bridge Context
 
+## Startup and Settings audit, 2026-10-11
+
+Clean runtime **`8eb962d`** is deployed (plan 067). UI/FTP startup is independent of BlueZ;
+Printer work waits for its agent. Network discovery and EXIF reads run off the UI event loop,
+and cancelled image preparation also stops its external decoder descendants. Manager serves
+available addresses and retries missing addresses with a maximum 10-second backoff.
+
+- Print Settings now has Post, Image fit, Confirmation and Printer; Image quality and Printer
+  options are below Advanced. Fit/confirmation open directly. Detailed copy is in KEY3 Help,
+  read-only rows show full values, and closing Settings restores cached home. KEY3 Post,
+  Looks/Correction separation and one-second review remain. Shared physical/virtual LCD path.
+- **1,369 Bridge tests**, Ruff, touched-file formatting, strict mypy (65 source files), shell
+  syntax, whitespace and strict MkDocs passed. Normal pre-commit gates passed.
+- First controlled reboot: core readiness **14.551 s** versus **16.146 s** at `4574aa9`;
+  UI first frame 14.536 s, FTP 14.204 s, hotspot receive-ready 18.889 s, manager 19.435 s.
+  Second reboot core readiness 14.340 s, hotspot 18.685 s, total 16.924 s. Core improved
+  1.59–1.81 s across two trials; no whole-system boot-speed claim. Splash completed
+  before UI. Kernel-monotonic timings exclude firmware and the X306 power-button delay.
+- 35-second dark-idle samples: Bridge CPU about 9.4% of one core before/after, 600 MHz,
+  manager 0%. This does not establish improved battery runtime. Awake/job maximum remains
+  1000 MHz; native artifacts, network recovery cadence and image quality are unchanged.
+- Both post-change reboots had no advertising Printer; boot-to-Printer remains pending a
+  fresh power-on after its documented idle shutdown. No film was used.
+- Live manager late-address trial restored hotspot automatically, then rebound its HTTP
+  listener without another service restart. Initial retry latency prompted the shorter cap. The final trial restored both HTTP
+  endpoints in 42.91 s without another restart; final CPU 600 MHz and GPIO24 low. Bridge
+  and manager active, NRestarts=0, throttling 0x0, hotspot FTP greeting/NOOP passed.
+- Hardware/OS: Pi Zero 2 W Rev 1.0 / Waveshare ST7789 / X306 2300 mAh, Debian 13.2,
+  kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17. Saved Printer is
+  Instax Square INSTAX-52006924; Sony a7C II camera profile. New upload, physical keys,
+  film output and the controlled 16-hour battery discharge remain unverified this pass.
+
 ## One-second default review, 2026-10-11
 
 Clean runtime **`4574aa9`** is deployed. New/missing configuration defaults to **Review 1s**;

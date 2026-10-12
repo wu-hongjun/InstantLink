@@ -138,6 +138,45 @@ pub struct BlePrinterDevice {
     name: String,
 }
 
+struct ImageTransferGuard<'a> {
+    transport: &'a dyn Transport,
+    complete: bool,
+}
+
+impl<'a> ImageTransferGuard<'a> {
+    fn new(transport: &'a dyn Transport) -> Self {
+        transport.image_transfer_started();
+        Self {
+            transport,
+            complete: false,
+        }
+    }
+    fn finish(mut self, result: Result<()>) -> Result<()> {
+        match &result {
+            Ok(()) => {
+                self.transport.image_transfer_completed();
+                self.complete = true;
+            }
+            Err(
+                PrinterError::NoFilm | PrinterError::CoverOpen | PrinterError::LowBattery { .. },
+            ) => {
+                self.transport.image_transfer_rejected();
+                self.complete = true;
+            }
+            Err(_) => {}
+        }
+        result
+    }
+}
+
+impl Drop for ImageTransferGuard<'_> {
+    fn drop(&mut self) {
+        if !self.complete {
+            self.transport.image_transfer_failed();
+        }
+    }
+}
+
 const LED_PATTERN_SOLID: u8 = 0;
 const PRINT_START_LED_COLOR: (u8, u8, u8) = (248, 120, 67);
 
@@ -163,7 +202,7 @@ impl BlePrinterDevice {
         let cmd = Command::ImageSupportInfo;
         let model_result = async {
             let packet =
-                send_command_and_receive_matching(transport.as_ref(), &cmd, DEFAULT_TIMEOUT)
+                send_command_and_receive_matching(transport.as_ref(), &cmd, DEFAULT_TIMEOUT, None)
                     .await?;
             let response = Response::decode(&packet);
 
@@ -196,10 +235,43 @@ impl BlePrinterDevice {
 
     /// Send a command and decode the response.
     async fn command_unlocked(&self, cmd: &Command) -> Result<Response> {
-        let packet =
-            send_command_and_receive_matching(self.transport.as_ref(), cmd, DEFAULT_TIMEOUT)
-                .await?;
+        let packet = send_command_and_receive_matching(
+            self.transport.as_ref(),
+            cmd,
+            DEFAULT_TIMEOUT,
+            Some(self.model),
+        )
+        .await?;
         Ok(Response::decode(&packet))
+    }
+
+    /// Exercise the production transfer loop without LED handoff or PrintImage.
+    /// Completed buffers are explicitly cancelled and that ACK is checked.
+    pub async fn download_prepared_jpeg_and_cancel(
+        &self,
+        data: &[u8],
+        expected_model: PrinterModel,
+        transport_flip_applied: bool,
+        progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
+    ) -> Result<()> {
+        let _guard = self.operation_lock.lock().await;
+        image::validate_prepared_jpeg(data, expected_model, self.model, transport_flip_applied)?;
+        let chunks = image::chunk_image_data(data, self.model);
+        let transfer = ImageTransferGuard::new(self.transport.as_ref());
+        let result = async {
+            self.send_image_data(data, &chunks, 0, progress).await?;
+            match self.command_unlocked(&Command::DownloadCancel).await? {
+                Response::DownloadAck { status } => self.check_status(status, "download cancel")?,
+                _ => {
+                    return Err(PrinterError::UnexpectedResponse(
+                        "expected DownloadCancel ACK".into(),
+                    ));
+                }
+            }
+            Ok(())
+        }
+        .await;
+        transfer.finish(result)
     }
 
     /// Check if a status code indicates success for this printer model.
@@ -293,26 +365,33 @@ impl BlePrinterDevice {
         print_option: u8,
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()> {
-        self.send_image_data(&jpeg_data, &chunks, print_option, progress)
-            .await?;
+        let transfer = ImageTransferGuard::new(self.transport.as_ref());
+        let result = async {
+            self.send_image_data(&jpeg_data, &chunks, print_option, progress)
+                .await?;
 
-        self.signal_print_handoff_unlocked().await;
+            self.signal_print_handoff_unlocked().await;
 
-        // Pre-execute delay (critical for Link 3 and Square)
-        let pre_delay = self.model.spec().pre_execute_delay_ms;
-        if pre_delay > 0 {
-            log::debug!("Waiting {}ms before print execute", pre_delay);
-            tokio::time::sleep(Duration::from_millis(pre_delay)).await;
+            // Pre-execute delay (critical for Link 3 and Square)
+            let pre_delay = self.model.spec().pre_execute_delay_ms;
+            if pre_delay > 0 {
+                log::debug!("Waiting {}ms before print execute", pre_delay);
+                tokio::time::sleep(Duration::from_millis(pre_delay)).await;
+            }
+
+            // Trigger print
+            let result = match self.command_unlocked(&Command::PrintImage).await? {
+                Response::PrintStatus { status } if self.is_success(status) => Ok(()),
+                Response::PrintStatus { status } => self.check_status(status, "print"),
+                _ => Err(PrinterError::UnexpectedResponse(
+                    "expected PrintStatus".into(),
+                )),
+            };
+            result?;
+            Ok(())
         }
-
-        // Trigger print
-        match self.command_unlocked(&Command::PrintImage).await? {
-            Response::PrintStatus { status } if self.is_success(status) => Ok(()),
-            Response::PrintStatus { status } => self.check_status(status, "print"),
-            _ => Err(PrinterError::UnexpectedResponse(
-                "expected PrintStatus".into(),
-            )),
-        }
+        .await;
+        transfer.finish(result)
     }
 
     /// Send JPEG data to the printer with ACK-based flow control.
@@ -324,7 +403,7 @@ impl BlePrinterDevice {
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()> {
         let total = chunks.len();
-        let delay_ms = self.model.spec().packet_delay_ms;
+        let baseline_delay_ms = self.model.spec().packet_delay_ms;
 
         // DOWNLOAD_START
         let start_resp = self
@@ -371,7 +450,16 @@ impl BlePrinterDevice {
                     cb(i + 1, total);
                 }
 
-                // Inter-packet delay (required for Link 3, Square, Wide)
+                // Re-evaluate after the ACK: legacy replies or a prior pacing
+                // failure retain baseline. The final chunk always keeps its settle.
+                let delay_ms = if i + 1 == total {
+                    baseline_delay_ms
+                } else {
+                    self.transport.data_packet_delay_ms(self.model)
+                };
+                if i + 1 < total && delay_ms < baseline_delay_ms {
+                    self.transport.fast_chunk_gap_used();
+                }
                 if delay_ms > 0 {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                 }
@@ -517,11 +605,17 @@ async fn send_command_and_receive_matching(
     transport: &dyn Transport,
     cmd: &Command,
     timeout: Duration,
+    model: Option<PrinterModel>,
 ) -> Result<crate::protocol::Packet> {
     let encoded = cmd.encode()?;
-    let expectation = cmd.response_expectation().ok_or_else(|| {
-        PrinterError::UnexpectedResponse(format!("{cmd:?} does not expect a response"))
-    })?;
+    let expectation = model
+        .map_or_else(
+            || cmd.response_expectation(),
+            |model| cmd.response_expectation_for_model(model),
+        )
+        .ok_or_else(|| {
+            PrinterError::UnexpectedResponse(format!("{cmd:?} does not expect a response"))
+        })?;
     transport
         .send_and_receive_expected(&encoded, timeout, expectation)
         .await

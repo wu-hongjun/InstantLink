@@ -237,3 +237,23 @@ The observed Square reply body has eight bytes: the leading four form a big-endi
 counter, followed by four uninterpreted bytes. Exact two-byte legacy counters are also accepted.
 The current public count type remains u16; larger counters and malformed lengths are rejected
 rather than truncated. The no-film probe compares before/after counts as well as film remaining.
+
+## ACK correlation and chunk pacing
+
+Square Data replies with a five-byte payload must echo the current big-endian chunk index after
+the status byte. Stale/future or malformed indexed replies do not advance the transfer and share
+the original transaction deadline. Exact one-byte legacy status replies remain supported. Other
+models retain their existing response-tail compatibility until their format is verified.
+
+Production pacing remains at the existing model values while shorter Square timings await
+hardware validation. The last chunk retains its model settling delay, and pre-execute waits are
+separate. Legacy replies cannot authorize a shorter gap. A full-transfer guard handles interrupted
+Start/Data/End/handoff/execute, including cancellation between ACKs: require a fresh link, never
+replay the uncertain image, and restore baseline pacing after accelerated uncertainty. Pacing and
+fragment fallback are separate flags in the bounded device cache. Known NoFilm/CoverOpen/LowBattery
+rejections require reset without penalizing pacing; busy/unknown/transport errors stay conservative.
+
+The download-only diagnostic can sweep intermediate delays and can exercise the same production
+transfer loop followed by checked DownloadCancel. Its wrapper rejects LED/PrintImage/reset/shutdown
+commands; the helper fixes print option 0. No-film tests establish outbound bytes, ACK acceptance,
+unchanged counters and reconnects, rather than developed-film or mechanical-print measurements.

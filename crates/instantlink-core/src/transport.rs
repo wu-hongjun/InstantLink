@@ -24,9 +24,10 @@ use uuid::Uuid;
 #[cfg(target_os = "linux")]
 use std::process::Stdio;
 
-use crate::commands::{Command, ResponseExpectation};
+use crate::commands::{Command, OP_DATA, ResponseExpectation};
 use crate::connect_progress::{ConnectProgressCallback, ConnectStage, emit_connect_progress};
 use crate::error::{PrinterError, Result};
+use crate::models::PrinterModel;
 use crate::protocol::{self, PacketAssembler};
 
 async fn receive_packet_from_channel(
@@ -128,8 +129,14 @@ static MTU_BUS_OPEN: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(
 const MAX_FALLBACK_DEVICES: usize = 128;
 
 #[derive(Default)]
+struct FallbackPolicy {
+    fragments: bool,
+    pacing: bool,
+}
+
+#[derive(Default)]
 struct FallbackDevices {
-    devices: BTreeMap<String, bool>,
+    devices: BTreeMap<String, FallbackPolicy>,
     reset_required: std::collections::BTreeSet<String>,
     /// Once capacity is reached, use conservative fragments for all new devices
     /// rather than evicting a device whose larger writes were unsafe.
@@ -141,7 +148,31 @@ static FALLBACK_DEVICES: LazyLock<StdMutex<FallbackDevices>> =
 
 impl FallbackDevices {
     fn contains(&self, device: &str) -> bool {
-        self.saturated || self.devices.get(device).copied().unwrap_or(false)
+        self.saturated
+            || self
+                .devices
+                .get(device)
+                .is_some_and(|policy| policy.fragments)
+    }
+
+    fn conservative_pacing(&self, device: &str) -> bool {
+        self.saturated || self.devices.get(device).is_some_and(|policy| policy.pacing)
+    }
+
+    fn disable_fast_pacing(&mut self, device: &str) {
+        if let Some(policy) = self.devices.get_mut(device) {
+            policy.pacing = true;
+        } else if self.devices.len() < MAX_FALLBACK_DEVICES {
+            self.devices.insert(
+                device.to_owned(),
+                FallbackPolicy {
+                    fragments: false,
+                    pacing: true,
+                },
+            );
+        } else {
+            self.saturated = true;
+        }
     }
 
     fn requires_reset(&self, device: &str) -> bool {
@@ -150,17 +181,27 @@ impl FallbackDevices {
 
     fn reset_completed(&mut self, device: &str) {
         self.reset_required.remove(device);
-        if self.devices.get(device) == Some(&false) {
+        if self
+            .devices
+            .get(device)
+            .is_some_and(|policy| !policy.fragments && !policy.pacing)
+        {
             self.devices.remove(device);
         }
     }
 
     fn insert(&mut self, device: &str, enlarged: bool) {
-        if let Some(conservative) = self.devices.get_mut(device) {
-            *conservative |= enlarged;
+        if let Some(policy) = self.devices.get_mut(device) {
+            policy.fragments |= enlarged;
             self.reset_required.insert(device.to_owned());
         } else if self.devices.len() < MAX_FALLBACK_DEVICES {
-            self.devices.insert(device.to_owned(), enlarged);
+            self.devices.insert(
+                device.to_owned(),
+                FallbackPolicy {
+                    fragments: enlarged,
+                    pacing: false,
+                },
+            );
             self.reset_required.insert(device.to_owned());
         } else {
             self.saturated = true;
@@ -173,6 +214,74 @@ fn conservative_device(device: &str) -> bool {
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .contains(device)
+}
+
+/// Kept at the established baseline until download-only hardware evidence
+/// selects a smaller preferred gap for this narrowly eligible transport.
+pub const PREFERRED_SQUARE_CHUNK_DELAY_MS: u64 = 150;
+
+pub fn data_packet_delay_ms_for_context(
+    model: PrinterModel,
+    linux: bool,
+    payload: usize,
+    legacy: bool,
+    pacing_fallback: bool,
+) -> u64 {
+    if linux
+        && model == PrinterModel::Square
+        && payload == protocol::MAX_FRAGMENT_PAYLOAD
+        && !legacy
+        && !pacing_fallback
+    {
+        PREFERRED_SQUARE_CHUNK_DELAY_MS
+    } else {
+        model.spec().packet_delay_ms
+    }
+}
+
+struct PacingSession {
+    device: String,
+    legacy_ack_seen: AtomicBool,
+    fast_gap_used: AtomicBool,
+    disabled: AtomicBool,
+}
+
+impl PacingSession {
+    fn new(device: String) -> Self {
+        let disabled = FALLBACK_DEVICES
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .conservative_pacing(&device);
+        Self {
+            device,
+            legacy_ack_seen: AtomicBool::new(false),
+            fast_gap_used: AtomicBool::new(false),
+            disabled: AtomicBool::new(disabled),
+        }
+    }
+
+    fn record_ack(&self, packet: &protocol::Packet) {
+        if packet.opcode == OP_DATA && packet.payload.len() == 1 {
+            self.legacy_ack_seen.store(true, Ordering::Release);
+        }
+    }
+
+    fn started(&self) {
+        self.fast_gap_used.store(false, Ordering::Release);
+    }
+    fn completed(&self) {
+        self.fast_gap_used.store(false, Ordering::Release);
+    }
+    fn failed(&self, writes: &WriteSession) {
+        writes.require_link_reset();
+        if self.fast_gap_used.load(Ordering::Acquire) {
+            self.disabled.store(true, Ordering::Release);
+            FALLBACK_DEVICES
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .disable_fast_pacing(&self.device);
+        }
+    }
 }
 
 struct WriteSession {
@@ -339,6 +448,18 @@ pub trait Transport: Send + Sync {
 
     /// Disconnect from the printer.
     async fn disconnect(&self) -> Result<()>;
+
+    /// Preferred intermediate gap; final-chunk settle always uses the model spec.
+    fn data_packet_delay_ms(&self, model: PrinterModel) -> u64 {
+        model.spec().packet_delay_ms
+    }
+    fn image_transfer_started(&self) {}
+    fn image_transfer_completed(&self) {}
+    fn image_transfer_failed(&self) {}
+    fn image_transfer_rejected(&self) {
+        self.image_transfer_failed();
+    }
+    fn fast_chunk_gap_used(&self) {}
 
     /// Optional DIS Model Number hint for printer model detection.
     /// Returns `None` if DIS was not available or not read.
@@ -592,6 +713,7 @@ pub struct BleTransport {
     assembler: tokio::sync::Mutex<PacketAssembler>,
     command_lock: Mutex<()>,
     write_session: WriteSession,
+    pacing_session: PacingSession,
     diagnostic_payload_size: NonZeroUsize,
     /// DIS Model Number string, if available.
     dis_model_number: Option<String>,
@@ -858,6 +980,7 @@ impl BleTransport {
             rx: tokio::sync::Mutex::new(rx),
             assembler: tokio::sync::Mutex::new(PacketAssembler::new()),
             command_lock: Mutex::new(()),
+            pacing_session: PacingSession::new(device_key.clone()),
             write_session: WriteSession {
                 device: device_key,
                 payload_size: NonZeroUsize::new(payload_size).expect("selected payload is nonzero"),
@@ -893,6 +1016,11 @@ impl BleTransport {
         .await
     }
 
+    /// Immutable payload used by ordinary production commands on this connection.
+    pub fn production_payload_limit(&self) -> NonZeroUsize {
+        self.write_session.payload_size
+    }
+
     /// Current negotiated ATT write ceiling for explicit download-only diagnostics.
     /// This includes previous device-specific downgrade, but allows comparison
     /// above the production preference without changing normal sends.
@@ -910,13 +1038,41 @@ impl BleTransport {
         command: &Command,
         payload_limit: NonZeroUsize,
     ) -> Result<protocol::Packet> {
+        self.diagnostic_command_with_expectation(
+            command,
+            payload_limit,
+            command.response_expectation(),
+        )
+        .await
+    }
+
+    pub async fn diagnostic_command_for_model_with_payload_limit(
+        &self,
+        command: &Command,
+        payload_limit: NonZeroUsize,
+        model: PrinterModel,
+    ) -> Result<protocol::Packet> {
+        self.diagnostic_command_with_expectation(
+            command,
+            payload_limit,
+            command.response_expectation_for_model(model),
+        )
+        .await
+    }
+
+    async fn diagnostic_command_with_expectation(
+        &self,
+        command: &Command,
+        payload_limit: NonZeroUsize,
+        expectation: Option<ResponseExpectation>,
+    ) -> Result<protocol::Packet> {
         if !diagnostic_command_allowed(command) {
             return Err(PrinterError::Ble(
                 "command is not allowed in download-only diagnostics".into(),
             ));
         }
         let encoded = command.encode()?;
-        let expectation = command.response_expectation().ok_or_else(|| {
+        let expectation = expectation.ok_or_else(|| {
             PrinterError::UnexpectedResponse("diagnostic command has no response".into())
         })?;
         let _guard = self.command_lock.lock().await;
@@ -930,6 +1086,7 @@ impl BleTransport {
         let diagnostic_delivery = session.delivery()?;
         self.send_bytes_with_session(&encoded, &session).await?;
         let packet = receive_expected_from_transport(self, DEFAULT_TIMEOUT, expectation).await?;
+        self.pacing_session.record_ack(&packet);
         diagnostic_delivery.complete();
         real_delivery.complete();
         Ok(packet)
@@ -1138,6 +1295,7 @@ impl Transport for BleTransport {
         let delivery = self.write_session.delivery()?;
         self.send_bytes(data).await?;
         let packet = self.receive(timeout).await?;
+        self.pacing_session.record_ack(&packet);
         delivery.complete();
         Ok(packet)
     }
@@ -1152,6 +1310,7 @@ impl Transport for BleTransport {
         let delivery = self.write_session.delivery()?;
         self.send_bytes(data).await?;
         let packet = receive_expected_from_transport(self, timeout, expectation).await?;
+        self.pacing_session.record_ack(&packet);
         delivery.complete();
         Ok(packet)
     }
@@ -1192,6 +1351,34 @@ impl Transport for BleTransport {
             .reset_completed(&self.write_session.device);
         reset_guard.complete();
         Ok(())
+    }
+
+    fn data_packet_delay_ms(&self, model: PrinterModel) -> u64 {
+        data_packet_delay_ms_for_context(
+            model,
+            cfg!(target_os = "linux"),
+            self.write_session.payload_size.get(),
+            self.pacing_session.legacy_ack_seen.load(Ordering::Acquire),
+            self.pacing_session.disabled.load(Ordering::Acquire),
+        )
+    }
+    fn image_transfer_started(&self) {
+        self.pacing_session.started();
+    }
+    fn image_transfer_completed(&self) {
+        self.pacing_session.completed();
+    }
+    fn image_transfer_failed(&self) {
+        self.pacing_session.failed(&self.write_session);
+    }
+    fn image_transfer_rejected(&self) {
+        self.write_session.require_link_reset();
+        self.pacing_session.completed();
+    }
+    fn fast_chunk_gap_used(&self) {
+        self.pacing_session
+            .fast_gap_used
+            .store(true, Ordering::Release);
     }
 
     fn model_number_hint(&self) -> Option<&str> {

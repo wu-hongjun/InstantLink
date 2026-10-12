@@ -1,5 +1,19 @@
 # Current Bridge Context
 
+## Chunk-pacing preparation, 2026-10-12
+
+Plan 074 is prepared with three subagents and independent review. The production preferred delay
+is still **150 ms**; a smaller value has not been selected or deployed. Core adds Square-indexed
+ACK correlation, full-transfer cancellation/reset and separate bounded pacing fallback, with a
+no-film diagnostic using the shared production transfer loop and strict Cancel ACK.
+
+Offline gates passed: **278 Rust tests**, build/fmt/Clippy/header drift and strict docs; **52**
+mock transport/diagnostic/lifecycle tests passed on Pi arm64. No unresolved P1/P2 review issue.
+Pi and both services remain reachable/active on the prior firmware. INSTAX-52006924 is unavailable
+and not advertising; user power-on is pending for the real 150/100/75/50/25/0 ms sweep, reconnect
+validation and final deployment. Only temporary files were staged; no film commands were sent.
+Prepared DSC02825.jpeg remains the exact prior 102,846-byte / quality 87 Square JPEG.
+
 ## MTU-aware Bluetooth transport, 2026-10-12
 
 Clean final code **`a24b8b7`** is committed, pushed and deployed with new arm64 FFI/CLI. Plan 073 and

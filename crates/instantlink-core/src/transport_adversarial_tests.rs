@@ -1,5 +1,6 @@
 //! Independent fault-injection tests of the production write/query helpers.
 use super::*;
+use crate::commands::OP_SUPPORT_FUNCTION_INFO;
 use std::sync::Arc;
 use tokio::sync::Notify;
 
@@ -757,4 +758,170 @@ async fn linux_physical_disconnect_can_complete_after_bluez_two_second_timer() {
     .unwrap();
     assert_eq!(start.elapsed(), Duration::from_millis(2800));
     assert!(closed.load(Ordering::Acquire));
+}
+
+#[test]
+fn fast_pacing_context_is_limited_to_verified_linux_square_payload() {
+    assert!(PREFERRED_SQUARE_CHUNK_DELAY_MS <= PrinterModel::Square.spec().packet_delay_ms);
+    assert_eq!(
+        data_packet_delay_ms_for_context(PrinterModel::Square, true, 236, false, false),
+        PREFERRED_SQUARE_CHUNK_DELAY_MS
+    );
+    for payload in [0, 20, 182, 235, 237, 244, usize::MAX] {
+        assert_eq!(
+            data_packet_delay_ms_for_context(PrinterModel::Square, true, payload, false, false),
+            150
+        );
+    }
+    for (linux, legacy, fallback) in [
+        (false, false, false),
+        (true, true, false),
+        (true, false, true),
+        (false, true, true),
+    ] {
+        assert_eq!(
+            data_packet_delay_ms_for_context(PrinterModel::Square, linux, 236, legacy, fallback),
+            150
+        );
+    }
+    for model in [
+        PrinterModel::Mini,
+        PrinterModel::MiniLink3,
+        PrinterModel::Wide,
+    ] {
+        for payload in [20, 182, 236, 244] {
+            assert_eq!(
+                data_packet_delay_ms_for_context(model, true, payload, false, false),
+                model.spec().packet_delay_ms
+            );
+        }
+    }
+}
+
+#[test]
+fn incomplete_image_before_any_short_gap_requires_reset_without_pacing_or_fragment_downgrade() {
+    let writes = make_session(236);
+    let pacing = PacingSession::new(writes.device.clone());
+    pacing.started();
+    writes.enlarged_attempted.store(true, Ordering::Release);
+    pacing.failed(&writes);
+    assert!(writes.poisoned.load(Ordering::Acquire));
+    assert_eq!(policy(&writes), (true, false));
+    assert!(!pacing.disabled.load(Ordering::Acquire));
+    assert!(
+        !FALLBACK_DEVICES
+            .lock()
+            .unwrap()
+            .conservative_pacing(&writes.device)
+    );
+}
+
+#[test]
+fn failed_image_after_short_gap_disables_only_its_pacing_and_survives_verified_reset() {
+    let writes = make_session(236);
+    let unrelated = make_session(236);
+    let pacing = PacingSession::new(writes.device.clone());
+    pacing.started();
+    pacing.fast_gap_used.store(true, Ordering::Release);
+    pacing.failed(&writes);
+    assert!(pacing.disabled.load(Ordering::Acquire));
+    assert_eq!(policy(&writes), (true, false));
+    {
+        let mut devices = FALLBACK_DEVICES.lock().unwrap();
+        assert!(devices.conservative_pacing(&writes.device));
+        assert!(!devices.conservative_pacing(&unrelated.device));
+        devices.reset_completed(&writes.device);
+        assert!(!devices.requires_reset(&writes.device));
+        assert!(!devices.contains(&writes.device));
+        assert!(devices.conservative_pacing(&writes.device));
+    }
+    let reconnected = PacingSession::new(writes.device.clone());
+    assert!(reconnected.disabled.load(Ordering::Acquire));
+    assert_eq!(
+        data_packet_delay_ms_for_context(
+            PrinterModel::Square,
+            true,
+            236,
+            false,
+            reconnected.disabled.load(Ordering::Acquire)
+        ),
+        150
+    );
+}
+
+#[test]
+fn successful_fast_image_does_not_attribute_a_later_idle_status_error_to_pacing() {
+    let writes = make_session(236);
+    let pacing = PacingSession::new(writes.device.clone());
+    pacing.started();
+    pacing.fast_gap_used.store(true, Ordering::Release);
+    pacing.completed();
+    assert!(!pacing.fast_gap_used.load(Ordering::Acquire));
+    writes.require_link_reset();
+    assert_eq!(policy(&writes), (true, false));
+    assert!(
+        !FALLBACK_DEVICES
+            .lock()
+            .unwrap()
+            .conservative_pacing(&writes.device)
+    );
+    assert!(!pacing.disabled.load(Ordering::Acquire));
+}
+
+#[test]
+fn legacy_data_ack_latches_baseline_within_connection_without_global_downgrade() {
+    let writes = make_session(236);
+    let pacing = PacingSession::new(writes.device.clone());
+    pacing.record_ack(&protocol::Packet {
+        opcode: OP_SUPPORT_FUNCTION_INFO,
+        payload: vec![0],
+    });
+    assert!(!pacing.legacy_ack_seen.load(Ordering::Acquire));
+    pacing.record_ack(&protocol::Packet {
+        opcode: OP_DATA,
+        payload: vec![0, 0, 0, 0, 0],
+    });
+    assert!(!pacing.legacy_ack_seen.load(Ordering::Acquire));
+    pacing.record_ack(&protocol::Packet {
+        opcode: OP_DATA,
+        payload: vec![0],
+    });
+    pacing.started();
+    assert!(pacing.legacy_ack_seen.load(Ordering::Acquire));
+    assert_eq!(
+        data_packet_delay_ms_for_context(
+            PrinterModel::Square,
+            true,
+            236,
+            pacing.legacy_ack_seen.load(Ordering::Acquire),
+            false
+        ),
+        150
+    );
+    pacing.completed();
+    assert!(pacing.legacy_ack_seen.load(Ordering::Acquire));
+    let fresh = PacingSession::new(writes.device.clone());
+    assert!(!fresh.legacy_ack_seen.load(Ordering::Acquire));
+    assert!(!fresh.disabled.load(Ordering::Acquire));
+}
+
+#[test]
+fn pacing_cache_capacity_keeps_fragment_and_pacing_recovery_flags_separate() {
+    let mut devices = FallbackDevices::default();
+    devices.disable_fast_pacing("paced-device");
+    assert!(devices.conservative_pacing("paced-device"));
+    assert!(!devices.contains("paced-device"));
+    devices.insert("paced-device", true);
+    devices.reset_completed("paced-device");
+    assert!(devices.conservative_pacing("paced-device"));
+    assert!(devices.contains("paced-device"));
+    for index in 1..MAX_FALLBACK_DEVICES {
+        devices.disable_fast_pacing(&format!("pacing-device-{index}"));
+    }
+    devices.disable_fast_pacing("over-capacity");
+    assert_eq!(devices.devices.len(), MAX_FALLBACK_DEVICES);
+    assert!(devices.saturated);
+    assert!(devices.conservative_pacing("new-device"));
+    assert!(devices.contains("new-device"));
+    assert!(devices.requires_reset("new-device"));
 }

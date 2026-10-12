@@ -697,7 +697,8 @@ cargo test --workspace --locked
 cargo clippy --workspace --locked -- -D warnings
 ```
 
-The current Mac does not have `rustup`, so it cannot install the
-`aarch64-unknown-linux-gnu` target locally. If Rust FFI code changes, build ARM64 artifacts on a
-machine or CI runner with the proper Rust target and update the artifact manifest before deploying
-with `--instantlink-artifacts`.
+The current Mac has rustup with the `aarch64-unknown-linux-gnu` target, cargo-zigbuild and Zig.
+Native JPEG validation also needs CMake and a C compiler (NASM for x86 SIMD builds). Build clean
+ARM64 artifacts with `scripts/build-instantlink-artifacts.sh`, which records source and artifact
+provenance, before deploying with `--instantlink-artifacts`. The validator is statically bundled;
+no extra JPEG library is required on the Pi.

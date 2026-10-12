@@ -97,6 +97,21 @@ pub trait PrinterDevice: Send + Sync {
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()>;
 
+    /// Send a validated, printer-oriented RGB JPEG without re-encoding.
+    /// Implementations that do not support byte-preserving printing reject it.
+    async fn print_prepared_jpeg(
+        &self,
+        _data: &[u8],
+        _expected_model: PrinterModel,
+        _transport_flip_applied: bool,
+        _print_option: u8,
+        _progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
+    ) -> Result<()> {
+        Err(PrinterError::Image(
+            "prepared JPEG printing is unsupported".into(),
+        ))
+    }
+
     /// Set the LED color and pattern.
     async fn set_led(&self, r: u8, g: u8, b: u8, pattern: u8) -> Result<()>;
 
@@ -455,6 +470,21 @@ impl PrinterDevice for BlePrinterDevice {
         let _guard = self.operation_lock.lock().await;
         let (jpeg_data, chunks) = image::prepare_image_from_bytes(data, self.model, fit, quality)?;
         self.print_prepared_unlocked(jpeg_data, chunks, print_option, progress)
+            .await
+    }
+
+    async fn print_prepared_jpeg(
+        &self,
+        data: &[u8],
+        expected_model: PrinterModel,
+        transport_flip_applied: bool,
+        print_option: u8,
+        progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
+    ) -> Result<()> {
+        let _guard = self.operation_lock.lock().await;
+        image::validate_prepared_jpeg(data, expected_model, self.model, transport_flip_applied)?;
+        let chunks = image::chunk_image_data(data, self.model);
+        self.print_prepared_unlocked(data.to_vec(), chunks, print_option, progress)
             .await
     }
 
@@ -1275,5 +1305,101 @@ mod tests {
             .print_bytes(&png, image::FitMode::Crop, 97, 0, None)
             .await;
         assert!(matches!(result.unwrap_err(), PrinterError::NoFilm));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn prepared_jpeg_all_models_transfer_exact_bytes_with_one_declared_flip() {
+        for &model in PrinterModel::all() {
+            let png = make_png_bytes(model);
+            let (jpeg, chunks) =
+                image::prepare_image_from_bytes(&png, model, image::FitMode::Stretch, 80).unwrap();
+            let mut responses = vec![download_ack_packet(OP_DOWNLOAD_START, 0)];
+            responses.extend((0..chunks.len()).map(|_| download_ack_packet(OP_DATA, 0)));
+            responses.extend([
+                download_ack_packet(OP_DOWNLOAD_END, 0),
+                led_ack_packet(),
+                print_status_packet(model.spec().success_code),
+            ]);
+            let (device, state) = make_device_with_dis(
+                model,
+                responses,
+                (model == PrinterModel::MiniLink3).then(|| "FI033".into()),
+            )
+            .await;
+            let progress = std::sync::Mutex::new(Vec::new());
+            let callback = |sent, total| progress.lock().unwrap().push((sent, total));
+            device
+                .print_prepared_jpeg(&jpeg, model, model.spec().flip_vertical, 1, Some(&callback))
+                .await
+                .unwrap();
+            let packets: Vec<_> = state
+                .lock()
+                .unwrap()
+                .sent
+                .iter()
+                .skip(1)
+                .map(|bytes| protocol::parse_packet(bytes).unwrap())
+                .collect();
+            let start = &packets[0];
+            assert_eq!(start.opcode, OP_DOWNLOAD_START);
+            assert_eq!(&start.payload[..4], &[2, 1, 0, 0]);
+            assert_eq!(
+                u32::from_be_bytes(start.payload[4..8].try_into().unwrap()) as usize,
+                jpeg.len()
+            );
+            let data_packets: Vec<_> = packets
+                .iter()
+                .filter(|packet| packet.opcode == OP_DATA)
+                .collect();
+            assert_eq!(data_packets.len(), chunks.len());
+            let mut transported = Vec::new();
+            for (index, packet) in data_packets.iter().enumerate() {
+                assert_eq!(
+                    u32::from_be_bytes(packet.payload[..4].try_into().unwrap()) as usize,
+                    index
+                );
+                transported.extend_from_slice(&packet.payload[4..]);
+            }
+            assert_eq!(&transported[..jpeg.len()], jpeg.as_slice());
+            assert!(transported[jpeg.len()..].iter().all(|byte| *byte == 0));
+            assert_eq!(
+                *progress.lock().unwrap(),
+                (1..=chunks.len())
+                    .map(|sent| (sent, chunks.len()))
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(packets[packets.len() - 3].opcode, OP_DOWNLOAD_END);
+            assert_eq!(packets[packets.len() - 2].opcode, OP_LED_PATTERN_SETTINGS);
+            assert_eq!(
+                packets.last().unwrap().opcode,
+                crate::commands::OP_PRINT_IMAGE
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn prepared_jpeg_rejection_never_writes_to_printer() {
+        let model = PrinterModel::Mini;
+        let (jpeg, _) = image::prepare_image_from_bytes(
+            &make_png_bytes(model),
+            model,
+            image::FitMode::Stretch,
+            80,
+        )
+        .unwrap();
+        let (device, state) = make_device(model, vec![]).await;
+        for (data, expected, flipped) in [
+            (jpeg.as_slice(), PrinterModel::MiniLink3, true),
+            (jpeg.as_slice(), model, true),
+            (&[0xff, 0xd8, 0xff, 0xd9], model, false),
+        ] {
+            assert!(
+                device
+                    .print_prepared_jpeg(data, expected, flipped, 0, None)
+                    .await
+                    .is_err()
+            );
+            assert_eq!(state.lock().unwrap().sent.len(), 1); // only constructor model query
+        }
     }
 }

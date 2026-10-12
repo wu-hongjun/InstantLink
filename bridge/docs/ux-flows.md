@@ -384,6 +384,10 @@ stateDiagram-v2
   edits and Correction still run for each preview; output quality and processing order are
   preserved. A new photo/model, source replacement, cancellation or five minutes idle drops
   the cache. HIF dates use the camera's nested EXIF date without decoding pixels.
+- With a compatible native library, the final JPEG goes directly to the Printer after strict
+  model, dimensions, byte-budget and complete-JPEG validation. It is not encoded again. Mini
+  Link 3 receives its vertical transport flip before encoding; the LCD remains upright. Older
+  native libraries retain the legacy file path. A failed transfer is never retried automatically.
 - If the Bridge already knows the selected Printer has `0/10` film when an image arrives in Print
   mode, it shows `No film left` and skips BLE transfer. In Sync mode the print path is skipped
   entirely and the image spools to the sync outbox.

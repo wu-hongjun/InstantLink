@@ -227,6 +227,62 @@ int32_t instantlink_print_with_progress_ctx(const char *path,
                                             void *context);
 
 /**
+ * Send a printer-oriented prepared JPEG unchanged. Returns 0 or a negative error code.
+ *
+ * Model codes: 0 Mini, 1 Mini Link 3, 2 Square, 3 Wide. The exact detected model,
+ * baseline 8-bit three-component JPEG integrity/dimensions/size, and flip declaration
+ * are checked before any Printer writes. `transport_flip_applied` is strictly 0/1
+ * and must equal the model's required vertical flip (1 only for Mini Link 3).
+ * Raw pixel orientation is authoritative; recognized non-neutral EXIF orientation
+ * is rejected. No resize, flip, colour adjustment or re-encode occurs.
+ *
+ * # Safety
+ *
+ * `data` must point to `data_len` readable bytes that remain unchanged until return.
+ */
+int32_t instantlink_print_prepared_jpeg(const uint8_t *data,
+                                        uint32_t data_len,
+                                        uint8_t expected_model,
+                                        uint8_t transport_flip_applied,
+                                        uint8_t print_option);
+
+/**
+ * Send a prepared JPEG unchanged with an ACK progress callback.
+ * Uses the same model, integrity and orientation contract as `instantlink_print_prepared_jpeg`.
+ * The callback is invoked synchronously during the call, never after return.
+ *
+ * # Safety
+ *
+ * `data` must point to `data_len` readable bytes that remain unchanged until return.
+ * `progress_cb` may be null. It must not synchronously start another serialized
+ * Printer operation (status/print/disconnect); read-only identity getters are safe.
+ */
+int32_t instantlink_print_prepared_jpeg_with_progress(const uint8_t *data,
+                                                      uint32_t data_len,
+                                                      uint8_t expected_model,
+                                                      uint8_t transport_flip_applied,
+                                                      uint8_t print_option,
+                                                      void (*progress_cb)(uint32_t, uint32_t));
+
+/**
+ * Send a prepared JPEG unchanged with an ACK progress callback and opaque context.
+ * Uses the same model, integrity, orientation and callback contract as the legacy callback form.
+ *
+ * # Safety
+ *
+ * `data` must point to `data_len` readable bytes that remain unchanged until return.
+ * `progress_cb` may be null. `context` must remain valid for every callback during
+ * this call. Callbacks must not synchronously start another serialized Printer operation.
+ */
+int32_t instantlink_print_prepared_jpeg_with_progress_ctx(const uint8_t *data,
+                                                          uint32_t data_len,
+                                                          uint8_t expected_model,
+                                                          uint8_t transport_flip_applied,
+                                                          uint8_t print_option,
+                                                          instantlink_print_progress_cb_ctx progress_cb,
+                                                          void *context);
+
+/**
  * Set LED color and pattern.
  */
 int32_t instantlink_set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t pattern);

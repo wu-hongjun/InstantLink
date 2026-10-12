@@ -18,7 +18,7 @@ from typing import Any, ClassVar, Literal, Protocol, cast
 
 from PIL import Image
 
-from instantlink_bridge.ble.instantlink import instantlink_backend_enabled
+from instantlink_bridge.ble.instantlink import instantlink_backend_enabled, prepared_jpeg_available
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.camera.ftp import ReceivedImage
 from instantlink_bridge.config import (
@@ -1151,12 +1151,9 @@ class BridgeUi:
             model = await self._resolve_printer_model_for_preview()
         if model is None:
             raise ImagePipelineError("printer type unknown")
-        # apply_model_flip=False builds the InstantLink-backend flavour, which
-        # is both what the LCD should show (the flip is a transport quirk, not
-        # a visual one) and byte-identical to what the print path would build
-        # for itself — so `take_prepared_print_image` can hand this straight to
-        # the printer instead of running the whole pipeline a second time
-        # (plan 056 T1.1).
+        # New native libraries send these exact bytes, including Link3's
+        # transport flip. The decoded LCD view reverses that flip only for
+        # display. Older libraries retain their logical, unflipped input.
         prepared = await prepare_for_instax_async(
             received.path,
             model,
@@ -1166,7 +1163,7 @@ class BridgeUi:
             adjustments=adjustments,
             correction=correction_profile(config.correction),
             timeout_s=PREVIEW_BUILD_TIMEOUT_S,
-            apply_model_flip=False,
+            apply_model_flip=prepared_jpeg_available(),
         )
         preview = await asyncio.to_thread(create_preview_from_prepared, prepared)
         if self._preview_session_token == session_token:

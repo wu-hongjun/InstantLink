@@ -111,6 +111,7 @@ class PreparedImage:
     height: int
     quality: int
     fit: FitMode
+    transport_flip_applied: bool = False
 
 
 class _RawThumbnail(Protocol):
@@ -182,13 +183,13 @@ def prepare_for_instantlink_backend(
     adjustments: AdjustmentProfile | None = None,
     correction: CorrectionProfile | None = None,
     working_cache: WorkingImageCache | None = None,
+    apply_model_flip: bool = False,
 ) -> PreparedImage:
     """Prepare an edited, model-sized JPEG for InstantLink to send.
 
-    InstantLink applies model-specific transport transforms itself. In particular,
-    Mini Link 3 output is vertically flipped inside InstantLink before upload, so
-    this helper deliberately leaves that flip unapplied and the caller must pass
-    the result to InstantLink with fit mode ``stretch``.
+    Legacy native libraries apply the transport flip while re-encoding. New
+    libraries accept exact prepared bytes, so their callers request the flip
+    here before the one final JPEG encode.
     """
 
     return _prepare_for_model(
@@ -200,7 +201,7 @@ def prepare_for_instantlink_backend(
         adjustments=adjustments,
         correction=correction,
         working_cache=working_cache,
-        apply_model_flip=False,
+        apply_model_flip=apply_model_flip,
     )
 
 
@@ -310,6 +311,7 @@ def _prepare_for_model(
         height=spec.height,
         quality=final_quality,
         fit=fit,
+        transport_flip_applied=apply_model_flip and spec.flip_vertical,
     )
 
 
@@ -437,7 +439,10 @@ def create_preview_from_prepared(
     """Create an LCD film preview from an already prepared printer JPEG."""
 
     with Image.open(BytesIO(prepared.data)) as image:
-        return _film_preview_for_model(image.convert("RGB"), prepared.model, max_size)
+        logical = image.convert("RGB")
+        if prepared.transport_flip_applied:
+            logical = ImageOps.flip(logical)
+        return _film_preview_for_model(logical, prepared.model, max_size)
 
 
 def chunk_image_data(data: bytes, model: PrinterModel) -> list[bytes]:

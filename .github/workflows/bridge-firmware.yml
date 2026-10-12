@@ -35,7 +35,10 @@ jobs:
           version: "0.14.1"
 
       - name: Install cross-build tools
-        run: cargo install cargo-zigbuild --locked
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake nasm
+          cargo install cargo-zigbuild --locked
 
       - name: Build firmware bundle
         env:

@@ -268,6 +268,68 @@ fn print_with_progress_internal(
     }
 }
 
+fn prepared_model(code: u8) -> Result<instantlink_core::PrinterModel, i32> {
+    use instantlink_core::PrinterModel;
+    match code {
+        0 => Ok(PrinterModel::Mini),
+        1 => Ok(PrinterModel::MiniLink3),
+        2 => Ok(PrinterModel::Square),
+        3 => Ok(PrinterModel::Wide),
+        _ => Err(-5),
+    }
+}
+
+/// See the exported prepared-JPEG functions for the pointer/lifetime contract.
+unsafe fn print_prepared_jpeg_internal(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+    progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
+) -> i32 {
+    let model = match prepared_model(expected_model) {
+        Ok(model) => model,
+        Err(code) => return code,
+    };
+    if data.is_null() || data_len == 0 || transport_flip_applied > 1 {
+        return -5;
+    }
+    if data_len as usize > model.spec().max_image_size {
+        return -6;
+    }
+    let device = {
+        let guard = match get_device_lock().lock() {
+            Ok(guard) => guard,
+            Err(_) => return -3,
+        };
+        match guard.as_ref() {
+            Some(device) => Arc::clone(device),
+            None => return -1,
+        }
+    };
+    // Release DEVICE before invoking user callbacks or waiting for BLE.
+    if model != device.model() || (transport_flip_applied != 0) != model.spec().flip_vertical {
+        return -6;
+    }
+    // SAFETY: null/length bounds are checked above; caller guarantees all data_len
+    // bytes remain readable and unchanged until this synchronous call returns.
+    let bytes = unsafe { std::slice::from_raw_parts(data, data_len as usize) };
+    let progress_ref = progress
+        .as_ref()
+        .map(|callback| callback.as_ref() as &(dyn Fn(usize, usize) + Send + Sync));
+    match get_runtime().block_on(device.print_prepared_jpeg(
+        bytes,
+        model,
+        transport_flip_applied != 0,
+        print_option,
+        progress_ref,
+    )) {
+        Ok(()) => 0,
+        Err(error) => error_code(&error),
+    }
+}
+
 /// Helper: read a C string pointer into a `&str`, returning `-5` on error.
 ///
 /// # Safety
@@ -958,6 +1020,120 @@ pub unsafe extern "C" fn instantlink_print_with_progress_ctx(
     .unwrap_or(-3)
 }
 
+/// Send a printer-oriented prepared JPEG unchanged. Returns 0 or a negative error code.
+///
+/// Model codes: 0 Mini, 1 Mini Link 3, 2 Square, 3 Wide. The exact detected model,
+/// baseline 8-bit three-component JPEG integrity/dimensions/size, and flip declaration
+/// are checked before any Printer writes. `transport_flip_applied` is strictly 0/1
+/// and must equal the model's required vertical flip (1 only for Mini Link 3).
+/// Raw pixel orientation is authoritative; recognized non-neutral EXIF orientation
+/// is rejected. No resize, flip, colour adjustment or re-encode occurs.
+///
+/// # Safety
+///
+/// `data` must point to `data_len` readable bytes that remain unchanged until return.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_print_prepared_jpeg(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // SAFETY: caller upholds the exported function's data lifetime contract.
+        unsafe {
+            print_prepared_jpeg_internal(
+                data,
+                data_len,
+                expected_model,
+                transport_flip_applied,
+                print_option,
+                None,
+            )
+        }
+    }))
+    .unwrap_or(-3)
+}
+
+/// Send a prepared JPEG unchanged with an ACK progress callback.
+/// Uses the same model, integrity and orientation contract as `instantlink_print_prepared_jpeg`.
+/// The callback is invoked synchronously during the call, never after return.
+///
+/// # Safety
+///
+/// `data` must point to `data_len` readable bytes that remain unchanged until return.
+/// `progress_cb` may be null. It must not synchronously start another serialized
+/// Printer operation (status/print/disconnect); read-only identity getters are safe.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_print_prepared_jpeg_with_progress(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+    progress_cb: Option<extern "C" fn(u32, u32)>,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> = progress_cb.map(|cb| {
+            Box::new(move |sent: usize, total: usize| cb(sent as u32, total as u32))
+                as Box<dyn Fn(usize, usize) + Send + Sync>
+        });
+        // SAFETY: caller upholds the exported function's data lifetime contract.
+        unsafe {
+            print_prepared_jpeg_internal(
+                data,
+                data_len,
+                expected_model,
+                transport_flip_applied,
+                print_option,
+                progress,
+            )
+        }
+    }))
+    .unwrap_or(-3)
+}
+
+/// Send a prepared JPEG unchanged with an ACK progress callback and opaque context.
+/// Uses the same model, integrity, orientation and callback contract as the legacy callback form.
+///
+/// # Safety
+///
+/// `data` must point to `data_len` readable bytes that remain unchanged until return.
+/// `progress_cb` may be null. `context` must remain valid for every callback during
+/// this call. Callbacks must not synchronously start another serialized Printer operation.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_print_prepared_jpeg_with_progress_ctx(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+    progress_cb: instantlink_print_progress_cb_ctx,
+    context: *mut c_void,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let context = context as usize;
+        let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> = progress_cb.map(|cb| {
+            Box::new(move |sent: usize, total: usize| {
+                cb(sent as u32, total as u32, context as *mut c_void);
+            }) as Box<dyn Fn(usize, usize) + Send + Sync>
+        });
+        // SAFETY: caller upholds the exported function's data lifetime contract.
+        unsafe {
+            print_prepared_jpeg_internal(
+                data,
+                data_len,
+                expected_model,
+                transport_flip_applied,
+                print_option,
+                progress,
+            )
+        }
+    }))
+    .unwrap_or(-3)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1017,6 +1193,15 @@ mod tests {
         progress_enabled: bool,
     }
 
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct PreparedPrintInvocation {
+        data: Vec<u8>,
+        model: PrinterModel,
+        flip: bool,
+        print_option: u8,
+        progress_enabled: bool,
+    }
+
     #[derive(Debug, Default)]
     struct FakeFailures {
         status: Option<PrinterError>,
@@ -1026,6 +1211,7 @@ mod tests {
         print_file: Option<PrinterError>,
         set_led: Option<PrinterError>,
         disconnect: Option<PrinterError>,
+        panic_prepared: bool,
     }
 
     struct FakeDevice {
@@ -1033,6 +1219,7 @@ mod tests {
         model: PrinterModel,
         status: PrinterStatus,
         print_calls: Arc<StdMutex<Vec<PrintInvocation>>>,
+        prepared_calls: Arc<StdMutex<Vec<PreparedPrintInvocation>>>,
         led_calls: Arc<StdMutex<Vec<(u8, u8, u8, u8)>>>,
         shutdown_calls: Arc<AtomicU32>,
         reset_calls: Arc<AtomicU32>,
@@ -1054,6 +1241,7 @@ mod tests {
                     name: name.to_string(),
                 },
                 print_calls: Arc::new(StdMutex::new(Vec::new())),
+                prepared_calls: Arc::new(StdMutex::new(Vec::new())),
                 led_calls: Arc::new(StdMutex::new(Vec::new())),
                 shutdown_calls: Arc::new(AtomicU32::new(0)),
                 reset_calls: Arc::new(AtomicU32::new(0)),
@@ -1202,6 +1390,47 @@ mod tests {
             Box::pin(async move { Ok(()) })
         }
 
+        fn print_prepared_jpeg<'life0, 'life1, 'life2, 'async_trait>(
+            &'life0 self,
+            data: &'life1 [u8],
+            model: PrinterModel,
+            flip: bool,
+            print_option: u8,
+            progress: Option<&'life2 (dyn Fn(usize, usize) + Send + Sync)>,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            'life2: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move {
+                if self.failures.lock().unwrap().panic_prepared {
+                    panic!("simulated prepared JPEG panic");
+                }
+                instantlink_core::image::validate_prepared_jpeg(data, model, self.model, flip)?;
+                self.prepared_calls
+                    .lock()
+                    .unwrap()
+                    .push(PreparedPrintInvocation {
+                        data: data.to_vec(),
+                        model,
+                        flip,
+                        print_option,
+                        progress_enabled: progress.is_some(),
+                    });
+                if let Some(progress) = progress {
+                    progress(2, 5);
+                }
+                self.failures
+                    .lock()
+                    .unwrap()
+                    .print_file
+                    .take()
+                    .map_or(Ok(()), Err)
+            })
+        }
+
         fn set_led<'life0, 'async_trait>(
             &'life0 self,
             _r: u8,
@@ -1321,6 +1550,135 @@ mod tests {
         );
         assert_eq!(slots.0.load(Ordering::SeqCst), 7);
         assert_eq!(slots.1.load(Ordering::SeqCst), 52);
+    }
+
+    fn prepared_fixture(model: PrinterModel) -> Vec<u8> {
+        instantlink_core::image::prepare_image_from_bytes(
+            include_bytes!("../../../bridge/src/instantlink_bridge/imaging/_example_photo.jpg"),
+            model,
+            FitMode::Stretch,
+            80,
+        )
+        .unwrap()
+        .0
+    }
+
+    extern "C" fn prepared_identity_callback(sent: u32, total: u32, context: *mut c_void) {
+        let mut buffer = [0_i8; 128];
+        let name_length = unsafe { instantlink_device_name(buffer.as_mut_ptr(), 128) };
+        let slots = unsafe { &*(context.cast::<(AtomicU32, AtomicU32, AtomicI32)>()) };
+        slots.0.store(sent, Ordering::SeqCst);
+        slots.1.store(total, Ordering::SeqCst);
+        slots.2.store(name_length, Ordering::SeqCst);
+    }
+
+    #[test]
+    fn prepared_ffi_rejects_invalid_pointer_length_codes_and_orientation() {
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        let calls = Arc::clone(&device.prepared_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let jpeg = prepared_fixture(PrinterModel::Mini);
+        for (pointer, length, model, flip, expected) in [
+            (std::ptr::null(), jpeg.len() as u32, 0, 0, -5),
+            (jpeg.as_ptr(), 0, 0, 0, -5),
+            (jpeg.as_ptr(), jpeg.len() as u32, 4, 0, -5),
+            (jpeg.as_ptr(), jpeg.len() as u32, 0, 2, -5),
+            (jpeg.as_ptr(), u32::MAX, 0, 0, -6),
+            (jpeg.as_ptr(), jpeg.len() as u32, 1, 1, -6),
+            (jpeg.as_ptr(), jpeg.len() as u32, 0, 1, -6),
+            (jpeg.as_ptr(), 2, 0, 0, -6),
+        ] {
+            assert_eq!(
+                unsafe { instantlink_print_prepared_jpeg(pointer, length, model, flip, 0) },
+                expected
+            );
+        }
+        assert!(calls.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn prepared_ffi_all_models_preserve_bytes_and_context_identity_callback_is_safe() {
+        for (code, &model) in PrinterModel::all().iter().enumerate() {
+            let device = FakeDevice::new("INSTAX-12345678", model);
+            let calls = Arc::clone(&device.prepared_calls);
+            let legacy_calls = Arc::clone(&device.print_calls);
+            let _guard = install_test_device(Some(Box::new(device)));
+            let jpeg = prepared_fixture(model);
+            let slots = (AtomicU32::new(0), AtomicU32::new(0), AtomicI32::new(0));
+            let rc = unsafe {
+                instantlink_print_prepared_jpeg_with_progress_ctx(
+                    jpeg.as_ptr(),
+                    jpeg.len() as u32,
+                    code as u8,
+                    u8::from(model.spec().flip_vertical),
+                    1,
+                    Some(prepared_identity_callback),
+                    (&slots as *const (AtomicU32, AtomicU32, AtomicI32))
+                        .cast_mut()
+                        .cast(),
+                )
+            };
+            assert_eq!(rc, 0);
+            assert_eq!(slots.0.load(Ordering::SeqCst), 2);
+            assert_eq!(slots.1.load(Ordering::SeqCst), 5);
+            assert!(slots.2.load(Ordering::SeqCst) > 0); // DEVICE was unlocked in callback
+            assert_eq!(
+                *calls.lock().unwrap(),
+                vec![PreparedPrintInvocation {
+                    data: jpeg,
+                    model,
+                    flip: model.spec().flip_vertical,
+                    print_option: 1,
+                    progress_enabled: true,
+                }]
+            );
+            assert!(legacy_calls.lock().unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn prepared_ffi_callbacks_are_optional_and_errors_or_panics_leave_device_installed() {
+        let model = PrinterModel::Mini;
+        let device = FakeDevice::new("INSTAX-12345678", model);
+        let failures = Arc::clone(&device.failures);
+        let calls = Arc::clone(&device.prepared_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let jpeg = prepared_fixture(model);
+        assert_eq!(
+            unsafe {
+                instantlink_print_prepared_jpeg_with_progress(
+                    jpeg.as_ptr(),
+                    jpeg.len() as u32,
+                    0,
+                    0,
+                    0,
+                    None,
+                )
+            },
+            0
+        );
+        assert!(!calls.lock().unwrap()[0].progress_enabled);
+        failures.lock().unwrap().print_file = Some(PrinterError::PrinterBusy);
+        assert_eq!(
+            unsafe { instantlink_print_prepared_jpeg(jpeg.as_ptr(), jpeg.len() as u32, 0, 0, 0) },
+            -11
+        );
+        failures.lock().unwrap().panic_prepared = true;
+        assert_eq!(
+            unsafe { instantlink_print_prepared_jpeg(jpeg.as_ptr(), jpeg.len() as u32, 0, 0, 0) },
+            -3
+        );
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn prepared_ffi_requires_a_connected_device() {
+        let _guard = install_test_device(None);
+        let data = [0xff, 0xd8, 0xff, 0xd9];
+        assert_eq!(
+            unsafe { instantlink_print_prepared_jpeg(data.as_ptr(), data.len() as u32, 0, 0, 0) },
+            -1
+        );
     }
 
     #[test]

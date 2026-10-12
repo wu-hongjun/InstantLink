@@ -2,6 +2,10 @@
 
 ## Development Setup
 
+Rust builds require CMake and a C compiler for the bundled JPEG validator. Install NASM for
+x86 SIMD support. On macOS use `brew install cmake nasm`; on Debian/Ubuntu use
+`sudo apt-get install build-essential cmake nasm`. The JPEG library is statically linked.
+
 ```bash
 git clone https://github.com/wu-hongjun/InstantLink.git
 cd InstantLink

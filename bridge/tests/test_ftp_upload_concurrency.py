@@ -5,6 +5,7 @@ import ftplib
 from collections.abc import AsyncIterator
 from contextlib import closing
 from pathlib import Path
+from threading import Event
 
 import pytest
 import pytest_asyncio
@@ -26,12 +27,22 @@ async def receiver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIter
 
     class LocalServer(FTPServer):
         def __init__(self, address: tuple[str, int], handler: type[FTPHandler]) -> None:
+            self._close_requested = Event()
             # Isolate sockets and scheduled callbacks from other FTP tests.
             super().__init__(address, handler, ioloop=IOLoop())
             servers.append(self)
 
         def serve_forever(self) -> None:
-            super().serve_forever(timeout=0.02, handle_exit=False)
+            try:
+                while not self._close_requested.is_set() and self.ioloop.socket_map:
+                    self.ioloop.loop(timeout=0.02, blocking=False)
+            finally:
+                # kqueue/epoll descriptors must not close in another thread
+                # while the owning loop is inside poll().
+                FTPServer.close_all(self)
+
+        def close_all(self) -> None:
+            self._close_requested.set()
 
     monkeypatch.setattr(pyftpdlib.servers, "FTPServer", LocalServer)
     queue: asyncio.Queue[ReceivedImage] = asyncio.Queue()
@@ -87,12 +98,17 @@ async def test_real_overlapping_stor_preserves_queued_source(
                 with pytest.raises(ftplib.error_temp, match="450"):
                     second.transfercmd(f"STOR {destination}")
             first.voidresp()
+            # 226 precedes the receive callback and its lease-release finally.
+            # A subsequent command on this same control connection cannot
+            # respond until that callback has finished in the FTP thread.
+            first.voidcmd("NOOP")
             if root_upload:
                 # A completed root upload moves into incoming, so the now-free
                 # root pathname can accept a separate photo without touching A.
                 with closing(second.transfercmd(f"STOR {destination}")) as stream:
                     stream.sendall(b"BBBBCCCC")
                 second.voidresp()
+                second.voidcmd("NOOP")
             else:
                 with pytest.raises(ftplib.error_temp, match="450"):
                     second.transfercmd(f"STOR {destination}")
@@ -131,6 +147,7 @@ async def test_real_disconnect_releases_open_upload_for_retry(receiver: Receiver
             with closing(retry.transfercmd("STOR /incoming/retry.HIF")) as stream:
                 stream.sendall(b"complete-retry")
             retry.voidresp()
+            retry.voidcmd("NOOP")
 
     await asyncio.wait_for(asyncio.to_thread(abort_then_retry), 6)
     received = await asyncio.wait_for(queue.get(), 1)

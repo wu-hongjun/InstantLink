@@ -59,6 +59,12 @@ ERROR_PRINTER_BUSY = -11
 INSTANTLINK_FIT_CROP = 0
 INSTANTLINK_FIT_CONTAIN = 1
 INSTANTLINK_FIT_STRETCH = 2
+PREPARED_MODEL_CODES = {
+    PrinterModel.MINI: 0,
+    PrinterModel.MINI_LINK3: 1,
+    PrinterModel.SQUARE: 2,
+    PrinterModel.WIDE: 3,
+}
 DEFAULT_SCAN_DURATION_S = 5
 STRING_BUFFER_SIZE = 4096
 FFI_CANCEL_GRACE_S = 5.0
@@ -166,6 +172,20 @@ def default_instantlink_backend() -> InstantLinkBackend:
     return _DEFAULT_BACKEND
 
 
+def prepared_jpeg_available() -> bool:
+    """Report a loaded native capability without loading FFI or touching BLE.
+
+    Printer status normally loads the library before uploads become ready.
+    Earlier callers safely prepare the legacy flavor; printing rechecks the
+    actual loaded library and rebuilds an incompatible orientation if needed.
+    """
+    return (
+        instantlink_backend_enabled()
+        and _DEFAULT_BACKEND is not None
+        and _DEFAULT_BACKEND.prepared_jpeg_available()
+    )
+
+
 async def close_default_instantlink_backend() -> None:
     """Disconnect the process-wide InstantLink backend, if loaded."""
 
@@ -243,6 +263,12 @@ class InstantLinkBackend:
         self._last_status_failure_log_at = -float("inf")
         self._last_status_failure_signature: tuple[str, str, str] | None = None
         self._consecutive_status_failures = 0
+
+    def prepared_jpeg_available(self) -> bool:
+        """Read the optional export from an already loaded library only."""
+        return self._lib is not None and hasattr(
+            self._lib, "instantlink_print_prepared_jpeg_with_progress"
+        )
 
     async def scan(self, timeout_s: float = DEFAULT_SCAN_DURATION_S) -> list[str]:
         """Return normalized visible Instax printer names."""
@@ -521,6 +547,7 @@ class InstantLinkBackend:
         # speculation when a preview already supplied prepared bytes.
         speculative: Future[PreparedImage] | None = None
         prep_executor: ThreadPoolExecutor | None = None
+        prepared_native = hasattr(self._library(), "instantlink_print_prepared_jpeg_with_progress")
         preparation_model = model_override or preparation_model_hint
         if prepared_image is None and preparation_model is not None:
             prep_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="instantlink-prep")
@@ -534,6 +561,7 @@ class InstantLinkBackend:
                     edit=edit,
                     adjustments=adjustments,
                     correction=correction,
+                    apply_model_flip=prepared_native,
                 )
             )
 
@@ -580,7 +608,12 @@ class InstantLinkBackend:
         )
         self._ensure_connected_blocking(name, scan_duration_s=DEFAULT_SCAN_DURATION_S)
         detected_model = self._device_model_blocking()
-        model = _compatible_model_override(detected_model, model_override)
+        prepared_native = hasattr(self._library(), "instantlink_print_prepared_jpeg_with_progress")
+        model = (
+            detected_model
+            if prepared_native
+            else _compatible_model_override(detected_model, model_override)
+        )
 
         spec = spec_for(model)
         _emit_progress(
@@ -597,7 +630,12 @@ class InstantLinkBackend:
         if prepared is None and speculative is not None:
             prepared = _speculative_prepared(speculative)
             source = "speculative"
-        if prepared is not None and prepared.model is not model:
+        expected_flip = prepared_native and spec.flip_vertical
+        if prepared is not None and (
+            prepared.model is not model
+            or prepared.transport_flip_applied != expected_flip
+            or (prepared.width, prepared.height) != (spec.width, spec.height)
+        ):
             LOGGER.info(
                 "instantlink.prepared_discarded expected=%s prepared=%s source=%s",
                 model.value,
@@ -617,6 +655,7 @@ class InstantLinkBackend:
                     edit=edit,
                     adjustments=adjustments,
                     correction=correction,
+                    apply_model_flip=prepared_native,
                 )
             except ImagePipelineError:
                 raise
@@ -636,37 +675,55 @@ class InstantLinkBackend:
             (time.monotonic() - prepare_started) * 1000,
         )
 
+        _emit_progress(
+            progress,
+            PrintProgress(
+                PrintStage.SENDING,
+                "Sending to printer",
+                f"{len(prepared.data) // 1024} KB",
+                0,
+            ),
+        )
+        callback = _print_progress_callback(progress, len(prepared.data))
+        if prepared_native:
+            # Both locals remain strongly referenced until the synchronous
+            # native call returns. Embedded NUL bytes are ordinary JPEG data;
+            # the explicit length, not C-string termination, bounds the input.
+            buffer = (ctypes.c_uint8 * len(prepared.data)).from_buffer_copy(prepared.data)
+            rc = int(
+                self._library().instantlink_print_prepared_jpeg_with_progress(
+                    buffer,
+                    ctypes.c_uint32(len(prepared.data)),
+                    ctypes.c_uint8(PREPARED_MODEL_CODES[prepared.model]),
+                    ctypes.c_uint8(int(prepared.transport_flip_applied)),
+                    ctypes.c_uint8(max(0, min(255, print_option))),
+                    callback,
+                )
+            )
+        else:
+            rc = self._send_legacy_prepared(prepared, print_option, callback)
+        if rc < 0:
+            _raise_for_code(rc, "print failed")
+        _emit_progress(
+            progress,
+            PrintProgress(PrintStage.FINISHING, "Finishing", "Waiting for printer", 100),
+        )
+
+    def _send_legacy_prepared(
+        self,
+        prepared: PreparedImage,
+        print_option: int,
+        callback: Callable[[int, int], None],
+    ) -> int:
+        """Use the older file API with logical pixels and its existing encode quality."""
         temp_path: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(
-                prefix="instantlink-bridge-instantlink-",
-                suffix=".jpg",
-                delete=False,
+                prefix="instantlink-bridge-instantlink-", suffix=".jpg", delete=False
             ) as temp_file:
                 temp_file.write(prepared.data)
                 temp_path = Path(temp_file.name)
-
-            _emit_progress(
-                progress,
-                PrintProgress(
-                    PrintStage.SENDING,
-                    "Sending to printer",
-                    f"{len(prepared.data) // 1024} KB",
-                    0,
-                ),
-            )
-            callback = _print_progress_callback(progress, len(prepared.data))
-            # Hand InstantLink the quality the pipeline actually settled on,
-            # not the configured one (plan 056 T1.3). `prepared.data` is
-            # already sized under spec.max_image_size, but the core decodes it
-            # and re-encodes at whatever quality it is given
-            # (crates/instantlink-core/src/image.rs `encode_jpeg`). Passing the
-            # config value — 100 by default — inflated a 102 KB image back to
-            # ~412 KB and forced the core through its own binary search: a
-            # third full encode pass plus a second generation of JPEG loss.
-            # `encode_jpeg` tries the requested quality first and returns
-            # immediately when it fits, so this collapses that to one encode.
-            rc = int(
+            return int(
                 self._library().instantlink_print_with_progress(
                     str(temp_path).encode("utf-8"),
                     ctypes.c_uint8(max(1, min(100, prepared.quality))),
@@ -674,12 +731,6 @@ class InstantLinkBackend:
                     ctypes.c_uint8(max(0, min(255, print_option))),
                     callback,
                 )
-            )
-            if rc < 0:
-                _raise_for_code(rc, "print failed")
-            _emit_progress(
-                progress,
-                PrintProgress(PrintStage.FINISHING, "Finishing", "Waiting for printer", 100),
             )
         finally:
             if temp_path is not None:
@@ -896,6 +947,16 @@ def _configure_library(lib: ctypes.CDLL) -> None:
         _PRINT_PROGRESS_CALLBACK,
     ]
     lib.instantlink_print_with_progress.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_print_prepared_jpeg_with_progress"):
+        lib.instantlink_print_prepared_jpeg_with_progress.argtypes = [
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_uint32,
+            ctypes.c_uint8,
+            ctypes.c_uint8,
+            ctypes.c_uint8,
+            _PRINT_PROGRESS_CALLBACK,
+        ]
+        lib.instantlink_print_prepared_jpeg_with_progress.restype = ctypes.c_int
 
 
 def _raise_for_code(code: int, context: str) -> None:

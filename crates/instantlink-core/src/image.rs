@@ -4,6 +4,7 @@ use std::io::Cursor;
 use std::path::Path;
 
 use image::imageops::FilterType;
+use image::metadata::Orientation;
 use image::{DynamicImage, GenericImageView};
 
 use crate::error::{PrinterError, Result};
@@ -147,6 +148,232 @@ pub fn chunk_image_data(data: &[u8], model: PrinterModel) -> Vec<Vec<u8>> {
         last.resize(chunk_size, 0);
     }
     chunks
+}
+
+/// Validate a complete, printer-oriented JPEG without changing its encoded bytes.
+///
+/// The caller supplies exact model identity and declares whether the model's
+/// transport flip was applied before encoding. Only 8-bit, three-component
+/// baseline JPEGs with exact print dimensions and no trailing data
+/// are accepted. A strict full entropy decode catches corrupt/truncated scans;
+/// pixel allocation is bounded by the model dimensions checked beforehand.
+/// Raw pixels are authoritative: recognized non-neutral EXIF orientation is
+/// rejected; no metadata transform is applied on this path.
+pub fn validate_prepared_jpeg(
+    data: &[u8],
+    expected_model: PrinterModel,
+    detected_model: PrinterModel,
+    transport_flip_applied: bool,
+) -> Result<()> {
+    if expected_model != detected_model {
+        return Err(PrinterError::Image("prepared JPEG model mismatch".into()));
+    }
+    let spec = detected_model.spec();
+    if transport_flip_applied != spec.flip_vertical {
+        return Err(PrinterError::Image(
+            "prepared JPEG transport flip mismatch".into(),
+        ));
+    }
+    if data.len() > spec.max_image_size {
+        return Err(PrinterError::ImageTooLarge {
+            size: data.len(),
+            max: spec.max_image_size,
+        });
+    }
+    validate_jpeg_structure(data, spec.width, spec.height)?;
+    validate_jpeg_entropy(data, spec.width, spec.height)
+}
+
+/// A private per-call handle; no global decoder state or callbacks cross this boundary.
+struct StrictJpegDecoder(std::ptr::NonNull<std::ffi::c_void>);
+
+impl StrictJpegDecoder {
+    fn parameter(&self, parameter: turbojpeg_sys::TJPARAM) -> i32 {
+        // SAFETY: reads one documented parameter of this private live handle.
+        unsafe { turbojpeg_sys::tj3Get(self.0.as_ptr(), parameter as i32) }
+    }
+    fn error(&self) -> PrinterError {
+        // SAFETY: this handle remains live until Drop; TurboJPEG owns its
+        // null-terminated error string, which is copied before another call.
+        let message = unsafe {
+            let pointer = turbojpeg_sys::tj3GetErrorStr(self.0.as_ptr());
+            if pointer.is_null() {
+                "unknown JPEG validation error".into()
+            } else {
+                std::ffi::CStr::from_ptr(pointer)
+                    .to_string_lossy()
+                    .into_owned()
+            }
+        };
+        PrinterError::Image(format!("invalid prepared JPEG: {message}"))
+    }
+}
+
+impl Drop for StrictJpegDecoder {
+    fn drop(&mut self) {
+        // SAFETY: this owns one successful tj3Init handle and destroys it once.
+        unsafe { turbojpeg_sys::tj3Destroy(self.0.as_ptr()) };
+    }
+}
+
+fn validate_jpeg_entropy(data: &[u8], width: u32, height: u32) -> Result<()> {
+    // SAFETY: initialization takes no pointers and creates an owned handle.
+    let pointer = unsafe { turbojpeg_sys::tj3Init(turbojpeg_sys::TJINIT_TJINIT_DECOMPRESS as i32) };
+    let decoder = StrictJpegDecoder(std::ptr::NonNull::new(pointer).ok_or_else(|| {
+        PrinterError::Image("could not initialize prepared JPEG validator".into())
+    })?);
+    // A warning such as premature EOI must be a validation error, never a
+    // successful decode with missing MCUs filled in. Other Rust JPEG decoders
+    // recover this case even with their strict setting enabled.
+    // SAFETY: live private handle; STOPONWARNING accepts integer 0 or 1.
+    if unsafe {
+        turbojpeg_sys::tj3Set(
+            decoder.0.as_ptr(),
+            turbojpeg_sys::TJPARAM_TJPARAM_STOPONWARNING as i32,
+            1,
+        )
+    } != 0
+    {
+        return Err(decoder.error());
+    }
+    // SAFETY: header inspection reads the bounded immutable slice. It does not
+    // write pixels and uses the same private STOPONWARNING-enabled handle.
+    if unsafe {
+        turbojpeg_sys::tj3DecompressHeader(
+            decoder.0.as_ptr(),
+            data.as_ptr(),
+            data.len() as turbojpeg_sys::size_t,
+        )
+    } != 0
+    {
+        return Err(decoder.error());
+    }
+    let colorspace = decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_COLORSPACE);
+    if decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_JPEGWIDTH) != width as i32
+        || decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_JPEGHEIGHT) != height as i32
+        || decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_PRECISION) != 8
+        || decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_PROGRESSIVE) != 0
+        || decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_LOSSLESS) != 0
+        || decoder.parameter(turbojpeg_sys::TJPARAM_TJPARAM_ARITHMETIC) != 0
+        || ![
+            turbojpeg_sys::TJCS_TJCS_RGB as i32,
+            turbojpeg_sys::TJCS_TJCS_YCbCr as i32,
+        ]
+        .contains(&colorspace)
+    {
+        return Err(invalid_prepared_jpeg());
+    }
+    let mut pixels = vec![0_u8; width as usize * height as usize * 3];
+    // SAFETY: the bounded structural check verified these exact dimensions
+    // before allocation; data is valid for this call, pixels is an RGB buffer
+    // of height * pitch bytes, and the private handle cannot be used concurrently.
+    if unsafe {
+        turbojpeg_sys::tj3Decompress8(
+            decoder.0.as_ptr(),
+            data.as_ptr(),
+            data.len() as turbojpeg_sys::size_t,
+            pixels.as_mut_ptr(),
+            (width * 3) as i32,
+            turbojpeg_sys::TJPF_TJPF_RGB,
+        )
+    } != 0
+    {
+        return Err(decoder.error());
+    }
+    Ok(())
+}
+
+fn invalid_prepared_jpeg() -> PrinterError {
+    PrinterError::Image("invalid prepared RGB JPEG structure or dimensions".into())
+}
+
+fn validate_jpeg_structure(data: &[u8], width: u32, height: u32) -> Result<()> {
+    if !data.starts_with(&[0xff, 0xd8]) {
+        return Err(invalid_prepared_jpeg());
+    }
+    let mut position = 2;
+    let mut in_scan = false;
+    let mut saw_frame = false;
+    let mut saw_scan = false;
+    while position < data.len() {
+        if in_scan {
+            while position < data.len() && data[position] != 0xff {
+                position += 1;
+            }
+        }
+        if data.get(position) != Some(&0xff) {
+            return Err(invalid_prepared_jpeg());
+        }
+        while data.get(position) == Some(&0xff) {
+            position += 1;
+        }
+        let marker = *data.get(position).ok_or_else(invalid_prepared_jpeg)?;
+        position += 1;
+        if in_scan && (marker == 0x00 || (0xd0..=0xd7).contains(&marker)) {
+            continue;
+        }
+        in_scan = false;
+        if marker == 0xd9 {
+            return if saw_frame && saw_scan && position == data.len() {
+                Ok(())
+            } else {
+                Err(invalid_prepared_jpeg())
+            };
+        }
+        // DNL/hierarchical/arithmetic/reserved frame extensions cannot change
+        // dimensions or coding mode after the checked baseline frame header.
+        if matches!(
+            marker,
+            0x00 | 0x01 | 0xc8 | 0xcc | 0xd0..=0xd8 | 0xdc | 0xde | 0xdf
+        ) {
+            return Err(invalid_prepared_jpeg());
+        }
+        let length_bytes = data
+            .get(position..position + 2)
+            .ok_or_else(invalid_prepared_jpeg)?;
+        let length = u16::from_be_bytes([length_bytes[0], length_bytes[1]]) as usize;
+        if length < 2 {
+            return Err(invalid_prepared_jpeg());
+        }
+        let segment = data
+            .get(position + 2..position + length)
+            .ok_or_else(invalid_prepared_jpeg)?;
+        if marker == 0xe1
+            && let Some(exif) = segment.strip_prefix(b"Exif\0\0")
+            && Orientation::from_exif_chunk(exif)
+                .is_some_and(|orientation| orientation != Orientation::NoTransforms)
+        {
+            return Err(PrinterError::Image(
+                "prepared JPEG contains non-neutral EXIF orientation".into(),
+            ));
+        }
+        if marker == 0xc0 {
+            if saw_frame
+                || segment.len() != 15
+                || segment[0] != 8
+                || segment[5] != 3
+                || u16::from_be_bytes([segment[1], segment[2]]) as u32 != height
+                || u16::from_be_bytes([segment[3], segment[4]]) as u32 != width
+            {
+                return Err(invalid_prepared_jpeg());
+            }
+            saw_frame = true;
+        } else if matches!(marker, 0xc1..=0xc3 | 0xc5..=0xc7 | 0xc9..=0xcb | 0xcd..=0xcf) {
+            return Err(invalid_prepared_jpeg());
+        } else if marker == 0xda {
+            if !saw_frame
+                || segment.is_empty()
+                || !(1..=3).contains(&segment[0])
+                || segment.len() != 4 + 2 * segment[0] as usize
+            {
+                return Err(invalid_prepared_jpeg());
+            }
+            saw_scan = true;
+            in_scan = true;
+        }
+        position += length;
+    }
+    Err(invalid_prepared_jpeg())
 }
 
 /// Shared image preparation pipeline: resize → flip (if needed) → encode → chunk.

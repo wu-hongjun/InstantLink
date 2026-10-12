@@ -27,6 +27,9 @@ Pre-built artifacts are published on the [Releases](https://github.com/wu-hongju
 
 Build from source:
 
+Install a Rust toolchain, CMake and a C compiler first. The prepared-JPEG validator bundles
+and statically links libjpeg-turbo. Install NASM for SIMD support when building for x86.
+
 ```bash
 git clone https://github.com/wu-hongjun/InstantLink.git
 cd InstantLink

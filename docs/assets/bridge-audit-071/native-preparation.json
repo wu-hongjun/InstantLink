@@ -1,0 +1,363 @@
+{
+  "boundary": "Same-release native legacy decode/resize/encode/chunk versus strict validate/chunk of production HIF-derived JPEG; no BLE send or film",
+  "source_bytes": 11255808,
+  "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+  "settings": {
+    "fit": "auto",
+    "quality": 100,
+    "adjustments": {
+      "saturation": 1.5,
+      "exposure": 1.0,
+      "sharpness": 1.0,
+      "hue": 0,
+      "vignette": 0,
+      "datestamp": false,
+      "watermark": false,
+      "datestamp_text": "",
+      "watermark_text": ""
+    },
+    "correction": {
+      "saturation": 1.0
+    }
+  },
+  "models": [
+    {
+      "model": "mini",
+      "legacy_input": {
+        "bytes": 102631,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "91ea49b5d1c671dfcad2b000946bb06f8638b35b26f0222170ebd49ad856dd0d",
+        "rgb_sha256": "a248fb563dc736cc05430b5b9c2992a4f930d913088a9792918304ae79967377"
+      },
+      "prepared_input": {
+        "bytes": 102631,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "91ea49b5d1c671dfcad2b000946bb06f8638b35b26f0222170ebd49ad856dd0d",
+        "rgb_sha256": "a248fb563dc736cc05430b5b9c2992a4f930d913088a9792918304ae79967377"
+      },
+      "legacy_output": {
+        "bytes": 104154,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "b67794086e292c3b7590b835878788aec473873a9d9c2dd7eb6216f62503422c",
+        "rgb_sha256": "96dc767eb974cc45dadd43f2b77f8662b9b7d49c6c05d5402940ae144823cea0"
+      },
+      "prepared_output": {
+        "bytes": 102631,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "91ea49b5d1c671dfcad2b000946bb06f8638b35b26f0222170ebd49ad856dd0d",
+        "rgb_sha256": "a248fb563dc736cc05430b5b9c2992a4f930d913088a9792918304ae79967377"
+      },
+      "legacy_input_quality": 80,
+      "prepared_input_quality": 80,
+      "transport_flip_applied": false,
+      "first_python_prepare_s": 4.072089737997885,
+      "cache_oriented_python_prepare_s": 0.6290221359995485,
+      "native": {
+        "architecture": "aarch64",
+        "iterations": 5,
+        "jpeg_bytes_equal": false,
+        "legacy_chunks": 116,
+        "legacy_output_bytes": 104154,
+        "legacy_prepare_ms": [
+          757.9177080000001,
+          740.207291,
+          738.490729,
+          736.987395,
+          737.233385
+        ],
+        "model": "Mini",
+        "os": "linux",
+        "prepared_chunks": 115,
+        "prepared_output_bytes": 102631,
+        "prepared_validate_chunk_ms": [
+          13.515780999999999,
+          13.381822999999999,
+          13.448177000000001,
+          13.519896,
+          13.47401
+        ],
+        "quality_supplied_to_legacy": 80,
+        "rgb_maximum_channel_error": 68,
+        "rgb_mean_absolute_error": 2.5902541666666665,
+        "rgb_psnr_db": 36.19041968587601,
+        "rgb_root_mean_square_error": 3.953840959539639,
+        "transport_flip_applied": false
+      },
+      "exact_prepared_bytes_preserved": true,
+      "preview_dimensions": [
+        70,
+        112
+      ],
+      "clock_sample_count": 85,
+      "sampled_cpu_khz": [
+        1000000
+      ]
+    },
+    {
+      "model": "mini_link3",
+      "legacy_input": {
+        "bytes": 54479,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "b3e2b014ea9e738827fe18699619a0381c86213f3c486686b207a9c93d57dcce",
+        "rgb_sha256": "49cc122711c993b029048429cf14b90d39a6121bf7019ab01ad2085c65bfde7e"
+      },
+      "prepared_input": {
+        "bytes": 54498,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "e7267de204bfc81b2c07997bd4c5fd66e14ac39e5fa5b23ec2f536c7c4af6a4e",
+        "rgb_sha256": "aa7a1e56adc2ed033d32e53c782abf9936dd5dd1bba6fa133b25eb1883a43f75"
+      },
+      "legacy_output": {
+        "bytes": 54224,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "517a95325788335bc721f9d9b2ca187ec0a97b177d39f82ede6fed261a7bb102",
+        "rgb_sha256": "73a72dcea9f99c0a50121118f5aa260f50a13eb97b4634f9eb04f8969c1e6e30"
+      },
+      "prepared_output": {
+        "bytes": 54498,
+        "dimensions": [
+          600,
+          800
+        ],
+        "jpeg_sha256": "e7267de204bfc81b2c07997bd4c5fd66e14ac39e5fa5b23ec2f536c7c4af6a4e",
+        "rgb_sha256": "aa7a1e56adc2ed033d32e53c782abf9936dd5dd1bba6fa133b25eb1883a43f75"
+      },
+      "legacy_input_quality": 42,
+      "prepared_input_quality": 42,
+      "transport_flip_applied": true,
+      "first_python_prepare_s": 3.8604199990004417,
+      "cache_oriented_python_prepare_s": 0.5512733850009681,
+      "native": {
+        "architecture": "aarch64",
+        "iterations": 5,
+        "jpeg_bytes_equal": false,
+        "legacy_chunks": 61,
+        "legacy_output_bytes": 54224,
+        "legacy_prepare_ms": [
+          616.5772390000001,
+          612.307813,
+          611.954844,
+          612.666198,
+          612.234635
+        ],
+        "model": "MiniLink3",
+        "os": "linux",
+        "prepared_chunks": 61,
+        "prepared_output_bytes": 54498,
+        "prepared_validate_chunk_ms": [
+          10.815937,
+          10.781511,
+          10.819894999999999,
+          10.769115,
+          10.704011
+        ],
+        "quality_supplied_to_legacy": 42,
+        "rgb_maximum_channel_error": 81,
+        "rgb_mean_absolute_error": 4.7225118055555555,
+        "rgb_psnr_db": 31.205164136763276,
+        "rgb_root_mean_square_error": 7.01910878918716,
+        "transport_flip_applied": true
+      },
+      "exact_prepared_bytes_preserved": true,
+      "preview_dimensions": [
+        70,
+        112
+      ],
+      "clock_sample_count": 76,
+      "sampled_cpu_khz": [
+        1000000
+      ]
+    },
+    {
+      "model": "square",
+      "legacy_input": {
+        "bytes": 102303,
+        "dimensions": [
+          800,
+          800
+        ],
+        "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+        "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+      },
+      "prepared_input": {
+        "bytes": 102303,
+        "dimensions": [
+          800,
+          800
+        ],
+        "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+        "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+      },
+      "legacy_output": {
+        "bytes": 104628,
+        "dimensions": [
+          800,
+          800
+        ],
+        "jpeg_sha256": "00a6acc3a18109011c6b19b90927a2551f8b44330fb3b6917c530dfdedcc2a1f",
+        "rgb_sha256": "e37be85e876066b35b923adf2bd9a2c42faec9ec3282528e544fc78d0798faf1"
+      },
+      "prepared_output": {
+        "bytes": 102303,
+        "dimensions": [
+          800,
+          800
+        ],
+        "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+        "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+      },
+      "legacy_input_quality": 76,
+      "prepared_input_quality": 76,
+      "transport_flip_applied": false,
+      "first_python_prepare_s": 5.795027236999886,
+      "cache_oriented_python_prepare_s": 0.7013773440012301,
+      "native": {
+        "architecture": "aarch64",
+        "iterations": 5,
+        "jpeg_bytes_equal": false,
+        "legacy_chunks": 58,
+        "legacy_output_bytes": 104628,
+        "legacy_prepare_ms": [
+          950.419999,
+          943.299791,
+          944.4965100000001,
+          942.4038009999999,
+          942.507969
+        ],
+        "model": "Square",
+        "os": "linux",
+        "prepared_chunks": 57,
+        "prepared_output_bytes": 102303,
+        "prepared_validate_chunk_ms": [
+          15.589583000000001,
+          15.500885,
+          15.614115,
+          15.560053,
+          15.522343
+        ],
+        "quality_supplied_to_legacy": 76,
+        "rgb_maximum_channel_error": 42,
+        "rgb_mean_absolute_error": 2.344997916666667,
+        "rgb_psnr_db": 37.15031024390465,
+        "rgb_root_mean_square_error": 3.5401744895791034,
+        "transport_flip_applied": false
+      },
+      "exact_prepared_bytes_preserved": true,
+      "preview_dimensions": [
+        93,
+        112
+      ],
+      "clock_sample_count": 113,
+      "sampled_cpu_khz": [
+        1000000
+      ]
+    },
+    {
+      "model": "wide",
+      "legacy_input": {
+        "bytes": 217375,
+        "dimensions": [
+          1260,
+          840
+        ],
+        "jpeg_sha256": "f1c3517f39e13f3bd0aac431d799115f2a94bc9074af1a99b2fa8fb64b9f5e5a",
+        "rgb_sha256": "55e4cc86dd66f0828595ae6fd282ed97d26899f080e48225cd334e55305c8ece"
+      },
+      "prepared_input": {
+        "bytes": 217375,
+        "dimensions": [
+          1260,
+          840
+        ],
+        "jpeg_sha256": "f1c3517f39e13f3bd0aac431d799115f2a94bc9074af1a99b2fa8fb64b9f5e5a",
+        "rgb_sha256": "55e4cc86dd66f0828595ae6fd282ed97d26899f080e48225cd334e55305c8ece"
+      },
+      "legacy_output": {
+        "bytes": 223131,
+        "dimensions": [
+          1260,
+          840
+        ],
+        "jpeg_sha256": "0822f1b2d0a28d0e98569b233beba1b73834ab796569b0c8b10ee348a96597d0",
+        "rgb_sha256": "ac3d3edbc535fe636476cb6a5891c4c05cc32d4360f0c0fbc48679484c7d660b"
+      },
+      "prepared_output": {
+        "bytes": 217375,
+        "dimensions": [
+          1260,
+          840
+        ],
+        "jpeg_sha256": "f1c3517f39e13f3bd0aac431d799115f2a94bc9074af1a99b2fa8fb64b9f5e5a",
+        "rgb_sha256": "55e4cc86dd66f0828595ae6fd282ed97d26899f080e48225cd334e55305c8ece"
+      },
+      "legacy_input_quality": 85,
+      "prepared_input_quality": 85,
+      "transport_flip_applied": false,
+      "first_python_prepare_s": 6.244283486998029,
+      "cache_oriented_python_prepare_s": 1.1326362500003597,
+      "native": {
+        "architecture": "aarch64",
+        "iterations": 5,
+        "jpeg_bytes_equal": false,
+        "legacy_chunks": 248,
+        "legacy_output_bytes": 223131,
+        "legacy_prepare_ms": [
+          1625.412968,
+          1609.587031,
+          1616.015312,
+          1607.2983330000002,
+          1606.985936
+        ],
+        "model": "Wide",
+        "os": "linux",
+        "prepared_chunks": 242,
+        "prepared_output_bytes": 217375,
+        "prepared_validate_chunk_ms": [
+          28.706407,
+          29.253332999999998,
+          28.872396000000002,
+          28.73177,
+          29.010886
+        ],
+        "quality_supplied_to_legacy": 85,
+        "rgb_maximum_channel_error": 48,
+        "rgb_mean_absolute_error": 1.7182457797933988,
+        "rgb_psnr_db": 39.63734081551069,
+        "rgb_root_mean_square_error": 2.6587232883114265,
+        "transport_flip_applied": false
+      },
+      "exact_prepared_bytes_preserved": true,
+      "preview_dimensions": [
+        140,
+        112
+      ],
+      "clock_sample_count": 156,
+      "sampled_cpu_khz": [
+        1000000
+      ]
+    }
+  ],
+  "temperature_c": 45.622,
+  "throttled": "throttled=0x0"
+}

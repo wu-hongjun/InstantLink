@@ -29,7 +29,6 @@ from instantlink_bridge.imaging.pipeline import (
     WorkingImageCache,
     _working_size_for_model,
     prepare_for_instantlink_backend,
-    prepare_for_instax,
     source_identity,
 )
 from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
@@ -57,8 +56,8 @@ class ImagePreparationRequest:
     adjustments: AdjustmentProfile | None = None
     correction: CorrectionProfile | None = None
     working_cache: WorkingImageCache | None = None
-    # False selects the InstantLink-backend flavour, which leaves the
-    # model transport flip to InstantLink itself (plan 056 T1.1).
+    # False selects logical pixels for the legacy native file API; True
+    # applies transport orientation before the final encode for direct bytes.
     apply_model_flip: bool = True
 
 
@@ -533,10 +532,7 @@ def _run_prepare_in_child(
     request: ImagePreparationRequest,
 ) -> None:
     try:
-        prepare = (
-            prepare_for_instax if request.apply_model_flip else prepare_for_instantlink_backend
-        )
-        prepared = prepare(
+        prepared = prepare_for_instantlink_backend(
             request.source_path,
             request.model,
             fit=request.fit,
@@ -545,6 +541,7 @@ def _run_prepare_in_child(
             adjustments=request.adjustments,
             correction=request.correction,
             working_cache=request.working_cache,
+            apply_model_flip=request.apply_model_flip,
         )
         result_writer.send(_PreparedImageResult(prepared))
     except ImageTooLargeError as error:

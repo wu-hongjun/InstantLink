@@ -165,6 +165,63 @@ typedef void (*instantlink_print_progress_cb_ctx)(uint32_t sent, uint32_t total,
 - **Callback Invocation**: Progress callbacks are invoked from the tokio runtime thread after each chunk is acknowledged. UI callers must synchronize state updates (e.g., via Grand Central Dispatch).
 - **Thread Safety**: The context pointer is thread-safe by design since it is passed opaque and unchanged to each callback.
 
+### Prepared JPEG Printing
+
+Callers that already perform model-specific image preparation can send their final JPEG
+without another resize, flip or JPEG encode:
+
+```c
+int32_t instantlink_print_prepared_jpeg(const uint8_t *data, uint32_t data_len,
+                                        uint8_t expected_model,
+                                        uint8_t transport_flip_applied,
+                                        uint8_t print_option);
+int32_t instantlink_print_prepared_jpeg_with_progress(const uint8_t *data,
+                                                      uint32_t data_len,
+                                                      uint8_t expected_model,
+                                                      uint8_t transport_flip_applied,
+                                                      uint8_t print_option,
+                                                      void (*progress_cb)(uint32_t, uint32_t));
+int32_t instantlink_print_prepared_jpeg_with_progress_ctx(const uint8_t *data,
+                                                          uint32_t data_len,
+                                                          uint8_t expected_model,
+                                                          uint8_t transport_flip_applied,
+                                                          uint8_t print_option,
+                                                          instantlink_print_progress_cb_ctx progress_cb,
+                                                          void *context);
+```
+
+| Model | `expected_model` | Dimensions | Maximum bytes | `transport_flip_applied` |
+| --- | --- | --- | --- | --- |
+| Mini | 0 | 600×800 | 105,000 | 0 |
+| Mini Link 3 | 1 | 600×800 | 55,000 | 1 |
+| Square | 2 | 800×800 | 105,000 | 0 |
+| Wide | 3 | 1260×840 | 225,000 | 0 |
+
+The exact detected model must match, including Mini versus Mini Link 3. JPEG data must be a
+complete 8-bit, three-component baseline JPEG with exact dimensions, within the model's byte
+budget and without trailing data. Progressive, grayscale, CMYK, arithmetic/lossless JPEG and
+recognized non-neutral EXIF orientation are rejected. Raw pixel orientation is authoritative.
+Mini Link 3's vertical transport flip must be applied **before encoding**; the native path
+validates the declaration and transmits those bytes unchanged. It cannot infer orientation
+from arbitrary pixel content, so the caller must uphold that declaration.
+
+The core performs a bounded full decode with warnings treated as errors to detect incomplete
+entropy scans; it discards validation pixels and performs no new encode. Validation failure
+returns `-6` before any Printer write. Null/empty input, unknown model or flip values outside
+0/1 return `-5`; no connected device returns `-1`. No legacy retry occurs after a failed send.
+
+`data` must remain readable and unchanged for the entire synchronous call. Callbacks/context
+must stay alive until return; callbacks occur after acknowledged chunks and never afterwards.
+The global device mutex is released before callbacks, while the per-Printer operation lock
+serializes the transaction. Callbacks must not synchronously start another serialized Printer
+operation; identity getters are safe. Marshal UI work to the UI thread. All three exports catch
+Rust panics; the existing file-based functions remain available.
+
+The Bridge detects this optional export in its FFI wrapper. Compatible native builds use an
+in-memory byte buffer and correctly oriented prepared JPEG; older builds use the legacy
+unflipped preparation/file path. Physical and virtual LCD previews reverse the transport flip
+only when rendering. No management or sync API field is added.
+
 ### LED Control
 
 ```c

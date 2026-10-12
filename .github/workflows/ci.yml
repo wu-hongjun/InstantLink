@@ -18,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install JPEG build tools
+        run: brew install cmake nasm
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
@@ -54,6 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install JPEG build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake nasm
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -92,6 +98,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install JPEG build tools
+        run: brew install cmake nasm
 
       - uses: dtolnay/rust-toolchain@stable
         with:

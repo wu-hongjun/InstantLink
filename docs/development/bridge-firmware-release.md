@@ -67,7 +67,9 @@ This prevents `latest.json` from being accepted where an installable package man
 
 ## Local Build
 
-Install `zig` and `cargo-zigbuild`, then run:
+Install `zig`, `cargo-zigbuild`, CMake and a C compiler, then run. The prepared-JPEG
+validator builds and statically links its bundled libjpeg-turbo; the Pi does not need a new
+shared library. NASM enables SIMD when building for x86; arm64 uses the compiler's NEON support.
 
 ```bash
 cargo install cargo-zigbuild --locked

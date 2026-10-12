@@ -358,7 +358,8 @@ async def test_dispatch_survives_missing_outbox(tmp_path: Path) -> None:
         printer_sender=_unused_sender,
     )
 
-    assert ui.events == []
+    assert ui.events == ["failed:Sync unavailable"]
+    assert received.path.exists()
 
 
 @pytest.mark.asyncio

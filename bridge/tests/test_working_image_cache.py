@@ -36,8 +36,12 @@ def fake_hif(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Pat
         "source = pathlib.Path(sys.argv[-2]).read_bytes()\n"
         "if source.startswith(b'WAIT'): time.sleep(30)\n"
         "if source.startswith(b'FAIL'): sys.exit(1)\n"
-        "image = Image.new('RGB', (90, 60), (source[0], 100, 170))\n"
-        "ImageDraw.Draw(image).rectangle((4, 6, 40, 22), fill=(210, 110, 70))\n"
+        "if source.startswith(b'TINY') and '-p' not in sys.argv:\n"
+        "    Image.new('RGB', (160, 120), (10, 20, 30)).save(sys.argv[-1], format='PNG')\n"
+        "    sys.exit(0)\n"
+        "if source.startswith(b'TINY_WAIT') and '-p' in sys.argv: time.sleep(30)\n"
+        "image = Image.new('RGB', (900, 600), (source[0] % 4 * 60 + 30, 100, 170))\n"
+        "ImageDraw.Draw(image).rectangle((40, 60, 400, 220), fill=(210, 110, 70))\n"
         "exif = Image.Exif(); exif[274] = 6\n"
         "image.save(sys.argv[-1], format='PNG', exif=exif)\n"
     )
@@ -49,7 +53,7 @@ def fake_hif(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Pat
 
 
 def decode_count(counter: Path) -> int:
-    return int(counter.read_text()) if counter.exists() else 0
+    return int(counter.read_text() or "0") if counter.exists() else 0
 
 
 def test_real_lazy_heif_fallback_materializes_before_parallel_cache_write(
@@ -143,7 +147,7 @@ async def test_lossless_cache_reuses_decode_across_edits_and_preserves_exact_out
         assert decode_count(counter) == 1
         cache = worker._working_cache
         assert cache is not None and cache.path.exists()
-        assert cache.path.stat().st_size < 90 * 60 * 4 + 1024
+        assert cache.path.stat().st_size < 900 * 600 * 4 + 1024
         for prepared, (edit, fit) in zip(cached, cases, strict=True):
             reference = prepare_for_instantlink_backend(
                 source,
@@ -221,17 +225,18 @@ async def test_cache_ttl_expiration_releases_file_and_redecodes(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("source_bytes, attempts", [(b"WAIT", 1), (b"TINY_WAIT", 2)])
 async def test_cancel_cleans_cache_and_partial_write_after_decoder_is_stopped(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source_bytes: bytes, attempts: int
 ) -> None:
     source, counter = fake_hif(tmp_path, monkeypatch)
-    source.write_bytes(b"WAIT")
+    source.write_bytes(source_bytes)
     worker = ImagePreparationWorker(poll_interval_s=0.005, shutdown_grace_s=0.1)
     task = asyncio.create_task(worker.prepare(source, PrinterModel.SQUARE))
     try:
 
         async def wait_for_decoder() -> None:
-            while not counter.exists():  # noqa: ASYNC110 - external decoder writes marker
+            while decode_count(counter) < attempts:  # noqa: ASYNC110 - external decoder marker
                 await asyncio.sleep(0.005)
 
         await asyncio.wait_for(wait_for_decoder(), 3)
@@ -245,7 +250,7 @@ async def test_cancel_cleans_cache_and_partial_write_after_decoder_is_stopped(
         assert worker._working_cache is None and not directory.exists()
         source.write_bytes(b"GOOD")
         await worker.prepare(source, PrinterModel.SQUARE)
-        assert decode_count(counter) == 2
+        assert decode_count(counter) == attempts + 1
     finally:
         if not task.done():
             task.cancel()

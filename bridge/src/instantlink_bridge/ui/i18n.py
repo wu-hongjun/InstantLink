@@ -667,6 +667,7 @@ _ZH_HANS: dict[str, str] = {
     # Sync-service honesty causes/notes/toasts, the sync-ready footer chips,
     # and the discoverability nudges + settings cross-links.
     "Sync starting": "同步启动中",
+    "Sync unavailable": "同步不可用",
     "Sync failed · restart bridge": "同步失败 · 请重启桥接",
     "Sync starting · try again": "同步启动中 · 请稍后再试",
     "Switch to Sync mode first": "请先切换到同步模式",

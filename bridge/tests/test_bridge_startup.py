@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -698,3 +699,149 @@ async def test_shutdown_releases_active_and_multiple_queued_sources_without_dele
     assert runtime.queue.empty()
     assert len(photos) == 5
     assert all(photo.read_bytes() == b"original" for photo in photos)
+
+
+@pytest.mark.asyncio
+async def test_sync_upload_waits_for_deferred_outbox_before_releasing_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import threading
+
+    real_dispatch = app.dispatch_received_image
+    runtime = Runtime(monkeypatch, upload=True)
+    runtime.switch_to_sync = True
+    building, build_release = threading.Event(), threading.Event()
+    saved = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    class DelayedOutbox:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            building.set()
+            assert build_release.wait(2)
+
+        def add(self, path: Path, *, remote_ip: str) -> None:
+            runtime.events.append(f"saved:{path.name}:{remote_ip}")
+            loop.call_soon_threadsafe(saved.set)
+
+        def depth(self) -> int:
+            return 1
+
+    monkeypatch.setattr(outbox, "SyncOutbox", DelayedOutbox)
+    monkeypatch.setattr(app, "dispatch_received_image", real_dispatch)
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    try:
+        await asyncio.wait_for(runtime.ready.wait(), 1)
+        assert await asyncio.to_thread(building.wait, 1)
+        await asyncio.sleep(0)
+        assert "release:photo.jpg" not in runtime.events
+        assert not saved.is_set()
+        assert runtime.queue is not None
+        assert runtime.queue._unfinished_tasks == 1
+        build_release.set()
+        await asyncio.wait_for(saved.wait(), 1)
+        await asyncio.wait_for(runtime.queue.join(), 1)
+        assert "saved:photo.jpg:camera" in runtime.events
+        assert runtime.events.count("release:photo.jpg") == 1
+    finally:
+        build_release.set()
+        runtime.stop.set()
+        await asyncio.wait_for(task, 2)
+
+
+@pytest.mark.asyncio
+async def test_shutdown_cancels_photo_waiting_for_sync_setup_without_orphaned_queue_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = Runtime(monkeypatch, upload=True)
+    runtime.switch_to_sync = True
+    setup_started, setup_release = asyncio.Event(), asyncio.Event()
+
+    async def initial_depth(*_args: object) -> None:
+        setup_started.set()
+        await setup_release.wait()
+
+    monkeypatch.setattr(app, "announce_initial_outbox_depth", initial_depth)
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    await asyncio.wait_for(setup_started.wait(), 1)
+    await asyncio.sleep(0)
+    assert "release:photo.jpg" not in runtime.events
+    runtime.stop.set()
+    await asyncio.wait_for(task, 2)
+    assert runtime.events.count("release:photo.jpg") == 1
+    assert not runtime.dispatched.is_set()
+    assert runtime.queue is not None
+    await asyncio.wait_for(runtime.queue.join(), 0.1)
+
+
+@pytest.mark.asyncio
+async def test_shutdown_joins_deferred_sync_construction_then_stops_constructed_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import threading
+
+    runtime = Runtime(monkeypatch)
+    building, release = threading.Event(), threading.Event()
+
+    class DelayedOutbox:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            building.set()
+            assert release.wait(2)
+            runtime.events.append("outbox-built-after-stop")
+
+        def depth(self) -> int:
+            return 0
+
+    monkeypatch.setattr(outbox, "SyncOutbox", DelayedOutbox)
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    try:
+        assert await asyncio.to_thread(building.wait, 1)
+        runtime.stop.set()
+        await asyncio.sleep(0.02)
+        assert not task.done(), "shutdown must retain the constructor's eventual service"
+        assert "ui-stop" not in runtime.events
+        release.set()
+        await asyncio.wait_for(task, 2)
+        assert runtime.events.index("outbox-built-after-stop") < runtime.events.index("sync-stop")
+        assert runtime.events.index("sync-stop") < runtime.events.index("ui-stop")
+    finally:
+        release.set()
+        runtime.stop.set()
+        await task
+
+
+@pytest.mark.asyncio
+async def test_repeated_runtime_cancellation_finishes_shared_resource_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = Runtime(monkeypatch)
+    entered, release = asyncio.Event(), asyncio.Event()
+    task = asyncio.create_task(app.run_ftp_receive_slice(Path("config.toml")))
+    await asyncio.wait_for(runtime.ready.wait(), 1)
+
+    async def slow_stop() -> None:
+        entered.set()
+        await release.wait()
+        runtime.events.append("ui-stop-finished")
+
+    runtime.ui.stop = slow_stop
+    try:
+        task.cancel()
+        await asyncio.wait_for(entered.wait(), 1)
+        task.cancel()
+        await asyncio.sleep(0)
+        assert not task.done(), "repeated cancellation must join the existing cleanup task"
+        assert "cpu-close" not in runtime.events
+        assert "ftp-stop" not in runtime.events
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, 2)
+        assert "agent-cancel" in runtime.events
+        assert runtime.events.index("ui-stop-finished") < runtime.events.index("cpu-close")
+        assert runtime.events.index("cpu-close") < runtime.events.index("ftp-stop")
+    finally:
+        release.set()
+        runtime.stop.set()
+        if not task.done():
+            task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task

@@ -370,6 +370,9 @@ stateDiagram-v2
 - In `Crop`, all joystick directions pan the crop window and the LCD hint says `Crop: 4-way pan`;
   entering crop mode guarantees a visible crop.
 - In `Rotate`, joystick left/right rotates the image in 90 degree steps.
+- Pressing Print during an update freezes the selected edit, finishes that preparation and
+  reuses its JPEG. Cancel remains available while it finishes. Inputs that do not change an
+  edit still stop timed printing, but do not start another preparation.
 - KEY2 cancels and deletes the pending job.
 - Any BLE disconnect pauses transition and surfaces `ERROR_BLE`.
 - New uploads while waiting are queued by path and processed one by one after the current preview or
@@ -387,6 +390,8 @@ stateDiagram-v2
 - While the SYNC_PAIRING QR is on screen, arriving images are held before the preview/no-film/
   auto-print flow runs (plan 051 pass 2): nothing prints or switches modes behind the QR, and the
   deferred image proceeds normally (timer restarted) once the user exits with KEY2/LEFT.
+- In Sync mode, an accepted photo waits for the outbox to finish starting. Setup failure shows
+  `Sync unavailable` and retains the original; it does not start Printer polling or printing.
 
 ## Print Progress
 

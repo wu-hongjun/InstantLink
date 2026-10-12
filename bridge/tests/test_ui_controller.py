@@ -542,12 +542,13 @@ async def test_late_preview_rebuild_cannot_overwrite_printing(
     action_task = asyncio.create_task(ui._handle_action(UiAction.UP))
     await asyncio.wait_for(rebuild_started.wait(), timeout=0.5)
 
-    # Editing now suspends auto-print; explicit confirmation ends the session.
+    # Confirmation waits for edited bytes. An externally superseding print
+    # state must still prevent this worker from publishing a stale frame/error.
     await ui._handle_action(UiAction.SELECT)
-    assert await asyncio.wait_for(task, timeout=0.5) == PrintEdit(zoom=1.25)
-
+    assert not task.done()
     await ui.printing_started(received)
     release_rebuild.set()
+    assert await asyncio.wait_for(task, timeout=0.5) is None
     await asyncio.wait_for(action_task, timeout=0.5)
 
     assert display.snapshots[-1].mode is UiMode.PRINTING
@@ -600,13 +601,14 @@ async def test_late_preview_rebuild_cannot_overwrite_newer_preview(
     await asyncio.wait_for(old_rebuild_started.wait(), timeout=0.5)
 
     await ui._handle_action(UiAction.SELECT)
-    assert await asyncio.wait_for(first_task, timeout=0.5) == PrintEdit(zoom=1.25)
+    assert not first_task.done()
 
     second_task = asyncio.create_task(ui.await_print_confirmation(second_received, timeout_s=None))
     await _wait_for_preview_image_name(display, "second.jpg")
     assert display.snapshots[-1].preview_image is second_image
 
     release_old_rebuild.set()
+    assert await asyncio.wait_for(first_task, timeout=0.5) is None
     await asyncio.wait_for(old_action_task, timeout=0.5)
 
     assert display.snapshots[-1].last_image_name == "second.jpg"

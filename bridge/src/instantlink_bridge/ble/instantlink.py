@@ -207,6 +207,7 @@ async def print_file_to_printer(
     adjustments: AdjustmentProfile | None = None,
     correction: CorrectionProfile | None = None,
     prepared_image: PreparedImage | None = None,
+    preparation_model_hint: PrinterModel | None = None,
 ) -> None:
     """Print a file through InstantLink's Rust transport.
 
@@ -228,6 +229,7 @@ async def print_file_to_printer(
         adjustments=adjustments,
         correction=correction,
         prepared_image=prepared_image,
+        preparation_model_hint=preparation_model_hint,
     )
 
 
@@ -277,6 +279,7 @@ class InstantLinkBackend:
         adjustments: AdjustmentProfile | None = None,
         correction: CorrectionProfile | None = None,
         prepared_image: PreparedImage | None = None,
+        preparation_model_hint: PrinterModel | None = None,
     ) -> None:
         """Prepare an edited image and send it through InstantLink."""
 
@@ -295,6 +298,7 @@ class InstantLinkBackend:
                 adjustments,
                 correction,
                 prepared_image,
+                preparation_model_hint,
             ),
         )
 
@@ -507,22 +511,24 @@ class InstantLinkBackend:
         adjustments: AdjustmentProfile | None = None,
         correction: CorrectionProfile | None = None,
         prepared_image: PreparedImage | None = None,
+        preparation_model_hint: PrinterModel | None = None,
     ) -> None:
         # Image prep needs no BLE link, so overlap it with the connect and
         # model query below — seconds of radio work (plan 056 T1.6). Only
-        # speculate when the model is configured: that is the model we build
-        # for, and the mismatch guard further down discards the result if
-        # detection disagrees. Skipped entirely when a preview already handed
-        # us an image (T1.1), which is the common case at the shipped default.
+        # speculate when a configured model or a cached detection hint is
+        # available. A hint affects preparation only; detection still chooses
+        # the actual output model and discards a mismatched preparation. Skip
+        # speculation when a preview already supplied prepared bytes.
         speculative: Future[PreparedImage] | None = None
         prep_executor: ThreadPoolExecutor | None = None
-        if prepared_image is None and model_override is not None:
+        preparation_model = model_override or preparation_model_hint
+        if prepared_image is None and preparation_model is not None:
             prep_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="instantlink-prep")
             speculative = prep_executor.submit(
                 partial(
                     prepare_for_instantlink_backend,
                     image_path,
-                    model_override,
+                    preparation_model,
                     fit=fit,
                     quality=quality,
                     edit=edit,

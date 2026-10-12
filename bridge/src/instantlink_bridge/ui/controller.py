@@ -582,6 +582,7 @@ class BridgeUi:
         self._preview_ready_event = asyncio.Event()
         self._preview_interaction_event = asyncio.Event()
         self._preview_manual_confirmation = False
+        self._preview_accept_requested = False
         # The most recent preview's InstantLink-ready image, handed to the
         # print path so it need not re-run the pipeline (plan 056 T1.1).
         self._prepared_print_image: PreparedImage | None = None
@@ -927,6 +928,7 @@ class BridgeUi:
         self._preview_ready_event = asyncio.Event()
         self._preview_interaction_event = asyncio.Event()
         self._preview_manual_confirmation = timeout_s is None
+        self._preview_accept_requested = False
         ready_task = asyncio.create_task(self._preview_ready_event.wait())
         interaction_task = asyncio.create_task(self._preview_interaction_event.wait())
         result_waiter = cast(asyncio.Future[object], result)
@@ -949,6 +951,8 @@ class BridgeUi:
                 return None
             deadline = None if timeout_s is None else loop.time() + timeout_s
             while True:
+                if not self._preview_session_can_apply(session_token, received, result):
+                    return None
                 if self._preview_manual_confirmation or deadline is None:
                     if self._snapshot.print_title != "Updating preview":
                         self._show_print_preview(received, None, None)
@@ -993,6 +997,7 @@ class BridgeUi:
                 self._preview_build_task = None
                 self._preview_image = None
                 self._preview_received = None
+                self._preview_accept_requested = False
                 if accepted_edit is None:
                     self._prepared_print_image = None
                     self._prepared_print_key = None
@@ -1034,6 +1039,15 @@ class BridgeUi:
                     # the latest edit, then reuse those bytes for the actual print.
                     continue
                 self._preview_image = preview_image
+                if self._preview_accept_requested:
+                    # SELECT freezes the latest edit while its preparation
+                    # finishes. Keep these exact bytes instead of cancelling
+                    # the worker and decoding the source again for printing.
+                    if self._preview_blocked_by_no_film(received):
+                        result.set_result(None)
+                    else:
+                        result.set_result(edit)
+                    return
                 # The confirmation owner starts the countdown after preparation.
                 # Its first frame already contains the photo and correct timer;
                 # avoid flashing a timer-free Preview frame immediately before it.
@@ -1353,10 +1367,17 @@ class BridgeUi:
             self._return_to_cached_status_after_preview_cancel()
             result.set_result(None)
             return
+        if self._preview_accept_requested:
+            return
         if action is UiAction.SELECT:
             received = self._preview_received
             if received is not None and self._preview_blocked_by_no_film(received):
                 result.set_result(None)
+                return
+            if self._preview_build_task is not None and not self._preview_build_task.done():
+                self._preview_accept_requested = True
+                self._preview_manual_confirmation = True
+                self._preview_interaction_event.set()
                 return
             result.set_result(self._preview_edit)
             return
@@ -1380,7 +1401,18 @@ class BridgeUi:
             title = "Preparing preview" if self._preview_image is None else None
             self._show_print_preview(received, None, None, title=title)
             return
-        self._preview_edit = _adjust_preview_edit(self._preview_edit, self._preview_tool, action)
+        edit = _adjust_preview_edit(self._preview_edit, self._preview_tool, action)
+        if edit == self._preview_edit:
+            # Bounds and unsupported directions still opt into manual review,
+            # but do not require another worker or JPEG encode.
+            title = (
+                self._snapshot.print_title
+                if self._snapshot.print_title in {"Preparing preview", "Updating preview"}
+                else None
+            )
+            self._show_print_preview(received, None, None, title=title)
+            return
+        self._preview_edit = edit
         self._show_print_preview(received, None, None, title="Updating preview")
         if self._preview_build_task is None or self._preview_build_task.done():
             self._preview_build_task = asyncio.create_task(
@@ -4572,6 +4604,8 @@ class BridgeUi:
 
     async def _schedule_printer_status_refresh(self) -> None:
         await self._cancel_status_refresh()
+        if not self._config.sync.print_enabled:
+            return
         printer = self._snapshot.paired_printer
         if printer is None:
             return

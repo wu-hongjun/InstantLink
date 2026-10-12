@@ -5,14 +5,19 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from test_ui_controller import _FakeDisplay, _FakePairer, _unused_wifi_mode_setter
+from test_ui_controller import (
+    _FakeDisplay,
+    _FakePairer,
+    _FakeStatusProvider,
+    _unused_wifi_mode_setter,
+)
 
 from instantlink_bridge.camera.ftp import ReceivedImage
-from instantlink_bridge.config import BridgeConfig
+from instantlink_bridge.config import BridgeConfig, SyncConfig, SyncDestination
 from instantlink_bridge.imaging.pipeline import PrintEdit
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.input import NullInput
-from instantlink_bridge.ui.models import UiAction, UiMode
+from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiMode
 from instantlink_bridge.ui.settings import SettingsPage
 
 
@@ -106,3 +111,28 @@ async def test_no_film_guidance_has_no_timer_that_replaces_user_navigation(tmp_p
     assert ui._image_reset_task is None
     await ui._handle_action(UiAction.SELECT)
     assert ui.live_snapshot.mode is UiMode.SETTINGS
+
+
+@pytest.mark.asyncio
+async def test_sync_failure_keeps_error_visible_without_restarting_printer_polling() -> None:
+    display = _FakeDisplay()
+    provider = _FakeStatusProvider()
+    ui = BridgeUi(
+        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        display=display,
+        input_device=NullInput(),
+        pairer=_FakePairer([]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = replace(ui.live_snapshot, paired_printer=PairedPrinter("AA:BB", "INSTAX-1"))
+    # A mode change can leave an old poll pending; the guard must cancel it too.
+    poll = asyncio.create_task(asyncio.sleep(100))
+    ui._status_task = poll
+    await ui.print_failed("Sync unavailable")
+    with pytest.raises(asyncio.CancelledError):
+        await poll
+    assert ui.live_snapshot.mode is UiMode.ERROR
+    assert ui.live_snapshot.message == "Sync unavailable"
+    assert ui._status_task is None
+    assert provider.fetch_calls == 0

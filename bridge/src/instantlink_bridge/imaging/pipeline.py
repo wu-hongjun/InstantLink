@@ -627,7 +627,9 @@ def _open_source_image(
 ) -> Image.Image:
     suffix = source_path.suffix.lower()
     if suffix in HEIF_SUFFIXES:
-        return _open_heif_image(source_path, _heif_thumbnail_edge(working_size))
+        return _open_heif_image(
+            source_path, _heif_thumbnail_edge(working_size), minimum_source_edge
+        )
     if suffix in RAW_SUFFIXES:
         return _open_raw_image(source_path, working_size, minimum_source_edge)
     return Image.open(source_path)
@@ -661,22 +663,41 @@ def _heif_thumbnail_edge(working_size: tuple[int, int]) -> int:
     return max(DEFAULT_WORKING_EDGE, *working_size)
 
 
-def _open_heif_image(source_path: Path, thumbnail_edge: int) -> Image.Image:
+def _open_heif_image(
+    source_path: Path, thumbnail_edge: int, minimum_source_edge: int
+) -> Image.Image:
     thumbnailer = shutil.which("heif-thumbnailer")
     if thumbnailer is not None:
-        return _open_heif_thumbnail(source_path, thumbnailer, thumbnail_edge)
+        image = _open_heif_thumbnail(source_path, thumbnailer, thumbnail_edge)
+        if max(image.size) >= minimum_source_edge:
+            return image
+        # The decoder selects the first embedded thumbnail and never upscales.
+        # A small embedded thumbnail must not replace the larger primary image
+        # for a full-size print. Retry only once, through the same bounded CLI.
+        LOGGER.info(
+            "image.heif_thumbnail_undersized path=%s size=%s minimum_edge=%s",
+            source_path,
+            image.size,
+            minimum_source_edge,
+        )
+        image.close()
+        return _open_heif_thumbnail(source_path, thumbnailer, thumbnail_edge, primary_only=True)
     _register_heif_opener()
     image = Image.open(source_path)
     _ensure_fallback_decode_size(image.size)
     return image
 
 
-def _open_heif_thumbnail(source_path: Path, thumbnailer: str, size: int) -> Image.Image:
+def _open_heif_thumbnail(
+    source_path: Path, thumbnailer: str, size: int, *, primary_only: bool = False
+) -> Image.Image:
     with TemporaryDirectory(prefix="instantlink-bridge-heif-") as temp_dir:
         output_path = Path(temp_dir) / "thumbnail.png"
         try:
             subprocess.run(
-                [thumbnailer, "-s", str(size), str(source_path), str(output_path)],
+                [thumbnailer, "-s", str(size)]
+                + (["-p"] if primary_only else [])
+                + [str(source_path), str(output_path)],
                 check=True,
                 capture_output=True,
                 timeout=30,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import replace
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -17,12 +18,18 @@ from test_ui_controller import (
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.camera.ftp import ReceivedImage
 from instantlink_bridge.config import BridgeConfig, CorrectionConfig, PrinterConfig, UiConfig
-from instantlink_bridge.imaging.pipeline import PrintEdit
+from instantlink_bridge.imaging import worker as image_worker
+from instantlink_bridge.imaging.pipeline import (
+    FitMode,
+    ImagePipelineError,
+    PreparedImage,
+    PrintEdit,
+)
 from instantlink_bridge.imaging.worker import ImagePreparationWorker
 from instantlink_bridge.power.performance import CpuPerformanceController
-from instantlink_bridge.ui.controller import BridgeUi
+from instantlink_bridge.ui.controller import BridgeUi, PreviewTool
 from instantlink_bridge.ui.input import NullInput
-from instantlink_bridge.ui.models import UiAction, UiSnapshot
+from instantlink_bridge.ui.models import UiAction, UiMode, UiSnapshot
 
 
 def _ui(display: _FakeDisplay, *, cpu: CpuPerformanceController | None = None) -> BridgeUi:
@@ -96,6 +103,54 @@ async def test_edit_or_tool_switch_requires_explicit_confirmation(
     await ui._handle_action(UiAction.SELECT)
     edit = await asyncio.wait_for(task, 0.5)
     assert edit == (PrintEdit(zoom=1.25) if action is UiAction.UP else PrintEdit())
+
+
+@pytest.mark.parametrize(
+    ("edit", "tool", "action"),
+    [
+        (PrintEdit(), "zoom", UiAction.DOWN),
+        (PrintEdit(zoom=3.0), "zoom", UiAction.UP),
+        (PrintEdit(zoom=1.5, offset_x=1.0), "crop", UiAction.RIGHT),
+        (PrintEdit(), "rotate", UiAction.UP),
+    ],
+)
+@pytest.mark.asyncio
+async def test_unchanged_edit_stops_countdown_without_rebuilding(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    edit: PrintEdit,
+    tool: PreviewTool,
+    action: UiAction,
+) -> None:
+    display = _FakeDisplay()
+    ui = _ui(display)
+    builds = 0
+
+    async def build(_received: ReceivedImage, _edit: PrintEdit) -> Image.Image:
+        nonlocal builds
+        builds += 1
+        return Image.new("RGB", (80, 80))
+
+    monkeypatch.setattr(ui, "_build_preview_image", build)
+    task = asyncio.create_task(
+        ui.await_print_confirmation(ReceivedImage(tmp_path / "photo.jpg", "camera"), timeout_s=0.04)
+    )
+    try:
+        await _wait_for_preview_image(display)
+        ui._preview_edit, ui._preview_tool = edit, tool
+        await ui._handle_action(action)
+        await asyncio.sleep(0.06)
+        assert builds == 1
+        assert ui._preview_edit == edit
+        assert not task.done()
+        assert ui.live_snapshot.print_title == "Preview"
+        assert ui.live_snapshot.print_progress_percent is None
+        await ui._handle_action(UiAction.SELECT)
+        assert await asyncio.wait_for(task, 0.5) == edit
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
 
 
 @pytest.mark.asyncio
@@ -258,7 +313,7 @@ async def test_initial_status_refresh_during_preparation_releases_abandoned_prev
 
 
 @pytest.mark.asyncio
-async def test_confirm_during_rebuild_uses_latest_edit_and_discards_older_prepared_bytes(
+async def test_confirm_during_rebuild_finishes_latest_edit_and_reuses_prepared_bytes(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     path = tmp_path / "photo.jpg"
@@ -270,24 +325,145 @@ async def test_confirm_during_rebuild_uses_latest_edit_and_discards_older_prepar
     await _wait_for_preview_image(display)
     assert ui._prepared_print_image is not None
     rebuilding = asyncio.Event()
-    cancelled = asyncio.Event()
+    release = asyncio.Event()
+    builds: list[PrintEdit] = []
+    original_build = ui._build_preview_image
 
-    async def slow_rebuild(_received: ReceivedImage, _edit: PrintEdit) -> Image.Image:
-        rebuilding.set()
-        try:
-            await asyncio.Event().wait()
-        finally:
-            cancelled.set()
-        raise AssertionError("accepted job should cancel obsolete rebuild")
+    async def slow_rebuild(received: ReceivedImage, edit: PrintEdit) -> Image.Image | None:
+        builds.append(edit)
+        if edit.zoom == 1.25:
+            rebuilding.set()
+            await release.wait()
+        return await original_build(received, edit)
 
     monkeypatch.setattr(ui, "_build_preview_image", slow_rebuild)
     await ui._handle_action(UiAction.UP)
     await rebuilding.wait()
+    await ui._handle_action(UiAction.UP)  # Coalesce one more edit before acceptance.
     await ui._handle_action(UiAction.SELECT)
+    await ui._handle_action(UiAction.UP)  # Acceptance freezes the selected edit.
+    assert ui._preview_edit == PrintEdit(zoom=1.5)
+    assert not task.done()
+    assert ui._preview_build_task is not None and not ui._preview_build_task.cancelling()
+    release.set()
     edit = await asyncio.wait_for(task, 0.5)
-    assert edit == PrintEdit(zoom=1.25)
-    assert cancelled.is_set()
+    assert edit == PrintEdit(zoom=1.5)
+    assert builds == [PrintEdit(zoom=1.25), PrintEdit(zoom=1.5)]
+    assert ui._prepared_print_key == (received.path, edit)
+    assert ui.take_prepared_print_image(received, edit) is not None
     assert ui.take_prepared_print_image(received, edit) is None
+
+
+@pytest.mark.parametrize("outcome", ["back", "shutdown", "failure", "no-film"])
+@pytest.mark.asyncio
+async def test_pending_preview_acceptance_can_cancel_fail_or_block_without_printing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, outcome: str
+) -> None:
+    display = _FakeDisplay()
+    ui = _ui(display)
+    rebuilding, release, finished = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def build(_received: ReceivedImage, edit: PrintEdit) -> Image.Image:
+        if edit == PrintEdit():
+            return Image.new("RGB", (80, 80))
+        rebuilding.set()
+        try:
+            await release.wait()
+            if outcome == "failure":
+                raise ImagePipelineError("bad edited image")
+            return Image.new("RGB", (80, 80))
+        finally:
+            finished.set()
+
+    monkeypatch.setattr(ui, "_build_preview_image", build)
+    task = asyncio.create_task(
+        ui.await_print_confirmation(ReceivedImage(tmp_path / "photo.jpg", "camera"), timeout_s=None)
+    )
+    try:
+        await _wait_for_preview_image(display)
+        await ui._handle_action(UiAction.UP)
+        await asyncio.wait_for(rebuilding.wait(), 0.5)
+        await ui._handle_action(UiAction.SELECT)
+        assert ui._preview_accept_requested
+        assert not task.done()
+        if outcome == "back":
+            await asyncio.wait_for(ui._handle_action(UiAction.BACK), 0.1)
+        elif outcome == "shutdown":
+            task.cancel()
+        else:
+            if outcome == "no-film":
+                ui._snapshot = replace(ui._snapshot, film_remaining=0)
+            release.set()
+        if outcome == "shutdown":
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(task, 0.5)
+        else:
+            assert await asyncio.wait_for(task, 0.5) is None
+        assert finished.is_set()
+        assert ui._pending_print_result is None
+        assert not ui._preview_accept_requested
+        assert ui._prepared_print_image is None
+        if outcome == "failure":
+            assert ui.live_snapshot.mode is UiMode.ERROR
+        elif outcome == "no-film":
+            assert ui.live_snapshot.mode is UiMode.NO_FILM
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_accepting_inflight_worker_preserves_decoded_cache_and_prepared_handoff(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "photo.hif"
+    source.write_bytes(b"HIF source fixture")
+    output = BytesIO()
+    Image.new("RGB", (80, 80), (80, 120, 160)).save(output, format="JPEG")
+    prepared = PreparedImage(output.getvalue(), PrinterModel.SQUARE, 800, 800, 85, FitMode.AUTO)
+    first, second = FakeProcess(), FakeProcess()
+    first.finish()
+    first_reader, second_reader = FakeResultReader(), FakeResultReader()
+    first_reader.set_result(image_worker._PreparedImageResult(prepared))
+    started = asyncio.Event()
+    factory = FakeFactory(
+        [(first, first_reader), (second, second_reader)],
+        on_call=lambda index: started.set() if index == 1 else None,
+    )
+    worker = ImagePreparationWorker(
+        process_factory=factory, poll_interval_s=0.001, shutdown_grace_s=0.01
+    )
+    monkeypatch.setattr("instantlink_bridge.ui.controller.prepare_for_instax_async", worker.prepare)
+    display = _FakeDisplay()
+    ui = _ui(display)
+    received = ReceivedImage(source, "camera")
+    confirmation = asyncio.create_task(ui.await_print_confirmation(received, timeout_s=None))
+    try:
+        await _wait_for_preview_image(display)
+        cache = worker._working_cache
+        assert cache is not None
+        Image.new("RGB", (80, 80)).save(cache.path, format="BMP")
+        await ui._handle_action(UiAction.UP)
+        await asyncio.wait_for(started.wait(), 0.5)
+        assert factory.requests[1].working_cache is cache
+        await ui._handle_action(UiAction.SELECT)
+        await asyncio.sleep(0.01)
+        assert not confirmation.done()
+        assert not second.terminated
+        assert cache.path.exists()
+        second.finish()
+        second_reader.set_result(image_worker._PreparedImageResult(prepared))
+        edit = await asyncio.wait_for(confirmation, 0.5)
+        assert edit == PrintEdit(zoom=1.25)
+        assert ui.take_prepared_print_image(received, edit) == prepared
+        assert not second.terminated
+        assert worker._working_cache is cache and cache.path.exists()
+    finally:
+        if not confirmation.done():
+            confirmation.cancel()
+            await asyncio.gather(confirmation, return_exceptions=True)
+        await worker.aclose()
 
 
 @pytest.mark.asyncio

@@ -62,8 +62,6 @@ async def test_handle_received_image_prints_after_auto_confirm(
         "received:image.jpg",
         f"confirm:{app.AUTO_PRINT_DELAY_S}",
         "printing:image.jpg",
-        "progress:selecting_printer:Checking printer:Looking up printer:",
-        "progress:selecting_printer:Finding printer:INSTAX-1N034655:",
         "progress:sending:Sending 50%::50",
         "complete:image.jpg",
     ]
@@ -131,7 +129,6 @@ async def test_handle_received_image_requires_selected_printer(tmp_path: Path) -
         "received:image.jpg",
         f"confirm:{app.AUTO_PRINT_DELAY_S}",
         "printing:image.jpg",
-        "progress:selecting_printer:Checking printer:Looking up printer:",
         "failed:Select printer first",
     ]
 

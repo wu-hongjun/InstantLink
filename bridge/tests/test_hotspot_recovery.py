@@ -10,11 +10,12 @@ import pytest
 
 from instantlink_bridge.config import BridgeConfig, FtpConfig, FtpReceiveMode, write_config
 from instantlink_bridge.net.health import FtpActivityTracker, build_connection_health
+from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.ui import controller
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.display import NullDisplay
 from instantlink_bridge.ui.input import NullInput
-from instantlink_bridge.ui.models import UiMode
+from instantlink_bridge.ui.models import PairedPrinter, UiMode
 from instantlink_bridge.ui.settings import WifiMode
 
 
@@ -32,6 +33,79 @@ def make_ui(setter: Callable[[WifiMode], Awaitable[str]]) -> BridgeUi:
 
 async def radio_enabled() -> bool:
     return True
+
+
+@pytest.mark.asyncio
+async def test_locked_recovery_keeps_idle_cpu_dark_display_and_printer_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    governors: list[str] = []
+    addresses: list[str] = []
+
+    async def cpu_setter(governor: str) -> None:
+        governors.append(governor)
+
+    async def wifi_setter(mode: WifiMode) -> str:
+        assert mode is WifiMode.HOTSPOT
+        addresses.append("192.168.8.1")
+        return "hotspot active"
+
+    class Display(NullDisplay):
+        def __init__(self) -> None:
+            self.frames = 0
+            self.stages: list[str] = []
+
+        def render(self, snapshot: controller.UiSnapshot) -> None:
+            self.frames += 1
+
+        def set_idle_stage(self, stage: str) -> None:
+            self.stages.append(stage)
+
+    cpu = CpuPerformanceController(cpu_setter)
+    await cpu.start()
+    display = Display()
+    ui = make_ui(wifi_setter)
+    ui._cpu_performance = cpu
+    ui._display = display
+    printer = PairedPrinter("FA:AB:BC:C7:95:64", "INSTAX-52006924")
+    ui._snapshot = replace(
+        ui._snapshot,
+        mode=UiMode.READY,
+        paired_printer=printer,
+        film_remaining=6,
+        printer_status_fresh=True,
+    )
+    monkeypatch.setattr(controller, "detect_wifi_radio_enabled", radio_enabled)
+    monkeypatch.setattr(
+        controller,
+        "detect_camera_link_health",
+        lambda **_: build_connection_health(
+            checked_at=time.time(),
+            expected_usb_ipv4="192.168.7.1",
+            usb_carrier=True,
+            usb_ipv4_addresses=["192.168.7.1"],
+            wifi_ipv4_addresses=addresses,
+        ),
+    )
+    ui._lock_screen()
+    if cpu._task is not None:
+        await cpu._task
+    assert governors == ["performance", "powersave"]
+    assert ui._network_status_poll_interval_s() == 5.0
+    await ui._refresh_network_status()
+    assert ui._hotspot_recovery_task is not None
+    await ui._hotspot_recovery_task
+    assert ui.live_snapshot.hotspot_host == "192.168.8.1"
+    assert ui.live_snapshot.camera_receive_ready
+    assert ui.live_snapshot.paired_printer == printer
+    assert ui.live_snapshot.printer_status_fresh
+    assert ui._screen_locked
+    assert ui.snapshot.idle_stage == "screen_off"
+    assert display.frames == 0
+    assert display.stages == ["screen_off"]
+    assert governors == ["performance", "powersave"]
+    await ui.stop()
+    await cpu.close()
 
 
 @pytest.mark.asyncio

@@ -1230,7 +1230,7 @@ def _ready(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    if not can_accept_images(snapshot):
+    if snapshot.mode is not UiMode.PRINT_COMPLETE and not can_accept_images(snapshot):
         _validation(draw, snapshot, fonts, theme)
         return
 
@@ -1248,6 +1248,8 @@ def _ready(
     # y=56 (was 75): pushes the title up so the info card at y=104 has a
     # comfortable ~18 px gap below the title instead of touching it.
     title = "Sync to iPhone" if iphone_only else "Ready"
+    if snapshot.mode is UiMode.PRINT_COMPLETE:
+        title = "Printed"
     _center_lines(draw, [t(title, lang)], 56, fonts["large"], theme.label_primary)
 
     nudge = sync_pair_nudge(snapshot)
@@ -1634,22 +1636,23 @@ def _awaiting_confirm(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    title = snapshot.print_title or t("Printing soon", snapshot.language)
-    detail = _physical_control_text(
-        snapshot.print_detail or t("Press K2 to cancel", snapshot.language)
-    )
+    title = preview_title_text(snapshot)
+    # Keep the photo card fixed while preparation and edits run. Filling the
+    # same space avoids a headline screen flashing before every preview.
+    draw_card(draw, 16, 40, 208, 100, theme)
     if snapshot.preview_image is not None:
-        # Wrap preview in a card
-        draw_card(draw, 16, 40, 208, 100, theme)
         preview = snapshot.preview_image.copy()
         preview.thumbnail((172, 92), Image.Resampling.LANCZOS)
         x = 120 - preview.width // 2
         y = 90 - preview.height // 2
         canvas.paste(preview, (x, y))
+    else:
+        _center_lines(draw, [title], 80, fonts["body"], theme.label_secondary)
+    if snapshot.preview_image is not None:
         _text(
             draw,
             18,
-            144,
+            148,
             _fit_text_to_width(draw, title, fonts["body"], 204),
             fonts["body"],
             theme.label_primary,
@@ -1657,38 +1660,45 @@ def _awaiting_confirm(
         _text(
             draw,
             18,
-            164,
-            _fit_text_to_width(draw, detail, fonts["small"], 204),
-            fonts["small"],
-            theme.accent_yellow,
-        )
-        _text(
-            draw,
-            18,
-            181,
-            _fit_text_to_width(draw, preview_state_text(snapshot), fonts["small"], 204),
+            176,
+            _fit_text_to_width(draw, preview_tool_hint(snapshot), fonts["small"], 204),
             fonts["small"],
             theme.label_secondary,
         )
-    else:
-        _center_lines(draw, [title], 62, fonts["large"], theme.label_primary)
-        if snapshot.last_image_name is not None:
-            _text(
-                draw,
-                18,
-                104,
-                _ellipsize(snapshot.last_image_name, 25),
-                fonts["body"],
-                theme.label_primary,
-            )
-        _progress_bar(
-            draw, 18, 128, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme
-        )
-        _text(draw, 18, 154, _ellipsize(detail, 31), fonts["small"], theme.accent_yellow)
-        _text(draw, 18, 172, film_status_text(snapshot), fonts["small"], theme.label_secondary)
+    draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
 
-    hints = _mode_hints(snapshot)
-    draw_hint_bar(draw, hints, fonts["hint"], theme)
+
+def preview_title_text(snapshot: UiSnapshot) -> str:
+    """Localize review timing and keep preparation copy short."""
+
+    title = snapshot.print_title or "Preview"
+    if title.startswith("Print in ") and title.endswith("s"):
+        return t("Print in {n}s", snapshot.language).format(n=title[9:-1])
+    short = {"Preparing preview": "Preparing", "Updating preview": "Updating"}
+    return t(short.get(title, title), snapshot.language)
+
+
+def preview_tool_hint(snapshot: UiSnapshot) -> str:
+    """One instruction for the current tool; key actions stay in the footer."""
+
+    hints = {"zoom": "Up/Down: Zoom", "crop": "Joystick: Crop", "rotate": "Left/Right: Rotate"}
+    return t(hints.get(snapshot.preview_tool, hints["zoom"]), snapshot.language)
+
+
+def print_stage_text(snapshot: UiSnapshot) -> str:
+    """Show useful progress without transport, model or packet details."""
+
+    title = snapshot.print_title or "Connecting"
+    if title.startswith("Sending"):
+        stage = "Sending"
+    else:
+        stage = {
+            "Starting print": "Connecting",
+            "Checking printer": "Connecting",
+            "Finding printer": "Connecting",
+            "Preparing image": "Preparing",
+        }.get(title, title)
+    return t(stage, snapshot.language)
 
 
 def _printing(
@@ -1697,43 +1707,37 @@ def _printing(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    title = snapshot.print_title or t("Sending to printer", snapshot.language)
-    title_font = fonts["large"]
-    if _text_width(draw, title, title_font) > 216:
-        title_font = fonts["body"]
-    title = _fit_text_to_width(draw, title, title_font, 216)
-    _center_lines(draw, [title], 58, title_font, theme.label_primary)
-    # `print_detail` is only populated during non-SENDING stages now
-    # (e.g. "Checking printer"). The chunk-count / KB sub-string was
-    # dropped per user feedback: the progress bar + the percent-suffixed
-    # title carry the full signal. When the BLE callback sets detail to
-    # None, skip the secondary line entirely so we don't show a redundant
-    # "Working" fallback. y=96 is reserved; the progress bar stays at 122.
-    if snapshot.print_detail:
-        _text(
-            draw,
-            18,
-            96,
-            _ellipsize(snapshot.print_detail, 31),
-            fonts["body"],
-            theme.label_primary,
-        )
-    _progress_bar(
-        draw, 18, 122, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme
+    _center_lines(draw, [t("Printing", snapshot.language)], 58, fonts["large"], theme.label_primary)
+    _text(
+        draw,
+        18,
+        100,
+        _fit_text_to_width(draw, print_stage_text(snapshot), fonts["body"], 204),
+        fonts["body"],
+        theme.label_secondary,
     )
-    if snapshot.last_image_name is not None:
+    if snapshot.print_title == "Print stalled" and snapshot.print_detail == "Restarting bridge":
         _text(
             draw,
             18,
             150,
-            _ellipsize(snapshot.last_image_name, 25),
+            t("Restarting", snapshot.language),
+            fonts["small"],
+            theme.accent_yellow,
+        )
+    if snapshot.print_title != "Print stalled" and snapshot.print_progress_percent is not None:
+        _progress_bar(
+            draw, 18, 128, snapshot.print_progress_percent, theme.accent_blue, fonts["small"], theme
+        )
+    if snapshot.last_image_name is not None:
+        _text(
+            draw,
+            18,
+            178,
+            _fit_text_to_width(draw, snapshot.last_image_name, fonts["small"], 204),
             fonts["small"],
             theme.label_secondary,
         )
-    _text(draw, 18, 166, printer_model_text(snapshot), fonts["small"], theme.label_secondary)
-    _text(
-        draw, 18, 182, t("Do not power off", snapshot.language), fonts["small"], theme.accent_yellow
-    )
     draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
 
 
@@ -1743,28 +1747,9 @@ def _print_complete(
     fonts: dict[str, Font],
     theme: Theme,
 ) -> None:
-    _center_lines(
-        draw, [t("Print complete", snapshot.language)], 75, fonts["large"], theme.label_primary
-    )
-    if snapshot.last_image_name is not None:
-        _text(
-            draw,
-            18,
-            126,
-            _ellipsize(snapshot.last_image_name, 25),
-            fonts["body"],
-            theme.label_primary,
-        )
-    _text(
-        draw,
-        18,
-        148,
-        t("Photo sent to Printer", snapshot.language),
-        fonts["small"],
-        theme.label_secondary,
-    )
-    _text(draw, 18, 164, film_status_text(snapshot), fonts["small"], theme.label_secondary)
-    draw_hint_bar(draw, _mode_hints(snapshot), fonts["hint"], theme)
+    # Completion uses the home layout and a brief verified acknowledgement,
+    # including the last sheet when readiness has already become no-film.
+    _ready(draw, snapshot, fonts, theme)
 
 
 def _needs_pairing(

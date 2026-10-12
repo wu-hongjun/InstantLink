@@ -2066,3 +2066,122 @@ def test_unavailable_hotspot_copy_preserves_blocked_readiness_until_address_retu
     assert can_accept_images(restored)
     assert readiness_cause_texts(restored) == []
     assert hotspot_ftp_status_text(restored) == "Bridge FTP 192.168.8.1"
+
+
+@pytest.mark.parametrize(
+    "title,stage",
+    [
+        ("Checking printer", "Connecting"),
+        ("Finding printer", "Connecting"),
+        ("Connecting", "Connecting"),
+        ("Preparing image", "Preparing"),
+        ("Sending 45%", "Sending"),
+        ("Finishing", "Finishing"),
+        ("Still printing", "Still printing"),
+        ("Print stalled", "Print stalled"),
+    ],
+)
+def test_print_job_keeps_one_layout_and_only_meaningful_progress_copy(
+    monkeypatch: pytest.MonkeyPatch, title: str, stage: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.PRINTING,
+        ftp_host="192.168.7.1",
+        last_image_name="DSC01234.HIF",
+        print_title=title,
+        print_detail="52/115 chunks  100 KB",
+        print_progress_percent=45 if title.startswith("Sending") else None,
+        printer_model=PrinterModel.SQUARE,
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert "Printing" in drawn
+    assert stage in drawn
+    assert "DSC01234.HIF" in drawn
+    assert not any("chunks" in text or "KB" in text or "Type:" in text for text in drawn)
+    assert "Do not power off" not in drawn
+    assert "Progress: working..." not in drawn
+    if title.startswith("Sending"):
+        assert drawn.count("45%") == 1
+        assert "Sending 45%" not in drawn
+
+
+@pytest.mark.parametrize("language,expected", [("en", "Print in 5s"), ("zh-Hans", "5 秒后打印")])
+def test_preview_review_countdown_is_localized_without_duplicate_tool_hints(
+    monkeypatch: pytest.MonkeyPatch, language: str, expected: str
+) -> None:
+    from PIL import Image
+
+    snapshot = UiSnapshot(
+        mode=UiMode.AWAITING_CONFIRM,
+        ftp_host="192.168.7.1",
+        language=language,
+        preview_image=Image.new("RGB", (100, 80), "orange"),
+        print_title="Print in 5s",
+        print_detail="Crop: joystick  K3 tool",
+        preview_tool="crop",
+        preview_zoom=1.25,
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert expected in drawn
+    assert ("Joystick: Crop" if language == "en" else "摇杆\N{FULLWIDTH COLON}裁剪") in drawn
+    assert not any("Zoom 1.25" in text or "K3 tool" in text for text in drawn)
+
+
+@pytest.mark.parametrize(
+    "title,expected", [("Preparing preview", "Preparing"), ("Updating preview", "Updating")]
+)
+def test_preview_preparation_omits_working_progress_and_transport_copy(
+    monkeypatch: pytest.MonkeyPatch, title: str, expected: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.AWAITING_CONFIRM,
+        ftp_host="192.168.7.1",
+        print_title=title,
+        last_image_name="DSC01234.HIF",
+        print_detail="Zoom: Up/Down  K3 tool",
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert drawn.count(expected) == 1
+    assert "DSC01234.HIF" not in drawn
+    assert "Progress: working..." not in drawn
+
+
+@pytest.mark.parametrize("film_remaining", [0, 6])
+def test_completion_returns_home_layout_with_printed_acknowledgement(
+    monkeypatch: pytest.MonkeyPatch, film_remaining: int
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.PRINT_COMPLETE,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        paired_printer=PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=film_remaining,
+        printer_battery=90,
+        last_image_name="DSC01234.HIF",
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert "Printed" in drawn
+    assert "Look: " in drawn
+    assert "Workflow: " in drawn
+    assert "Photo sent to Printer" not in drawn
+    assert "Setup needed" not in drawn
+
+
+@pytest.mark.parametrize(
+    "language,stalled,recovery",
+    [("en", "Print stalled", "Restarting"), ("zh-Hans", "打印无响应", "重启中")],
+)
+def test_stalled_print_preserves_recovery_action(
+    monkeypatch: pytest.MonkeyPatch, language: str, stalled: str, recovery: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.PRINTING,
+        ftp_host="192.168.7.1",
+        language=language,
+        print_title="Print stalled",
+        print_detail="Restarting bridge",
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert stalled in drawn
+    assert recovery in drawn

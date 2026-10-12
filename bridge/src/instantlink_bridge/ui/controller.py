@@ -781,7 +781,7 @@ class BridgeUi:
         await self._schedule_printer_status_refresh()
 
     async def image_received(self, received: ReceivedImage) -> None:
-        """Show a short image-received confirmation."""
+        """Record receipt; preview or printing supplies the next visible frame."""
 
         await self._record_power_activity()
         if self._snapshot.mode is UiMode.SYNC_PAIRING:
@@ -798,11 +798,8 @@ class BridgeUi:
         self._cancel_image_reset()
         self._snapshot = replace(
             self._snapshot,
-            mode=UiMode.IMAGE_RECEIVED,
             last_image_name=received.path.name,
         )
-        self._render()
-        self._image_reset_task = asyncio.create_task(self._return_home_after_delay())
 
     async def await_print_confirmation(
         self,
@@ -945,7 +942,14 @@ class BridgeUi:
                     # the latest edit, then reuse those bytes for the actual print.
                     continue
                 self._preview_image = preview_image
-                self._show_print_preview(received, None, None)
+                # The confirmation owner starts the countdown after preparation.
+                # Its first frame already contains the photo and correct timer;
+                # avoid flashing a timer-free Preview frame immediately before it.
+                # Edits happen after readiness and need their own repaint.
+                if self._preview_ready_event.is_set():
+                    self._show_print_preview(received, None, None)
+                else:
+                    self._snapshot = replace(self._snapshot, preview_image=preview_image)
                 self._preview_ready_event.set()
                 return
         finally:
@@ -1184,7 +1188,6 @@ class BridgeUi:
             preview_image=None,
         )
         self._render()
-        self._image_reset_task = asyncio.create_task(self._return_home_after_delay())
         return True
 
     def _show_print_preview(
@@ -1315,9 +1318,9 @@ class BridgeUi:
             self._snapshot,
             mode=UiMode.PRINTING,
             last_image_name=received.path.name,
-            print_title="Starting print",
-            print_detail="Checking printer",
-            print_progress_percent=0,
+            print_title="Connecting",
+            print_detail=None,
+            print_progress_percent=None,
             preview_image=None,
         )
         self._render()
@@ -4200,13 +4203,10 @@ class BridgeUi:
     def _pairing_result_is_current(self, generation: int) -> bool:
         return generation == self._pairing_generation and self._snapshot.mode is UiMode.PAIRING
 
-    async def _return_home_after_delay(self) -> None:
-        await asyncio.sleep(RETURN_HOME_DELAY_S)
-        await self.refresh_printer_status()
-
     async def _return_home_after_print_complete(self) -> None:
         await asyncio.sleep(RETURN_HOME_DELAY_S)
-        self._show_cached_home_status()
+        if self._snapshot.mode is UiMode.PRINT_COMPLETE:
+            self._show_cached_home_status()
 
     def _select_printer(self, printers: list[PairedPrinter]) -> PairedPrinter | None:
         configured_name = self._config.printer.device_name

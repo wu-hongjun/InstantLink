@@ -138,7 +138,7 @@ def test_ready_copy_identifies_printer_battery_and_post_state(
     assert "Host: " not in copy
     copy.clear()
     render.render_snapshot(replace(snapshot, mode=UiMode.PRINT_COMPLETE))
-    assert "Print complete" in copy
+    assert "Printed" in copy
     assert "Film ejecting" not in copy
 
 

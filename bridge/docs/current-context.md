@@ -1,5 +1,22 @@
 # Current Bridge Context
 
+## Print-flow simplification and reconnect attempt, 2026-10-11
+
+Plan 065 reduces one-photo UI transitions to Review (when enabled), one Printing layout,
+and Home with a brief Printed notice. Duplicate receipt/Printer-check frames and verbose
+progress text are removed. Preparation and edits stay in the same photo card; meaningful
+errors and stalled/restarting feedback remain. Completion/no-film timers no longer interrupt
+navigation. Both LCD surfaces share this controller/render path; no App/iOS contract changes.
+
+The Mac has not detected the Pi USB gadget in this session (`en8` is absent and no InstantLink
+USB device is enumerated); SSH to `192.168.7.1` timed out. The user was asked to use a data cable
+on the Pi's USB micro-USB port and leave the Printer powered on. Both the pending Wi-Fi fix
+and this print-flow change await deployment. A mocked regression confirms recovery can update
+hotspot readiness while the controller remains locked/dark, keeps the idle CPU policy, and
+preserves its Printer state. Real locked recovery with uninterrupted BLE remains unverified.
+
+No film was consumed or camera upload performed. October 6 below remains the last device audit.
+
 ## Missing Wi-Fi interface audit, 2026-10-06
 
 The user reported `Setup needed` / `Bridge Wi-Fi off`. USB SSH initially worked. Wi-Fi was

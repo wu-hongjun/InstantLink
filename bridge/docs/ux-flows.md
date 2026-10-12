@@ -181,10 +181,10 @@ Shown at boot when no `INSTAX-*` printer is selected.
 +----------------------+
 |  preview image area  |
 |                      |
-| Preview / Print in 5 |
-| Crop: 4-way pan KEY3 |
-| KEY1 print           |
-| KEY2 cancel          |
+| Print in 5s          |
+| Up/Down: Zoom        |
+| K1 Print K2 Cancel   |
+| K3 Tool              |
 +----------------------+
 ```
 
@@ -192,12 +192,22 @@ Shown at boot when no `INSTAX-*` printer is selected.
 
 ```text
 +----------------------+
-|  preview thumbnail   |
-|                      |
-|      PRINTING        |
-|  sending to Instax   |
+|      Printing        |
+| Sending              |
+| [progress bar] 45%   |
+| DSC01234.HIF         |
+| K2 Lock              |
 +----------------------+
 ```
+
+One photo uses **Review → Printing → Home**. Review prepares and updates its image inside
+the same card; its first ready frame already contains the countdown. Editing stops automatic
+printing and requires KEY1 confirmation. Immediate mode skips Review. Receipt and duplicate
+Printer-check screens are omitted. Printing keeps one layout as Connecting, Preparing, Sending
+and Finishing advance; it shows one percentage and no packet/model/power-warning boilerplate.
+After success, Home briefly says **Printed**, then returns to Ready. Settings/Post navigation
+is not interrupted by that notice's expiry. No-film guidance has no forced return timer;
+normal status polling detects reloaded film. Errors and stalled/restarting status remain visible.
 
 ### Settings Menu
 
@@ -276,7 +286,8 @@ preparation and printing stay boosted, then the idle dark Bridge returns to its 
 clock.
 Home identifies **Printer battery**, current Look, workflow and any nonzero Correction; camera
 setup addresses are in Network. X306 has no charge telemetry, so no Bridge charge is invented.
-The completion screen says **Print complete**, without claiming a separate ejection stage.
+Completion briefly says **Printed** in the Home layout, without claiming a separate ejection
+stage. It remains visible when the successful photo consumed the last sheet.
 
 ### Lock and unlock
 

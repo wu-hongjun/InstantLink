@@ -63,6 +63,9 @@ async def test_review_duration_starts_after_slow_preview_is_visible(
     assert display.snapshots[-1].print_title == "Preparing preview"
     release.set()
     await _wait_for_preview_image(display)
+    visible_reviews = [snapshot for snapshot in display.snapshots if snapshot.preview_image]
+    assert visible_reviews[0].print_title == "Print in 1s"
+    assert not any(snapshot.print_title == "Preview" for snapshot in visible_reviews)
     assert not task.done()
     await asyncio.sleep(0.04)
     assert not task.done()

@@ -830,18 +830,12 @@ async def handle_received_image(
                 prepared_image=ui.take_prepared_print_image(received, edit),
             )
         await ui.printing_started(received)
-        await ui.print_progress(
-            PrintProgress(PrintStage.SELECTING_PRINTER, "Checking printer", "Looking up printer")
-        )
         selected = select_configured_printer(
             await pairer.list_paired(),
             configured_name=config.printer.device_name,
         )
         if selected is None:
             raise PrintJobError("Select printer first")
-        await ui.print_progress(
-            PrintProgress(PrintStage.SELECTING_PRINTER, "Finding printer", selected.name)
-        )
         target = await resolve_print_target(selected)
         LOGGER.info(
             "bridge.print_start path=%s target=%s name=%s",

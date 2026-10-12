@@ -224,7 +224,7 @@ async def test_worker_preserves_image_too_large_outcome(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(os.name != "posix", reason="POSIX isolated process groups")
-@pytest.mark.parametrize("outcome", ["cancel", "timeout", "parent_crash"])
+@pytest.mark.parametrize("outcome", ["cancel", "timeout", "parent_crash", "close"])
 async def test_hif_decoder_descendant_stops_with_worker(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
 ) -> None:
@@ -274,6 +274,10 @@ async def test_hif_decoder_descendant_stops_with_worker(
             task.cancel()
             with pytest.raises(asyncio.CancelledError):
                 await asyncio.wait_for(task, 1)
+        elif outcome == "close":
+            await asyncio.wait_for(worker.aclose(), 1)
+            with pytest.raises(asyncio.CancelledError):
+                await task
         elif outcome == "timeout":
             with pytest.raises(ImagePreparationTimeoutError):
                 await asyncio.wait_for(task, 4)
@@ -287,9 +291,13 @@ async def test_hif_decoder_descendant_stops_with_worker(
         # Cancellation leaves the worker ready for the next image; no changed pixels.
         jpeg = tmp_path / "next.jpg"
         Image.new("RGB", (30, 30), "orange").save(jpeg)
-        assert (
-            await worker.prepare(jpeg, PrinterModel.SQUARE, timeout_s=5)
-        ).model is PrinterModel.SQUARE
+        if outcome == "close":
+            with pytest.raises(image_worker.ImageWorkerError, match="closed"):
+                await worker.prepare(jpeg, PrinterModel.SQUARE)
+        else:
+            assert (
+                await worker.prepare(jpeg, PrinterModel.SQUARE, timeout_s=5)
+            ).model is PrinterModel.SQUARE
     finally:
         if not task.done():
             task.cancel()
@@ -334,3 +342,102 @@ async def test_termination_of_already_exited_worker_still_cleans_owned_group(
     worker = ImagePreparationWorker()
     assert await worker._terminate_process(process, isolated_process_group=True)
     assert calls == [process.pid]
+
+
+@pytest.mark.asyncio
+async def test_close_interrupts_active_work_and_rejects_queued_preparation(tmp_path: Path) -> None:
+    first_process = FakeProcess()
+    first_reader = FakeResultReader()
+    unused_process = FakeProcess()
+    unused_reader = FakeResultReader()
+    started = asyncio.Event()
+    factory = FakeFactory(
+        [(first_process, first_reader), (unused_process, unused_reader)],
+        on_call=lambda _: started.set(),
+    )
+    worker = ImagePreparationWorker(process_factory=factory, shutdown_grace_s=0.01)
+    first = asyncio.create_task(worker.prepare(tmp_path / "active.hif", PrinterModel.SQUARE))
+    await asyncio.wait_for(started.wait(), 0.5)
+    queued = asyncio.create_task(worker.prepare(tmp_path / "queued.hif", PrinterModel.SQUARE))
+    await asyncio.wait_for(worker.aclose(), 0.5)
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    with pytest.raises(image_worker.ImageWorkerError, match="closed"):
+        await queued
+    assert first_process.terminated and first_process.closed and first_reader.closed
+    assert not unused_process.started
+    assert len(factory.requests) == 1
+    await worker.aclose()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_close_calls_join_one_process_cleanup(tmp_path: Path) -> None:
+    termination_started = asyncio.Event()
+    started = asyncio.Event()
+
+    class SlowProcess(FakeProcess):
+        def terminate(self) -> None:
+            self.terminated = True
+            termination_started.set()
+
+    process = SlowProcess()
+    reader = FakeResultReader()
+    factory = FakeFactory([(process, reader)], on_call=lambda _: started.set())
+    worker = ImagePreparationWorker(
+        process_factory=factory, poll_interval_s=0.001, shutdown_grace_s=0.5
+    )
+    preparing = asyncio.create_task(worker.prepare(tmp_path / "active.hif", PrinterModel.SQUARE))
+    await asyncio.wait_for(started.wait(), 0.5)
+    first_close = asyncio.create_task(worker.aclose())
+    await asyncio.wait_for(termination_started.wait(), 0.5)
+    second_close = asyncio.create_task(worker.aclose())
+    await asyncio.sleep(0)
+    assert worker._active_prepare_task is not None
+    assert worker._active_prepare_task.cancelling() == 1
+    assert not second_close.done()
+    process.finish(-15)
+    await asyncio.wait_for(asyncio.gather(first_close, second_close), 0.5)
+    with pytest.raises(asyncio.CancelledError):
+        await preparing
+    assert process.closed and reader.closed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("close_started", [False, True])
+async def test_parent_cancellation_does_not_interrupt_existing_worker_cleanup(
+    tmp_path: Path, close_started: bool
+) -> None:
+    started, terminating = asyncio.Event(), asyncio.Event()
+
+    class SlowProcess(FakeProcess):
+        def terminate(self) -> None:
+            self.terminated = True
+            terminating.set()
+
+    process = SlowProcess()
+    reader = FakeResultReader()
+    worker = ImagePreparationWorker(
+        process_factory=FakeFactory([(process, reader)], on_call=lambda _: started.set()),
+        poll_interval_s=0.001,
+        shutdown_grace_s=0.5,
+    )
+    parent = asyncio.create_task(worker.prepare(tmp_path / "active.hif", PrinterModel.SQUARE))
+    await asyncio.wait_for(started.wait(), 0.5)
+    closing = asyncio.create_task(worker.aclose()) if close_started else None
+    if not close_started:
+        parent.cancel()
+    await asyncio.wait_for(terminating.wait(), 0.5)
+    parent.cancel()
+    await asyncio.sleep(0)
+    parent.cancel()
+    await asyncio.sleep(0)
+    assert not parent.done()
+    assert worker._active_prepare_task is not None
+    assert worker._active_prepare_task.cancelling() == 1
+    process.finish(-15)
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(parent, 0.5)
+    if closing is not None:
+        await asyncio.wait_for(closing, 0.5)
+    assert process.closed and reader.closed
+    await worker.aclose()

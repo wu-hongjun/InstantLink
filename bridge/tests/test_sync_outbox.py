@@ -6,6 +6,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from instantlink_bridge.sync.outbox import SyncOutbox
 
 
@@ -154,3 +156,72 @@ def test_budget_eviction_persists_to_index(tmp_path: Path) -> None:
 
     reloaded = SyncOutbox(root, budget_mb=1)
     assert reloaded.pending() == [newest]
+
+
+@pytest.mark.asyncio
+async def test_pending_photo_preparation_overlaps_existing_photo_reads_and_ack(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+    import threading
+
+    from instantlink_bridge.sync import outbox as outbox_module
+
+    outbox = _make_outbox(tmp_path)
+    existing = outbox.add(_write_source(tmp_path / "uploads", "old.jpg", b"old photo"))
+    incoming = _write_source(tmp_path / "uploads", "new.hif", b"new photo")
+    started = threading.Event()
+    release = threading.Event()
+    original_hash = outbox_module._hash_file
+
+    def slow_hash(path: Path) -> str:
+        started.set()
+        if not release.wait(2):
+            raise AssertionError("hash held the metadata lock")
+        return original_hash(path)
+
+    monkeypatch.setattr(outbox_module, "_hash_file", slow_hash)
+    adding = asyncio.create_task(asyncio.to_thread(outbox.add, incoming))
+    try:
+        assert await asyncio.to_thread(started.wait, 1)
+
+        def use_existing_photo() -> None:
+            assert outbox.depth() == 1
+            assert outbox.pending() == [existing]
+            assert outbox.get(existing.item_id) == existing
+            path = outbox.path_for(existing.item_id)
+            assert path is not None and path.read_bytes() == b"old photo"
+            assert outbox.ack(existing.item_id)
+            assert outbox.depth() == 0
+
+        await asyncio.wait_for(asyncio.to_thread(use_existing_photo), 0.3)
+        assert not adding.done()
+        release.set()
+        item = await asyncio.wait_for(adding, 1)
+        assert outbox.pending() == [item]
+        assert item.sha256 == hashlib.sha256(b"new photo").hexdigest()
+        assert SyncOutbox(tmp_path / "outbox", budget_mb=64).pending() == [item]
+    finally:
+        release.set()
+        await adding
+
+
+def test_failed_new_photo_checksum_keeps_index_and_removes_unpublished_spool(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from instantlink_bridge.sync import outbox as outbox_module
+
+    outbox = _make_outbox(tmp_path)
+    existing = outbox.add(_write_source(tmp_path / "uploads", "old.jpg", b"old"))
+    before = set((tmp_path / "outbox").iterdir())
+    incoming = _write_source(tmp_path / "uploads", "new.hif", b"new")
+
+    def fail_hash(path: Path) -> str:
+        raise OSError("read failed")
+
+    monkeypatch.setattr(outbox_module, "_hash_file", fail_hash)
+    with pytest.raises(OSError, match="read failed"):
+        outbox.add(incoming)
+    assert outbox.pending() == [existing]
+    assert set((tmp_path / "outbox").iterdir()) == before
+    assert incoming.read_bytes() == b"new"

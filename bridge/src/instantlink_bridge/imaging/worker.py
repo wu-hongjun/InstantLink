@@ -130,7 +130,9 @@ class ImagePreparationWorker:
         self._shutdown_grace_s = shutdown_grace_s
         self._lock = asyncio.Lock()
         self._active_process: _ManagedProcess | None = None
+        self._active_prepare_task: asyncio.Task[PreparedImage] | None = None
         self._termination_failed = False
+        self._closed = False
 
     async def prepare(
         self,
@@ -158,19 +160,52 @@ class ImagePreparationWorker:
             apply_model_flip=apply_model_flip,
         )
         async with self._lock:
+            if self._closed:
+                raise ImageWorkerError("image worker is closed")
             if self._termination_failed:
                 raise ImageWorkerError("image worker unavailable after failed termination")
-            return await self._prepare_locked(request, timeout_s)
+            task = asyncio.create_task(self._prepare_locked(request, timeout_s))
+            self._active_prepare_task = task
+            try:
+                return await asyncio.shield(task)
+            except asyncio.CancelledError:
+                if not task.done() and not task.cancelling():
+                    task.cancel()
+                # Closing the worker and cancelling its caller can race.
+                # Further caller cancellation must never interrupt the one
+                # process-group cleanup or release the serialization lock.
+                while not task.done():
+                    try:
+                        await asyncio.shield(task)
+                    except asyncio.CancelledError:
+                        continue
+                    except Exception:
+                        break
+                if not task.cancelled():
+                    task.exception()
+                raise
+            finally:
+                self._active_prepare_task = None
 
     async def aclose(self) -> None:
-        """Terminate any active worker process."""
+        """Stop active preparation and its descendants without waiting for its job deadline."""
 
+        already_closing = self._closed
+        self._closed = True
+        task = self._active_prepare_task
+        if task is not None and not task.done():
+            if not already_closing and not task.cancelling():
+                # Concurrent close callers join the same cleanup; another
+                # cancellation must not interrupt process-group termination.
+                task.cancel()
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                if not task.done():
+                    raise
         async with self._lock:
-            if self._active_process is not None:
-                terminated = await self._terminate_process(self._active_process)
-                if not terminated:
-                    self._termination_failed = True
-                    raise ImageWorkerError("image worker could not be terminated")
+            if self._termination_failed:
+                raise ImageWorkerError("image worker could not be terminated")
 
     async def _prepare_locked(
         self,

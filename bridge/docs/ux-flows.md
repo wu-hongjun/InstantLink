@@ -443,3 +443,15 @@ Logical patterns; buzzer hardware is optional and deferred.
 | Recoverable error | Two low chirps |
 | Fatal error | Three low chirps |
 | Low battery | One low chirp every 60 s |
+
+## Background work and input responsiveness
+
+Settings Refresh starts one background worker, overlapping network health and saved-Printer
+lookup. Repeated taps reuse that worker; KEY2/navigation remain responsive and a late result does
+not reopen a departed page. Startup, polling and explicit refresh share one network probe.
+
+About collects versions and metrics off the render/input loop, using a shared cache. Rows can
+briefly show a loading placeholder; an opened detail dialog updates its value without being
+replaced. Pairing QR identity loads separately with a bounded wait and never encodes a placeholder.
+Preview overlaps enabled date metadata reads with Printer model detection; the image pipeline
+still respects model dimensions and processing order. See plan 068 for concurrency boundaries.

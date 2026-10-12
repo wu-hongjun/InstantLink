@@ -1877,6 +1877,8 @@ async def test_settings_system_refresh_stays_in_settings() -> None:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
+    assert ui._settings_status_task is not None
+    await ui._settings_status_task
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "System"
     assert display.snapshots[-1].settings_message == "No printer saved"
@@ -2064,6 +2066,9 @@ async def test_system_stats_row_renders_cpu_percent(monkeypatch: pytest.MonkeyPa
         ),
     )
 
+    ui._system_stats_snapshot()
+    assert ui._about_load_task is not None
+    await ui._about_load_task
     row = ui._settings_row_for_key(SettingKey.SYSTEM_CPU, "")
     assert row.label == "CPU"
     assert row.value == "23%"
@@ -2111,6 +2116,9 @@ async def test_system_stats_snapshot_is_cached_for_three_seconds(
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
+    ui._system_stats_snapshot()
+    assert ui._about_load_task is not None
+    await ui._about_load_task
     first = ui._system_stats_snapshot()
     second = ui._system_stats_snapshot()
     # Same call, same cache window → same object reference, only one read.

@@ -197,6 +197,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     service: FtpReceiveService | None = None
     bluez_agent: AsyncStopService | None = None
     bluetooth_task: asyncio.Task[None] | None = None
+    cpu_start_task: asyncio.Task[None] | None = None
     sync_outbox: SyncOutbox | None = None
     sync_service: SyncService | None = None
     sync_setup_task: asyncio.Task[None] | None = None
@@ -346,12 +347,31 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             queue_overflow_callback=notify_queue_overflow,
             bridge_snapshot_provider=lambda: live_ui_snapshot(ui),
         )
-        ftp_service.start()  # blocks until the FTP thread's listener is bound
+        try:
+            ftp_service.start()  # blocks until the FTP thread's listener is bound
+        except BaseException:
+            ftp_service.stop()
+            raise
         LOGGER.info("bridge.ftp.ready bind_host=%s port=%s", config.ftp.bind_host, config.ftp.port)
         return ftp_service
 
     async def start_ftp_service() -> FtpReceiveService:
-        return await asyncio.to_thread(_setup_ftp_service_sync)
+        nonlocal service
+        task = asyncio.create_task(asyncio.to_thread(_setup_ftp_service_sync))
+        try:
+            return await asyncio.shield(task)
+        finally:
+            try:
+                await join_photo_task_cleanup(task)
+            finally:
+                if task.done() and not task.cancelled() and task.exception() is None:
+                    service = task.result()
+
+    async def start_ui_at_full_performance() -> None:
+        if cpu_start_task is None:
+            raise RuntimeError("BUG: CPU startup not assigned")
+        await asyncio.shield(cpu_start_task)
+        await ui.start()
 
     async def start_bluetooth() -> None:
         nonlocal bluez_agent
@@ -381,12 +401,14 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # Separate readiness events prevent early Printer operations without
         # keeping the LCD/input path waiting for BlueZ. Sync imports begin after
         # core readiness so their CPU/I/O cost does not compete with these paths.
-        await cpu_performance.start()
+        # CPU helper I/O, FTP binding and agent registration are independent.
+        # First LCD/input and core READY still require the awake CPU tier.
+        cpu_start_task = asyncio.create_task(cpu_performance.start(), name="bridge.cpu_start")
         bluetooth_task = asyncio.create_task(start_bluetooth(), name="bridge.bluetooth_start")
         sync_setup_task = asyncio.create_task(setup_sync_service())
         ftp_result, ui_result = await asyncio.gather(
             start_ftp_service(),
-            ui.start(),
+            start_ui_at_full_performance(),
             return_exceptions=True,
         )
         if not isinstance(ftp_result, BaseException):
@@ -440,14 +462,17 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                     # can authorize a Printer connection yet.
                     if not await bluetooth_ready_for_print():
                         continue
-                await dispatch_received_image(
-                    received,
-                    snapshot=live_ui_snapshot(ui),
-                    config=ui.config,
-                    ui=ui,
-                    pairer=pairer,
-                    outbox=sync_outbox,
-                    cpu_performance=cpu_performance,
+                await run_image_job_until_stopped(
+                    dispatch_received_image(
+                        received,
+                        snapshot=live_ui_snapshot(ui),
+                        config=ui.config,
+                        ui=ui,
+                        pairer=pairer,
+                        outbox=sync_outbox,
+                        cpu_performance=cpu_performance,
+                    ),
+                    stop_event=stop_event,
                 )
             except Exception as exc:
                 LOGGER.exception(
@@ -476,6 +501,8 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             sync_setup_task.cancel()
             with suppress(asyncio.CancelledError):
                 await sync_setup_task
+        if cpu_start_task is not None:
+            await join_photo_task_cleanup(cpu_start_task)
         await stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
         await ui.stop()
         if bluetooth_task is not None:
@@ -633,8 +660,16 @@ async def spool_image_to_sync_outbox(
     if outbox is None:
         LOGGER.error("sync.outbox_add_failed path=%s reason=outbox_unavailable", received.path)
         return False
+    add_task = asyncio.create_task(
+        asyncio.to_thread(outbox.add, received.path, remote_ip=received.remote_ip)
+    )
     try:
-        await asyncio.to_thread(outbox.add, received.path, remote_ip=received.remote_ip)
+        try:
+            await asyncio.shield(add_task)
+        finally:
+            # A filesystem transaction cannot be cancelled with its asyncio
+            # waiter. Keep ownership until its thread commits or fails.
+            await join_photo_task_cleanup(add_task)
     except Exception:
         LOGGER.exception("sync.outbox_add_failed path=%s", received.path)
         return False
@@ -921,7 +956,54 @@ async def handle_received_image(
         LOGGER.info("bridge.print_complete path=%s", received.path)
         await ui.print_complete(received)
     finally:
+        accepting_progress = False
         await performance_scope.aclose()
+
+
+async def run_image_job_until_stopped(work: Awaitable[None], *, stop_event: asyncio.Event) -> None:
+    """Observe shutdown while one ordered photo job owns its resources.
+
+    Cancellation joins the job's cleanup before another photo or service
+    teardown can use the same Printer/image worker. The backend retains its
+    own serialization and bounded FFI cancellation grace.
+    """
+    job = asyncio.ensure_future(work)
+    stopping = asyncio.create_task(stop_event.wait())
+    try:
+        done, _ = await asyncio.wait({job, stopping}, return_when=asyncio.FIRST_COMPLETED)
+        if job in done:
+            await job
+        else:
+            await cancel_and_join_photo_task(job)
+    finally:
+        stopping.cancel()
+        try:
+            await cancel_and_join_photo_task(job)
+        finally:
+            await asyncio.gather(stopping, return_exceptions=True)
+
+
+async def cancel_and_join_photo_task(task: asyncio.Future[None]) -> None:
+    """Cancel once, then retain resource ownership through repeated outer cancellation."""
+    if not task.done() and not (isinstance(task, asyncio.Task) and task.cancelling()):
+        task.cancel()
+    await join_photo_task_cleanup(task)
+
+
+async def join_photo_task_cleanup(task: Awaitable[object]) -> None:
+    """Join existing work without forwarding repeated cancellation into its cleanup."""
+    joined = asyncio.gather(task, return_exceptions=True)
+    cancelled = False
+    while True:
+        try:
+            await asyncio.shield(joined)
+            break
+        except asyncio.CancelledError:
+            # Forwarding this into the sender could interrupt its FFI grace,
+            # release the Printer lock and leave a blocking call still alive.
+            cancelled = True
+    if cancelled:
+        raise asyncio.CancelledError
 
 
 async def await_print_sender_without_cancelling_on_timeout(
@@ -936,32 +1018,38 @@ async def await_print_sender_without_cancelling_on_timeout(
 
     send_task = asyncio.ensure_future(send)
     try:
-        await asyncio.wait_for(asyncio.shield(send_task), timeout=slow_after_s)
-    except TimeoutError:
-        LOGGER.warning(
-            "bridge.print_slow path=%s timeout_s=%s",
-            received.path,
-            slow_after_s,
-        )
-        await ui.print_progress(
-            PrintProgress(PrintStage.FINISHING, "Still printing", "Waiting for printer")
-        )
-        if hard_after_s is None or slow_after_s is None:
-            await send_task
-            return
-        remaining_s = max(1.0, hard_after_s - slow_after_s)
         try:
-            await asyncio.wait_for(asyncio.shield(send_task), timeout=remaining_s)
+            await asyncio.wait_for(asyncio.shield(send_task), timeout=slow_after_s)
         except TimeoutError:
-            LOGGER.critical(
-                "bridge.print_hard_timeout path=%s hard_timeout_s=%s",
+            LOGGER.warning(
+                "bridge.print_slow path=%s timeout_s=%s",
                 received.path,
-                hard_after_s,
+                slow_after_s,
             )
             await ui.print_progress(
-                PrintProgress(PrintStage.FINISHING, "Print stalled", "Restarting bridge")
+                PrintProgress(PrintStage.FINISHING, "Still printing", "Waiting for printer")
             )
-            os._exit(1)
+            if hard_after_s is None or slow_after_s is None:
+                await asyncio.shield(send_task)
+                return
+            remaining_s = max(1.0, hard_after_s - slow_after_s)
+            try:
+                await asyncio.wait_for(asyncio.shield(send_task), timeout=remaining_s)
+            except TimeoutError:
+                LOGGER.critical(
+                    "bridge.print_hard_timeout path=%s hard_timeout_s=%s",
+                    received.path,
+                    hard_after_s,
+                )
+                await ui.print_progress(
+                    PrintProgress(PrintStage.FINISHING, "Print stalled", "Restarting bridge")
+                )
+                os._exit(1)
+    finally:
+        # A slow-print notice keeps the hardware job running. Shutdown is a
+        # separate cancellation path: join the sender before releasing its
+        # CPU boost or closing the UI/backend, rather than orphaning it.
+        await cancel_and_join_photo_task(send_task)
 
 
 async def drain_print_progress(

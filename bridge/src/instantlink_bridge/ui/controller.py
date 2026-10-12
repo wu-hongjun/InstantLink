@@ -55,7 +55,12 @@ from instantlink_bridge.power.monitor import BatteryAlert, IdleStage, PowerEvent
 from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.power.pisugar import BatteryState
 from instantlink_bridge.printing import PrintProgress
-from instantlink_bridge.system_info import SystemInfo, default_hotspot_ssid, read_system_info
+from instantlink_bridge.system_info import (
+    SystemInfo,
+    default_hotspot_ssid,
+    read_device_id,
+    read_system_info,
+)
 from instantlink_bridge.system_stats import (
     CPUSampler,
     SystemStatsSnapshot,
@@ -145,11 +150,37 @@ MIN_OFFLINE_SEARCH_GAP_S = 2.0
 UNLOCK_TIMEOUT_S = 10.0
 HOTSPOT_RECOVERY_STARTUP_GRACE_S = 30.0
 HOTSPOT_RECOVERY_BACKOFF_S = (30.0, 60.0, 120.0, 300.0)
+UI_TASK_CANCEL_BUDGET_S = 6.0
+
+
+async def _join_ui_cleanup(future: asyncio.Future[Any], *, timeout_s: float | None = None) -> bool:
+    """Defer outer cancellation through cleanup without extending its deadline."""
+    interrupted = False
+    deadline = None if timeout_s is None else asyncio.get_running_loop().time() + timeout_s
+    while not future.done():
+        remaining = None if deadline is None else deadline - asyncio.get_running_loop().time()
+        if remaining is not None and remaining <= 0:
+            break
+        try:
+            if remaining is None:
+                await asyncio.shield(future)
+            else:
+                await asyncio.wait_for(asyncio.shield(future), timeout=remaining)
+        except asyncio.CancelledError:
+            interrupted = True
+        except TimeoutError:
+            break
+    if future.done():
+        future.result()
+    return interrupted
+
+
 # How long a SystemStatsSnapshot is reused before re-reading /proc and /sys.
 # The About page can re-render at the LCD's ~30 Hz tick when help text toasts or
 # the cursor moves; without a cache that would hammer the filesystem readers
 # for no perceptible UX gain. 3s is short enough that CPU% feels live.
 SYSTEM_STATS_CACHE_S = 3.0
+SYSTEM_IDENTITY_TIMEOUT_S = 2.0
 # Cadence for the live-refresh loop that rebuilds the About page rows so the
 # user sees CPU/RAM/Storage/Temp tick in real time without having to scroll
 # (the settings_rows tuple is otherwise only rebuilt on navigation). Held at
@@ -430,12 +461,18 @@ class BridgeUi:
         self._sync_config_applied_callback = sync_config_applied_callback
         self._sync_token_rotated_callback = sync_token_rotated_callback
         self._system_info = system_info
+        self._device_id = system_info.device_id if system_info is not None else None
+        self._identity_load_task: asyncio.Task[str] | None = None
         # Live About-page stats: dedicated sampler (stateful — needs two reads
         # to compute CPU%) plus a small (3s) cache so repeat renders within
         # one user interaction don't keep re-reading /proc.
         self._cpu_sampler = CPUSampler()
         self._cached_system_stats: SystemStatsSnapshot | None = None
         self._cached_system_stats_at: float = 0.0
+        self._about_load_task: asyncio.Task[None] | None = None
+        self._about_next_retry_at = 0.0
+        self._loading_system_info = SystemInfo("…", "…", "…", "…", "…")
+        self._loading_system_stats = SystemStatsSnapshot(None, None, None, None, None, None)
         self._ready_event = ready_event
         self._bluetooth_ready_event = bluetooth_ready_event
         self._bridge_battery_percent: int | None = None
@@ -503,6 +540,9 @@ class BridgeUi:
         self._status_generation = 0
         self._render_tick_task: asyncio.Task[None] | None = None
         self._network_task: asyncio.Task[None] | None = None
+        self._network_refresh_task: asyncio.Task[None] | None = None
+        self._network_state_generation = 0
+        self._stopping = False
         self._startup_network_task: asyncio.Task[None] | None = None
         self._cpu_sampler_task: asyncio.Task[None] | None = None
         self._about_refresh_task: asyncio.Task[None] | None = None
@@ -623,6 +663,7 @@ class BridgeUi:
     async def start(self) -> None:
         """Start rendering and input handling."""
 
+        self._stopping = False
         self._hotspot_recovery_enabled = True
         self._hotspot_recovery_next_at = (
             asyncio.get_running_loop().time() + HOTSPOT_RECOVERY_STARTUP_GRACE_S
@@ -654,53 +695,70 @@ class BridgeUi:
             LOGGER.warning("ui.cpu_sampler_prewarm_failed", exc_info=True)
 
     async def stop(self) -> None:
-        """Stop background UI tasks.
+        """Cancel all UI work together, then allow one bounded cleanup window.
 
-        Each task is cancelled; the await uses a per-task timeout so a
-        stuck BLE FFI worker (which can hold its executor thread for a
-        few seconds after CancelledError until the shielded grace inside
-        InstantLinkBackend resolves) never blocks the whole shutdown
-        sequence. If a task is still pending after the budget, we move
-        on and let the process exit — the background worker either
-        completes its grace or systemd sends SIGKILL on the unit timeout.
+        A stuck BLE worker must not delay cancellation of input/network tasks
+        or multiply the timeout by the number of tasks. Shared resources close
+        after cooperative task cleanup or the six-second global deadline.
         """
 
-        TASK_CANCEL_BUDGET_S = 6.0
+        self._stopping = True
         self._hotspot_recovery_enabled = False
-        for task in (
-            self._action_task,
-            self._pairing_task,
-            self._status_task,
-            self._render_tick_task,
-            self._network_task,
-            self._startup_network_task,
-            self._cpu_sampler_task,
-            self._hotspot_recovery_task,
-            self._about_refresh_task,
-            self._ftp_mode_task,
-            self._image_reset_task,
-            self._auto_rebond_task,
-            self._silent_link_recovery_task,
-            self._proactive_bond_reset_task,
-            self._initial_status_task,
-            self._settings_status_task,
-            self._credential_hotspot_task,
-            self._unlock_timeout_task,
-        ):
-            if task is None:
-                continue
-            task.cancel()
-            try:
-                await asyncio.wait_for(asyncio.shield(task), timeout=TASK_CANCEL_BUDGET_S)
-            except (asyncio.CancelledError, TimeoutError):
-                # Cancelled: expected. Timeout: the worker is still in
-                # an uncancellable thread call; abandon the await and
-                # continue the shutdown chain.
-                pass
+        if self._pending_print_result is not None and not self._pending_print_result.done():
+            self._pending_print_result.set_result(None)
+        tasks = [
+            task
+            for task in (
+                self._action_task,
+                self._pairing_task,
+                self._status_task,
+                self._render_tick_task,
+                self._network_task,
+                self._network_refresh_task,
+                self._startup_network_task,
+                self._cpu_sampler_task,
+                self._hotspot_recovery_task,
+                self._about_refresh_task,
+                self._about_load_task,
+                self._identity_load_task,
+                self._ftp_mode_task,
+                self._image_reset_task,
+                self._preview_build_task,
+                self._auto_rebond_task,
+                self._silent_link_recovery_task,
+                self._proactive_bond_reset_task,
+                self._initial_status_task,
+                self._settings_status_task,
+                self._credential_hotspot_task,
+                self._unlock_timeout_task,
+            )
+            if task is not None
+        ]
+        for task in tasks:
+            if not task.cancelling():
+                task.cancel()
+        interrupted = False
+        if tasks:
+            cleanup = asyncio.gather(*tasks, return_exceptions=True)
+            interrupted = await _join_ui_cleanup(cleanup, timeout_s=UI_TASK_CANCEL_BUDGET_S)
+            if not cleanup.done():
+                LOGGER.warning(
+                    "ui.stop_tasks_timeout pending=%s", sum(not task.done() for task in tasks)
+                )
+        resource_cleanup = asyncio.create_task(self._close_ui_resources())
+        interrupted = await _join_ui_cleanup(resource_cleanup) or interrupted
+        if interrupted:
+            raise asyncio.CancelledError
+
+    async def _close_ui_resources(self) -> None:
         self._input.close()
-        await self._close_cached_printer_session()
-        await self._status_provider.close()
-        self._display.close()
+        try:
+            await self._close_cached_printer_session()
+        finally:
+            try:
+                await self._status_provider.close()
+            finally:
+                self._display.close()
 
     async def _deferred_initial_status(self) -> None:
         """Load/configure the Printer backend after core and agent readiness.
@@ -1041,9 +1099,6 @@ class BridgeUi:
         edit: PrintEdit,
     ) -> Image.Image | None:
         session_token = self._preview_session_token
-        model = await self._resolve_printer_model_for_preview()
-        if model is None:
-            raise ImagePipelineError("printer type unknown")
         config = self._config
         from dataclasses import replace as _replace
 
@@ -1055,13 +1110,33 @@ class BridgeUi:
 
         adjustments = resolve_preset(config.adjustments, self._user_presets)
         if config.adjustments.datestamp:
-            datestamp_text = await asyncio.to_thread(
-                read_exif_datestamp_text,
-                received.path,
-                config.ui.language.value,
-                fmt=config.adjustments.datestamp_format,
+            model_task = asyncio.create_task(self._resolve_printer_model_for_preview())
+            metadata_task = asyncio.create_task(
+                asyncio.to_thread(
+                    read_exif_datestamp_text,
+                    received.path,
+                    config.ui.language.value,
+                    fmt=config.adjustments.datestamp_format,
+                )
             )
+            preparation = asyncio.gather(model_task, metadata_task)
+            try:
+                model, datestamp_text = await asyncio.shield(preparation)
+            except BaseException:
+                for task in (model_task, metadata_task):
+                    if not task.cancelling():
+                        task.cancel()
+                await _join_ui_cleanup(
+                    asyncio.gather(model_task, metadata_task, return_exceptions=True)
+                )
+                if preparation.done() and not preparation.cancelled():
+                    preparation.exception()
+                raise
             adjustments = _replace(adjustments, datestamp_text=datestamp_text)
+        else:
+            model = await self._resolve_printer_model_for_preview()
+        if model is None:
+            raise ImagePipelineError("printer type unknown")
         # apply_model_flip=False builds the InstantLink-backend flavour, which
         # is both what the LCD should show (the flip is a transport quirk, not
         # a visual one) and byte-identical to what the print path would build
@@ -2133,7 +2208,17 @@ class BridgeUi:
             await self._confirm_or_save_preset()
             return
         if key is SettingKey.REFRESH_STATUS:
-            await self._refresh_status_from_settings()
+            if self._settings_status_task is None or self._settings_status_task.done():
+                waiting_for_bluetooth = (
+                    self._bluetooth_ready_event is not None
+                    and not self._bluetooth_ready_event.is_set()
+                )
+                self._show_settings(
+                    "Starting Bluetooth" if waiting_for_bluetooth else "Refreshing status"
+                )
+                self._settings_status_task = asyncio.create_task(
+                    self._refresh_settings_after_bluetooth_ready(self._settings_page)
+                )
             return
         if key is SettingKey.SYNC_PAIRING:
             await self._show_sync_pairing()
@@ -2936,7 +3021,12 @@ class BridgeUi:
         if wifi_mode is None:
             return
         async with self._wifi_mode_lock:
-            await self._wifi_mode_setter(wifi_mode)
+            try:
+                await self._wifi_mode_setter(wifi_mode)
+            finally:
+                # Activation may change the interface even when the helper
+                # fails. A probe started before it cannot verify its result.
+                self._network_state_generation += 1
 
     async def _apply_configured_ftp_mode_at_start(self) -> None:
         mode = self._config.ftp.mode
@@ -3802,26 +3892,121 @@ class BridgeUi:
         return setting_help_text(key)
 
     def _system_info_snapshot(self) -> SystemInfo:
+        """Read cached information without collecting versions during rendering."""
+
         if self._system_info is None:
-            self._system_info = read_system_info()
-        return self._system_info
+            self._schedule_about_collection()
+        return self._system_info or self._loading_system_info
 
     def _system_stats_snapshot(self) -> SystemStatsSnapshot:
-        """Return the cached system stats snapshot, refreshing every 3s.
+        """Read cached About metrics; one shared collector refreshes stale data."""
 
-        Same object reference is returned across the cache window so the
-        About page renders consistent values for CPU/RAM/Storage/SoC
-        across a single user-visible refresh.
-        """
-
-        now = self._monotonic()
+        try:
+            now = self._monotonic()
+        except RuntimeError:
+            return self._cached_system_stats or self._loading_system_stats
         if (
             self._cached_system_stats is None
             or self._cached_system_stats_at + SYSTEM_STATS_CACHE_S < now
         ):
-            self._cached_system_stats = read_system_stats(self._cpu_sampler)
-            self._cached_system_stats_at = now
-        return self._cached_system_stats
+            self._schedule_about_collection()
+        return self._cached_system_stats or self._loading_system_stats
+
+    def _schedule_about_collection(self) -> None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Pure snapshot inspection outside a running UI cannot launch I/O.
+            return
+        if self._stopping or loop.time() < self._about_next_retry_at:
+            return
+        if self._about_load_task is not None and not self._about_load_task.done():
+            return
+        self._about_load_task = loop.create_task(self._collect_about_information())
+
+    async def _collect_about_information(self) -> None:
+        """Collect off loop, cache once, and repaint only the still-visible About page."""
+
+        info_task = (
+            asyncio.create_task(asyncio.to_thread(read_system_info))
+            if self._system_info is None
+            else None
+        )
+        stats_task = asyncio.create_task(self._collect_about_metrics())
+        children = (stats_task,) if info_task is None else (stats_task, info_task)
+        try:
+            if info_task is None:
+                stats = await stats_task
+            else:
+                # Version probes and metrics are independent. Only metrics
+                # wait for the CPU sampler's mutable startup baseline.
+                info, stats = await asyncio.gather(info_task, stats_task)
+                if self._stopping:
+                    return
+                self._system_info = info
+                self._device_id = info.device_id
+            if self._stopping:
+                return
+            self._cached_system_stats = stats
+            self._cached_system_stats_at = self._monotonic()
+            self._about_next_retry_at = 0.0
+            if self._snapshot.mode is UiMode.SETTINGS and self._settings_page is SettingsPage.ABOUT:
+                self._snapshot = replace(
+                    self._snapshot, settings_rows=self._current_settings_rows()
+                )
+                self._render()
+            elif (
+                self._snapshot.mode is UiMode.HELP_DIALOG
+                and self._settings_page is SettingsPage.ABOUT
+                and self._snapshot.help_dialog_body == "…"
+            ):
+                # An info row opened during loading stays the same dialog;
+                # update its value rather than leaving a permanent placeholder.
+                for key in SETTINGS_BY_PAGE[SettingsPage.ABOUT]:
+                    row = self._settings_row_for_key(key, "")
+                    if row.label == self._snapshot.help_dialog_title:
+                        self._snapshot = replace(
+                            self._snapshot,
+                            help_dialog_body=row.value,
+                            settings_rows=self._current_settings_rows(),
+                        )
+                        self._render()
+                        break
+        except Exception:
+            self._about_next_retry_at = self._monotonic() + SYSTEM_STATS_CACHE_S
+            LOGGER.warning("ui.about_collection_failed", exc_info=True)
+        finally:
+            for child in children:
+                if not child.cancelling():
+                    child.cancel()
+            await asyncio.gather(*children, return_exceptions=True)
+
+    async def _collect_about_metrics(self) -> SystemStatsSnapshot:
+        # Serialize only the sampler access, rather than delaying unrelated
+        # version collection behind the startup CPU warmup.
+        if self._cpu_sampler_task is not None and not self._cpu_sampler_task.done():
+            await asyncio.shield(self._cpu_sampler_task)
+        return await asyncio.to_thread(read_system_stats, self._cpu_sampler)
+
+    async def _ensure_device_identity(self) -> str:
+        """Read the stable QR identity independently of slower About version probes."""
+
+        if self._device_id is not None:
+            return self._device_id
+        if self._stopping:
+            raise RuntimeError("UI is stopping")
+        if self._identity_load_task is None:
+            self._identity_load_task = asyncio.create_task(self._read_device_identity())
+        # Shield the shared read so repeated timeouts cannot duplicate I/O.
+        return await asyncio.wait_for(
+            asyncio.shield(self._identity_load_task), timeout=SYSTEM_IDENTITY_TIMEOUT_S
+        )
+
+    async def _read_device_identity(self) -> str:
+        device_id = await asyncio.to_thread(read_device_id)
+        if not self._stopping:
+            self._device_id = device_id
+        return device_id
 
     def _network_summary_value(self) -> str:
         parts: list[str] = []
@@ -3973,7 +4158,7 @@ class BridgeUi:
         if key is SettingKey.SYSTEM_DEVICE_ID:
             return f"Device: {self._system_info_snapshot().device_id}"
         if key is SettingKey.SYSTEM_APP_VERSION:
-            return f"App: {self._system_info_snapshot().app_version}"
+            return f"Bridge: {self._system_info_snapshot().app_version}"
         if key is SettingKey.SYSTEM_CPU:
             stats = self._system_stats_snapshot()
             return f"CPU: {format_cpu_percent(stats.cpu_percent)}"
@@ -4042,15 +4227,20 @@ class BridgeUi:
         from instantlink_bridge.sync.server import load_or_create_sync_token
 
         try:
+            device_id = await self._ensure_device_identity()
             token = await asyncio.to_thread(load_or_create_sync_token, self._config.sync.token_path)
         except Exception:
-            LOGGER.exception("ui.sync_pairing_token_failed path=%s", self._config.sync.token_path)
+            if self._stopping:
+                return
+            LOGGER.exception("ui.sync_pairing_prepare_failed path=%s", self._config.sync.token_path)
             if return_home:
                 self._show_help_dialog(title="iPhone status", body="Pairing unavailable")
             else:
                 self._show_settings("Pairing unavailable")
             return
-        payload = self._sync_pairing_payload(token)
+        if self._stopping:
+            return
+        payload = self._sync_pairing_payload(token, device_id=device_id)
         self._cancel_image_reset()
         self._sync_pairing_return_home = return_home
         self._sync_pairing_exit_event = asyncio.Event()
@@ -4064,7 +4254,7 @@ class BridgeUi:
         LOGGER.info("ui.sync_pairing_shown hotspot=%s", self._hotspot_host is not None)
         self._render()
 
-    def _sync_pairing_payload(self, token: str) -> str:
+    def _sync_pairing_payload(self, token: str, *, device_id: str) -> str:
         """Build the ``instantlink://pair`` QR payload.
 
         Host mirrors what the status surfaces show: the hotspot address when
@@ -4077,7 +4267,6 @@ class BridgeUi:
 
         from urllib.parse import quote
 
-        device_id = self._system_info_snapshot().device_id
         host = self._hotspot_host or self._wifi_host or self._config.ftp.hotspot_host
         payload = (
             "instantlink://pair?v=1"
@@ -4124,21 +4313,26 @@ class BridgeUi:
             return
         page = self._settings_page
         self._show_settings("Refreshing status")
+        network_task = asyncio.create_task(self._refresh_network_status())
+        paired_task = asyncio.create_task(self._pairer.list_paired())
+        refresh = asyncio.gather(network_task, paired_task, return_exceptions=True)
         try:
-            await self._refresh_network_status()
-        except Exception:
-            LOGGER.exception("ui.network_status_refresh_failed_from_settings")
+            network_result, paired_result = await asyncio.shield(refresh)
+        except BaseException:
+            for task in (network_task, paired_task):
+                if not task.cancelling():
+                    task.cancel()
+            await _join_ui_cleanup(refresh)
+            raise
+        if isinstance(network_result, BaseException):
+            LOGGER.error("ui.network_status_refresh_failed_from_settings", exc_info=network_result)
         if self._snapshot.mode is not UiMode.SETTINGS or self._settings_page is not page:
             return
-        try:
-            printers = await self._pairer.list_paired()
-        except Exception:
-            LOGGER.exception("ui.paired_printer_lookup_failed")
+        if isinstance(paired_result, BaseException):
+            LOGGER.error("ui.paired_printer_lookup_failed", exc_info=paired_result)
             self._show_settings("Refresh failed", page=page)
             return
-        if self._snapshot.mode is not UiMode.SETTINGS or self._settings_page is not page:
-            return
-        printer = self._select_printer(printers)
+        printer = self._select_printer(paired_result)
         if printer is None:
             await self._cancel_status_refresh()
             self._snapshot = replace(
@@ -5067,17 +5261,46 @@ class BridgeUi:
                 LOGGER.warning("ui.about_page_refresh_failed", exc_info=True)
 
     async def _refresh_network_status(self) -> None:
-        async with self._network_refresh_lock:
+        if self._stopping:
+            return
+        task = self._network_refresh_task
+        if task is None or task.done():
+            task = asyncio.create_task(
+                self._refresh_network_status_once(), name="bridge.network_refresh"
+            )
+            self._network_refresh_task = task
+        # Poll, Settings and recovery share one bounded subprocess snapshot.
+        # Canceling a caller must not cancel another caller's health refresh.
+        await asyncio.shield(task)
+
+    async def _detect_current_network_health(self) -> ConnectionHealth | None:
+        while not self._stopping:
+            ftp_config = self._config.ftp
+            network_generation = self._network_state_generation
             ftp_activity = self._ftp_activity.snapshot() if self._ftp_activity is not None else None
+            health = await asyncio.to_thread(
+                detect_camera_link_health,
+                expected_usb_ipv4=ftp_config.host,
+                expected_hotspot_ipv4=ftp_config.hotspot_host,
+                ftp_activity=ftp_activity,
+            )
+            if (
+                ftp_config == self._config.ftp
+                and network_generation == self._network_state_generation
+            ):
+                return health
+            # A mode/address change during the probe invalidates its readiness
+            # interpretation. Re-probe serially without adding another worker.
+        return None
+
+    async def _refresh_network_status_once(self) -> None:
+        async with self._network_refresh_lock:
             try:
-                health = await asyncio.to_thread(
-                    detect_camera_link_health,
-                    expected_usb_ipv4=self._config.ftp.host,
-                    expected_hotspot_ipv4=self._config.ftp.hotspot_host,
-                    ftp_activity=ftp_activity,
-                )
+                health = await self._detect_current_network_health()
             except Exception:
                 LOGGER.exception("ui.network_status_detect_failed")
+                return
+            if health is None or self._stopping:
                 return
             wifi_host = health.home_wifi_ipv4
             hotspot_host = health.hotspot_ipv4

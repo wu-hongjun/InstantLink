@@ -97,3 +97,11 @@ The WPA2 hotspot provides L2 encryption and the bearer token gates access;
 TLS with a pinned self-signed cert is a v1.5 hardening item. See
 `docs/plans/050-iphone-auto-sync.md` and `051-sync-ux-audit.md` for the
 threat model and token-rotation story.
+
+## Outbox concurrency
+
+Copying and checksumming a new camera file does not block status/queue reads, existing-photo
+lookup or acknowledgements. Additions remain ordered; a new item becomes visible only after
+its checksum is complete and its metadata commit is protected by the index lock. Existing
+range/download and authentication contracts are unchanged. Cancellation of the receive task
+joins the filesystem transaction before runtime teardown (plan 068).

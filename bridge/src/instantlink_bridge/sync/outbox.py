@@ -37,6 +37,9 @@ class SyncOutbox:
         self._root = root
         self._budget_bytes = budget_mb * 1024 * 1024
         self._lock = threading.Lock()
+        # Serialize arrivals without making existing-photo reads/acks wait
+        # for a new photo's potentially slow copy or checksum.
+        self._add_lock = threading.Lock()
         # Insertion order is arrival order (oldest first); the persisted
         # index list preserves it across restarts.
         self._items: dict[str, OutboxItem] = {}
@@ -51,25 +54,30 @@ class SyncOutbox:
         items first when the disk budget would be exceeded.
         """
 
-        with self._lock:
+        with self._add_lock:
             item_id = secrets.token_hex(8)
             spool_path = self._spool_path(item_id, source.name)
             try:
-                os.link(source, spool_path)
-            except OSError:
-                shutil.copy2(source, spool_path)
-            size_bytes = spool_path.stat().st_size
-            item = OutboxItem(
-                item_id=item_id,
-                file_name=source.name,
-                size_bytes=size_bytes,
-                sha256=_hash_file(spool_path),
-                received_at=time.time(),
-                source_remote_ip=remote_ip,
-            )
-            self._evict_until_fits_locked(incoming_bytes=size_bytes)
-            self._items[item_id] = item
-            self._write_index_locked()
+                try:
+                    os.link(source, spool_path)
+                except OSError:
+                    shutil.copy2(source, spool_path)
+                size_bytes = spool_path.stat().st_size
+                item = OutboxItem(
+                    item_id=item_id,
+                    file_name=source.name,
+                    size_bytes=size_bytes,
+                    sha256=_hash_file(spool_path),
+                    received_at=time.time(),
+                    source_remote_ip=remote_ip,
+                )
+            except BaseException:
+                spool_path.unlink(missing_ok=True)
+                raise
+            with self._lock:
+                self._evict_until_fits_locked(incoming_bytes=size_bytes)
+                self._items[item_id] = item
+                self._write_index_locked()
             LOGGER.info(
                 "sync.outbox_added item=%s file=%s size=%s remote_ip=%s",
                 item_id,

@@ -325,15 +325,28 @@ class InstantLinkBackend:
                 return await asyncio.shield(task)
             except asyncio.CancelledError:
                 LOGGER.warning("instantlink.%s_cancel_waiting_for_worker", operation)
-                try:
-                    await asyncio.wait_for(asyncio.shield(task), timeout=FFI_CANCEL_GRACE_S)
-                except TimeoutError:
-                    LOGGER.critical(
-                        "instantlink.%s_cancel_worker_stuck restarting_process grace_s=%.1f",
-                        operation,
-                        FFI_CANCEL_GRACE_S,
-                    )
-                    os._exit(1)
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + FFI_CANCEL_GRACE_S
+                while not task.done():
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.shield(task), timeout=max(0.0, deadline - loop.time())
+                        )
+                    except asyncio.CancelledError:
+                        # Retain the Printer lock through repeated cancellation,
+                        # without granting the blocking call a fresh grace period.
+                        continue
+                    except TimeoutError:
+                        LOGGER.critical(
+                            "instantlink.%s_cancel_worker_stuck restarting_process grace_s=%.1f",
+                            operation,
+                            FFI_CANCEL_GRACE_S,
+                        )
+                        os._exit(1)
+                # Retrieve completion (including a worker failure) before releasing
+                # the serialization lock and propagating the caller's cancellation.
+                if not task.cancelled():
+                    task.result()
                 raise
 
     def _scan_blocking(self, timeout_s: float) -> list[str]:

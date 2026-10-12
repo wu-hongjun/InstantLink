@@ -165,6 +165,8 @@ Add application milestones through structured logs:
 `bridge.ready` confirms UI and FTP initialization for systemd. Bluetooth, Printer status, hotspot
 address and Sync readiness are separate. Plan 067 moves Bluetooth registration, Printer
 keepalive, health probing and optional Sync construction off the UI/FTP critical path.
+Plan 068 additionally starts CPU helper I/O, FTP setup and Bluetooth registration together;
+the first UI/input and core READY still wait for the maximum awake CPU tier.
 
 The product metric is time from X306 button press to the LCD showing Ready with healthy FTP and
 Printer status. Kernel-monotonic reboot measurements exclude power-button/firmware latency.

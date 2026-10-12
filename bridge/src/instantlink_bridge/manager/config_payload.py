@@ -419,15 +419,15 @@ def _apply_workflow(
         if raw is None or is_off_string:
             delay = None
         elif isinstance(raw, bool):
-            field_errors["workflow.auto_print_delay_s"] = "Delay must be 0, 5, or 'off'."
+            field_errors["workflow.auto_print_delay_s"] = "Delay must be 0, 1, 5, or 'off'."
         elif isinstance(raw, int | float):
             parsed = float(raw)
-            if not isfinite(parsed) or parsed not in {0.0, 5.0}:
-                field_errors["workflow.auto_print_delay_s"] = "Delay must be 0, 5, or 'off'."
+            if not isfinite(parsed) or parsed not in {0.0, 1.0, 5.0}:
+                field_errors["workflow.auto_print_delay_s"] = "Delay must be 0, 1, 5, or 'off'."
             else:
                 delay = parsed
         else:
-            field_errors["workflow.auto_print_delay_s"] = "Delay must be 0, 5, or 'off'."
+            field_errors["workflow.auto_print_delay_s"] = "Delay must be 0, 1, 5, or 'off'."
     if "allow_print_without_film" in body:
         raw = body["allow_print_without_film"]
         if isinstance(raw, bool):

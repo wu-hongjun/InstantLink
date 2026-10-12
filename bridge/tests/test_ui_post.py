@@ -7,6 +7,7 @@ from PIL import ImageDraw
 
 from instantlink_bridge.config import BridgeConfig, CorrectionConfig
 from instantlink_bridge.ui import render
+from instantlink_bridge.ui.i18n import t
 from instantlink_bridge.ui.models import PairedPrinter, SettingsRow, UiMode, UiSnapshot
 from instantlink_bridge.ui.settings import (
     SETTINGS_BY_PAGE,
@@ -14,6 +15,7 @@ from instantlink_bridge.ui.settings import (
     SettingKey,
     SettingsPage,
     config_with_setting_value,
+    selected_option_index,
     setting_options,
     workflow_label,
 )
@@ -38,9 +40,20 @@ def test_workflow_names_describe_preserved_values() -> None:
     assert [(o.label, o.value) for o in setting_options(SettingKey.AUTO_PRINT_DELAY)] == [
         ("Confirm each", None),
         ("Print immediately", 0.0),
+        ("Review 1s", 1.0),
         ("Review 5s", 5.0),
     ]
     assert workflow_label(8.0) == "Review 8s"
+    assert workflow_label(BridgeConfig().workflow.auto_print_delay_s) == "Review 1s"
+    assert selected_option_index(BridgeConfig(), SettingKey.AUTO_PRINT_DELAY) == 2
+    assert (
+        config_with_setting_value(
+            BridgeConfig(), SettingKey.AUTO_PRINT_DELAY, 1.0
+        ).workflow.auto_print_delay_s
+        == 1.0
+    )
+    assert UiSnapshot(mode=UiMode.READY, ftp_host="192.168.7.1").workflow_label == "Review 1s"
+    assert t("Review 1s", "zh-Hans") == "预览1秒"
     keys = SETTINGS_BY_PAGE[SettingsPage.AUTO_PRINT]
     assert keys.index(SettingKey.ALLOW_PRINT_WITHOUT_FILM) > keys.index(
         SettingKey.PRINT_ADVANCED_HEADER

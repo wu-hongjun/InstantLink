@@ -125,7 +125,7 @@ struct BridgePrinterConfig: Codable, Equatable, Hashable, Sendable {
 
 struct BridgeWorkflowConfig: Codable, Equatable, Hashable, Sendable {
     /// Auto-print delay seconds. ``nil`` means "off" (decoded from the
-    /// bridge's `"off"` sentinel). Valid values are `nil`, ``0`` and ``5``.
+    /// bridge's `"off"` sentinel). Valid values are `nil`, ``0``, ``1`` and ``5``.
     var autoPrintDelaySeconds: Double?
     var allowPrintWithoutFilm: Bool
 
@@ -135,7 +135,7 @@ struct BridgeWorkflowConfig: Codable, Equatable, Hashable, Sendable {
     }
 
     static let defaults = BridgeWorkflowConfig(
-        autoPrintDelaySeconds: 5,
+        autoPrintDelaySeconds: 1,
         allowPrintWithoutFilm: false
     )
 
@@ -162,7 +162,8 @@ struct BridgeWorkflowConfig: Codable, Equatable, Hashable, Sendable {
         } else if let doubleValue = try container.decodeIfPresent(Double.self, forKey: .autoPrintDelaySeconds) {
             self.autoPrintDelaySeconds = doubleValue
         } else {
-            self.autoPrintDelaySeconds = nil
+            self.autoPrintDelaySeconds = container.contains(.autoPrintDelaySeconds)
+                ? nil : Self.defaults.autoPrintDelaySeconds
         }
         self.allowPrintWithoutFilm = try container.decodeIfPresent(
             Bool.self,

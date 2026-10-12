@@ -296,7 +296,7 @@ async def test_dispatch_print_destination_runs_print_flow_without_spooling(
     )
 
     assert outbox.depth() == 0
-    assert ui.events == ["received:image.jpg", "confirm:5.0"]
+    assert ui.events == ["received:image.jpg", "confirm:1.0"]
 
 
 @pytest.mark.asyncio
@@ -340,7 +340,7 @@ async def test_dispatch_legacy_both_destination_uses_print_flow(tmp_path: Path) 
     )
 
     assert outbox.depth() == 0
-    assert ui.events == ["received:image.jpg", "confirm:5.0"]
+    assert ui.events == ["received:image.jpg", "confirm:1.0"]
 
 
 @pytest.mark.asyncio
@@ -391,7 +391,7 @@ async def test_dispatch_reads_destination_per_item(tmp_path: Path) -> None:
     assert outbox.depth() == 1
     assert ui.events == [
         "received:image.jpg",
-        "confirm:5.0",
+        "confirm:1.0",
         "sync_outbox:1",
     ]
 

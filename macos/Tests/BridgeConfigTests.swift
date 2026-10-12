@@ -1,6 +1,25 @@
 import Foundation
 
 final class BridgeConfigTests {
+    func testWorkflowDefaultAndLegacyChoicesDecodeWithoutMigration() throws {
+        try expectEqual(BridgeWorkflowConfig.defaults.autoPrintDelaySeconds, 1)
+        let missing = try JSONDecoder().decode(BridgeWorkflowConfig.self, from: Data("{}".utf8))
+        try expectEqual(missing.autoPrintDelaySeconds, 1)
+        for (raw, expected): (String, Double?) in [
+            (#""off""#, nil), ("null", nil), ("0", 0), ("1", 1), ("5", 5),
+        ] {
+            let payload = "{\"auto_print_delay_s\":\(raw)}"
+            let decoded = try JSONDecoder().decode(
+                BridgeWorkflowConfig.self, from: Data(payload.utf8)
+            )
+            try expectEqual(decoded.autoPrintDelaySeconds, expected)
+            let roundTripped = try JSONDecoder().decode(
+                BridgeWorkflowConfig.self, from: JSONEncoder().encode(decoded)
+            )
+            try expectEqual(roundTripped.autoPrintDelaySeconds, expected)
+        }
+    }
+
     func testUnlockGuardDefaultsTrueForOlderBridgeAndDecodesStrictBoolean() throws {
         let legacy = try JSONDecoder().decode(
             BridgeUIConfig.self,

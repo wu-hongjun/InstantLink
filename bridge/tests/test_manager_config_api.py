@@ -145,6 +145,7 @@ async def test_config_get_returns_defaults_when_no_config_file(tmp_path: Path) -
         assert config["adjustments"]["watermark_text"] == ""
         assert config["adjustments"]["datestamp_format"] == "quartz_date"
         assert config["correction"] == {"saturation": 0}
+        assert config["workflow"]["auto_print_delay_s"] == 1.0
     finally:
         await client.close()
 
@@ -219,6 +220,71 @@ datestamp_format = "olympus"
 
 
 # --- PUT /v1/config --------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delay", [0, 1, 5, "off"])
+async def test_config_put_review_delay_persists_and_reads_supported_values(
+    tmp_path: Path, delay: int | str
+) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    client = TestClient(TestServer(_make_app(tmp_path, private_key, config_path)))
+    await client.start_server()
+    try:
+        path = "/v1/config"
+        body = _json_body({"config": {"workflow": {"auto_print_delay_s": delay}}})
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["workflow"]["auto_print_delay_s"] == delay
+        on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        assert on_disk["workflow"]["auto_print_delay_s"] == delay
+        response = await client.get(
+            path,
+            headers=signed_headers(private_key, method="GET", path=path, nonce="nonce-read"),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["workflow"]["auto_print_delay_s"] == delay
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delay", [True, False, 2, 1.5, "1", -1])
+async def test_config_put_review_delay_rejects_unsupported_or_wrong_types(
+    tmp_path: Path, delay: object
+) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    client = TestClient(TestServer(_make_app(tmp_path, private_key, config_path)))
+    await client.start_server()
+    try:
+        path = "/v1/config"
+        body = _json_body({"config": {"workflow": {"auto_print_delay_s": delay}}})
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 422, data
+        errors = data["error"]["details"]["field_errors"]
+        assert errors["workflow.auto_print_delay_s"] == "Delay must be 0, 1, 5, or 'off'."
+        assert not config_path.exists()
+    finally:
+        await client.close()
 
 
 @pytest.mark.asyncio

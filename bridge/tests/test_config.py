@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.config import (
     AdjustmentsConfig,
@@ -317,13 +319,14 @@ def test_printer_search_interval_must_be_positive_and_finite(tmp_path: Path) -> 
             raise AssertionError(f"expected {invalid} search interval to fail")
 
 
-def test_workflow_auto_print_delay_can_be_configured(tmp_path: Path) -> None:
+@pytest.mark.parametrize("delay", [1, 5])
+def test_workflow_auto_print_delay_can_be_configured(tmp_path: Path, delay: int) -> None:
     config_path = tmp_path / "config.toml"
-    config_path.write_text("[workflow]\nauto_print_delay_s = 5\n", encoding="utf-8")
+    config_path.write_text(f"[workflow]\nauto_print_delay_s = {delay}\n", encoding="utf-8")
 
     config = load_config(config_path)
 
-    assert config.workflow.auto_print_delay_s == 5.0
+    assert config.workflow.auto_print_delay_s == float(delay)
 
 
 def test_workflow_can_allow_print_without_film(tmp_path: Path) -> None:
@@ -345,13 +348,40 @@ def test_workflow_auto_print_delay_can_be_off_or_zero(tmp_path: Path) -> None:
     assert load_config(zero_path).workflow.auto_print_delay_s == 0.0
 
 
-def test_workflow_legacy_auto_print_delay_maps_to_preview_delay(tmp_path: Path) -> None:
+@pytest.mark.parametrize("delay", [0.25, 1.5, 8.0])
+def test_workflow_legacy_auto_print_delay_maps_to_preview_delay(
+    tmp_path: Path, delay: float
+) -> None:
     config_path = tmp_path / "config.toml"
-    config_path.write_text("[workflow]\nauto_print_delay_s = 1.5\n", encoding="utf-8")
+    config_path.write_text(f"[workflow]\nauto_print_delay_s = {delay}\n", encoding="utf-8")
 
     config = load_config(config_path)
 
-    assert config.workflow.auto_print_delay_s == 5.0
+    assert config.workflow.auto_print_delay_s == 1.0
+
+
+def test_workflow_defaults_to_one_second_review_for_new_and_missing_configs(tmp_path: Path) -> None:
+    assert WorkflowConfig().auto_print_delay_s == 1.0
+    assert BridgeConfig().workflow.auto_print_delay_s == 1.0
+    assert load_config(tmp_path / "missing.toml").workflow.auto_print_delay_s == 1.0
+    path = tmp_path / "empty.toml"
+    path.write_text("[workflow]\nallow_print_without_film = false\n", encoding="utf-8")
+    assert load_config(path).workflow.auto_print_delay_s == 1.0
+
+
+def test_one_second_review_survives_config_write_round_trip(tmp_path: Path) -> None:
+    path = tmp_path / "review.toml"
+    write_config(BridgeConfig(), path)
+    assert "auto_print_delay_s = 1\n" in path.read_text(encoding="utf-8")
+    assert load_config(path).workflow.auto_print_delay_s == 1.0
+
+
+@pytest.mark.parametrize("value", ["true", "false"])
+def test_workflow_review_delay_rejects_boolean_values(tmp_path: Path, value: str) -> None:
+    path = tmp_path / "boolean.toml"
+    path.write_text(f"[workflow]\nauto_print_delay_s = {value}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"\[workflow\].auto_print_delay_s"):
+        load_config(path)
 
 
 def test_workflow_auto_print_delay_must_not_be_negative(tmp_path: Path) -> None:

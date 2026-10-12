@@ -471,7 +471,7 @@ FIT_OPTIONS: tuple[FitMode, ...] = (
     FitMode.STRETCH,
 )
 QUALITY_OPTIONS: tuple[int, ...] = (70, 75, 80, 85, 90, 95, 100)
-AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 5.0)
+AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 1.0, 5.0)
 BOOL_OPTIONS: tuple[bool, ...] = (False, True)
 KEEPALIVE_OPTIONS: tuple[float, ...] = (5.0, 10.0, 15.0, 30.0)
 FONT_SIZE_OPTIONS: tuple[FontSize, ...] = (FontSize.SMALL, FontSize.MEDIUM, FontSize.LARGE)

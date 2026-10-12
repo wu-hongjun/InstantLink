@@ -2,6 +2,31 @@ import Foundation
 
 @MainActor
 final class BridgeSettingsDraftTests {
+    func testWorkflowReviewChoicesValidateAndPreserveLoadedSettings() throws {
+        for value: Double? in [nil, 0, 1, 5] {
+            var loaded = BridgeConfig.defaults
+            loaded.workflow.autoPrintDelaySeconds = value
+            let draft = BridgeSettingsDraft()
+            draft.load(loaded)
+            try expectTrue(draft.validate())
+            try expectFalse(draft.isDirty)
+            try expectTrue(draft.diff().isEmpty)
+            draft.draft?.workflow.autoPrintDelaySeconds = value == 1 ? 5 : 1
+            try expectTrue(draft.validate())
+            let workflow = try unwrap(draft.diff()["workflow"] as? [String: Any])
+            try expectEqual(workflow["auto_print_delay_s"] as? Double, value == 1 ? 5 : 1)
+            draft.revert()
+            try expectEqual(draft.draft?.workflow.autoPrintDelaySeconds, value)
+        }
+        let draft = BridgeSettingsDraft()
+        draft.load(.defaults)
+        for invalid in [-1.0, 0.5, 2.0, Double.infinity, Double.nan] {
+            draft.draft?.workflow.autoPrintDelaySeconds = invalid
+            try expectFalse(draft.validate())
+            try expectTrue(draft.fieldErrors.keys.contains(.workflowAutoPrintDelay))
+        }
+    }
+
     func testUnlockGuardDiffAndRevertPreserveOtherSettings() throws {
         let draft = BridgeSettingsDraft()
         draft.load(.defaults)

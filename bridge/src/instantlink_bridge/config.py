@@ -316,7 +316,7 @@ class PrinterConfig:
 class WorkflowConfig:
     """Image receive and print workflow configuration."""
 
-    auto_print_delay_s: float | None = 5.0
+    auto_print_delay_s: float | None = 1.0
     allow_print_without_film: bool = False
 
 
@@ -742,7 +742,7 @@ def _load_printer_config(data: object) -> PrinterConfig:
 def _load_workflow_config(data: object) -> WorkflowConfig:
     if not isinstance(data, dict):
         raise ValueError("[workflow] must be a TOML table")
-    auto_print_delay_s = _parse_auto_print_delay(data.get("auto_print_delay_s", 5.0))
+    auto_print_delay_s = _parse_auto_print_delay(data.get("auto_print_delay_s", 1.0))
     allow_print_without_film = _parse_bool(
         data.get("allow_print_without_film", False),
         "[workflow].allow_print_without_film",
@@ -1103,14 +1103,14 @@ def _format_auto_print_delay(value: float | None) -> str:
 def _parse_auto_print_delay(value: object) -> float | None:
     if isinstance(value, str) and value.strip().lower() in {"off", "false", "none"}:
         return None
-    if not isinstance(value, str | int | float):
-        raise ValueError("[workflow].auto_print_delay_s must be off, 0, or 5")
+    if isinstance(value, bool) or not isinstance(value, str | int | float):
+        raise ValueError("[workflow].auto_print_delay_s must be off, 0, 1, or 5")
     auto_print_delay_s = float(value)
     if not isfinite(auto_print_delay_s) or auto_print_delay_s < 0:
-        raise ValueError("[workflow].auto_print_delay_s must be off, 0, or 5")
-    if auto_print_delay_s == 0 or auto_print_delay_s == 5:
+        raise ValueError("[workflow].auto_print_delay_s must be off, 0, 1, or 5")
+    if auto_print_delay_s in {0.0, 1.0, 5.0}:
         return auto_print_delay_s
-    return 5.0
+    return 1.0
 
 
 def _positive_float(value: object, field_name: str) -> float:

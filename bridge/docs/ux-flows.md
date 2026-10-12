@@ -181,7 +181,7 @@ Shown at boot when no `INSTAX-*` printer is selected.
 +----------------------+
 |  preview image area  |
 |                      |
-| Print in 5s          |
+| Print in 1s          |
 | Up/Down: Zoom        |
 | K1 Print K2 Cancel   |
 | K3 Tool              |
@@ -233,8 +233,8 @@ It remains accessible without a saved Printer through KEY1.
   the combined result while editing. It applies after the Look at print resolution before JPEG
   encoding. Sync mode preserves the original camera file.
 - Transform controls image fit and JPEG quality.
-- Workflow names its three stored choices **Confirm each** (`None`), **Print immediately** (`0s`),
-  and **Review 5s** (`5s`). No-film test, Keepalive, and Search rate appear below Advanced.
+- Workflow offers **Confirm each** (`None`), **Print immediately** (`0s`), **Review 1s** (`1s`,
+  default) and **Review 5s** (`5s`). No-film test, Keepalive and Search rate appear below Advanced.
 - Printer contains Serial, Pair/Re-pair, Reconnect, Forget, and Printer type. Re-pair/Forget use
   explicit confirmation. Reconnect checks the saved device without changing its identity.
 - Network combines camera Hotspot/Client setup, Wi-Fi/FTP credentials, diagnostics, iPhone
@@ -354,7 +354,8 @@ stateDiagram-v2
 ## Auto-Print Timer
 
 - **Print immediately**: skip preview and print after FTP receive.
-- **Review 5s**: start the five-second review after the preview appears. Editing or selecting a
+- **Review 1s** (default) or **Review 5s**: start the selected countdown after the preview appears.
+  Editing or selecting a
   tool switches that photo to manual confirmation; press KEY1 to print.
 - **Confirm each**: show a preview and wait for KEY1/joystick press to print.
 - Cancel interrupts preparation through the killable worker and releases the CPU boost promptly.

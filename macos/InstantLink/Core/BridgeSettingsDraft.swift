@@ -117,8 +117,8 @@ final class BridgeSettingsDraft: ObservableObject {
         if !draft.printer.searchIntervalSeconds.isFinite || draft.printer.searchIntervalSeconds <= 0 {
             errors[.printerSearchInterval] = "Search interval must be greater than 0."
         }
-        if let delay = draft.workflow.autoPrintDelaySeconds, delay != 0, delay != 5 {
-            errors[.workflowAutoPrintDelay] = "Auto-print delay must be 0 s, 5 s, or Off."
+        if let delay = draft.workflow.autoPrintDelaySeconds, delay != 0, delay != 1, delay != 5 {
+            errors[.workflowAutoPrintDelay] = "Auto-print delay must be 0 s, 1 s, 5 s, or Off."
         }
         if draft.power.idlePoweroffEnabled {
             if !draft.power.idlePoweroffAfterSeconds.isFinite || draft.power.idlePoweroffAfterSeconds <= 0 {

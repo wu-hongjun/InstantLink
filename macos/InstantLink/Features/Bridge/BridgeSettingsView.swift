@@ -257,6 +257,7 @@ struct BridgeSettingsView: View {
                     options: [
                         (-1, L("Confirm each")),
                         (0, L("Print immediately")),
+                        (1, L("Review 1s")),
                         (5, L("Review 5s")),
                     ]
                 )
@@ -862,6 +863,7 @@ struct BridgeSettingsView: View {
     private func formatDelay(_ value: Double?) -> String {
         guard let value else { return L("Confirm each") }
         if value == 0 { return L("Print immediately") }
+        if value == 1 { return L("Review 1s") }
         if value == 5 { return L("Review 5s") }
         return "\(Int(value)) s"
     }

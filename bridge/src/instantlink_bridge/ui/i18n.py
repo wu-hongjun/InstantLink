@@ -102,6 +102,7 @@ _ZH_HANS: dict[str, str] = {
     "Complete": "完成",
     "Confirm each": "逐张确认",
     "Print immediately": "立即打印",
+    "Review 1s": "预览1秒",
     "Review 5s": "预览5秒",
     "KEY1 Settings": "KEY1 设置",
     "KEY3 Post": "KEY3 后期",

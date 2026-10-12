@@ -4,6 +4,17 @@ The Bridge manager exposes authenticated configuration at `/v1/config`. The App 
 configuration, validates a draft and applies a field diff. The independent Printer correction
 section is additive; older configurations and older responses without it default to zero.
 
+## Print review delay
+
+`workflow.auto_print_delay_s` defaults to **1 second** when absent. Management updates accept
+`1` (Review 1s), `5` (Review 5s), `0` (Print immediately) or `"off"` (Confirm each). Boolean,
+negative, non-finite and other numeric values are rejected by the management API. Stored
+legacy positive delays outside these choices map to the 1-second review; explicit 5-second,
+immediate and manual settings are preserved. The App and Bridge settings expose all four choices.
+
+The countdown begins after preparation displays the photo. Editing or choosing a tool switches
+that photo to manual confirmation. Changing the review delay does not alter active print speed.
+
 ## Printer correction
 
 A configuration response includes:

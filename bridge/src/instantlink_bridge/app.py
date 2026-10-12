@@ -92,7 +92,7 @@ else:
     PrinterSender = Callable[..., Awaitable[None]]
 
 LOGGER = logging.getLogger(__name__)
-AUTO_PRINT_DELAY_S = 5.0
+AUTO_PRINT_DELAY_S = 1.0
 IMAGE_QUEUE_MAXSIZE = 100
 PRINT_JOB_TIMEOUT_S = 120.0
 PRINT_JOB_HARD_TIMEOUT_S = 300.0

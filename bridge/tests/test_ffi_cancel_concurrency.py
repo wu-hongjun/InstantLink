@@ -10,6 +10,44 @@ from instantlink_bridge.ble.instantlink import InstantLinkBackend
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("error", [RuntimeError("worker failed"), TimeoutError("worker deadline")])
+async def test_cancelled_worker_failure_preserves_cancellation_without_false_restart(
+    monkeypatch: pytest.MonkeyPatch, error: Exception
+) -> None:
+    started, release, next_started = (threading.Event() for _ in range(3))
+    backend = InstantLinkBackend()
+
+    def worker() -> None:
+        started.set()
+        assert release.wait(2)
+        raise error
+
+    def restart(_code: int) -> None:
+        raise AssertionError("completed failing worker must not restart the process")
+
+    monkeypatch.setattr(instantlink.os, "_exit", restart)
+    task = asyncio.create_task(backend._run_blocking_serialized("status", worker))
+    next_task: asyncio.Task[object] | None = None
+    try:
+        assert await asyncio.to_thread(started.wait, 1)
+        task.cancel()
+        await asyncio.sleep(0)
+        next_task = asyncio.create_task(
+            backend._run_blocking_serialized("next", lambda: next_started.set())
+        )
+        await asyncio.sleep(0)
+        assert not next_started.is_set()
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, 1)
+        await asyncio.wait_for(next_task, 1)
+        assert next_started.is_set()
+    finally:
+        release.set()
+        await asyncio.gather(task, *([next_task] if next_task else []), return_exceptions=True)
+
+
+@pytest.mark.asyncio
 async def test_repeated_cancellation_retains_printer_lock_until_blocking_worker_finishes() -> None:
     started, release, second_started = (threading.Event() for _ in range(3))
     backend = InstantLinkBackend()

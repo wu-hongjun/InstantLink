@@ -1,5 +1,28 @@
 # Current Bridge Context
 
+## Offline runtime correctness audit, 2026-10-12
+
+The Pi is disconnected for other work. Plan075 / `docs/assets/bridge-audit-075/` record a
+local audit of saved runtime logs and current code. Candidate changes are tested locally;
+**not deployed**. The last installed native artifact remains f574445 / FFI SHA-256
+`b601ec6a8b14138617ebbae5e5c74b892bb461ee2d2747dbfc6ed181f253bacb`.
+
+- Cancelled FFI worker errors preserve cancellation and serialization. Completed worker/sender
+  TimeoutError is not mistaken for a stuck operation or process-restart deadline.
+- Superseded status results cannot change counters/state or schedule recovery. Bond-reset
+  cancellation propagates; retired status tasks remain owned through shutdown cleanup.
+- Status logs report first/change/recovery and five-minute heartbeat. Unchanged status/routine
+  scans are DEBUG; expected absence is INFO once; genuine errors remain warnings.
+- Dark maintenance waits up to5s with expiry deadlines and immediate display-wake rescheduling.
+  Hidden About collectors do not start. Awake cadence, CPU tiers, network/FTP/status cadence,
+  image data, protocol delays, config/schema and App/iOS contracts are unchanged.
+- Offline saved-log replay:25 observations still make25 fetches, with1INFO/24DEBUG. Not a
+  hardware CPU/energy measurement.18 new regression cases; Bridge1542 tests, Ruff and mypy65
+  passed on macOS/Python3.13.9. Full current journal and hardware smoke await Pi availability.
+
+The user now prioritizes system correctness and operational efficiency over battery-duration
+benchmarking. No discharge test is scheduled or required for this audit.
+
 ## Chunk-pacing selection, 2026-10-12
 
 Plan 074 selected **25 ms** intermediate pacing for Square/Linux/236-byte/indexed-ACK sessions,

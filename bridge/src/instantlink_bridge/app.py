@@ -1067,6 +1067,11 @@ async def await_print_sender_without_cancelling_on_timeout(
         try:
             await asyncio.wait_for(asyncio.shield(send_task), timeout=slow_after_s)
         except TimeoutError:
+            if send_task.done():
+                # A sender can fail with its own TimeoutError. Preserve that
+                # result rather than treating completed work as still printing.
+                send_task.result()
+                return
             LOGGER.warning(
                 "bridge.print_slow path=%s timeout_s=%s",
                 received.path,
@@ -1082,6 +1087,9 @@ async def await_print_sender_without_cancelling_on_timeout(
             try:
                 await asyncio.wait_for(asyncio.shield(send_task), timeout=remaining_s)
             except TimeoutError:
+                if send_task.done():
+                    send_task.result()
+                    return
                 LOGGER.critical(
                     "bridge.print_hard_timeout path=%s hard_timeout_s=%s",
                     received.path,

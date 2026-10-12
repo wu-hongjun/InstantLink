@@ -138,6 +138,7 @@ LOGGER = logging.getLogger(__name__)
 # exponential backoff, so a powered-off printer keeps being searched at the chosen rate.
 RESTART_PRINTER_RETRY_S = 5.0
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
+PRINTER_STATUS_LOG_HEARTBEAT_S = 300.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
 # Minimum gap between BLE scan attempts in the offline poll loop. The BLE
 # scan is a ~5s blocking call (btleplug); without a floor here the loop
@@ -243,6 +244,7 @@ _GENERIC_SEARCHING_MESSAGES = frozenset({"Searching Printer"})
 # shows a stale frame while a coroutine is busy. The `snapshot == last_rendered` short-circuit in
 # `_render` keeps this cheap and prevents render-spam.
 RENDER_TICK_S = 0.35
+RENDER_SCREEN_OFF_TICK_S = 5.0
 # How long after the last authenticated iPhone sync request the "active"
 # chip stays on the READY card (plan 050; renamed from "connected" in plan
 # 051 P3.9). Aged back to False by the render tick, mirroring the
@@ -506,6 +508,8 @@ class BridgeUi:
         self._proactive_bond_reset_task: asyncio.Task[None] | None = None
         self._last_printer_status_warning_at = -math.inf
         self._last_printer_status_warning_signature: tuple[str, ...] | None = None
+        self._last_printer_status_log_signature: tuple[object, ...] | None = None
+        self._last_printer_status_log_at = -math.inf
         # Monotonic timestamp of the last successful printer status. Readiness ("Ready to print")
         # is only asserted while this is within PRINTER_STATUS_FRESH_TTL_S; -inf means never proven.
         self._last_printer_status_ok_at: float = float("-inf")
@@ -537,8 +541,10 @@ class BridgeUi:
         self._action_task: asyncio.Task[None] | None = None
         self._pairing_task: asyncio.Task[None] | None = None
         self._status_task: asyncio.Task[None] | None = None
+        self._retired_status_tasks: set[asyncio.Task[None]] = set()
         self._status_generation = 0
         self._render_tick_task: asyncio.Task[None] | None = None
+        self._render_tick_reschedule = asyncio.Event()
         self._network_task: asyncio.Task[None] | None = None
         self._network_refresh_task: asyncio.Task[None] | None = None
         self._network_state_generation = 0
@@ -713,6 +719,7 @@ class BridgeUi:
                 self._action_task,
                 self._pairing_task,
                 self._status_task,
+                *self._retired_status_tasks,
                 self._render_tick_task,
                 self._network_task,
                 self._network_refresh_task,
@@ -1511,7 +1518,7 @@ class BridgeUi:
         await self.resume_printer_status()
 
     async def pause_printer_status(self) -> None:
-        """Pause background printer status polling and close cached BLE connection."""
+        """Pause polling while preserving the shared connection for print handoff."""
 
         await self._cancel_status_refresh()
 
@@ -3947,7 +3954,7 @@ class BridgeUi:
         except RuntimeError:
             # Pure snapshot inspection outside a running UI cannot launch I/O.
             return
-        if self._stopping or loop.time() < self._about_next_retry_at:
+        if self._stopping or self._screen_is_dark() or loop.time() < self._about_next_retry_at:
             return
         if self._about_load_task is not None and not self._about_load_task.done():
             return
@@ -4622,6 +4629,8 @@ class BridgeUi:
                 attempt_start = self._monotonic()
                 was_online = self._printer_was_online
                 online = await self._refresh_printer_status_in_background(printer, generation)
+                if not self._status_generation_is_current(generation):
+                    return
                 # A tap during this check is already serviced by its result.
                 self._printer_check_requested.clear()
                 # Proactive always-fresh-pair (docs/plans/031): the connected->failed edge is the
@@ -4636,6 +4645,8 @@ class BridgeUi:
                 # safety net for the rare stale bond that survives this path.
                 if was_online and not online:
                     await self._maybe_reset_bond_on_drop(printer)
+                    if not self._status_generation_is_current(generation):
+                        return
                 # The retry delay is the total cadence PERIOD (e.g. the configured search interval),
                 # measured from the start of each attempt. Subtract the time the attempt already
                 # consumed (its scan/connect) so the period holds whether the scan exited early on a
@@ -4659,19 +4670,28 @@ class BridgeUi:
         printer: PairedPrinter,
         generation: int | None = None,
     ) -> bool:
+        if not self._status_generation_is_current(generation):
+            return False
         try:
             status = await self._status_provider.fetch(printer)
         except asyncio.CancelledError:
             raise
         except PrinterStatusUnavailableError as exc:
+            if not self._status_generation_is_current(generation):
+                return False
+            self._last_printer_status_log_signature = None
             diagnostics = scanner_diagnostics_summary(exc)
             if self._should_log_printer_status_warning(
                 "unavailable",
                 printer,
                 str(exc),
                 diagnostics,
+                repeat_interval_s=None
+                if exc.printer_not_found
+                else PRINTER_STATUS_WARNING_INTERVAL_S,
             ):
-                LOGGER.warning(
+                LOGGER.log(
+                    logging.INFO if exc.printer_not_found else logging.WARNING,
                     "ui.printer_status_unavailable address=%s name=%s error=%s diagnostics=%s",
                     printer.address,
                     printer.name,
@@ -4684,6 +4704,9 @@ class BridgeUi:
             self._apply_status_failure(printer, self._unavailable_message(exc), generation)
             return False
         except TimeoutError as exc:
+            if not self._status_generation_is_current(generation):
+                return False
+            self._last_printer_status_log_signature = None
             if self._should_log_printer_status_warning("timeout", printer, str(exc)):
                 LOGGER.warning(
                     "ui.printer_status_connect_timeout address=%s name=%s error=%s",
@@ -4699,6 +4722,9 @@ class BridgeUi:
             )
             return False
         except Exception as exc:
+            if not self._status_generation_is_current(generation):
+                return False
+            self._last_printer_status_log_signature = None
             if self._should_log_printer_status_warning(
                 "refresh_failed",
                 printer,
@@ -4719,15 +4745,27 @@ class BridgeUi:
                 generation,
             )
             return False
-        if generation is not None and generation != self._status_generation:
-            return True
+        if not self._status_generation_is_current(generation):
+            return False
         self._printer_status_misses = 0
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at.pop(_auto_rebond_key(printer), None)
         self._clear_printer_status_warning_state()
-        self._last_printer_status_ok_at = self._monotonic()
+        now = self._monotonic()
+        self._last_printer_status_ok_at = now
         estimate = self._feed_battery_estimator(status)
-        LOGGER.info(
+        signature = (
+            printer,
+            status,
+            self._battery_minutes_remaining,
+            self._printer_keepalive_interval_s,
+        )
+        report_status = (
+            signature != self._last_printer_status_log_signature
+            or now - self._last_printer_status_log_at >= PRINTER_STATUS_LOG_HEARTBEAT_S
+        )
+        LOGGER.log(
+            logging.INFO if report_status else logging.DEBUG,
             "ui.printer_status film_remaining=%s battery=%s charging=%s model=%s "
             "battery_minutes_remaining=%s keepalive_interval_s=%s",
             status.film_remaining,
@@ -4737,6 +4775,9 @@ class BridgeUi:
             estimate.minutes_remaining if estimate is not None else None,
             self._printer_keepalive_interval_s,
         )
+        if report_status:
+            self._last_printer_status_log_at = now
+        self._last_printer_status_log_signature = signature
         self._apply_printer_status(printer, status)
         return True
 
@@ -4864,8 +4905,7 @@ class BridgeUi:
         self._proactive_bond_reset_task = asyncio.create_task(
             self._run_proactive_bond_reset(printer)
         )
-        with suppress(asyncio.CancelledError):
-            await self._proactive_bond_reset_task
+        await self._proactive_bond_reset_task
 
     async def _run_proactive_bond_reset(self, printer: PairedPrinter) -> None:
         """Remove the bond for ``printer`` only while it is disconnected; keep the selection."""
@@ -4957,6 +4997,9 @@ class BridgeUi:
 
     def _monotonic(self) -> float:
         return asyncio.get_running_loop().time()
+
+    def _status_generation_is_current(self, generation: int | None) -> bool:
+        return not self._stopping and (generation is None or generation == self._status_generation)
 
     def _printer_status_fresh_ttl_s(self) -> float:
         """Return the readiness freshness TTL: a small multiple of the keepalive interval."""
@@ -5119,12 +5162,13 @@ class BridgeUi:
         kind: str,
         printer: PairedPrinter,
         *details: str,
+        repeat_interval_s: float | None = PRINTER_STATUS_WARNING_INTERVAL_S,
     ) -> bool:
         signature = (kind, printer.address, printer.name, *details)
         now = asyncio.get_running_loop().time()
-        if (
-            signature != self._last_printer_status_warning_signature
-            or now - self._last_printer_status_warning_at >= PRINTER_STATUS_WARNING_INTERVAL_S
+        if signature != self._last_printer_status_warning_signature or (
+            repeat_interval_s is not None
+            and now - self._last_printer_status_warning_at >= repeat_interval_s
         ):
             self._last_printer_status_warning_signature = signature
             self._last_printer_status_warning_at = now
@@ -5185,15 +5229,26 @@ class BridgeUi:
         Cancellation is fire-and-forget: the poll task runs the BLE status/connect on a shielded,
         cancel-resistant worker that can take seconds to unwind. Awaiting it here would park the
         action loop (and therefore input/render). Instead we bump the status generation so any
-        stale result the cancelled task may still produce is ignored, drop the task reference, and
-        let the task tear down its own resources (its ``finally`` calls ``_status_provider.close``).
+        stale result is ignored and retain the retired task until its resources are released.
+        Shutdown includes retired tasks in its bounded cleanup window.
         """
 
         self._status_generation += 1
         task = self._status_task
         self._status_task = None
         if task is not None:
-            task.cancel()
+            self._retired_status_tasks.add(task)
+            task.add_done_callback(self._retired_status_task_completed)
+            if not task.cancelling():
+                task.cancel()
+
+    def _retired_status_task_completed(self, task: asyncio.Task[None]) -> None:
+        self._retired_status_tasks.discard(task)
+        if not task.cancelled() and (error := task.exception()) is not None:
+            LOGGER.error(
+                "ui.retired_status_cleanup_failed",
+                exc_info=(type(error), error, error.__traceback__),
+            )
 
     async def _close_cached_printer_session(self) -> None:
         # A dropped/closed BLE session means the next status is a fresh connect; discard the drain
@@ -5214,16 +5269,20 @@ class BridgeUi:
         ``_render`` directly, but a busy coroutine could otherwise leave the LCD showing a stale
         frame. This tick guarantees the screen converges on the latest snapshot. ``_render`` keeps
         the ``snapshot == last_rendered`` short-circuit (bypassed while breathing), so this is
-        cheap on idle screens and smooth across the breath cycle when active.
+        cheap on idle screens. Dark screens use a slower maintenance cadence,
+        shortened to the next freshness deadline and interrupted by display changes.
         """
 
         while True:
-            # The render loop runs at a fixed ~3 fps converger now that the
+            # Awake screens run at a ~3 fps converger now that the
             # status pill is a solid colour. Breathing-pattern states (e.g.
             # PRINTER_SEARCHING) used to drive a 16 fps cadence so the tint
             # could pulse smoothly; that animation was the dominant idle CPU
             # source on the Pi Zero 2 W and has been retired.
-            await asyncio.sleep(RENDER_TICK_S)
+            self._render_tick_reschedule.clear()
+            with suppress(TimeoutError):
+                async with asyncio.timeout(self._render_tick_interval_s()):
+                    await self._render_tick_reschedule.wait()
             # Age out readiness: if no status succeeded within the TTL, downgrade the cached
             # snapshot so a stale "Ready to print" leaves the screen even when no explicit failure
             # arrived (e.g. a dropped PRINTER_SEARCHING transition). The snapshot short-circuit in
@@ -5238,6 +5297,27 @@ class BridgeUi:
             if client_recent != self._snapshot.sync_client_recent:
                 self._snapshot = replace(self._snapshot, sync_client_recent=client_recent)
             self._render()
+
+    def _render_tick_interval_s(self) -> float:
+        if not self._screen_is_dark():
+            return RENDER_TICK_S
+        delay = RENDER_SCREEN_OFF_TICK_S
+        now = self._monotonic()
+        for fresh, last_seen, ttl in (
+            (
+                self._snapshot.printer_status_fresh,
+                self._last_printer_status_ok_at,
+                self._printer_status_fresh_ttl_s(),
+            ),
+            (
+                self._snapshot.sync_client_recent,
+                self._sync_client_seen_at,
+                SYNC_CLIENT_RECENT_TTL_S,
+            ),
+        ):
+            if fresh:
+                delay = min(delay, max(0.001, last_seen + ttl - now))
+        return delay
 
     async def _run_network_status(self) -> None:
         while True:
@@ -5282,6 +5362,7 @@ class BridgeUi:
                 if (
                     self._snapshot.mode is UiMode.SETTINGS
                     and self._settings_page is SettingsPage.ABOUT
+                    and not self._screen_is_dark()
                 ):
                     self._snapshot = replace(
                         self._snapshot,
@@ -5429,6 +5510,7 @@ class BridgeUi:
             LOGGER.exception("ui.render_failed mode=%s", self._snapshot.mode)
 
     def _set_display_idle_stage(self, stage: IdleStage) -> None:
+        self._render_tick_reschedule.set()
         if stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}:
             self._last_rendered_snapshot = None
         if self._cpu_performance is not None:

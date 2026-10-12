@@ -367,16 +367,30 @@ class InstantLinkBackend:
                         # without granting the blocking call a fresh grace period.
                         continue
                     except TimeoutError:
+                        if task.done():
+                            # The worker's own TimeoutError is a completed
+                            # failure, not expiration of the cleanup deadline.
+                            break
                         LOGGER.critical(
                             "instantlink.%s_cancel_worker_stuck restarting_process grace_s=%.1f",
                             operation,
                             FFI_CANCEL_GRACE_S,
                         )
                         os._exit(1)
+                    except Exception:
+                        # Consume a completed worker failure without replacing
+                        # the caller's cancellation with an obsolete result.
+                        break
                 # Retrieve completion (including a worker failure) before releasing
                 # the serialization lock and propagating the caller's cancellation.
                 if not task.cancelled():
-                    task.result()
+                    error = task.exception()
+                    if error is not None:
+                        LOGGER.debug(
+                            "instantlink.%s_cancel_worker_failed error_type=%s",
+                            operation,
+                            type(error).__name__,
+                        )
                 raise
 
     def _scan_blocking(self, timeout_s: float) -> list[str]:
@@ -441,12 +455,14 @@ class InstantLinkBackend:
         normalized_name = normalize_printer_name(name)
         event = "status_failed_disconnect" if disconnected else "status_failed_keep_connection"
         signature = (normalized_name, type(exc).__name__, str(exc))
+        expected_absence = isinstance(exc, InstantLinkPrinterNotFoundError)
         now = time.monotonic()
-        if (
-            signature != self._last_status_failure_signature
-            or now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
+        if signature != self._last_status_failure_signature or (
+            not expected_absence
+            and now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
         ):
-            LOGGER.warning(
+            LOGGER.log(
+                logging.INFO if expected_absence else logging.WARNING,
                 "instantlink.%s name=%s error_type=%s error=%s",
                 event,
                 normalized_name,
@@ -1099,7 +1115,13 @@ def _connect_progress_logger(
             stage_tracker.observe(stage)
         stage_name = CONNECT_STAGE_NAMES.get(stage, "unknown")
         detail_text = detail.decode("utf-8", errors="replace") if detail else ""
-        LOGGER.info(
+        routine_scan = stage in {0, 1} or (
+            stage == _CONNECT_STAGE_FAILED
+            and stage_tracker is not None
+            and stage_tracker.max_stage in {None, 0, 1}
+        )
+        LOGGER.log(
+            logging.DEBUG if routine_scan else logging.INFO,
             "instantlink.connect_progress target=%s stage=%s detail=%s",
             target_name,
             stage_name,

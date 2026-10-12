@@ -97,3 +97,22 @@ Sync and Printer reconnect remain operational.
 When disabled, one input wakes and repaints the screen without executing its normal action.
 The physical and virtual LCDs share this behavior and the existing abstract input API. This
 input guard prevents accidental button actions; it is not an authentication mechanism.
+
+### Runtime maintenance and diagnostics
+
+When the screen is dark, display maintenance waits up to five seconds rather than polling
+every 0.35 seconds. Printer-readiness and iPhone-activity expiry deadlines shorten that wait;
+display transitions interrupt it immediately. About-page version/metrics collectors are not
+started while the screen is dark. Camera receive, network recovery, Printer polling and the
+configured CPU tiers continue independently.
+
+At the default INFO log level, successful Printer status is recorded on first observation,
+value/recovery changes and a five-minute heartbeat. Unchanged intermediate observations and
+routine scan progress are DEBUG. Expected Printer absence is recorded once at INFO until
+its state changes; genuine communication failures retain rate-limited warnings. Use the
+Bridge executable's `--log-level DEBUG` option when detailed poll/scan records are needed.
+
+Cancelling a native operation retains serialization until its blocking worker has finished
+or the existing stuck-worker deadline triggers recovery. Completed worker/sender failures
+are distinguished from watchdog deadline expiry, and obsolete status results cannot initiate
+recovery or alter the current UI. Retired status tasks remain owned through shutdown cleanup.

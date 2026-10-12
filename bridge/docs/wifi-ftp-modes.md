@@ -41,7 +41,8 @@ page for checking whether the hotspot is actually active.
 
 In Bridge Wi-Fi mode, the runtime retries a missing hotspot after a 30-second startup/healthy
 grace period, with retry delays of 30, 60, 120 and then 300 seconds. Recovery runs separately
-from screen polling and defers during photo preparation, printing and recent FTP activity.
+from screen polling and defers during photo preparation, printing and recent FTP activity
+on other transports. A past camera login on the failed hotspot does not delay its recovery.
 It preserves the saved SSID/PIN and skips an administratively disabled radio. Changing FTP
 mode or stopping the Bridge cancels recovery; Wired, Auto and Same Wi-Fi do not trigger it.
 The runtime rechecks saved configuration before activation, preserving network changes from

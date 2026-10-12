@@ -36,6 +36,19 @@ async def radio_enabled() -> bool:
 
 
 @pytest.mark.asyncio
+async def test_past_camera_login_does_not_delay_missing_hotspot_recovery() -> None:
+    async def setter(_mode: WifiMode) -> str:
+        return "ok"
+
+    ui = make_ui(setter)
+    ui._ftp_activity = FtpActivityTracker()
+    ui._ftp_activity.record_connection("192.168.8.59")
+    assert ui._hotspot_recovery_allowed()
+    ui._hotspot_host = "192.168.8.1"
+    assert not ui._hotspot_recovery_allowed()
+
+
+@pytest.mark.asyncio
 async def test_locked_recovery_keeps_idle_cpu_dark_display_and_printer_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

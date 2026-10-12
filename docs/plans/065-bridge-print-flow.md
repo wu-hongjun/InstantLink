@@ -55,3 +55,9 @@ The Mac has not detected the Pi USB gadget during this session, and SSH to `192.
 out. Deployment and real locked-Wi-Fi/Printer continuity smoke await a working data connection.
 The last verified device state remains the October 6 manual recovery in plan 064 and
 `bridge/docs/current-context.md`. No film or camera upload was used in this session.
+
+During deployment the camera logged into FTP without uploading a photo. This exposed an
+overly conservative recovery guard: a past hotspot login deferred repair for the full five-minute
+activity window after its link disappeared. Recovery now defers recent activity only on other
+transports, while active photo preparation/printing/queues remain guarded. A failed hotspot
+cannot carry an ongoing Wi-Fi upload, so its earlier login should not strand camera reconnection.

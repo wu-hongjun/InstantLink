@@ -12,6 +12,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import nullcontext, suppress
 from dataclasses import replace
 from datetime import date
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Protocol, cast
 
@@ -28,6 +29,7 @@ from instantlink_bridge.config import (
     PowerBackend,
     StatusSinkKind,
     SyncConfig,
+    ipv4_24_network,
     load_config,
     write_config,
 )
@@ -2930,13 +2932,19 @@ class BridgeUi:
             or (self._preview_build_task is not None and not self._preview_build_task.done())
         ):
             return False
-        # This also protects recent USB camera traffic while wlan0 is missing.
-        # The tracker records login/completion events, not individual packets;
-        # use its full recent window rather than assuming a transfer is finished.
+        # Protect other transports conservatively. A past hotspot login cannot
+        # be an ongoing upload once the hotspot address is gone; delaying its
+        # recovery for the full activity window would strand a connected camera.
         if self._ftp_activity is not None:
             activity = self._ftp_activity.snapshot()
             if activity.is_recent(time.time()):
-                return False
+                try:
+                    if ip_address(activity.last_remote_ip or "") not in ipv4_24_network(
+                        self._config.ftp.hotspot_host
+                    ):
+                        return False
+                except ValueError:
+                    return False
         return True
 
     def _schedule_hotspot_recovery(self) -> None:

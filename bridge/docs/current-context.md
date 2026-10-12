@@ -37,6 +37,14 @@ external film/cover/battery rejection requires reset without falsely penalizing 
   BlueZ cache aborted a temporary harness precheck before discovery/image commands; fresh
   discovery is now permitted when the cache is absent. Initial disconnected health remains
   recorded separately. No production-source change or film use resulted.
+- Extended idle observation: fresh polls continued every 10 seconds through **14:47:03**, over
+  three minutes after the 600 MHz transition. At **14:47:13** the Printer was unavailable,
+  about 299 seconds after reconnect. This is consistent with Square's documented five-minute
+  idle auto-off ([manual](https://instax.com/square_link/assets/pdf/manual_naen.pdf)); physical
+  power-light confirmation is pending. Latest state: Printer offline, Bridge still 600 MHz,
+  Wi-Fi/FTP ready and services unchanged. Earlier connected checks remain valid. No evidence
+  of a pacing regression: idle support-info handling is unchanged; the bond reset followed
+  disappearance. These checks do not establish indefinite idle Printer availability.
 
 ## MTU-aware Bluetooth transport, 2026-10-12
 

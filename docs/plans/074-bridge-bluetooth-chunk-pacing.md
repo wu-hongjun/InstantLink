@@ -173,3 +173,23 @@ manifest. The final independent adversarial review found no unresolved issue.
 Sanitized evidence is in `docs/assets/bridge-audit-074/`. Temporary test binaries, duplicate
 photo uploads and raw captures are removed after review; the user's original DSC02825.jpeg
 is retained. The Bridge remains running normally with the selected 25 ms policy.
+
+
+## Extended idle observation
+
+After completing the connected screen-off check, normal status polling continued every ten
+seconds through **14:47:03**. The first unavailable status was **14:47:13**, approximately
+299 seconds after reconnect and over three minutes after the 600 MHz transition. Services and
+Bluetooth daemon PIDs remained unchanged; documentation-only deployment did not restart them.
+Latest health still verifies powersave600MHz, screen off, Wi-Fi/FTP ready, NRestarts0, no throttle
+or working caches, with the Printer offline.
+
+This timing is consistent with the Square's documented five-minute idle auto-off
+([Fujifilm manual](https://instax.com/square_link/assets/pdf/manual_naen.pdf)); the
+[official FAQ](https://www.instax.com/square_link/en/support/) documents its automatic power-off
+toggle. The user's physical power-light confirmation remains pending, so actual power-off is
+not asserted. Independent review found no reason to invalidate completed transfer/reconnect
+checks: selected pacing affects image DATA transfers, while idle support-info handling is
+unchanged. Bond-cache reset occurred after the Printer disappeared. No pacing rollback or
+Printer power-setting change was made. Do not infer indefinite idle availability from these
+checks.

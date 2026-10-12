@@ -11,6 +11,7 @@
   "limits": [
     "Same-source shared-core probe postdeploy; installed FFI status checked separately",
     "No FFI print call, physical film, mechanical timing or battery-energy measurement",
-    "Extended idle: last good status14:47:03, unavailable14:47:13 about299s after reconnect; consistent with documented5min automatic poweroff, physical power-light confirmation pending. Does not invalidate completed checks; idle status code unchanged by pacing."
-  ]
+    "Extended idle: last good status14:47:03, unavailable14:47:13 about299s after reconnect; consistent with documented5min automatic poweroff, prior physical power-light state not recorded; subsequent user power-on automatically recovered. Does not invalidate completed checks; idle status code unchanged by pacing."
+  ],
+  "additional_observation": "User power-on after extended offline period: normal Bridge automatically reconnected and received fresh status at600MHz without restart/unlock/manual FFI probe; services,Wi-Fi,FTP healthy."
 }

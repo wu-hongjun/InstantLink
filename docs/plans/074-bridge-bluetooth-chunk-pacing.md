@@ -187,9 +187,23 @@ or working caches, with the Printer offline.
 This timing is consistent with the Square's documented five-minute idle auto-off
 ([Fujifilm manual](https://instax.com/square_link/assets/pdf/manual_naen.pdf)); the
 [official FAQ](https://www.instax.com/square_link/en/support/) documents its automatic power-off
-toggle. The user's physical power-light confirmation remains pending, so actual power-off is
+toggle. The prior physical power-light state was not recorded, so its actual power-off is
 not asserted. Independent review found no reason to invalidate completed transfer/reconnect
 checks: selected pacing affects image DATA transfers, while idle support-info handling is
 unchanged. Bond-cache reset occurred after the Printer disappeared. No pacing rollback or
 Printer power-setting change was made. Do not infer indefinite idle availability from these
 checks.
+
+
+## Automatic recovery after the extended offline period
+
+The user powered the Printer on again. Without restarting/unlocking the Bridge or issuing a
+manual Printer connection, the existing 30-second recovery scan matched it at **15:33:47.030**;
+connection completed **15:33:50.237**, fresh film1/battery35 status **15:33:50.764** and again
+**15:33:56.582**. Time from physical power-on was not measured.
+
+Read-only health confirms the same Bridge/manager PIDs13234/12101, NRestarts0, CPU600MHz
+powersave, screen off/GPIO24 low, Printer connected, FTP220/NOOP200, correct USB/hotspot,
+throttle0x0 and no working caches. Runtime ab76bb4 is clean; native FFI hash remains the
+validated f574445 artifact. No film or additional test photo was used. This closes the normal
+power-on reconnect check after the extended idle/offline observation.

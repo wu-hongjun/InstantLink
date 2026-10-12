@@ -41,10 +41,17 @@ external film/cover/battery rejection requires reset without falsely penalizing 
   three minutes after the 600 MHz transition. At **14:47:13** the Printer was unavailable,
   about 299 seconds after reconnect. This is consistent with Square's documented five-minute
   idle auto-off ([manual](https://instax.com/square_link/assets/pdf/manual_naen.pdf)); physical
-  power-light confirmation is pending. Latest state: Printer offline, Bridge still 600 MHz,
+  power-light state was not recorded before the user powered it on again. At that observation:
+  Printer offline, Bridge still 600 MHz,
   Wi-Fi/FTP ready and services unchanged. Earlier connected checks remain valid. No evidence
   of a pacing regression: idle support-info handling is unchanged; the bond reset followed
   disappearance. These checks do not establish indefinite idle Printer availability.
+- User powered the Printer on again. The running Bridge automatically discovered it at
+  **15:33:47** and received fresh film1 / battery35 status at **15:33:50**. Screen remained
+  off / GPIO24 low and CPU **600 MHz / powersave**. Wi-Fi/FTP ready, same service PIDs13234
+  /12101 and NRestarts0, throttle0x0, no working caches. No Bridge restart, unlock, direct
+  FFI probe or image command was needed. This verifies recovery after the extended offline
+  period; elapsed time from physical Printer power-on was not measured.
 
 ## MTU-aware Bluetooth transport, 2026-10-12
 

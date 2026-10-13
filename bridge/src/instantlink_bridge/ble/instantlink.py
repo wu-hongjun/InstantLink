@@ -493,13 +493,19 @@ class InstantLinkBackend:
         self._last_status_failure_log_at = -float("inf")
 
     def _status_blocking_connected(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
-        self._ensure_connected_blocking(name, scan_duration_s=scan_duration_s)
+        initial_status = self._ensure_connected_blocking(
+            name, scan_duration_s=scan_duration_s, read_initial_status=True
+        )
 
         battery = ctypes.c_int()
         film = ctypes.c_int()
         charging = ctypes.c_int()
         print_count = ctypes.c_int()
-        if hasattr(self._library(), "instantlink_status"):
+        if initial_status is not None:
+            # This snapshot belongs only to the fresh connection created by this worker.
+            # Established sessions and every later poll still request current printer status.
+            battery.value, film.value, charging.value, print_count.value = initial_status
+        elif hasattr(self._library(), "instantlink_status"):
             rc = int(
                 self._library().instantlink_status(
                     ctypes.byref(battery),
@@ -764,17 +770,39 @@ class InstantLinkBackend:
         name: str,
         *,
         scan_duration_s: int,
-    ) -> None:
+        read_initial_status: bool = False,
+    ) -> tuple[int, int, int, int] | None:
         target_name = _connect_target_name(name)
         connected_name = self._device_name_blocking()
         if connected_name is not None and _printer_names_match(connected_name, target_name):
             # New native builds report terminal session state without a hardware query; older
             # ones report cached presence. Only a confirmed closure retires a reusable session.
             if not self._native_connection_known_closed():
-                return
+                return None
             self._disconnect_blocking()
         stage_tracker = _ConnectStageTracker()
-        rc = self._connect_named_blocking(target_name, scan_duration_s, stage_tracker)
+        initial_status: tuple[int, int, int, int] | None = None
+        connect_with_status = getattr(
+            self._library(), "instantlink_connect_named_with_status", None
+        )
+        if read_initial_status and connect_with_status is not None:
+            battery, film, charging, print_count = (ctypes.c_int() for _ in range(4))
+            callback = _connect_progress_logger(target_name, stage_tracker)
+            rc = int(
+                connect_with_status(
+                    target_name.encode("utf-8"),
+                    max(1, scan_duration_s),
+                    callback,
+                    ctypes.byref(battery),
+                    ctypes.byref(film),
+                    ctypes.byref(charging),
+                    ctypes.byref(print_count),
+                )
+            )
+            if rc >= 0:
+                initial_status = battery.value, film.value, charging.value, print_count.value
+        else:
+            rc = self._connect_named_blocking(target_name, scan_duration_s, stage_tracker)
         if rc < 0:
             try:
                 _raise_for_code(rc, "connect failed")
@@ -785,6 +813,7 @@ class InstantLinkBackend:
                 raise
         # The new session must not inherit a transient failure streak from the previous link.
         self._consecutive_status_failures = 0
+        return initial_status
 
     def _connect_named_blocking(
         self,
@@ -942,6 +971,17 @@ def _configure_library(lib: ctypes.CDLL) -> None:
             _CONNECT_PROGRESS_CALLBACK,
         ]
         lib.instantlink_connect_named_with_progress.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_connect_named_with_status"):
+        lib.instantlink_connect_named_with_status.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_int,
+            _CONNECT_PROGRESS_CALLBACK,
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+        ]
+        lib.instantlink_connect_named_with_status.restype = ctypes.c_int
     lib.instantlink_disconnect.argtypes = []
     lib.instantlink_disconnect.restype = ctypes.c_int
     if hasattr(lib, "instantlink_is_connected"):

@@ -152,6 +152,12 @@ fresh, bounded snapshot on that same agent bus. Exactly one known adapter is req
 connection state, incomplete scope, ambiguous topology or unavailable data uses the established
 CLI gate. A live identity prevents bond removal. Removal commands and their ordering are unchanged.
 
+With native libraries providing `instantlink_connect_named_with_status`, a fresh status request
+uses the successful connection's initial Printer read directly. It is a handoff within that
+request, with no retained status cache or TTL. Every later poll queries the Printer again.
+Older libraries use the established connect-and-status path; an error from the new function
+does not trigger another connect API. Print setup retains its existing connection path.
+
 After a disconnect event, the serialized loop finishes guarded bond cleanup before its first
 fresh scan. Recovery owners are joined before reconnect or print handoff; CLI subprocesses are
 killed and reaped on cancellation. Printing aborts if mutating cleanup cannot finish within

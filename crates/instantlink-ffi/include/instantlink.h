@@ -81,6 +81,30 @@ int32_t instantlink_connect_named_with_progress(const char *name,
                                                 instantlink_connect_stage_cb progress_cb);
 
 /**
+ * Connect to a named Printer and return the freshly queried initial status in one operation.
+ *
+ * Uses the same progress stages as `instantlink_connect_named_with_progress`. No subsequent
+ * status request is needed to obtain this connection's initial battery, film, charging or print
+ * count. Later `instantlink_status` calls still query the Printer. Outputs are untouched on error.
+ * Existing-session replacement and concurrent-disconnect semantics match the named connect APIs;
+ * callers must serialize operations when they require the returned session to remain connected.
+ *
+ * # Safety
+ *
+ * `name` must be a valid, non-null, null-terminated UTF-8 C string. Each output must point to a
+ * distinct writable i32 slot for the duration of this call. `progress_cb` may be null, and callback
+ * detail is valid only during its invocation. Concurrent or reentrant connect returns -11; a callback
+ * disconnect invalidates this connection attempt, which then returns -3 without publishing it.
+ */
+int32_t instantlink_connect_named_with_status(const char *name,
+                                              int32_t duration_secs,
+                                              instantlink_connect_stage_cb progress_cb,
+                                              int32_t *out_battery,
+                                              int32_t *out_film,
+                                              int32_t *out_charging,
+                                              int32_t *out_print_count);
+
+/**
  * Connect to a specific printer by name with configurable scan duration and progress callback
  * plus an opaque context pointer.
  *

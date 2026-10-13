@@ -79,7 +79,9 @@ pub async fn connect(
     device_name: &str,
     duration: Option<Duration>,
 ) -> Result<Box<dyn PrinterDevice>> {
-    connect_internal(device_name, duration, None, false).await
+    connect_internal(device_name, duration, None, false)
+        .await
+        .map(|(device, _)| device)
 }
 
 /// Connect to a specific printer by name and emit progress stages.
@@ -88,7 +90,60 @@ pub async fn connect_with_progress(
     duration: Option<Duration>,
     progress: Option<&ConnectProgressCallback>,
 ) -> Result<Box<dyn PrinterDevice>> {
-    connect_internal(device_name, duration, progress, true).await
+    connect_with_progress_and_status(device_name, duration, progress)
+        .await
+        .map(|(device, _)| device)
+}
+
+/// Connect with progress and return the freshly queried initial status from that same device.
+///
+/// The status is an operation result, not a cache: later calls to `PrinterDevice::status` still
+/// query the Printer. Status failure tears down the new device and does not report Connected.
+pub async fn connect_with_progress_and_status(
+    device_name: &str,
+    duration: Option<Duration>,
+    progress: Option<&ConnectProgressCallback>,
+) -> Result<(Box<dyn PrinterDevice>, PrinterStatus)> {
+    let (device, status) = connect_internal(device_name, duration, progress, true).await?;
+    // The initial-status path always fetches status before returning the device.
+    Ok((device, status.expect("initial status was requested")))
+}
+
+async fn finish_connection(
+    device: Box<dyn PrinterDevice>,
+    progress: Option<&ConnectProgressCallback>,
+    fetch_initial_status: bool,
+) -> Result<(Box<dyn PrinterDevice>, Option<PrinterStatus>)> {
+    let status = if fetch_initial_status {
+        emit_connect_progress(progress, ConnectStage::StatusFetching, None::<String>);
+        match device.status().await {
+            Ok(status) => Some(status),
+            Err(error) => {
+                let _ = device.disconnect().await;
+                return Err(error);
+            }
+        }
+    } else {
+        None
+    };
+    emit_connect_progress(
+        progress,
+        ConnectStage::Connected,
+        Some(device.name().to_owned()),
+    );
+    Ok((device, status))
+}
+
+async fn finish_connection_after_cleanup(
+    device: Box<dyn PrinterDevice>,
+    progress: Option<&ConnectProgressCallback>,
+    fetch_initial_status: bool,
+    cleanup: impl std::future::Future<Output = ()>,
+) -> Result<(Box<dyn PrinterDevice>, Option<PrinterStatus>)> {
+    // A best-effort scan stop may wait for the adapter. Complete it before the initial status
+    // read so the returned snapshot does not age behind an awaited cleanup operation.
+    cleanup.await;
+    finish_connection(device, progress, fetch_initial_status).await
 }
 
 async fn connect_internal(
@@ -96,7 +151,7 @@ async fn connect_internal(
     duration: Option<Duration>,
     progress: Option<&ConnectProgressCallback>,
     fetch_initial_status: bool,
-) -> Result<Box<dyn PrinterDevice>> {
+) -> Result<(Box<dyn PrinterDevice>, Option<PrinterStatus>)> {
     emit_connect_progress(progress, ConnectStage::ScanStarted, None::<String>);
 
     let adapter = match transport::get_adapter().await {
@@ -127,7 +182,7 @@ async fn connect_internal(
         return Err(err);
     }
 
-    let result: Result<Box<dyn PrinterDevice>> = async {
+    let result: Result<(Box<dyn PrinterDevice>, Option<PrinterStatus>)> = async {
         // Poll the candidate list during the active scan and connect as soon as the target is
         // uniquely matched, rather than always waiting out the full scan window. The scan stays
         // active throughout (started above, stopped below). On a not-found/ambiguous result we
@@ -193,27 +248,22 @@ async fn connect_internal(
         let device =
             BlePrinterDevice::new_with_progress(Box::new(transport), name, progress).await?;
 
-        if fetch_initial_status {
-            emit_connect_progress(progress, ConnectStage::StatusFetching, None::<String>);
-            if let Err(error) = device.status().await {
-                let _ = device.disconnect().await;
-                return Err(error);
-            }
-        }
-        emit_connect_progress(
+        finish_connection_after_cleanup(
+            Box::new(device),
             progress,
-            ConnectStage::Connected,
-            Some(device.name().to_owned()),
-        );
-
-        Ok::<Box<dyn PrinterDevice>, PrinterError>(Box::new(device))
+            fetch_initial_status,
+            async {
+                let _ = transport::stop_scan(&adapter).await;
+            },
+        )
+        .await
     }
     .await;
 
-    // Stop the active scan regardless of outcome so the adapter is not left scanning between polls.
-    let _ = transport::stop_scan(&adapter).await;
-
     if let Err(err) = &result {
+        // Successful connections already stopped scanning before their final status read. Failed
+        // discovery, device construction or initial status still require best-effort cleanup.
+        let _ = transport::stop_scan(&adapter).await;
         emit_connect_progress(
             progress,
             ConnectStage::Failed,
@@ -393,6 +443,233 @@ mod tests {
         normalized_printer_name, printer_name_matches, select_matching_result,
     };
     use crate::error::PrinterError;
+
+    struct StatusTransport {
+        replies: std::sync::Arc<
+            std::sync::Mutex<std::collections::VecDeque<crate::Result<crate::protocol::Packet>>>,
+        >,
+        sent: std::sync::Arc<std::sync::Mutex<Vec<Vec<u8>>>>,
+        disconnects: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::transport::Transport for StatusTransport {
+        async fn send(&self, data: &[u8]) -> crate::Result<()> {
+            self.sent.lock().unwrap().push(data.to_vec());
+            Ok(())
+        }
+        async fn receive(&self, _: std::time::Duration) -> crate::Result<crate::protocol::Packet> {
+            self.replies
+                .lock()
+                .unwrap()
+                .pop_front()
+                .unwrap_or(Err(PrinterError::Timeout))
+        }
+        async fn send_and_receive(
+            &self,
+            data: &[u8],
+            timeout: std::time::Duration,
+        ) -> crate::Result<crate::protocol::Packet> {
+            self.send(data).await?;
+            self.receive(timeout).await
+        }
+        async fn disconnect(&self) -> crate::Result<()> {
+            self.disconnects
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    fn status_reply(info: u8, data: &[u8]) -> crate::Result<crate::protocol::Packet> {
+        let mut payload = vec![0, info];
+        payload.extend_from_slice(data);
+        Ok(crate::protocol::Packet {
+            opcode: crate::commands::OP_SUPPORT_FUNCTION_INFO,
+            payload,
+        })
+    }
+
+    #[tokio::test]
+    async fn connection_returns_one_initial_status_and_later_queries_are_fresh() {
+        use crate::commands::{
+            INFO_BATTERY, INFO_IMAGE_SUPPORT, INFO_PRINT_HISTORY, INFO_PRINTER_FUNCTION,
+        };
+        use crate::device::BlePrinterDevice;
+        use crate::models::PrinterModel;
+        use std::sync::{Arc, Mutex};
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let disconnects = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let transport = StatusTransport {
+            replies: Arc::new(Mutex::new(
+                vec![
+                    status_reply(INFO_IMAGE_SUPPORT, &[0x03, 0x20, 0x03, 0x20]),
+                    status_reply(INFO_BATTERY, &[0, 5]),
+                    status_reply(INFO_PRINTER_FUNCTION, &[0x80]),
+                    status_reply(INFO_PRINT_HISTORY, &[0, 68]),
+                    status_reply(INFO_BATTERY, &[0, 4]),
+                    status_reply(INFO_PRINTER_FUNCTION, &[0]),
+                    status_reply(INFO_PRINT_HISTORY, &[0, 69]),
+                ]
+                .into(),
+            )),
+            sent: Arc::clone(&sent),
+            disconnects: Arc::clone(&disconnects),
+        };
+        let device = BlePrinterDevice::new(Box::new(transport), "INSTAX-52006924".into())
+            .await
+            .unwrap();
+        let stages = Arc::new(Mutex::new(Vec::new()));
+        let observed = Arc::clone(&stages);
+        let progress: Box<crate::connect_progress::ConnectProgressCallback> =
+            Box::new(move |event| observed.lock().unwrap().push(event.stage));
+        let (device, initial) =
+            super::finish_connection(Box::new(device), Some(progress.as_ref()), true)
+                .await
+                .unwrap();
+        let initial = initial.unwrap();
+        assert_eq!(
+            (
+                initial.battery,
+                initial.film_remaining,
+                initial.is_charging,
+                initial.print_count
+            ),
+            (5, 0, true, 68)
+        );
+        assert_eq!(initial.model, PrinterModel::Square);
+        assert_eq!(initial.name, device.name());
+        assert_eq!(sent.lock().unwrap().len(), 4); // model + one three-command status
+        assert_eq!(
+            *stages.lock().unwrap(),
+            vec![
+                crate::connect_progress::ConnectStage::StatusFetching,
+                crate::connect_progress::ConnectStage::Connected
+            ]
+        );
+        let current = device.status().await.unwrap();
+        assert_eq!(
+            (current.battery, current.is_charging, current.print_count),
+            (4, false, 69)
+        );
+        assert_eq!(sent.lock().unwrap().len(), 7);
+        assert_eq!(disconnects.load(std::sync::atomic::Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn initial_status_failure_disconnects_and_never_emits_connected() {
+        use crate::commands::INFO_IMAGE_SUPPORT;
+        use std::sync::{Arc, Mutex};
+        let disconnects = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let transport = StatusTransport {
+            replies: Arc::new(Mutex::new(
+                vec![
+                    status_reply(INFO_IMAGE_SUPPORT, &[0x03, 0x20, 0x03, 0x20]),
+                    Err(PrinterError::Timeout),
+                ]
+                .into(),
+            )),
+            sent: Arc::new(Mutex::new(Vec::new())),
+            disconnects: Arc::clone(&disconnects),
+        };
+        let device =
+            crate::device::BlePrinterDevice::new(Box::new(transport), "TestPrinter".into())
+                .await
+                .unwrap();
+        let stages = Arc::new(Mutex::new(Vec::new()));
+        let observed = Arc::clone(&stages);
+        let progress: Box<crate::connect_progress::ConnectProgressCallback> =
+            Box::new(move |event| observed.lock().unwrap().push(event.stage));
+        assert!(matches!(
+            super::finish_connection(Box::new(device), Some(progress.as_ref()), true).await,
+            Err(PrinterError::Timeout)
+        ));
+        assert_eq!(disconnects.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(
+            *stages.lock().unwrap(),
+            vec![crate::connect_progress::ConnectStage::StatusFetching]
+        );
+    }
+
+    #[tokio::test]
+    async fn classic_connect_finishing_does_not_query_status() {
+        use crate::commands::INFO_IMAGE_SUPPORT;
+        use std::sync::{Arc, Mutex};
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let transport = StatusTransport {
+            replies: Arc::new(Mutex::new(
+                vec![status_reply(INFO_IMAGE_SUPPORT, &[0x03, 0x20, 0x03, 0x20])].into(),
+            )),
+            sent: Arc::clone(&sent),
+            disconnects: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        };
+        let device =
+            crate::device::BlePrinterDevice::new(Box::new(transport), "TestPrinter".into())
+                .await
+                .unwrap();
+        let (_, status) = super::finish_connection(Box::new(device), None, false)
+            .await
+            .unwrap();
+        assert!(status.is_none());
+        assert_eq!(sent.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn awaited_scan_cleanup_finishes_before_initial_status_is_sampled() {
+        use crate::commands::{
+            INFO_BATTERY, INFO_IMAGE_SUPPORT, INFO_PRINT_HISTORY, INFO_PRINTER_FUNCTION,
+        };
+        use std::sync::{Arc, Mutex};
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let replies = Arc::new(Mutex::new(
+            vec![
+                status_reply(INFO_IMAGE_SUPPORT, &[0x03, 0x20, 0x03, 0x20]),
+                status_reply(INFO_BATTERY, &[0, 80]),
+                status_reply(INFO_PRINTER_FUNCTION, &[7]),
+                status_reply(INFO_PRINT_HISTORY, &[0, 68]),
+            ]
+            .into(),
+        ));
+        let transport = StatusTransport {
+            replies: Arc::clone(&replies),
+            sent: Arc::clone(&sent),
+            disconnects: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        };
+        let device =
+            crate::device::BlePrinterDevice::new(Box::new(transport), "TestPrinter".into())
+                .await
+                .unwrap();
+        let entered = Arc::new(tokio::sync::Notify::new());
+        let release = Arc::new(tokio::sync::Notify::new());
+        let cleanup_entered = Arc::clone(&entered);
+        let cleanup_release = Arc::clone(&release);
+        let task = tokio::spawn(super::finish_connection_after_cleanup(
+            Box::new(device),
+            None,
+            true,
+            async move {
+                cleanup_entered.notify_one();
+                cleanup_release.notified().await;
+            },
+        ));
+        entered.notified().await;
+        assert_eq!(sent.lock().unwrap().len(), 1); // Only model detection before cleanup.
+        assert!(!task.is_finished());
+        // State changes while scan cleanup is pending must be reflected in the returned snapshot.
+        *replies.lock().unwrap() = vec![
+            status_reply(INFO_BATTERY, &[0, 79]),
+            status_reply(INFO_PRINTER_FUNCTION, &[6]),
+            status_reply(INFO_PRINT_HISTORY, &[0, 69]),
+        ]
+        .into();
+        release.notify_one();
+        let (_, status) = task.await.unwrap().unwrap();
+        let status = status.unwrap();
+        assert_eq!(
+            (status.battery, status.film_remaining, status.print_count),
+            (79, 6, 69)
+        );
+        assert_eq!(sent.lock().unwrap().len(), 4); // One status, with no second query.
+    }
 
     #[test]
     fn is_wedge_signature_matches_in_progress() {

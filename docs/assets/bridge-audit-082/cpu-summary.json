@@ -1,0 +1,65 @@
+{
+  "baseline": {
+    "label": "baseline-connected",
+    "rows": [
+      {
+        "sample": 1,
+        "elapsed_s": 20.001122128000134,
+        "process_cpu_percent_one_core": 0.4499747535364852,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 26321
+      },
+      {
+        "sample": 2,
+        "elapsed_s": 20.000968325999565,
+        "process_cpu_percent_one_core": 0.3499830551154162,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 26321
+      },
+      {
+        "sample": 3,
+        "elapsed_s": 20.000998481998977,
+        "process_cpu_percent_one_core": 0.4499775352765541,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 26321
+      }
+    ],
+    "boundary": "Three20s dark600MHz process samples; ambientBLE and separate runtime starts prevent universal CPU/energyclaims",
+    "mean_percent_one_core": 0.4166451146428185
+  },
+  "candidate": {
+    "label": "candidate-connected",
+    "rows": [
+      {
+        "sample": 1,
+        "elapsed_s": 20.00106973200309,
+        "process_cpu_percent_one_core": 0.3999786065042036,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 27611
+      },
+      {
+        "sample": 2,
+        "elapsed_s": 20.00150072100223,
+        "process_cpu_percent_one_core": 0.3999699878319499,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 27611
+      },
+      {
+        "sample": 3,
+        "elapsed_s": 20.00178254400089,
+        "process_cpu_percent_one_core": 0.6999376165200337,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 27611
+      }
+    ],
+    "boundary": "Three20s dark600MHz process samples; ambientBLE and separate runtime starts prevent universal CPU/energyclaims",
+    "mean_percent_one_core": 0.49996207028539574
+  },
+  "boundary": "3x20s connected600MHz perruntime; separate starts/ambientBLE variation. Means0.417% versus0.500%; no energy/CPU reduction claim."
+}

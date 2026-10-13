@@ -1,0 +1,21 @@
+{
+  "records_reviewed": 6642,
+  "normal_records": 40,
+  "normal_pids": [
+    29062,
+    28530
+  ],
+  "normal_warning_error_panic_lines": [],
+  "boot_panic_records": [
+    {
+      "pid": "24547",
+      "message": "thread 'tokio-rt-worker' (24557) panicked at /Users/hongjunwu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bluez-async-0.8.2/src/messagestream.rs:40:84:"
+    },
+    {
+      "pid": "25926",
+      "message": "thread 'tokio-rt-worker' (25938) panicked at /Users/hongjunwu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bluez-async-0.8.2/src/messagestream.rs:40:84:"
+    }
+  ],
+  "historical_structured_warning_errors": 108,
+  "scope": "Currentboot Bridge+manager servicejournalincluding controlledtests andhistorical079/080/081faults; rawjournalprivate. Includes native stderr panics, notonlystructuredlevels. No kernel-logclaim."
+}

@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "source_commit": "82f6097",
+  "independent_affected_tests": 337,
+  "host_rust_tests": 298,
+  "host_rust_doctests": 1,
+  "full_bridge_tests": 1763,
+  "App_tests": 156,
+  "ARM_core_tests": 197,
+  "ARM_vendor_tests": 51,
+  "ARM_private_bus_tests": 4,
+  "ARM_FFI_tests": 39,
+  "gates": [
+    "normalhooks",
+    "Ruff",
+    "strictmypy67",
+    "touchedformat",
+    "Rustfmt",
+    "hoststrictClippy",
+    "LinuxproductionstrictClippy",
+    "headerdrift",
+    "strictdocs"
+  ],
+  "sha256": {
+    "bridge/src/instantlink_bridge/ui/controller.py": "cc2804a121da7fc7799b17339866f9b46a58c34501c9ded3870aff8e0535d312",
+    "bridge/src/instantlink_bridge/ui/pairing.py": "59d1c3450642b620053c7795a0fdfa41dfa2605ca5d88e0c97db6cdf3fc10bbe",
+    "crates/instantlink-core/src/transport.rs": "3f65aed57b398ec6a44ba35eccb06c45c16e148bd0e40457d08e4d3f63c474dd",
+    "vendor/bluez-async/src/messagestream.rs": "74f42c8b7f51abb161550b5a84886ce98c408f9ebadb25aca55a6f2df3325edb",
+    "vendor/bluez-async/src/lib.rs": "7cf35e9e7691433e875e4ab9a84e56c3b24a1936875ac62e166351d0855c9272",
+    "vendor/bluez-async/Cargo.toml": "cd9ea187693554f1460add059b39b886a24eb1122f647f02740d1e087ea296ef"
+  },
+  "resolved_findings": [
+    "empty/unscoped snapshot cannot authorize bond removal",
+    "subprocess cancellation owns kill/reap through repeatedcancel",
+    "print waits for mutatingrecovery with6s abortlimit",
+    "replacement poll waits for cleanup and continues afterchildcancel",
+    "dbus receiver/filter teardown races nonpanicking",
+    "Linuxonly vendor scope, explicitTokio time, provenance andupstreamstyle gates"
+  ],
+  "native_FFI_sha256": "d23d3b817108b0243ab474af2970f1fd7748431c317af64b38bc4c5eb94f3d38",
+  "native_CLI_sha256": "b3fcffc0c0d1a351e2cdafbdddee065393434cb1c01f56e6fa1239874e9502dc",
+  "film_used": 0
+}

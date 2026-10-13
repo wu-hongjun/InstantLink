@@ -1,5 +1,37 @@
 # Current Bridge Context
 
+## Discovery and connection setup, 2026-10-13
+
+Plan082 / `docs/assets/bridge-audit-082/`: clean **82f6097** Python/native deployed.
+FFI SHA256 `d23d3b817108b0243ab474af2970f1fd7748431c317af64b38bc4c5eb94f3d38`,
+CLI `b3fcffc0c0d1a351e2cdafbdddee065393434cb1c01f56e6fa1239874e9502dc`.
+
+- Guarded bond cleanup precedes the first reconnect scan after disconnect events; live links
+  are preserved. Fresh single-adapter D-Bus gate avoids CLI info, with conservative fallback.
+  Owned CLI children kill/reap on cancellation; print handoff joins mutators or aborts safely
+  at6s, replacement polls retain cleanup ownership and continue after child cancellation.
+- Read-only MTU lookup overlaps the unchanged200ms settle floor/1.2s budget; default/missing
+  MTU refreshed after settle. All real payloads remained247/236; no print bytes/pacing/ABI change.
+- Localized licensed BlueZ dependency patch fixes receiver/filter cleanup races and native
+  panic. Plan081 zero structured errors missed a stderr panic at09:41:09; full log scan now
+  includes panic/unwrap/thread messages. Historical faults retained, not presented as clean.
+- No-film status-only recovery: baseline13.141/19.211s, candidate7.990/8.690s, installed12.632s.
+  All accepted rows locked600/camera-ready. Installed still had one scan miss; candidate3
+  transient missing characteristic recovered by existing rebond. Radio varies; no universal
+  speedup. CPU3×20s means0.417→0.500% onecore, child0, all600; no energy/CPU improvement claim.
+- Independent review resolved unscoped negatives, subprocess/recovery/print/cancellation races;
+  337 targeted tests pass. Normalhooks1763, hostRust298+1doc, App156, PiARMcore197/vendor51+4
+  privatebus/FFI39, Ruff/mypy67/format/host+LinuxstrictClippy/header/docs pass. No film/image
+  commands; printquality not physically retested. Abstract-input LCD tripleunlock/relock and
+  statuspause/resume pass; contacts not actuated. Audit /tmp ENOSPC retained/excluded, fixed
+  by removing owned test binaries and using /var/tmp for later unit executables.
+- Final normal10:43:26EDT PID29062/manager28530 active/NRestarts0, connected,600MHz/GPIO24low,
+  45.084°C/throttle0x0, GPIOv2, hotspot/USB/FTP220/200 healthy, source/native hashes match.
+  6642currentboot service records reviewed; finalnormalzero warnings/errors/panics. Rawlogs
+  private; no kernel claim. Observer/drop-in/socket/source/lib/testbinary fixtures removed.
+- Next: variable advertisement/GATT export,1.3–1.5s BLE handshake, duplicate initialstatus
+  (~0.43–0.54s then Bridge status again). Preserve freshness before caching/reusing status.
+
 ## Bluetooth disconnect events, 2026-10-13
 
 Plan 081 / `docs/assets/bridge-audit-081/`: clean **ec960c2** Python source installed;

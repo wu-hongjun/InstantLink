@@ -153,6 +153,20 @@ checks. Invalid or unavailable metadata falls back to those checks; scan cadence
 unfiltered advertisements and saved-Printer reconnect behavior are preserved.
 The extra reader has a bounded query budget and owns its separate bus resource.
 
+The selected Printer also has a disconnect watch on the existing agent bus. After
+successful status, one bounded snapshot identifies a unique live physical path; stale
+iOS/Android identities are ignored and ambiguous identities retain polling. Authenticated
+connection-loss, device/adapter-removal and BlueZ-owner events wake the serialized status
+loop, including its ordinary waiting gap. Callbacks do not issue Printer commands or change
+CPU tiers. Printing pauses and selection/generation changes disarm the watch.
+
+Signals arriving during status or watch setup remain pending, so an earlier reply cannot
+restore readiness after the link has dropped. A 250 ms recovery gap bounds repeat cycles;
+bond cleanup and existing two-retry/offline cadence remain. Ten-second periodic status
+checks remain the fallback. An arming failure is tried/logged once per connected episode,
+then a new status generation or offline/reconnect transition permits another attempt.
+There are no per-poll watch snapshots or new idle queries.
+
 The pairing agent tracks BlueZ owner changes on its existing bus and registers
 again after a daemon restart. If the agent manager or selected adapter appears
 late, its interface-added event retries registration. These watches do not poll

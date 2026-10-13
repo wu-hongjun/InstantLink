@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -1343,6 +1343,335 @@ async def test_cancelled_poll_does_not_cancel_silent_link_recovery() -> None:
     finally:
         release.set()
         await ui._silent_link_recovery_task
+
+
+class _DisconnectWatcher:
+    def __init__(self) -> None:
+        self.callbacks: list[Callable[[], None]] = []
+        self.names: list[str] = []
+        self.disarmed: list[int] = []
+        self.armed = asyncio.Event()
+
+    async def watch(self, name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        index = len(self.callbacks)
+        self.names.append(name)
+        self.callbacks.append(callback)
+        self.armed.set()
+        return lambda: self.disarmed.append(index)
+
+
+def _disconnect_test_ui(provider: _FakeStatusProvider, watcher: _DisconnectWatcher) -> BridgeUi:
+    printer = PairedPrinter(address="INSTANTLINK:INSTAX-12345678", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        printer_disconnect_watcher=watcher.watch,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+    return ui
+
+
+@pytest.mark.asyncio
+async def test_failed_disconnect_watch_arms_once_per_connected_episode(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    clock = [0.0]
+    attempted: list[int] = []
+    outcomes = [True, True, True, False, True, True, True]
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls == len(outcomes):
+                raise asyncio.CancelledError
+            online = outcomes[self.fetch_calls]
+            self.fetch_calls += 1
+            if not online:
+                raise PrinterStatusUnavailableError("not advertising")
+            return PrinterStatusSnapshot(3, 90, False)
+
+    provider = Provider()
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+
+    async def unavailable_watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        assert name == "INSTAX-12345678"
+        attempted.append(provider.fetch_calls)
+        raise RuntimeError("snapshot unavailable")
+
+    async def sleep(delay: float) -> None:
+        clock[0] += delay
+
+    async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
+        waiter.close()
+        clock[0] += duration_s
+        raise TimeoutError
+
+    ui._printer_disconnect_watcher = unavailable_watch
+    monkeypatch.setattr(ui, "_monotonic", lambda: clock[0])
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(asyncio, "wait_for", wait_for)
+    assert ui.snapshot.paired_printer is not None
+    with caplog.at_level(logging.WARNING), pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+
+    assert attempted == [1, 5]
+    warnings = [
+        record
+        for record in caplog.records
+        if "ui.printer_disconnect_watch_failed" in record.message
+    ]
+    assert len(warnings) == 2
+    assert provider.fetch_calls == 7  # Periodic status remains operational throughout.
+    assert ui._printer_disconnect_unsubscribe is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kick_during_gap", [True, False])
+async def test_disconnect_event_poll_preserves_bounded_retries_with_fake_clock(
+    monkeypatch: pytest.MonkeyPatch, kick_during_gap: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    clock = [0.0]
+    starts: list[float] = []
+    kicked = False
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            starts.append(clock[0])
+            if self.fetch_calls == 4:
+                raise asyncio.CancelledError
+            self.fetch_calls += 1
+            if self.fetch_calls > 1:
+                # A delayed duplicate callback cannot reset the recovery budget.
+                watcher.callbacks[0]()
+                raise PrinterStatusUnavailableError("not advertising")
+            return PrinterStatusSnapshot(3, 90, False)
+
+    provider = Provider()
+    ui = _disconnect_test_ui(provider, watcher)
+
+    async def sleep(delay: float) -> None:
+        clock[0] += delay
+
+    async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
+        nonlocal kicked
+        waiter.close()
+        if not kicked and (kick_during_gap or duration_s > MIN_OFFLINE_SEARCH_GAP_S):
+            clock[0] += 0.1
+            watcher.callbacks[0]()
+            kicked = True
+            return True
+        clock[0] += duration_s
+        raise TimeoutError
+
+    monkeypatch.setattr(ui, "_monotonic", lambda: clock[0])
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(asyncio, "wait_for", wait_for)
+    assert ui.snapshot.paired_printer is not None
+    with pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+
+    first_retry = 0.35 if kick_during_gap else 2.35
+    assert starts == pytest.approx(
+        [0.0, first_retry, first_retry + 0.25, first_retry + 0.5, first_retry + 30.5]
+    )
+    assert provider.close_cached_calls == 1
+    assert watcher.disarmed == [0]
+    assert not ui._printer_disconnect_pending
+
+
+@pytest.mark.asyncio
+async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_status() -> None:
+    watcher = _DisconnectWatcher()
+    second_fetch = asyncio.Event()
+    release = asyncio.Event()
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls:
+                assert self.close_cached_calls == 1
+                second_fetch.set()
+                await release.wait()
+            return await super().fetch(printer)
+
+    provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(watcher.armed.wait(), 1)
+        assert provider.fetch_calls == 1
+        watcher.callbacks[0]()
+        watcher.callbacks[0]()  # Duplicate signals cannot grow a retry budget or schedule work.
+        await asyncio.wait_for(second_fetch.wait(), 0.5)
+        assert not ui._printer_status_is_fresh()
+        assert watcher.disarmed == [0]
+        assert watcher.names == ["INSTAX-12345678"]
+    finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+
+
+@pytest.mark.asyncio
+async def test_disconnect_during_status_fetch_preserves_event_and_serializes_cleanup() -> None:
+    watcher = _DisconnectWatcher()
+    release = asyncio.Event()
+    second_started = asyncio.Event()
+    third_started = asyncio.Event()
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls == 1:
+                second_started.set()
+                await release.wait()
+                assert self.close_cached_calls == 0
+            if self.fetch_calls == 2:
+                assert self.close_cached_calls == 1
+                assert not ui._printer_status_is_fresh()
+                third_started.set()
+                await asyncio.Event().wait()
+            return await super().fetch(printer)
+
+    provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    ui._printer_keepalive_interval_s = 2.0
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(watcher.armed.wait(), 1)
+        # A requested check interrupts the connected wait without dispatching another worker.
+        ui._printer_check_requested.set()
+        await asyncio.wait_for(second_started.wait(), 0.5)
+        watcher.callbacks[0]()
+        await asyncio.sleep(0)
+        assert provider.close_cached_calls == 0
+        release.set()
+        await asyncio.wait_for(third_started.wait(), 0.5)
+        assert len(watcher.callbacks) == 1  # No rearm from the ACK racing the drop.
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+
+
+@pytest.mark.asyncio
+async def test_disconnect_watch_keeps_one_subscription_across_successful_status_checks() -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(watcher.armed.wait(), 1)
+        for expected in range(2, 5):
+            provider.fetch_started.clear()
+            ui._printer_check_requested.set()
+            await asyncio.wait_for(provider.fetch_started.wait(), 0.5)
+            assert provider.fetch_calls == expected
+        assert len(watcher.callbacks) == 1
+        assert provider.close_cached_calls == 0
+    finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+    assert watcher.disarmed == [0]
+    watcher.callbacks[0]()
+    assert not ui._printer_disconnect_pending
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["pause", "name", "address", "stop"])
+async def test_disconnect_callback_cannot_poison_paused_replaced_or_stopped_poll(
+    change: str,
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    assert ui.snapshot.paired_printer is not None
+    await ui._arm_printer_disconnect_watch(ui.snapshot.paired_printer, ui._status_generation)
+    if change == "pause":
+        await ui.pause_printer_status()
+        assert watcher.disarmed == [0]
+    elif change in {"name", "address"}:
+        selected = ui.snapshot.paired_printer
+        ui._snapshot = replace(
+            ui.snapshot,
+            paired_printer=replace(
+                selected,
+                name="INSTAX-87654321" if change == "name" else selected.name,
+                address="OTHER" if change == "address" else selected.address,
+            ),
+        )
+    else:
+        ui._stopping = True
+    watcher.callbacks[0]()
+    assert not ui._printer_disconnect_pending
+    assert not ui._printer_check_requested.is_set()
+    assert provider.close_cached_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_disconnect_watch_survives_detected_model_metadata_update() -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None and printer.model is None
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    ui._apply_printer_status(printer, PrinterStatusSnapshot(3, 90, False, PrinterModel.SQUARE))
+    assert ui.snapshot.paired_printer is not None
+    assert ui.snapshot.paired_printer.model is PrinterModel.SQUARE
+    assert ui.snapshot.paired_printer != printer
+    watcher.callbacks[0]()
+    assert ui._printer_disconnect_pending
+    assert ui._printer_check_requested.is_set()
+    assert not ui._printer_status_is_fresh()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_while_arming_survives_first_success_and_uses_recovery_budget() -> None:
+    watcher = _DisconnectWatcher()
+
+    async def watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        callback()  # The seeding snapshot found a drop after the successful status ACK.
+        return await watcher.watch(name, callback)
+
+    failed = asyncio.Event()
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls:
+                failed.set()
+                assert ui._printer_was_online
+                assert self.close_cached_calls == 1
+                await asyncio.Event().wait()
+            return await super().fetch(printer)
+
+    provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    ui._printer_disconnect_watcher = watch
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(failed.wait(), 0.5)
+        assert not ui._printer_status_is_fresh()
+    finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
 
 
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:

@@ -216,6 +216,16 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             raise RuntimeError("BlueZ pairing agent snapshot unavailable")
         return await cast(BluezObjectsProvider, provider)()
 
+    async def watch_printer_disconnect(
+        name: str, callback: Callable[[], None]
+    ) -> Callable[[], None]:
+        watcher = getattr(bluez_agent, "watch_printer_disconnect", None)
+        if not callable(watcher):
+            return lambda: None
+        return await cast(
+            Callable[[str, Callable[[], None]], Awaitable[Callable[[], None]]], watcher
+        )(name, callback)
+
     pairer = BluetoothctlPrinterPairer(bluez_objects_provider=current_bluez_objects)
 
     async def record_power_activity() -> None:
@@ -340,6 +350,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         sync_token_rotated_callback=on_sync_token_rotated,
         ready_event=ready_event,
         bluetooth_ready_event=bluetooth_ready_event,
+        printer_disconnect_watcher=watch_printer_disconnect,
     )
     power_monitor = build_power_monitor(config, ui=ui)
 

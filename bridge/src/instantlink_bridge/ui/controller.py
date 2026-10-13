@@ -308,6 +308,9 @@ LOCKABLE_HOME_MODES = {
 }
 
 
+PrinterDisconnectWatcher = Callable[[str, Callable[[], None]], Awaitable[Callable[[], None]]]
+
+
 class KeepaliveConfigurableStatusProvider(Protocol):
     """Optional status provider hook for native printer keepalive."""
 
@@ -434,6 +437,7 @@ class BridgeUi:
         ready_event: asyncio.Event | None = None,
         bluetooth_ready_event: asyncio.Event | None = None,
         status_sink: StatusSink | None = None,
+        printer_disconnect_watcher: PrinterDisconnectWatcher | None = None,
     ) -> None:
         self._config = config
         self._config_path = config_path
@@ -502,6 +506,10 @@ class BridgeUi:
         # search period (see _printer_status_retry_delay).
         self._printer_was_online = False
         self._printer_check_requested = asyncio.Event()
+        self._printer_disconnect_watcher = printer_disconnect_watcher
+        self._printer_disconnect_unsubscribe: Callable[[], None] | None = None
+        self._printer_disconnect_pending = False
+        self._printer_disconnect_watch_token: object | None = None
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at: dict[str, float] = {}
         self._auto_rebond_task: asyncio.Task[None] | None = None
@@ -715,6 +723,7 @@ class BridgeUi:
         """
 
         self._stopping = True
+        self._disarm_printer_disconnect_watch()
         self._hotspot_recovery_enabled = False
         if self._pending_print_result is not None and not self._pending_print_result.done():
             self._pending_print_result.set_result(None)
@@ -4639,6 +4648,20 @@ class BridgeUi:
                         return
                 if not self._status_generation_is_current(generation):
                     return
+                if self._printer_disconnect_pending:
+                    # Only this serialized poll closes the native session. Signal callbacks
+                    # merely wake it; they never dispatch commands or interrupt a print.
+                    self._printer_disconnect_pending = False
+                    LOGGER.info("ui.printer_disconnect_event name=%s", printer.name)
+                    self._disarm_printer_disconnect_watch()
+                    # Bound contradictory or repeated event/reconnect cycles while
+                    # still bypassing the normal connected polling interval.
+                    await asyncio.sleep(MIN_PRINTER_RECOVERY_GAP_S)
+                    if not self._status_generation_is_current(generation):
+                        return
+                    await self._close_cached_printer_session()
+                    if not self._status_generation_is_current(generation):
+                        return
                 if startup_bond_check:
                     # A reboot loses the online->offline edge while BlueZ keeps
                     # its bond. The pairer refuses to remove connected identities.
@@ -4655,6 +4678,21 @@ class BridgeUi:
                 online = await self._refresh_printer_status_in_background(printer, generation)
                 if not self._status_generation_is_current(generation):
                     return
+                # A disconnect during a fetch must survive its result: the ACK can
+                # have arrived just before the link dropped. Do not call it fresh.
+                if self._printer_disconnect_pending:
+                    self._last_printer_status_ok_at = float("-inf")
+                    continue
+                if online:
+                    self._printer_was_online = True
+                    await self._arm_printer_disconnect_watch(printer, generation)
+                    if not self._status_generation_is_current(generation):
+                        return
+                    if self._printer_disconnect_pending:
+                        self._last_printer_status_ok_at = float("-inf")
+                        continue
+                else:
+                    self._disarm_printer_disconnect_watch()
                 # A tap during this check is already serviced by its result.
                 self._printer_check_requested.clear()
                 # A failed status can be transient. The pairer must confirm Connected=no before
@@ -4684,13 +4722,84 @@ class BridgeUi:
                 self._printer_was_online = online
                 elapsed = self._monotonic() - attempt_start
                 gap = MIN_PRINTER_RECOVERY_GAP_S if recovering else MIN_OFFLINE_SEARCH_GAP_S
-                await asyncio.sleep(gap)
+                if online and self._printer_disconnect_watcher is not None:
+                    # Connected waits can be interrupted even during the ordinary
+                    # two-second gap. Offline attempts retain their bounded cadence.
+                    with suppress(TimeoutError):
+                        await asyncio.wait_for(self._printer_check_requested.wait(), gap)
+                else:
+                    await asyncio.sleep(gap)
+                if self._printer_disconnect_pending:
+                    continue
                 remaining = period - elapsed - gap
                 if remaining > 0:
                     with suppress(TimeoutError):
                         await asyncio.wait_for(self._printer_check_requested.wait(), remaining)
         finally:
+            if self._status_generation_is_current(generation):
+                self._disarm_printer_disconnect_watch()
             await self._status_provider.close()
+
+    def _disarm_printer_disconnect_watch(self) -> None:
+        self._printer_disconnect_watch_token = None
+        unsubscribe = self._printer_disconnect_unsubscribe
+        self._printer_disconnect_unsubscribe = None
+        if unsubscribe is not None:
+            unsubscribe()
+
+    async def _arm_printer_disconnect_watch(self, printer: PairedPrinter, generation: int) -> None:
+        watcher = self._printer_disconnect_watcher
+        if watcher is None or self._printer_disconnect_unsubscribe is not None:
+            return
+        notified = False
+        token = object()
+        self._printer_disconnect_watch_token = token
+
+        def disconnected() -> None:
+            nonlocal notified
+            if (
+                notified
+                or self._printer_disconnect_watch_token is not token
+                or not self._status_generation_is_current(generation)
+            ):
+                return
+            current = self._snapshot.paired_printer
+            if (
+                self._stopping
+                or current is None
+                or current.address != printer.address
+                or current.name != printer.name
+            ):
+                return
+            notified = True
+            self._printer_disconnect_pending = True
+            self._last_printer_status_ok_at = float("-inf")
+            self._printer_check_requested.set()
+
+        try:
+            unsubscribe = await watcher(printer.name, disconnected)
+        except asyncio.CancelledError:
+            if self._printer_disconnect_watch_token is token:
+                self._printer_disconnect_watch_token = None
+            raise
+        except Exception:
+            if self._printer_disconnect_watch_token is token:
+                self._printer_disconnect_watch_token = None
+                if self._status_generation_is_current(generation):
+                    # Try once per connected episode. Retain a no-op subscription
+                    # so fallback status polls cannot repeat IPC and warnings.
+                    # A failed status or new generation disarms it and allows
+                    # a fresh attempt after reconnect or selection changes.
+                    self._printer_disconnect_unsubscribe = lambda: None
+            # Signals are an optimization. Periodic status remains the fallback.
+            LOGGER.warning(
+                "ui.printer_disconnect_watch_failed name=%s", printer.name, exc_info=True
+            )
+            return
+        if not self._status_generation_is_current(generation) or self._stopping:
+            unsubscribe()
+            return
+        self._printer_disconnect_unsubscribe = unsubscribe
 
     async def _refresh_printer_status_in_background(
         self,
@@ -4774,6 +4883,10 @@ class BridgeUi:
             return False
         if not self._status_generation_is_current(generation):
             return False
+        if self._printer_disconnect_pending:
+            # The reply can predate a queued disconnect notification. Its data
+            # cannot establish readiness for the connection that just ended.
+            return True
         self._printer_status_misses = 0
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at.pop(_auto_rebond_key(printer), None)
@@ -5268,6 +5381,8 @@ class BridgeUi:
         """
 
         self._status_generation += 1
+        self._disarm_printer_disconnect_watch()
+        self._printer_disconnect_pending = False
         task = self._status_task
         self._status_task = None
         if task is not None:

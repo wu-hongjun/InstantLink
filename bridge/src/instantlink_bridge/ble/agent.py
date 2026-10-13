@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from dbus_fast import BusType, Message, MessageType, Variant
@@ -15,6 +17,8 @@ from dbus_fast.aio.message_bus import MessageBus as AioMessageBus
 from dbus_fast.errors import DBusError, InterfaceNotFoundError
 from dbus_fast.proxy_object import BaseProxyInterface
 from dbus_fast.service import ServiceInterface, method
+
+from instantlink_bridge.ble.instantlink import normalize_printer_name
 
 LOGGER = logging.getLogger(__name__)
 
@@ -100,6 +104,20 @@ class NoInputNoOutputAgent(ServiceInterface):
 
 
 @dataclass
+class _DisconnectWatch:
+    name: str
+    callback: Callable[[], None]
+    owner: str
+    generation: int
+    lifecycle: int
+    paths: set[str]
+    changed: dict[str, bool | None]
+    active: bool = True
+    fired: bool = False
+    seeded: bool = False
+
+
+@dataclass
 class BluezAgentService:
     """Register a process-owned BlueZ NoInputNoOutput agent."""
 
@@ -117,6 +135,7 @@ class BluezAgentService:
         self._watch_installed = False
         self._installed_matches: list[str] = []
         self._handler_installed = False
+        self._message_handler: Callable[[Message], None] | None = None
         self._agent_registered_owner = ""
         self._registration_task: asyncio.Task[None] | None = None
         self._registration_tasks: set[asyncio.Task[None]] = set()
@@ -124,6 +143,7 @@ class BluezAgentService:
         self._registration_retry_requested = False
         self._start_lock = asyncio.Lock()
         self._stop_lock = asyncio.Lock()
+        self._disconnect_watches: list[_DisconnectWatch] = []
 
     async def start(self) -> None:
         """Export an agent and watch BlueZ ownership on the same system bus."""
@@ -151,7 +171,13 @@ class BluezAgentService:
             return
         self._bus = bus
         bus.export(self.agent_path, NoInputNoOutputAgent())
-        bus.add_message_handler(self._owner_changed)
+
+        def handle_owned_message(message: Message) -> None:
+            if self._bus is bus and lifecycle == self._lifecycle and not self._stopping:
+                self._owner_changed(message)
+
+        self._message_handler = handle_owned_message
+        bus.add_message_handler(handle_owned_message)
         self._handler_installed = True
         for rule in self._match_rules():
             await self._daemon_call(bus, "AddMatch", "s", [rule])
@@ -200,6 +226,11 @@ class BluezAgentService:
             OWNER_MATCH,
             f"{prefix},arg0path='{BLUEZ_ROOT}'",
             f"{prefix},arg0path='{self.adapter_path}'",
+            "type='signal',sender='org.bluez',interface='org.freedesktop.DBus.Properties',"
+            f"member='PropertiesChanged',path_namespace='{self.adapter_path}',"
+            "arg0='org.bluez.Device1'",
+            "type='signal',sender='org.bluez',interface='org.freedesktop.DBus.ObjectManager',"
+            f"member='InterfacesRemoved',path='/',arg0path='{self.adapter_path}'",
         )
 
     @staticmethod
@@ -242,6 +273,7 @@ class BluezAgentService:
         return reply
 
     def _owner_changed(self, message: Message) -> None:
+        self._disconnect_signal(message)
         if message.member == "InterfacesAdded":
             self._interfaces_added(message)
             return
@@ -291,6 +323,8 @@ class BluezAgentService:
     def _set_owner(self, owner: str) -> None:
         if owner == self._owner or self._stopping:
             return
+        for watch in tuple(self._disconnect_watches):
+            self._notify_disconnect(watch)
         self._owner = owner
         self._generation += 1
         self._registered = False
@@ -398,6 +432,177 @@ class BluezAgentService:
             owner,
         )
 
+    def _device_path(self, path: object) -> bool:
+        return (
+            isinstance(path, str)
+            and re.fullmatch(
+                re.escape(self.adapter_path) + r"/dev_[0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2}){5}", path
+            )
+            is not None
+        )
+
+    @staticmethod
+    def _connected_value(value: object) -> bool | None:
+        if isinstance(value, Variant) and value.signature == "b" and type(value.value) is bool:
+            return value.value
+        return None
+
+    def _watch_current(self, watch: _DisconnectWatch) -> bool:
+        return (
+            watch.active
+            and not self._stopping
+            and watch.lifecycle == self._lifecycle
+            and watch.owner == self._owner
+            and watch.generation == self._generation
+        )
+
+    def _notify_disconnect(self, watch: _DisconnectWatch) -> None:
+        if not self._watch_current(watch) or watch.fired:
+            return
+        watch.fired = True
+        try:
+            watch.callback()
+        except Exception:
+            LOGGER.exception("bluetooth.disconnect_callback_failed")
+
+    def _disconnect_signal(self, message: Message) -> None:
+        if (
+            self._stopping
+            or not self._disconnect_watches
+            or not self._owner
+            or message.message_type is not MessageType.SIGNAL
+            or message.sender != self._owner
+        ):
+            return
+        path: str
+        connected: bool | None
+        if (
+            message.interface == "org.freedesktop.DBus.Properties"
+            and message.member == "PropertiesChanged"
+            and message.signature == "sa{sv}as"
+            and len(message.body) == 3
+            and message.body[0] == "org.bluez.Device1"
+            and isinstance(message.body[1], dict)
+            and isinstance(message.body[2], list)
+            and all(isinstance(item, str) for item in message.body[2])
+            and self._device_path(message.path)
+        ):
+            connected = self._connected_value(message.body[1].get("Connected"))
+            if connected is None:
+                return
+            path = message.path
+        elif (
+            message.interface == "org.freedesktop.DBus.ObjectManager"
+            and message.member == "InterfacesRemoved"
+            and message.path == "/"
+            and message.signature == "oas"
+            and len(message.body) == 2
+            and isinstance(message.body[1], list)
+            and all(isinstance(item, str) for item in message.body[1])
+        ):
+            path, interfaces = message.body
+            if path == self.adapter_path and "org.bluez.Adapter1" in interfaces:
+                for watch in tuple(self._disconnect_watches):
+                    self._notify_disconnect(watch)
+                return
+            if not self._device_path(path) or "org.bluez.Device1" not in interfaces:
+                return
+            connected = None
+        else:
+            return
+        for watch in tuple(self._disconnect_watches):
+            if (
+                not self._watch_current(watch)
+                or watch.fired
+                or (watch.seeded and path not in watch.paths)
+            ):
+                continue
+            # Keep changes received while the initial tree is in flight. Its
+            # older reply must never overwrite a newer disconnect/removal.
+            if path not in watch.changed or watch.changed[path] is True:
+                watch.changed[path] = connected
+            if path in watch.paths and connected is not True:
+                self._notify_disconnect(watch)
+
+    async def watch_printer_disconnect(
+        self, printer_name: str, callback: Callable[[], None]
+    ) -> Callable[[], None]:
+        """Arm one selected Printer session after a successful status request.
+
+        One bounded tree read resolves its physical BlueZ path. The watch then
+        consumes signals only until disarmed; callers retain their status-poll
+        fallback and arm again only after an actual session transition.
+        """
+        if self._bus is None or not self._registered or self._stopping:
+            raise RuntimeError("BlueZ pairing agent is not ready")
+        normalized_name = normalize_printer_name(printer_name).casefold()
+        if not normalized_name:
+            raise ValueError("selected Printer name is empty")
+        watch = _DisconnectWatch(
+            normalized_name,
+            callback,
+            self._owner,
+            self._generation,
+            self._lifecycle,
+            set(),
+            {},
+        )
+        self._disconnect_watches.append(watch)
+
+        def disarm() -> None:
+            watch.active = False
+            if watch in self._disconnect_watches:
+                self._disconnect_watches.remove(watch)
+
+        try:
+            async with asyncio.timeout(BUS_CALL_TIMEOUT_S):
+                objects = await self.managed_objects_snapshot()
+            if not self._watch_current(watch):
+                disarm()
+                return disarm
+            if not isinstance(objects, dict):
+                raise ValueError("invalid BlueZ object snapshot tree")
+            candidates: dict[str, bool | None] = {}
+            for path, interfaces in objects.items():
+                if not self._device_path(path) or not isinstance(interfaces, dict):
+                    continue
+                properties = interfaces.get("org.bluez.Device1")
+                if not isinstance(properties, dict):
+                    continue
+                names = [properties.get("Name"), properties.get("Alias")]
+                if not any(
+                    isinstance(value, Variant)
+                    and value.signature == "s"
+                    and isinstance(value.value, str)
+                    and normalize_printer_name(value.value).casefold() == watch.name
+                    for value in names
+                ):
+                    continue
+                candidates[path] = self._connected_value(properties.get("Connected"))
+            live_paths = [path for path, connected in candidates.items() if connected is True]
+            # BlueZ can retain a disconnected IOS/ANDROID identity for the same
+            # Printer. Only its one live identity belongs to the current session.
+            # If there is no live identity, a unique false-only row can establish
+            # that the session ended during arming. Ambiguous identities retain
+            # status polling rather than invalidating a healthy native session.
+            if len(live_paths) == 1:
+                watch.paths.add(live_paths[0])
+            elif not live_paths and len(candidates) == 1:
+                watch.paths.update(candidates)
+            for path in watch.paths:
+                connected = watch.changed.get(path, candidates[path])
+                if connected is False or (path in watch.changed and connected is None):
+                    self._notify_disconnect(watch)
+            watch.seeded = True
+            # Once paths are resolved, unrelated devices need no retained state.
+            watch.changed = {
+                path: state for path, state in watch.changed.items() if path in watch.paths
+            }
+            return disarm
+        except BaseException:
+            disarm()
+            raise
+
     async def managed_objects_snapshot(self) -> object:
         """Read current BlueZ objects on the agent's existing connection.
 
@@ -446,13 +651,17 @@ class BluezAgentService:
 
     async def _stop_owned(self) -> None:
         self._stopping = True
+        for watch in self._disconnect_watches:
+            watch.active = False
+        self._disconnect_watches.clear()
         self._lifecycle += 1
         self._generation += 1
         self._registered = False
         bus = self._bus
         try:
-            if bus is not None and self._handler_installed:
-                bus.remove_message_handler(self._owner_changed)
+            if bus is not None and self._handler_installed and self._message_handler is not None:
+                bus.remove_message_handler(self._message_handler)
+            self._message_handler = None
             self._handler_installed = False
             tasks = tuple(self._registration_tasks)
             for task in tasks:

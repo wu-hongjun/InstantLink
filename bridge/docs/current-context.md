@@ -37,8 +37,11 @@ and installed; native source **dedfdb2**, FFI SHA-256
   has no pytest; no test dependency installed. Sanitized evidence under
   `docs/assets/bridge-audit-076/`; raw journals/photo captures stay outside Git.
 - Temporary observer/drop-in/scripts and owned photo copies/capture removed. Normal service
-  PIDs6248/5125 active, NRestarts0,600MHz/GPIO24low,45.084°C/throttle0x0,FTP220/200,
-  USB/hotspot up and working caches0. Printer offline at final sample.
+  After the connected repetition, normal PIDs **7530/5125** active, NRestarts0,
+  **600 MHz**/GPIO24low,45.084°C/throttle0x0,FTP220/200,USB/hotspot up,caches0.
+  The normal service automatically reconnected with fresh film0 status; authoritative
+  Printer Connected=true at the final health sample. The test used installed cee3755,
+  a documentation successor to8bbbd88 with identical production code/native artifacts.
 - Final kernel review:23brcmfmac vendor-IE -52 records around startup/AP reconfiguration or
   injected interface-down, plus one earlier hci_conn_timeout WARN before the startup/rebond
   fixes. No repeated HCI WARN in subsequent captures; kernel root cause not established.

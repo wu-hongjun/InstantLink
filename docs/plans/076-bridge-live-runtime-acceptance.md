@@ -125,3 +125,9 @@ No camera association/airtime test. This completes the pending combined check ab
 The temporary observer/socket/drop-in was removed again. Normal ExecStart/PID7530 returned
 and automatically connected, with fresh film0 status, manager PID5125 active/NRestarts0.
 Record the final dark-idle/FTP/network health separately after its normal idle timeout.
+
+Final normal-service health after the connected repetition: PIDs7530/5125 active/NRestarts0,
+600MHz/powersave/GPIO24low,45.084°C/throttle0x0,FTP220/200, USB/hotspot up, working caches0,
+Printer Connected=true. Native hash unchanged. Observer/drop-in/socket and owned scripts
+removed. The audit records changed in Git; production source/native code did not change,
+so installed cee3755 remains the validated runtime.

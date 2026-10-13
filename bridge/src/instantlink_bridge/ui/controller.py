@@ -4619,16 +4619,25 @@ class BridgeUi:
     async def _poll_printer_status(self, printer: PairedPrinter, generation: int) -> None:
         try:
             await self._wait_for_printer_backend()
-            if not self._status_generation_is_current(generation):
-                return
-            # A reboot loses the online->offline edge while BlueZ keeps its bond.
-            # Instax clears its pairing on power-off. Reuse the guarded reset so
-            # a disconnected saved Printer pairs fresh on the first attempt;
-            # the pairer refuses to remove any still-connected identity.
-            await self._maybe_reset_bond_on_drop(printer, reason="startup_disconnected")
+            startup_bond_check = True
             while True:
-                if generation != self._status_generation:
+                if not self._status_generation_is_current(generation):
                     return
+                # Bond removal can take longer than the offline retry gap.
+                # Never start another connect while that recovery owns BlueZ.
+                # Shield it because recovery itself may replace this poll.
+                rebond = self._auto_rebond_task
+                if rebond is not None and not rebond.done():
+                    await asyncio.shield(rebond)
+                if not self._status_generation_is_current(generation):
+                    return
+                if startup_bond_check:
+                    # A reboot loses the online->offline edge while BlueZ keeps
+                    # its bond. The pairer refuses to remove connected identities.
+                    await self._maybe_reset_bond_on_drop(printer, reason="startup_disconnected")
+                    startup_bond_check = False
+                    if not self._status_generation_is_current(generation):
+                        return
                 # Use the same placeholder as the initial PRINTER_SEARCHING transition so the
                 # body line stays stable across retries. Flipping copy mid-poll reads as a state
                 # change to the user when nothing has actually changed.

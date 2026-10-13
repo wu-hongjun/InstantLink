@@ -436,3 +436,39 @@ async def test_superseded_startup_bond_check_does_not_fetch() -> None:
         with suppress(asyncio.CancelledError):
             await task
         await ui.stop()
+
+
+@pytest.mark.asyncio
+async def test_poll_waits_for_rebond_without_cancelling_recovery() -> None:
+    ui = make_ui()
+    release = asyncio.Event()
+    fetched = False
+
+    async def rebond() -> None:
+        await release.wait()
+
+    async def fetch(_printer: PairedPrinter) -> PrinterStatusSnapshot:
+        nonlocal fetched
+        fetched = True
+        raise AssertionError("fetch must wait for rebond")
+
+    ui._status_provider.fetch = fetch  # type: ignore[method-assign]
+    recovery = asyncio.create_task(rebond())
+    ui._auto_rebond_task = recovery
+    poll = asyncio.create_task(ui._poll_printer_status(PRINTER, ui._status_generation))
+    try:
+        for _ in range(10):
+            await asyncio.sleep(0)
+        assert not fetched
+        poll.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await poll
+        assert not recovery.done()
+        release.set()
+        await recovery
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+        await ui.stop()

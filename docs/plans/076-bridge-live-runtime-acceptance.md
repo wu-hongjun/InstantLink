@@ -43,3 +43,9 @@ fix. This startup action is logged at INFO with its actual reason.
 
 The user-selected validation photo changed to DSC02832.jpeg because the earlier source was
 no longer present. Preserve the original and saved processing settings.
+
+The same live attempt showed reactive bond removal racing a later status connect:
+`bluetoothctl remove` timed out while the poll entered discovery again. Polls now await
+active rebond recovery before their startup guard or another fetch, using shielded ownership
+because recovery may replace the polling generation. A regression test verifies the wait
+and that cancelling a poll does not cancel the recovery task.

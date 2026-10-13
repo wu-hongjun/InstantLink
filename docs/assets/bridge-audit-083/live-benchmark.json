@@ -1,0 +1,1013 @@
+{
+  "scope": "Physical PiZero2W/InstaxLinkSquare status-only external Device1.Disconnect recovery; no film. Single measured recovery per variant; radio variance prevents universal full-recovery speedup. Initial startup failures retained. Abstract UI actions, no button contacts actuated.",
+  "variants": {
+    "baseline": {
+      "pid": 30469,
+      "combined_api": false,
+      "recovery_s": 12.706140776004759,
+      "passed": true,
+      "film_used": 0,
+      "sample_count": 35,
+      "all_locked_600_camera_ready": true,
+      "disconnect_monotonic": 79966.66410881,
+      "attempts": [
+        {
+          "start": 79926.551267002,
+          "online": false,
+          "end": 79941.25969059,
+          "duration_s": 14.708423588002915,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [
+            {
+              "monotonic": 79926.554053304,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 79927.010772627,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 79927.016116116,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 79927.069457471,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 79928.456236272,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 79928.554822835,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 79928.815387418,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 79929.204629189,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 79941.023600747,
+              "stage": 10,
+              "stage_name": "failed",
+              "detail": "printer response timed out"
+            }
+          ],
+          "status_commands": [],
+          "status_command_count": 0
+        },
+        {
+          "start": 79956.552707095,
+          "online": true,
+          "end": 79958.935236938,
+          "duration_s": 2.3825298430019757,
+          "fresh_connect": true,
+          "connect_tail_s": 0.31028796901227906,
+          "stages": [
+            {
+              "monotonic": 79956.553749439,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 79957.085597615,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 79957.08571147,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 79957.10250574,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 79957.512921105,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 79957.58297673,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 79957.620102251,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 79957.956916001,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 79958.100104386,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 79958.624948969,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "status_commands": [
+            {
+              "monotonic": 79958.100807,
+              "selector": 1
+            },
+            {
+              "monotonic": 79958.280104,
+              "selector": 2
+            },
+            {
+              "monotonic": 79958.445321,
+              "selector": 3
+            },
+            {
+              "monotonic": 79958.629233,
+              "selector": 1
+            },
+            {
+              "monotonic": 79958.655578,
+              "selector": 2
+            },
+            {
+              "monotonic": 79958.685062,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 6
+        },
+        {
+          "start": 79966.555891674,
+          "online": true,
+          "end": 79966.653692247,
+          "duration_s": 0.09780057299940381,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 79966.557694,
+              "selector": 1
+            },
+            {
+              "monotonic": 79966.591299,
+              "selector": 2
+            },
+            {
+              "monotonic": 79966.621351,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 79969.680544954,
+          "online": false,
+          "end": 79974.809828963,
+          "duration_s": 5.129284009002731,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [
+            {
+              "monotonic": 79969.681695736,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 79974.802111098,
+              "stage": 10,
+              "stage_name": "failed",
+              "detail": "no Instax printer found"
+            }
+          ],
+          "status_commands": [],
+          "status_command_count": 0
+        },
+        {
+          "start": 79975.061523181,
+          "online": true,
+          "end": 79979.029418649,
+          "duration_s": 3.967895468013012,
+          "fresh_connect": true,
+          "connect_tail_s": 0.5145297920098528,
+          "stages": [
+            {
+              "monotonic": 79975.062573598,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 79975.53625516,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 79975.536405004,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 79975.57215214,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 79977.010736462,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 79977.120912347,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 79977.354413545,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 79977.947231253,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 79978.086105628,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 79978.514888857,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "status_commands": [
+            {
+              "monotonic": 79978.088559,
+              "selector": 1
+            },
+            {
+              "monotonic": 79978.184418,
+              "selector": 2
+            },
+            {
+              "monotonic": 79978.349768,
+              "selector": 3
+            },
+            {
+              "monotonic": 79978.518722,
+              "selector": 1
+            },
+            {
+              "monotonic": 79978.680263,
+              "selector": 2
+            },
+            {
+              "monotonic": 79978.860457,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 6
+        }
+      ],
+      "disconnect_signals": [
+        {
+          "monotonic": 79927.195880179,
+          "connected": true,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 79941.018321632,
+          "connected": false,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 79957.20180824,
+          "connected": true,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 79969.020887507,
+          "connected": false,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 79975.681648963,
+          "connected": true,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        }
+      ],
+      "final_last_status_ok": 79979.027695367,
+      "final_fresh": true,
+      "final_film": 0,
+      "warning_error_lines": [
+        "2026-10-13 18:10:11,241 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=TimeoutError error=connect failed",
+        "2026-10-13 18:10:11,243 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none"
+      ],
+      "raw_capture_paths": [
+        "/tmp/instantlink-status-reconnect-baseline-083.json",
+        "/tmp/instantlink-status-baseline-journal-083.jsonl"
+      ]
+    },
+    "candidate": {
+      "pid": 30842,
+      "combined_api": true,
+      "recovery_s": 7.068594372001826,
+      "passed": true,
+      "film_used": 0,
+      "sample_count": 15,
+      "all_locked_600_camera_ready": true,
+      "disconnect_monotonic": 80049.287398674,
+      "attempts": [
+        {
+          "start": 80009.174113429,
+          "online": false,
+          "end": 80024.251928944,
+          "duration_s": 15.077815514989197,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [
+            {
+              "monotonic": 80009.179097856,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 80009.681391345,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 80009.681638168,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 80009.710115825,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80011.067428584,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 80011.133892074,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 80011.428254053,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 80011.819933949,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80024.025892173,
+              "stage": 10,
+              "stage_name": "failed",
+              "detail": "printer response timed out"
+            }
+          ],
+          "status_commands": [],
+          "status_command_count": 0
+        },
+        {
+          "start": 80039.176689563,
+          "online": true,
+          "end": 80041.406847271,
+          "duration_s": 2.2301577080070274,
+          "fresh_connect": true,
+          "connect_tail_s": 0.22305062500527129,
+          "stages": [
+            {
+              "monotonic": 80039.177814147,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 80039.627499094,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 80039.627618053,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 80039.642194824,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80040.063352688,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 80040.139127271,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 80040.16304649,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 80040.500445292,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80040.645689875,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 80041.183796646,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "status_commands": [
+            {
+              "monotonic": 80040.646575,
+              "selector": 1
+            },
+            {
+              "monotonic": 80040.824113,
+              "selector": 2
+            },
+            {
+              "monotonic": 80040.989374,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80049.178349091,
+          "online": true,
+          "end": 80049.272879612,
+          "duration_s": 0.09453052100434434,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 80049.179636,
+              "selector": 1
+            },
+            {
+              "monotonic": 80049.21063,
+              "selector": 2
+            },
+            {
+              "monotonic": 80049.240711,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80052.735920548,
+          "online": true,
+          "end": 80056.297876744,
+          "duration_s": 3.5619561960047577,
+          "fresh_connect": true,
+          "connect_tail_s": 0.003515364005579613,
+          "stages": [
+            {
+              "monotonic": 80052.737324037,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 80053.214690443,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 80053.214844818,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 80053.28777362,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80054.746481537,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 80054.871329036,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 80055.092601588,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 80055.732494765,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80055.874619088,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 80056.29436138,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "status_commands": [
+            {
+              "monotonic": 80055.875788,
+              "selector": 1
+            },
+            {
+              "monotonic": 80055.969839,
+              "selector": 2
+            },
+            {
+              "monotonic": 80056.129672,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80062.739044086,
+          "online": true,
+          "end": 80062.836828096,
+          "duration_s": 0.09778400999493897,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 80062.740368,
+              "selector": 1
+            },
+            {
+              "monotonic": 80062.774054,
+              "selector": 2
+            },
+            {
+              "monotonic": 80062.804501,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        }
+      ],
+      "disconnect_signals": [
+        {
+          "monotonic": 80009.754270564,
+          "connected": true,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 80024.022267329,
+          "connected": false,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 80039.719621698,
+          "connected": true,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 80052.01535034,
+          "connected": false,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        },
+        {
+          "monotonic": 80053.467028047,
+          "connected": true,
+          "sender": ":1.4500",
+          "owner": ":1.4500"
+        }
+      ],
+      "final_last_status_ok": 80062.835857419,
+      "final_fresh": true,
+      "final_film": 0,
+      "warning_error_lines": [
+        "2026-10-13 18:11:34,243 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=TimeoutError error=connect failed",
+        "2026-10-13 18:11:34,244 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none"
+      ],
+      "raw_capture_paths": [
+        "/tmp/instantlink-status-reconnect-candidate-083.json",
+        "/tmp/instantlink-status-candidate-journal-083.jsonl"
+      ]
+    },
+    "installed": {
+      "pid": 31551,
+      "combined_api": true,
+      "recovery_s": 6.9180135909991805,
+      "passed": true,
+      "film_used": 0,
+      "sample_count": 16,
+      "all_locked_600_camera_ready": true,
+      "disconnect_monotonic": 80142.855781346,
+      "attempts": [
+        {
+          "start": 80122.692595364,
+          "online": true,
+          "end": 80126.924450883,
+          "duration_s": 4.2318555189995095,
+          "fresh_connect": true,
+          "connect_tail_s": 0.223808958005975,
+          "stages": [
+            {
+              "monotonic": 80122.714307708,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 80123.18558151,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 80123.193471666,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 80123.254947655,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80125.055508488,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 80125.128151926,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 80125.665590623,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 80126.098767706,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80126.192455311,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 80126.700641925,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "status_commands": [
+            {
+              "monotonic": 80126.19331,
+              "selector": 1
+            },
+            {
+              "monotonic": 80126.37079,
+              "selector": 2
+            },
+            {
+              "monotonic": 80126.535491,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80132.695431402,
+          "online": true,
+          "end": 80132.792538954,
+          "duration_s": 0.09710755200649146,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 80132.696644,
+              "selector": 1
+            },
+            {
+              "monotonic": 80132.730672,
+              "selector": 2
+            },
+            {
+              "monotonic": 80132.761038,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80142.697218065,
+          "online": true,
+          "end": 80142.801117231,
+          "duration_s": 0.10389916600252036,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 80142.698554,
+              "selector": 1
+            },
+            {
+              "monotonic": 80142.737757,
+              "selector": 2
+            },
+            {
+              "monotonic": 80142.767638,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80145.884305668,
+          "online": true,
+          "end": 80149.561418583,
+          "duration_s": 3.67711291500018,
+          "fresh_connect": true,
+          "connect_tail_s": 0.005447865012683906,
+          "stages": [
+            {
+              "monotonic": 80145.885812074,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 80146.411650615,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 80146.411810928,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 80146.502143428,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80147.912159938,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 80148.056850146,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 80148.28553301,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 80148.878926812,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 80149.068104989,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 80149.555970718,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "status_commands": [
+            {
+              "monotonic": 80149.069167,
+              "selector": 1
+            },
+            {
+              "monotonic": 80149.163008,
+              "selector": 2
+            },
+            {
+              "monotonic": 80149.389772,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80155.886067174,
+          "online": true,
+          "end": 80155.976189101,
+          "duration_s": 0.09012192700174637,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 80155.888094,
+              "selector": 1
+            },
+            {
+              "monotonic": 80155.914197,
+              "selector": 2
+            },
+            {
+              "monotonic": 80155.94371,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        },
+        {
+          "start": 80164.624745713,
+          "online": true,
+          "end": 80164.720812483,
+          "duration_s": 0.0960667700128397,
+          "fresh_connect": false,
+          "connect_tail_s": null,
+          "stages": [],
+          "status_commands": [
+            {
+              "monotonic": 80164.626757,
+              "selector": 1
+            },
+            {
+              "monotonic": 80164.660363,
+              "selector": 2
+            },
+            {
+              "monotonic": 80164.689243,
+              "selector": 3
+            }
+          ],
+          "status_command_count": 3
+        }
+      ],
+      "disconnect_signals": [
+        {
+          "monotonic": 80123.560436093,
+          "connected": true,
+          "sender": ":1.4871",
+          "owner": ":1.4871"
+        },
+        {
+          "monotonic": 80145.016796449,
+          "connected": false,
+          "sender": ":1.4871",
+          "owner": ":1.4871"
+        },
+        {
+          "monotonic": 80146.59175223,
+          "connected": true,
+          "sender": ":1.4871",
+          "owner": ":1.4871"
+        }
+      ],
+      "final_last_status_ok": 80164.719843213,
+      "final_fresh": true,
+      "final_film": 0,
+      "warning_error_lines": [],
+      "raw_capture_paths": [
+        "/tmp/instantlink-status-reconnect-installed-083.json",
+        "/tmp/instantlink-status-installed-journal-083.jsonl"
+      ]
+    }
+  }
+}

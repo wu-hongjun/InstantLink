@@ -33,9 +33,10 @@
   ],
   "status_policy": "No status cache/TTL; handoffonlyduringfreshconnectrequest. Establishedpolls alwaysreadhardware. Olderlibs fallback. No duplicatefallbackonnewAPIerror. Existingcaller-serializationcontract fornonconnectoperations remains.",
   "film_used": 0,
-  "hardware": "PendingPrinterpower-on, notclaimedcomplete",
+  "hardware": "PASS: baseline/candidate/installed status-only live validation; see live-benchmark.json and installed-ui-smoke.json",
   "ARM_connect_tests": 23,
   "ARM_additional_teardown_and_panic_checks": 2,
   "native_FFI_sha256": "88974b10dd285f4eb3b31a08fc8af68756d3612e5cdf8910a1c719b74e265e82",
-  "native_CLI_sha256": "e720bef273ebfca85b96743d85b9c77bb99dd8fcce13fc91e9d3ba52b15f7d79"
+  "native_CLI_sha256": "e720bef273ebfca85b96743d85b9c77bb99dd8fcce13fc91e9d3ba52b15f7d79",
+  "independent_hardware_review": "PASS: exact packet counts, freshness, failed attempts, lock/clock and UI observations verified"
 }

@@ -1,8 +1,35 @@
 # Current Bridge Context
 
-## Initial-status work: live validation pending, 2026-10-13
+## Initial status handoff deployed, 2026-10-13
 
-Plan083 clean source **ffe637e** is implemented/reviewed; **not deployed**. The Bridge retains
+Plan083: clean Python **83473d4**, native **ffe637e** installed. FFI SHA256
+`88974b10dd285f4eb3b31a08fc8af68756d3612e5cdf8910a1c719b74e265e82`; CLI
+`e720bef273ebfca85b96743d85b9c77bb99dd8fcce13fc91e9d3ba52b15f7d79`.
+
+- Fresh connect returns its single initial status: **6→3 commands**; established polls still
+  make3 fresh hardware requests. No status cache or TTL. Older libraries retain fallback.
+- Measured reconnect tail514.530→3.515ms candidate/5.448ms installed (~0.51s removed).
+  Observed total recovery12.706/7.069/6.918s, one per variant; baseline had an extra failed
+  scan, so total time difference cannot all be attributed to this change. Startup watch
+  registration retains about223ms overhead. MTU247/payload236 preserved.
+- All35/15/16 recovery samples locked600/camera-ready; installed later periodic polls fresh.
+  Same-button triple unlock/nonblank1000/relock600 and statuspause/resume pass through
+  actual controller/physical LCD; contacts not actuated. No image commands/film used.
+- Baseline/candidate startup model-query timeout each recovered automatically and is retained;
+  installed observer log zero warnings/errors/panics. Source gates and independent source/
+  hardware adversarial review pass;1773Bridge/308Rust+1doc/App156/PiARM23+2 lifecycle cases.
+- Finalnormal18:15:40EDT PID31925/manager31549 active/NRestarts0, connected,600MHz,
+  45.084°C/throttle0x0/GPIO24low/GPIOv2/FTP220/200/hotspot/USB healthy, clean manifests.
+  Normal startup repeated model-query timeout (2warnings), recovered automatically; no native
+  panic. Fullboot8078service records reviewed, historical faults retained.
+- Observer/drop-in/socket/candidate source/library/archive removed; normal service restored.
+  Evidence in docs/assets/bridge-audit-083/ and plan083. Next setup work: advertisement/GATT
+  variance, BLE handshake, model-query timeout recovery and initial watch registration.
+
+## Earlier initial-status checkpoint, before power-on, 2026-10-13
+
+At this earlier checkpoint Plan083 clean source **ffe637e** was implemented/reviewed and
+**not deployed**. The Bridge retained
 validated Plan082 source82f6097/native d23d3b81…f3d38. Selected Printer is not advertising;
 requested power-on is needed for baseline/candidate/installed no-film timing and freshness tests.
 No successful hardware command-count/speed claim for083. Source gates1773Bridge/308Rust+1doc/

@@ -46,9 +46,65 @@ plus teardown/panic checks2 passed with no Printer. Source review/hashes are ret
 `88974b10dd285f4eb3b31a08fc8af68756d3612e5cdf8910a1c719b74e265e82`; CLI
 `e720bef273ebfca85b96743d85b9c77bb99dd8fcce13fc91e9d3ba52b15f7d79`.
 
-Live benchmark and task083 deployment are **pending**: the selected Printer was not advertising
+### Earlier checkpoint before Printer power-on
+
+Live benchmark and task083 deployment were **pending**: the selected Printer was not advertising
 and the power-on request has not been answered. No radio timing or real successful command count
 is claimed. The previous validated Plan082 firmware remains installed. The baseline observer,
 drop-in/socket and owned ARM unit executable were removed; normal service restored. Prepared
 candidate source archive/library remain inactive under SD-backed /var/tmp for the live follow-up.
 No image/print commands or film used.
+
+## Live acceptance and deployment, 2026-10-13
+
+After Printer power-on, baseline/candidate/installed tests completed on the hardware above.
+No image or print commands, and **no film used**. Clean Python source **83473d4** and native
+source **ffe637e** installed; native hashes match source acceptance. The Python differences
+between those commits are documentation only.
+
+| Measurement | Baseline | Candidate | Installed |
+| --- | ---: | ---: | ---: |
+| Successful fresh-connect status commands | 6 | 3 | 3 |
+| Connected stage to completed reconnect status | 514.530 ms | 3.515 ms | 5.448 ms |
+| Observed external-disconnect recovery | 12.706 s | 7.069 s | 6.918 s |
+| Subsequent periodic status commands | 3 | 3 | 3 |
+
+Each status sequence is battery, film/charging and history. The returned fields are from the
+same successful physical connection; later polls read hardware again. Candidate and installed
+captures include successful subsequent periodic requests after reconnect. The roughly **0.51 s**
+removed from the measured reconnect tail is supported by packet counts. Startup tails remain
+about223ms, including first-watch registration; do not interpret these results as eliminating
+all post-connect work. One measured disconnect per variant; scan and radio variation prevent a
+universal full-recovery speedup claim. Baseline had an additional5.13s unsuccessful scan.
+
+Baseline and candidate each had a startup model-response timeout and recovered automatically;
+those failed attempts remain in the evidence. The first harness launch preceded socket readiness
+and failed without touching the Printer; it was rerun after service startup. Installed observer
+log had zero warning/error/panic messages. All35/15/16 accepted recovery observations respectively
+were locked, not unlocking,600MHz and camera-ready. MTU247/payload236 retained.
+
+Installed same-button triple unlock produced1→2→unlocked, nonblank LCD at1000MHz; relock returned
+to600MHz. Status pause retired the watch, and resume restored a fresh status/watch. Inputs used
+the production abstract GPIO actions and physical LCD; button contacts were not actuated.
+Independent adversarial review checked raw packet counts, later freshness, failures, lock/clock
+samples and UI behavior and found no remaining acceptance blocker. Physical print quality was
+not retested because this task uses no film and changes no image bytes.
+
+Evidence: `docs/assets/bridge-audit-083/live-benchmark.json` and `installed-ui-smoke.json`.
+Raw journals remain private under host /tmp. Audit observer/drop-in/socket and candidate
+source/library/archive were removed; normal service restored before final health verification.
+Remaining setup costs include variable advertisement/GATT availability, the BLE handshake,
+model-query timeout recovery and initial watch registration. Further optimization should
+measure these boundaries without weakening status freshness or reconnect ownership.
+
+Final normal service at **18:15:40 EDT**: PID31925/manager31549 active, NRestarts0,
+Printer connected,600MHz powersave/GPIO24low,45.084°C, throttle0x0, GPIOv2,
+hotspot/USB and FTP220/200 healthy. Native/Python hashes match deployment manifests, dirty=false.
+Normal startup repeated the baseline model-query timeout (two warning lines), then recovered
+and reported fresh100%/not charging/film0 at18:15:06. This log is not described as warning-free.
+Full current-boot Bridge/manager review covered8078 records, retaining
+132 matched warning/error/panic messages and two earlier native
+panic episodes (four matching lines, PIDs24547/25926). Installed observer had zero matched
+issues, and no task083 native panic. See final-health.json, cleanup.json and running-log-review.json.
+One early final-health probe ran before the60s auto-idle boundary and correctly saw1000MHz;
+the later probe above passed after idle. This was a verification timing issue, not a clock fault.

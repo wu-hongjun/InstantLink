@@ -30,3 +30,16 @@ production FTP for one authorized physical print; no uncertain retry. Check film
 captured JPEG bytes, expected orientation, ACKs, CPU boost and terminal UI state. Recover a
 controlled disconnected link automatically while locked and retain service/FTP/network health.
 Separate deployment/test restarts from spontaneous failures and historical faults.
+
+## Live finding: startup bond recovery
+
+Repeated service-discovery failures after deployment exposed a missed online→offline edge:
+BlueZ retains the Printer bond across Bridge restarts, while an Instax power-off can clear
+its key. Check the existing `reset_bond_if_disconnected` guard once when a status polling
+generation starts, after backend readiness and before its first fetch. Connected identities
+are preserved; selection is retained. Superseded generations do not fetch after the check,
+and cancellation propagates through owned cleanup. Three regression cases fail before the
+fix. This startup action is logged at INFO with its actual reason.
+
+The user-selected validation photo changed to DSC02832.jpeg because the earlier source was
+no longer present. Preserve the original and saved processing settings.

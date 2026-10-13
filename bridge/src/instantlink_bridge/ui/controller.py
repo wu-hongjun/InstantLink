@@ -4619,6 +4619,13 @@ class BridgeUi:
     async def _poll_printer_status(self, printer: PairedPrinter, generation: int) -> None:
         try:
             await self._wait_for_printer_backend()
+            if not self._status_generation_is_current(generation):
+                return
+            # A reboot loses the online->offline edge while BlueZ keeps its bond.
+            # Instax clears its pairing on power-off. Reuse the guarded reset so
+            # a disconnected saved Printer pairs fresh on the first attempt;
+            # the pairer refuses to remove any still-connected identity.
+            await self._maybe_reset_bond_on_drop(printer, reason="startup_disconnected")
             while True:
                 if generation != self._status_generation:
                     return
@@ -4885,7 +4892,9 @@ class BridgeUi:
         # loop is left running; bumping the generation just resets pacing/backoff state.
         await self._schedule_printer_status_refresh()
 
-    async def _maybe_reset_bond_on_drop(self, printer: PairedPrinter) -> None:
+    async def _maybe_reset_bond_on_drop(
+        self, printer: PairedPrinter, *, reason: str = "link_dropped"
+    ) -> None:
         """Proactively remove the BlueZ bond when the link just dropped (docs/plans/031).
 
         Called on the connected->failed edge from the poll loop, where the link is known down. The
@@ -4903,11 +4912,13 @@ class BridgeUi:
         if task is not None and not task.done():
             return
         self._proactive_bond_reset_task = asyncio.create_task(
-            self._run_proactive_bond_reset(printer)
+            self._run_proactive_bond_reset(printer, reason=reason)
         )
         await self._proactive_bond_reset_task
 
-    async def _run_proactive_bond_reset(self, printer: PairedPrinter) -> None:
+    async def _run_proactive_bond_reset(
+        self, printer: PairedPrinter, *, reason: str = "link_dropped"
+    ) -> None:
         """Remove the bond for ``printer`` only while it is disconnected; keep the selection."""
 
         reset_bond = getattr(self._pairer, "reset_bond_if_disconnected", None)
@@ -4931,9 +4942,10 @@ class BridgeUi:
             LOGGER.exception("instantlink.proactive_bond_reset_failed address=%s", printer.address)
             return
         if removed:
-            LOGGER.warning(
-                "instantlink.proactive_bond_reset done=remove_bond address=%s reason=link_dropped",
+            LOGGER.info(
+                "instantlink.proactive_bond_reset done=remove_bond address=%s reason=%s",
                 printer.address,
+                reason,
             )
         # Selection is preserved; the persisted bond reset clears any stale LTK so the next connect
         # (the immediate re-search on a dropped printer) pairs fresh via the pairing agent.

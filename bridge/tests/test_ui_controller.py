@@ -1948,6 +1948,8 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "Printer"
     assert display.snapshots[-1].settings_message == "BLE link reset"
+    # Startup now awaits the disconnected-bond guard before its first fetch.
+    await asyncio.wait_for(status_provider.fetch_started.wait(), 1)
     assert display.snapshots[-1].paired_printer == replace(printer, model=PrinterModel.SQUARE)
     await ui._cancel_status_refresh()
 

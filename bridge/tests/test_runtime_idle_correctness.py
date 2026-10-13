@@ -372,3 +372,67 @@ def test_progress_logging_keeps_late_failure_and_stage_tracker_visible(
         "stage=failed" in r.message and "encrypted write failed" in r.message
         for r in caplog.records
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("removed", [True, False])
+async def test_startup_poll_checks_disconnected_bond_before_first_fetch(removed: bool) -> None:
+    ui = make_ui()
+    events: list[str] = []
+    fetched = asyncio.Event()
+
+    async def reset(_printer: PairedPrinter) -> bool:
+        events.append("reset")
+        return removed
+
+    async def fetch(_printer: PairedPrinter) -> PrinterStatusSnapshot:
+        events.append("fetch")
+        fetched.set()
+        await asyncio.Event().wait()
+        raise AssertionError("cancelled fetch should not finish")
+
+    ui._pairer.reset_bond_if_disconnected = reset  # type: ignore[method-assign]
+    ui._status_provider.fetch = fetch  # type: ignore[method-assign]
+    task = asyncio.create_task(ui._poll_printer_status(PRINTER, ui._status_generation))
+    try:
+        await asyncio.wait_for(fetched.wait(), 1)
+        assert events == ["reset", "fetch"]
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+        await ui.stop()
+
+
+@pytest.mark.asyncio
+async def test_superseded_startup_bond_check_does_not_fetch() -> None:
+    ui = make_ui()
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    fetched = False
+
+    async def reset(_printer: PairedPrinter) -> bool:
+        entered.set()
+        await release.wait()
+        return True
+
+    async def fetch(_printer: PairedPrinter) -> PrinterStatusSnapshot:
+        nonlocal fetched
+        fetched = True
+        raise AssertionError("superseded startup must not fetch")
+
+    ui._pairer.reset_bond_if_disconnected = reset  # type: ignore[method-assign]
+    ui._status_provider.fetch = fetch  # type: ignore[method-assign]
+    task = asyncio.create_task(ui._poll_printer_status(PRINTER, ui._status_generation))
+    try:
+        await asyncio.wait_for(entered.wait(), 1)
+        ui._status_generation += 1
+        release.set()
+        await asyncio.wait_for(task, 1)
+        assert not fetched
+    finally:
+        release.set()
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+        await ui.stop()

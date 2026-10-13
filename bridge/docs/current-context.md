@@ -1,5 +1,47 @@
 # Current Bridge Context
 
+## Native Bluetooth discovery and agent recovery, 2026-10-13
+
+Plan079 / `docs/assets/bridge-audit-079/` records the native discovery benchmark,
+adversarial review and real-device recovery tests. Native **a8b637c** and Python
+repair **78d771f** are pushed and installed cleanly. Native FFI SHA-256
+`fdd47eaddb35f630534b5f250c8810515c5c14ac0ad5a68fa46a83f46f185973`,
+CLI `3744699d034ab1870e563bbca2c3aad88aff43f0485097ae6bf929595d051cee`;
+agent source SHA `7f4c9dfb8864a457c6273d9082755841aa8615c0e4ce51b908fb8068b25e9b33`.
+
+- Native discovery uses fresh bulk metadata to skip definitely unrelated handles;
+  actual/uncertain Printers retain their old properties, Android and liveness checks.
+  Missing/malformed/unavailable data falls back; no metadata cache or scan-cadence change.
+- Separate36-second offline traces: baseline12bulk/225individual property reads;
+  candidate15btleplug+14prefilter bulk/zeroindividual reads. Ambient/cached devices vary.
+  Native five-second search mean CPU **0.526→0.465s**, elapsed **5.413→5.375s**,
+  stable descriptors after initialization and scanning stopped after all six trials.
+- Offline dark600MHz CPU means **1.876→1.266%** of one core, three30-second intervals
+  each, zero childCPU. Observed reduction32.5%; separate process starts/ambient BLE
+  prevent universal CPU, energy or battery-life claims. Every accepted/rejected attempt
+  is retained. Baseline/candidate ELF compiler/linker versions match.
+- Daemon restart testing found lost pairing-agent registration, ending in a real
+  `Does Not Exist` cleanup error. Repair tracks owner changes and late selected-interface
+  readiness on the same bus, uses unique-owner/generation checks and owns cancellation
+  cleanup. No idle polling. Three candidate restarts restored registration in
+  **1.000/0.774/0.782s**, same PID/bus and locked600/camera-ready. Installed normal
+  restart passed in **1.082s**, samePID17914, 22clock samples all600MHz. These are
+  agent-registration timings, not Printer-reconnect timings.
+- Live power-return reconnect worked; later an actual agent authorization and Printer
+  status succeeded after candidate daemon restarts on the same process. Forced
+  Device1 disconnect exceeded65s then recovered; the initial daemon test exceeded180s.
+  Do not infer radio causes. Cached-session detection, command-lock/timeouts and retry
+  cadence remain the next speed bottleneck. Printer was absent at final normal capture.
+- Gates: host Rust282, Pi ARM unit183 including14discovery cases, App156, Bridge1672,
+  focused Python83, Ruff, strict mypy67files, header drift, formatting and strict docs.
+  Linux library Clippy strict; test-target Clippy allows two existing1.97test-only lints.
+  Independent review clear. Eleven kernel-to-UI cases passed before/after agent repair;
+  physical button contacts not actuated. No film or image/print commands used.
+- Normal installed services PID17914/17912 active/NRestarts0,600MHz/GPIO24low,
+  hotspot/USB and FTP220/200 healthy, throttle0x0, zero appWARNING/ERROR. Source/artifact
+  hashes match. Temporary observer/drop-in/socket and GPIO mock removed; saved photos
+  and configuration unchanged. Raw journals remain private; service-log review only.
+
 ## Idle network/recovery lookup acceptance, 2026-10-12
 
 Plan 078 / `docs/assets/bridge-audit-078/` audit the remaining idle work and full running logs.

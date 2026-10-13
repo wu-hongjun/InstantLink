@@ -28,5 +28,11 @@
   "agent_hardware_restarts": 3,
   "agent_recovery_kernel_ui_cases": 11,
   "agent_source_sha256": "7f4c9dfb8864a457c6273d9082755841aa8615c0e4ce51b908fb8068b25e9b33",
-  "source_hardware_candidate": "Three actual daemon restarts, same Bridge process and agent bus; automatic registration <1.01s, all locked600/camera-ready. Separate Printer-status acceptance, not three Printer reconnects."
+  "source_hardware_candidate": "Three actual daemon restarts, same Bridge process and agent bus; automatic registration <1.01s, all locked600/camera-ready. Separate Printer-status acceptance, not three Printer reconnects.",
+  "installed_agent_restart": "passed, 1.082 seconds, same PID17914, 22 sampled clocks all600MHz",
+  "installed_agent_hash_matches_review": true,
+  "firmware_native_commit": "a8b637cb17c2754d1fcfedd63dfe2ad42768c3ce",
+  "firmware_python_commit": "78d771f86e8c64ca9858a312e66c0c6c03766edc",
+  "hardware": "Raspberry Pi Zero 2 W Rev1.0 / ST7789 240x240 / X306 2300mAh; Instax Link Square INSTAX-52006924",
+  "os": "Debian13.2 / Linux6.12.47+rpt-rpi-v8 / Python3.13.5 / BlueZ5.82"
 }

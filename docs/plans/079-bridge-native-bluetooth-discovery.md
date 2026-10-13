@@ -132,3 +132,14 @@ at that capture. A fresh installed Printer check and agent-recovery deployment r
 - [D-Bus match-rule contract](https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules)
   supports exact object-path filters with `arg0path`; `arg0` only matches strings.
   The implementation also validates the exact body path and current unique sender.
+
+## Installed acceptance
+
+Python repair **78d771f** is pushed and installed; production agent hash matches the
+independent review. One installed normal-service Bluetooth restart re-registered in
+**1.082 s**, same PID17914, with 22 sampled CPU clocks all600MHz. Native artifacts
+remain a8b637c. Normal services17914/17912 are active/NRestarts0, dark600MHz,
+FTP220/200, no current application warnings/errors, and no temporary observer/drop-in
+or GPIO mock. Printer absent at that capture; no film was used. A later real agent
+authorization and film0 status succeeded in the candidate after daemon restarts;
+this is separate from agent-registration timing and no rapid Printer recovery claim.

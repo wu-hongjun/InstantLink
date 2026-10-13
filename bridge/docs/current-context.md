@@ -8,7 +8,7 @@ and wlan0-down readiness with a retained IPv4 address. Clean runtime **8bbbd88**
 and installed; native source **dedfdb2**, FFI SHA-256
 `5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8`.
 
-- Reviewed12,693 retained service records across8boots plus403current-boot kernel records.
+- Reviewed12,693 retained service records across8boots plus403initial/458final current-boot kernel records.
   Clock sync crossed midnight UTC; correlate by boot/PID/monotonic time. Historical shutdown
   errors and controlled deployment/fault-injection events are distinguished from new faults.
 - Real framebuffer/CPU, GPIO-equivalent queue inputs: same-button triple unlock, different
@@ -33,6 +33,13 @@ and installed; native source **dedfdb2**, FFI SHA-256
   touched format, Rust build/fmt/Clippy/header drift, strict docs and normal hooks. Pi runtime
   has no pytest; no test dependency installed. Sanitized evidence under
   `docs/assets/bridge-audit-076/`; raw journals/photo captures stay outside Git.
+- Temporary observer/drop-in/scripts and owned photo copies/capture removed. Normal service
+  PIDs6248/5125 active, NRestarts0,600MHz/GPIO24low,45.084°C/throttle0x0,FTP220/200,
+  USB/hotspot up and working caches0. Printer offline at final sample.
+- Final kernel review:23brcmfmac vendor-IE -52 records around startup/AP reconfiguration or
+  injected interface-down, plus one earlier hci_conn_timeout WARN before the startup/rebond
+  fixes. No repeated HCI WARN in subsequent captures; kernel root cause not established.
+  Driver/firmware maintenance remains a follow-up; no OS upgrade or driver-warning fix claimed.
 
 ## Offline runtime correctness audit, 2026-10-12
 

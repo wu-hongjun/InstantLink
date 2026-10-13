@@ -1,5 +1,48 @@
 # Current Bridge Context
 
+## Idle network/recovery lookup acceptance, 2026-10-12
+
+Plan 078 / `docs/assets/bridge-audit-078/` audit the remaining idle work and full running logs.
+Clean **3052ef5** is pushed and installed; all five reviewed production hashes match. Native
+FFI remains **dedfdb2** / SHA-256
+`5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8`.
+
+- Fresh bounded Linux rtnetlink replaces recurring address `ip` launches, preserving scope,
+  prefixes, administrative UP, dormant readiness and existing portable fallback. No cache or
+  poll/recovery cadence change. Physical-interface parity and seven isolated namespace cases
+  passed, including aliases, point-to-point, down-retained addresses and concurrent snapshots.
+- Silent-link recovery reads fresh BlueZ objects through the existing agent-owned bus, with
+  Address/Alias/default-adapter semantics and CLI fallback. Disconnect rules and mutations are
+  unchanged. Review caught a new blocking constructor in an undeployed draft; shared-bus reuse
+  resolved it. Cancellation preserves the shared agent and concurrent calls.
+- Direct query medians: network **13.822→3.590 ms**, Bluetooth **616.758→22.851 ms**. No discovery
+  children in native queries; standalone diagnostic FD count 8→8, no agent registration or
+  mutations. These are direct-query measurements, separate from the runtime benchmarks.
+- All CPU sets are three 30-second dark / 600 MHz / offline samples. Same PID combined / old
+  lookups / combined repeat: **1.576 / 1.998 / 1.754%** of one core including children. Pooled
+  candidate mean **1.665%**, 16.7% below old lookups in those samples. Every row retained,
+  including the initially higher network-only candidate and baseline/startup differences.
+- Installed samples averaged **2.043%** process CPU, **zero child CPU**, 18 network / 2 D-Bus
+  reads without lookup CLI/fallback during timing. Shared FFI/executor and Tokio workers
+  dominate (~82–85%). Native discovery varies; no general installed total CPU or energy
+  improvement claim. Scan/keepalive timings and print/native code remain unchanged.
+- Installed eleven kernel-to-UI cases passed with real LCD/CPU, same-button triple unlock and
+  10-second abandonment. Physical contacts not actuated. wlan0 down with retained IP removed
+  receive readiness and automatically recovered in **28.402 s**, same PID13410, all samples
+  locked at600MHz. One fresh ip fallback during interface churn; precise cause not inferred
+  from INFO logs. Printer offline; no film or live Printer reconnect/airtime test.
+- Gates: Bridge **1647**, focused **221**, Ruff, strict mypy **67** files, touched format,
+  strict docs and normal hooks passed. Independent combined review has no remaining blockers.
+- Full-boot logs retain historical real faults already recorded in plan076: old BLE timeouts,
+  deployment-stop worker-stuck exit and removal timeout. Current normal runtime is clean.
+  Final normal PIDs **13865/13408**, active/NRestarts0, kernelGPIOv2,600MHz/GPIO24low,
+  42.932°C/throttle0x0,Wi-Fi/USB up,FTP220/200,caches0,zero appWARNING/ERROR. Temporary
+  observer/drop-in/socket and owned GPIO mock/namespace fixtures removed; raw logs stay private.
+- Final independent log capture: 2016 records. Installed validation 83 INFO / no warnings or
+  errors; restored normal 28 INFO / no warnings or errors. One temporary observer connection
+  reset ERROR after its client disconnected is retained in evidence. Observer removed; no new
+  production fault, service failure or automatic restart. Service logs only, no kernel claim.
+
 ## GPIO input acceptance, 2026-10-12
 
 Plan 077 replaces input alert polling with a kernel GPIO v2 event descriptor, 50 ms debounce

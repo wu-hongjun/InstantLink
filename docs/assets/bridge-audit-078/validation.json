@@ -1,5 +1,5 @@
 {
-  "bridge_tests": 1645,
+  "bridge_tests": 1647,
   "focused_tests": 221,
   "ruff": "all src/tests passed",
   "mypy": "67 source files passed",
@@ -9,5 +9,6 @@
   "pi": "PiZero2W/ST7789/X306, Debian13.2/Linux6.12.47+rpt-rpi-v8/Python3.13.5/BlueZ5.82",
   "native_ffi_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
   "film_used": 0,
-  "deployment": "pending clean commit/install/recovery acceptance"
+  "deployment": "Clean3052ef5 pushed/installed; source hashes match review; normal services13865/13408 active/NRestarts0,dark600MHz,FTP220/200,zero current appWARN/ERROR,unchangedFFIhash,caches0.",
+  "normal_precommit": "Ruff, mypy67 and1647tests passed"
 }

@@ -88,7 +88,7 @@ with no tracing during CPU intervals, and identify remaining native Bluetooth CP
 - Independent review caught a blocking-constructor risk in the first BlueZ draft. That draft
   was not deployed; shared-agent lookup resolves it. No remaining blocking findings. Network
   non-atomicity and existing fallback timeouts are explicit boundaries.
-- Local Bridge **1645** tests, focused **221**, Ruff and strict mypy **67** files passed.
+- Local Bridge **1647** tests, focused **221**, Ruff and strict mypy **67** files passed.
   Eleven kernel-to-production-UI cases passed with both changes, real LCD/CPU and no film.
   Physical button contacts, developed-film output and live Printer reconnect are not tested
   here; Printer is offline and native print/transport code is unchanged.
@@ -104,7 +104,37 @@ were **1.821% /1.543%** including children.
 Final combined/forced legacy/combined repeat on **one PID12639**: **1.576% /1.998% /1.754%**
 including children. Six native samples pooled mean **1.665%**, approximately **16.7% less**
 than the three legacy samples. Native sets have **zero child CPU** and no lookup CLI calls;
-first native90s captured18network/3Bluetooth reads. Legacy90s has19ip/2devices/2info, no
+first native90s captured18network/3Bluetooth reads. Legacy90s has18ip/2devices/2info, no
 mutations. Variation remains from native Printer discovery; no substantial main-process-only
 CPU reduction, energy or connected-workload benefit is claimed. Shared FFI/executor and Tokio
 threads remain the largest process share. Evidence includes every accepted row and counters.
+
+## Installed acceptance
+
+Clean **3052ef5** is pushed and installed. All five production source hashes match review;
+native FFI SHA-256 remains5622ca8d. Eleven kernel-to-UI cases passed on installed source.
+Deliberately disabling wlan0 while locked removed receive readiness despite retained IP;
+the production watchdog restored readiness in **28.402s**, samePID **13410**, all samples
+locked at **600MHz**. One fresh `ip` fallback occurred during interface churn; no reason
+for that native failure is inferred from INFO logs. Printer offline; no film or camera
+association/airtime test. No manual network restoration was needed.
+
+Installed three30-second samples averaged **2.043%** processCPU with **zero childCPU**,
+18native network queries and2D-Bus queries, no lookupCLI/fallback during timing. Shared
+FFI/executor and Tokio workers account for approximately82–85% of processCPU. Native activity
+varies, so the matched candidate comparison is not a general installed totalCPU reduction
+claim. The measured improvement is removing recurring query processes and reducing query
+latency/CPU; native discovery remains the next profiling target with scan timing unchanged.
+
+Normal service restored: PIDs **13865/13408**, active/NRestarts0,600MHz/powersave/GPIO24low,
+42.932°C/throttle0x0,hotspot/USB up,FTP220/200,caches0 and unchanged native hash. Current
+normal application journal has zero WARNING/ERROR and no GPIO fallback/read failure. Printer
+offline; no live connected-Printer or film test claimed. Raw journals stay private.
+
+Final independent service-log capture: **2016records**,325added. Installed validation has
+83INFO/zeroWARNING/ERROR; restored normal runtime28INFO/zeroWARNING/ERROR; manager2INFO.
+One additional ERROR is retained: temporary observer writer.drain after a test client reset
+(associated missing-argument invocation). This harness was removed; it is not a production
+source fault. No new production faults, service failures or automatic restarts identified.
+Historical actual faults remain recorded. This is service-journal review, not kernel review.
+All owned observer/source/scripts/socket/drop-in/mockup/namespace resources are removed.

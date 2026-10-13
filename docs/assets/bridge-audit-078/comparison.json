@@ -34,6 +34,11 @@
       "process_percent_one_core": 1.7538940194151362,
       "process_plus_child_percent_one_core": 1.7538940194151362,
       "child_cpu_s_total": 0.0
+    },
+    "installed": {
+      "process_percent_one_core": 2.042594667220237,
+      "process_plus_child_percent_one_core": 2.042594667220237,
+      "child_cpu_s_total": 0.0
     }
   },
   "same_pid12639_comparison": {
@@ -45,7 +50,8 @@
     "Samples varied with offline native Bluetooth discovery and ambient activity. No large main-process-only reduction or energy/battery claim.",
     "Original baseline and first network-only candidate use different PIDs/startup states. All rows retained; do not attribute their difference solely to network.",
     "Matched combined/legacy/combined repeat use samePID12639, dark600MHz, Printer offline, tracing excluded.",
-    "Private counters show18fresh network probes/90s and3fresh Bluetooth probes/90s in first combined set, zero lookup CLI/childCPU. Legacy set has19ip/2devices/2info, no mutations.",
-    "Kernel mockup inputs do not actuate physical contacts; isolated network namespace does not mutate physical interfaces."
+    "Private counters show18fresh network probes/90s and3fresh Bluetooth probes/90s in first combined set, zero lookup CLI/childCPU. Legacy set has18ip/2devices/2info, no mutations.",
+    "Kernel mockup inputs do not actuate physical contacts; isolated network namespace does not mutate physical interfaces.",
+    "Installed PID13410 after controlled Wi-Fi recovery averaged2.043% processCPU, zerochildCPU,2freshD-Busqueries/18networkqueries withoutCLI/fallback. NativeFFI/sharedexecutor+Tokio workers account for~82\u201385% processCPU. This higher native activity prevents a general installed totalCPU reduction claim."
   ]
 }

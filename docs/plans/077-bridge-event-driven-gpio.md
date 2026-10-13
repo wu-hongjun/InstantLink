@@ -67,3 +67,20 @@ cost. Keep source, hardware verification and performance claims distinct.
 - [Linux6.12 UAPI layouts](https://raw.githubusercontent.com/torvalds/linux/v6.12/include/uapi/linux/gpio.h)
 - [lgpio alert implementation](https://raw.githubusercontent.com/joan2937/lg/master/lgPthAlerts.c)
 - [GPIO mockup testing](https://docs.kernel.org/admin-guide/gpio/gpio-mockup.html)
+
+## Installed acceptance
+
+Clean **2ccdfa6** is installed and pushed. Installed source hashes match the independent
+review. Native FFI SHA-256 remains
+`5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8`.
+The same 11 kernel-to-production-UI cases passed after deployment. Three further dark
+30-second samples averaged **1.898%** of one core, **81.0% less** than the original
+**10.012%** baseline and **82.6% less** than the matched forced-legacy repeat. These are
+idle process CPU savings. Debounce, mappings and CPU tier settings are unchanged.
+
+Normal service is restored with kernel GPIO input, no fallback/read failures, both services
+active/NRestarts0, dark600MHz, hotspot/USB up, unchanged native hash and no working caches.
+FTP220/200 passed through the Pi hotspot address. Localhost/USB probes were rejected by the
+existing receive policy; those two warnings are controlled test events, not new faults.
+All owned mockup/observer/drop-in/socket/source/scripts are removed; physical switch contacts
+and camera Wi-Fi airtime remain outside the automated test boundary.

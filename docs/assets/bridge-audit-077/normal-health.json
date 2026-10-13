@@ -1,0 +1,40 @@
+{
+  "timestamp_utc": "2026-10-13T01:41:25.952260+00:00",
+  "runtime_commit": "2ccdfa64b09c213bab21837a4b39e92b3cd53ef6",
+  "dirty": false,
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "temperature_c": 44.546,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "services": "MainPID=10928\nNRestarts=0\nActiveState=active\n\nMainPID=10536\nNRestarts=0\nActiveState=active",
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Mon 2026-10-12 21:39:19 EDT] ; stop_time=[n/a] ; pid=10928 ; code=(null) ; status=0/0 }",
+  "ftp_probe_path": "Pi hotspot address; no wireless airtime or upload measured",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "ffi_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
+  "source_sha256": {
+    "src/instantlink_bridge/ui/input.py": "8414a97a36b6625ed44dca6b2bfd091c58deb0115ba7ed368f35770f8ed5e16c",
+    "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97"
+  },
+  "working_cache_directories": 0,
+  "addresses": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \nusb0             UP             192.168.7.1/24 \nwlan0            UP             192.168.8.1/24",
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false,
+  "input_backend_log": [
+    "2026-10-12 21:39:21,832 INFO instantlink_bridge.ui.input ui.input_edges_started backend=linux_gpio_v2 debounce_ms=50 lines=8"
+  ],
+  "input_failures": [],
+  "normal_app_warning_error_lines": [
+    "2026-10-12 21:40:21,967 WARNING instantlink_bridge.camera.ftp ftp.connection_rejected mode=hotspot remote_ip=127.0.0.1 source=invalid reason=non_client_ipv4_rejected",
+    "2026-10-12 21:40:56,323 WARNING instantlink_bridge.camera.ftp ftp.connection_rejected mode=hotspot remote_ip=192.168.7.10 source=usb reason=usb_source_admin_only"
+  ],
+  "printer_connected": false,
+  "film_used_in_this_task": 0,
+  "controlled_probe_rejections": [
+    "2026-10-12 21:40:21,967 WARNING instantlink_bridge.camera.ftp ftp.connection_rejected mode=hotspot remote_ip=127.0.0.1 source=invalid reason=non_client_ipv4_rejected",
+    "2026-10-12 21:40:56,323 WARNING instantlink_bridge.camera.ftp ftp.connection_rejected mode=hotspot remote_ip=192.168.7.10 source=usb reason=usb_source_admin_only"
+  ],
+  "unexpected_normal_app_warnings": []
+}

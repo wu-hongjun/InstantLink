@@ -11,7 +11,11 @@
   "rejected_setup_attempts": [
     "Candidate CPU interval began during 10s unlock warmup; rejected because clock was not consistently 600MHz.",
     "Initial UI assertion queried before asynchronous wake completed; harness now waits for resulting state.",
-    "Recreated simulated GPIO chip was temporarily root-only; harness grants access only to the verified, test-owned mockup chip and removes the module afterward."
+    "Recreated simulated GPIO chip was temporarily root-only; harness grants access only to the verified, test-owned mockup chip and removes the module afterward.",
+    "Final health probes to localhost and Mac USB were rejected by the saved hotspot/USB-admin-only receive policy. Health succeeded through the Pi hotspot address; no receive configuration changed."
   ],
-  "deployment": "pending clean commit and installed repeat"
+  "deployment": "Clean 2ccdfa6 installed; source hashes match review; all11 kernel-to-UI cases passed on installed source; 3x30s installed CPU accepted.",
+  "normal_precommit": "passed Ruff, mypy66 and1571tests",
+  "strict_docs": "passed",
+  "normal_service": "Restored, both services active/NRestarts0, kernelGPIOv2, no input failures; controlled FTP source rejects explained in normal-health.json; all owned temporary resources removed."
 }

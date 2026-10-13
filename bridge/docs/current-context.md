@@ -1,5 +1,39 @@
 # Current Bridge Context
 
+## GPIO input acceptance, 2026-10-12
+
+Plan 077 replaces input alert polling with a kernel GPIO v2 event descriptor, 50 ms debounce
+and asyncio readiness. Clean **2ccdfa6** is pushed and installed; source hashes match the
+independent review. Native FFI remains **dedfdb2** / SHA-256
+`5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8`.
+
+- Actual dark / 600 MHz / offline Bridge CPU, three 30-second samples per condition:
+  baseline **10.012%**, candidate **1.710%**, forced legacy **10.900%**, installed **1.898%**
+  of one core. Installed idle process CPU is **81.0% lower** than the original baseline.
+  Whole-system and child counters are separate; no energy or connected workload claim.
+- Paired kernel mockup checks passed all eight mappings, bounce, stable 75 ms presses,
+  held buttons, triples, distinct Select identities, bursts and lifecycle. Stimulus-to-queue
+  p95 **52.47→56.38 ms**, including 50 ms debounce; candidate stable-event-to-queue p95
+  **0.583 ms**. Physical switch contacts were not actuated. Simulated pull-up resets the
+  startup level, so held-at-claim policy is unit-tested separately. Legacy lifecycle rerun
+  applied callback detachment after a retained-callback failure; idle timing was unaffected.
+- Eleven kernel-to-production-UI cases passed before and after deployment with real LCD/CPU:
+  nonblank wake, held once, key/joystick identity reset, same-button triple unlock, rapid
+  75 ms presses, 10-second abandonment to dark / 600 MHz, and inactivity after mock detach.
+  Printer offline / film 0; **no film used**. Print/native code and CPU tiers unchanged.
+- Independent review found no blocking candidate issues; 68 focused tests and separate
+  descriptor checks passed. Full Bridge **1571**, Ruff, strict mypy **66** files, touched
+  format, strict docs and normal precommit passed. Evidence: `docs/assets/bridge-audit-077/`.
+- Normal service restored: PIDs **10928/10536**, active / NRestarts 0, native GPIO v2 startup,
+  no input failure/fallback, 600 MHz / powersave / GPIO24 low, 44.546°C / throttle 0x0,
+  caches 0, Wi-Fi/USB up and FTP 220/200 via the Pi hotspot address. This FTP probe measures
+  server health, not Wi-Fi airtime or upload. Localhost and Mac USB probes were rejected by
+  the existing hotspot/USB-admin-only policy; both warnings are controlled test events.
+- Temporary observer, drop-in, socket, source, scripts and owned mockup module removed.
+  Saved photos/configuration and native library hash unchanged; no dependency patch or extra
+  package. Legacy fallback retains an inherited in-flight callback teardown limit; default
+  kernel input avoids that thread. No electrical-contact claim.
+
 ## Live runtime acceptance, 2026-10-12
 
 Plan076 deploys the plan075 runtime audit and adds fixes found in the full live logs:

@@ -4838,8 +4838,19 @@ class BridgeUi:
                 "ui.printer_disconnect_watch_failed name=%s", printer.name, exc_info=True
             )
             return
-        if not self._status_generation_is_current(generation) or self._stopping:
+        current = self._snapshot.paired_printer
+        if (
+            self._printer_disconnect_watch_token is not token
+            or not self._status_generation_is_current(generation)
+            or current is None
+            or current.address != printer.address
+            or current.name != printer.name
+        ):
+            # A delayed registration can finish after disarm or selection
+            # replacement. It must not retain a watch or replace a newer one.
             unsubscribe()
+            if self._printer_disconnect_watch_token is token:
+                self._printer_disconnect_watch_token = None
             return
         self._printer_disconnect_unsubscribe = unsubscribe
 

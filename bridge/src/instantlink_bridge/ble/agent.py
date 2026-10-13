@@ -33,6 +33,7 @@ OWNER_MATCH = (
 REGISTRATION_TIMEOUT_S = 10.0
 REGISTRATION_RETRY_DELAYS = (0.0, 0.2, 0.5, 1.0, 2.0)
 BUS_CALL_TIMEOUT_S = 3.0
+DEVICE_CACHE_LIMIT = 512
 
 
 class NoInputNoOutputAgent(ServiceInterface):
@@ -144,6 +145,9 @@ class BluezAgentService:
         self._start_lock = asyncio.Lock()
         self._stop_lock = asyncio.Lock()
         self._disconnect_watches: list[_DisconnectWatch] = []
+        self._device_cache: dict[str, dict[str, object]] = {}
+        self._device_cache_complete = False
+        self._device_revision = 0
 
     async def start(self) -> None:
         """Export an agent and watch BlueZ ownership on the same system bus."""
@@ -273,6 +277,7 @@ class BluezAgentService:
         return reply
 
     def _owner_changed(self, message: Message) -> None:
+        self._device_cache_signal(message)
         self._disconnect_signal(message)
         if message.member == "InterfacesAdded":
             self._interfaces_added(message)
@@ -325,6 +330,7 @@ class BluezAgentService:
             return
         for watch in tuple(self._disconnect_watches):
             self._notify_disconnect(watch)
+        self._invalidate_device_cache()
         self._owner = owner
         self._generation += 1
         self._registered = False
@@ -432,6 +438,180 @@ class BluezAgentService:
             owner,
         )
 
+    def _invalidate_device_cache(self) -> None:
+        self._device_cache.clear()
+        self._device_cache_complete = False
+        self._device_revision += 1
+
+    @classmethod
+    def _device_properties(cls, properties: object) -> dict[str, object] | None:
+        if not isinstance(properties, dict):
+            return None
+        result = {
+            key: properties[key] for key in ("Name", "Alias", "Connected") if key in properties
+        }
+        if cls._connected_value(result.get("Connected")) is None:
+            return None
+        names = [result[key] for key in ("Name", "Alias") if key in result]
+        if not names or not all(
+            isinstance(value, Variant) and value.signature == "s" and isinstance(value.value, str)
+            for value in names
+        ):
+            return None
+        return {key: Variant(value.signature, value.value) for key, value in result.items()}
+
+    def _cache_device_tree(self, objects: object, revision: int) -> None:
+        # Any relevant signal arriving during the call is newer than its reply.
+        # Keep the signal-maintained tree, or remain incomplete, rather than
+        # restoring a removed object or an earlier Connected/Name property.
+        if revision != self._device_revision:
+            return
+        if not isinstance(objects, dict):
+            self._invalidate_device_cache()
+            return
+        devices: dict[str, dict[str, object]] = {}
+        for path, interfaces in objects.items():
+            if not self._device_path(path):
+                continue
+            if not isinstance(interfaces, dict):
+                self._invalidate_device_cache()
+                return
+            if "org.bluez.Device1" not in interfaces:
+                continue
+            properties = self._device_properties(interfaces["org.bluez.Device1"])
+            if properties is None or len(devices) >= DEVICE_CACHE_LIMIT:
+                self._invalidate_device_cache()
+                return
+            devices[path] = properties
+        self._device_cache = devices
+        self._device_cache_complete = True
+        self._device_revision += 1
+
+    def _device_cache_signal(self, message: Message) -> None:
+        if (
+            self._stopping
+            or not self._owner
+            or message.message_type is not MessageType.SIGNAL
+            or message.sender != self._owner
+        ):
+            return
+        if (
+            message.interface == "org.freedesktop.DBus.Properties"
+            and message.member == "PropertiesChanged"
+        ):
+            if not self._device_path(message.path):
+                return
+            if message.signature != "sa{sv}as" or len(message.body) != 3:
+                self._invalidate_device_cache()
+                return
+            if message.body[0] != "org.bluez.Device1":
+                return
+            changed, invalidated = message.body[1:]
+            if (
+                not isinstance(changed, dict)
+                or not isinstance(invalidated, list)
+                or not all(isinstance(key, str) for key in invalidated)
+            ):
+                self._invalidate_device_cache()
+                return
+            relevant = {"Name", "Alias", "Connected"}
+            if not (relevant.intersection(changed) or relevant.intersection(invalidated)):
+                return
+            self._device_revision += 1
+            old = self._device_cache.get(message.path)
+            if old is None or relevant.intersection(invalidated):
+                # A previously unknown path could be another selected identity;
+                # do not grow partial rows or trust a now-incomplete tree.
+                self._invalidate_device_cache()
+                return
+            properties = self._device_properties(old | changed)
+            if properties is None:
+                self._invalidate_device_cache()
+                return
+            self._device_cache[message.path] = properties
+        elif (
+            message.interface == "org.freedesktop.DBus.ObjectManager"
+            and message.path == "/"
+            and message.member in {"InterfacesAdded", "InterfacesRemoved"}
+        ):
+            if len(message.body) != 2:
+                self._invalidate_device_cache()
+                return
+            path, interfaces = message.body
+            expected = "oa{sa{sv}}" if message.member == "InterfacesAdded" else "oas"
+            if message.signature != expected:
+                if self._device_path(path) or path == self.adapter_path:
+                    self._invalidate_device_cache()
+                return
+            if message.member == "InterfacesAdded" and message.signature == "oa{sa{sv}}":
+                if not self._device_path(path):
+                    return
+                if not isinstance(interfaces, dict):
+                    self._invalidate_device_cache()
+                    return
+                if "org.bluez.Device1" not in interfaces:
+                    return
+                self._device_revision += 1
+                properties = self._device_properties(interfaces["org.bluez.Device1"])
+                if properties is None or (
+                    path not in self._device_cache and len(self._device_cache) >= DEVICE_CACHE_LIMIT
+                ):
+                    self._invalidate_device_cache()
+                    return
+                self._device_cache[path] = properties
+            elif message.member == "InterfacesRemoved" and message.signature == "oas":
+                if not isinstance(interfaces, list) or not all(
+                    isinstance(key, str) for key in interfaces
+                ):
+                    if self._device_path(path) or path == self.adapter_path:
+                        self._invalidate_device_cache()
+                    return
+                if path == self.adapter_path and "org.bluez.Adapter1" in interfaces:
+                    self._invalidate_device_cache()
+                elif self._device_path(path) and "org.bluez.Device1" in interfaces:
+                    self._device_revision += 1
+                    self._device_cache.pop(path, None)
+
+    def _matching_devices(self, name: str, objects: object) -> dict[str, bool | None]:
+        if not isinstance(objects, dict):
+            raise ValueError("invalid BlueZ object snapshot tree")
+        candidates: dict[str, bool | None] = {}
+        for path, interfaces in objects.items():
+            if not self._device_path(path) or not isinstance(interfaces, dict):
+                continue
+            properties = interfaces.get("org.bluez.Device1")
+            if not isinstance(properties, dict):
+                continue
+            names = [properties.get("Name"), properties.get("Alias")]
+            if any(
+                isinstance(value, Variant)
+                and value.signature == "s"
+                and isinstance(value.value, str)
+                and normalize_printer_name(value.value).casefold() == name
+                for value in names
+            ):
+                candidates[path] = self._connected_value(properties.get("Connected"))
+        return candidates
+
+    def _cached_watch_candidates(self, name: str) -> dict[str, bool | None] | None:
+        if self._bus is not None and not self._bus.connected:
+            self._invalidate_device_cache()
+            return None
+        if (
+            not self._device_cache_complete
+            or self._bus is None
+            or not self._registered
+            or self._stopping
+        ):
+            return None
+        objects = {path: {"org.bluez.Device1": row} for path, row in self._device_cache.items()}
+        candidates = self._matching_devices(name, objects)
+        # Only a single live identity can establish the just-successful session.
+        # Missing, false-only and ambiguous cached identities require a fresh read.
+        if sum(value is True for value in candidates.values()) != 1:
+            return None
+        return candidates
+
     def _device_path(self, path: object) -> bool:
         return (
             isinstance(path, str)
@@ -529,9 +709,9 @@ class BluezAgentService:
     ) -> Callable[[], None]:
         """Arm one selected Printer session after a successful status request.
 
-        One bounded tree read resolves its physical BlueZ path. The watch then
-        consumes signals only until disarmed; callers retain their status-poll
-        fallback and arm again only after an actual session transition.
+        A complete owner-scoped, signal-maintained tree usually resolves its
+        physical BlueZ path immediately. Missing or ambiguous identities retain
+        the bounded fresh-tree fallback; status polling remains independent.
         """
         if self._bus is None or not self._registered or self._stopping:
             raise RuntimeError("BlueZ pairing agent is not ready")
@@ -556,29 +736,13 @@ class BluezAgentService:
 
         try:
             async with asyncio.timeout(BUS_CALL_TIMEOUT_S):
-                objects = await self.managed_objects_snapshot()
+                candidates = self._cached_watch_candidates(watch.name)
+                if candidates is None:
+                    objects = await self.managed_objects_snapshot()
+                    candidates = self._matching_devices(watch.name, objects)
             if not self._watch_current(watch):
                 disarm()
                 return disarm
-            if not isinstance(objects, dict):
-                raise ValueError("invalid BlueZ object snapshot tree")
-            candidates: dict[str, bool | None] = {}
-            for path, interfaces in objects.items():
-                if not self._device_path(path) or not isinstance(interfaces, dict):
-                    continue
-                properties = interfaces.get("org.bluez.Device1")
-                if not isinstance(properties, dict):
-                    continue
-                names = [properties.get("Name"), properties.get("Alias")]
-                if not any(
-                    isinstance(value, Variant)
-                    and value.signature == "s"
-                    and isinstance(value.value, str)
-                    and normalize_printer_name(value.value).casefold() == watch.name
-                    for value in names
-                ):
-                    continue
-                candidates[path] = self._connected_value(properties.get("Connected"))
             live_paths = [path for path, connected in candidates.items() if connected is True]
             # BlueZ can retain a disconnected IOS/ANDROID identity for the same
             # Printer. Only its one live identity belongs to the current session.
@@ -609,11 +773,12 @@ class BluezAgentService:
         Callers impose their own bounded deadline. Cancelling this read must
         leave the shared pairing agent and other bus calls operational.
         """
-        if self._bus is None or not self._registered:
+        if self._bus is None or not self._registered or not getattr(self._bus, "connected", True):
             raise RuntimeError("BlueZ pairing agent is not ready")
         bus = self._bus
         owner = self._owner
         generation = self._generation
+        revision = self._device_revision
         reply = await bus.call(
             Message(
                 destination=owner or BLUEZ_SERVICE,
@@ -631,6 +796,12 @@ class BluezAgentService:
             or len(reply.body) != 1
         ):
             raise ValueError("invalid BlueZ object snapshot reply")
+        # Only an authenticated reply from this unique owner may establish a
+        # reusable tree. Preserve the snapshot API's existing return semantics.
+        if owner and reply.sender == owner and getattr(bus, "connected", False):
+            self._cache_device_tree(reply.body[0], revision)
+        else:
+            self._invalidate_device_cache()
         return reply.body[0]
 
     async def stop(self) -> None:
@@ -654,6 +825,7 @@ class BluezAgentService:
         for watch in self._disconnect_watches:
             watch.active = False
         self._disconnect_watches.clear()
+        self._invalidate_device_cache()
         self._lifecycle += 1
         self._generation += 1
         self._registered = False

@@ -60,6 +60,7 @@ class Proxy:
 class FakeBus:
     def __init__(self, owner: str = ":1.10") -> None:
         self.owner = owner
+        self.connected = True
         self.handlers: list[Callable[[Message], object]] = []
         self.calls: list[Message] = []
         self.operations: list[tuple[Any, ...]] = []
@@ -81,6 +82,7 @@ class FakeBus:
 
     async def connect(self) -> FakeBus:
         self.connects += 1
+        self.connected = True
         await self.stage("bus", "connect")
         return self
 
@@ -92,6 +94,7 @@ class FakeBus:
 
     def disconnect(self) -> None:
         self.disconnects += 1
+        self.connected = False
 
     def add_message_handler(self, handler: Callable[[Message], object]) -> None:
         self.handlers.append(handler)
@@ -125,6 +128,7 @@ class FakeBus:
                 message_type=MessageType.METHOD_RETURN,
                 reply_serial=1,
                 signature="a{oa{sa{sv}}}",
+                sender=self.owner,
                 body=[self.snapshot],
             )
         return Message(message_type=MessageType.METHOD_RETURN, reply_serial=1)
@@ -887,4 +891,307 @@ async def test_old_bus_lifecycle_handler_cannot_invalidate_restarted_watch(
     assert not edges
     emit(bus, connection_signal(bus))
     assert edges == [None]
+    await service.stop()
+
+
+def addition_signal(bus: FakeBus, path: str, properties: object) -> Message:
+    return Message(
+        message_type=MessageType.SIGNAL,
+        sender=bus.owner,
+        path="/",
+        interface="org.freedesktop.DBus.ObjectManager",
+        member="InterfacesAdded",
+        signature="oa{sa{sv}}",
+        body=[path, {"org.bluez.Device1": properties}],
+    )
+
+
+def tree_calls(bus: FakeBus) -> int:
+    return sum(call.member == "GetManagedObjects" for call in bus.calls)
+
+
+@pytest.mark.asyncio
+async def test_first_watch_reuses_prior_bond_snapshot_and_connection_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree(False)
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    emit(bus, connection_signal(bus, Variant("b", True)))
+    # A fresh query would now stall. Arming must complete directly from the
+    # owner-scoped tree updated by signals received before any watch existed.
+    bus.snapshot_wait = True
+    edges: list[None] = []
+    disarm = await asyncio.wait_for(
+        service.watch_printer_disconnect("INSTAX-52006924", lambda: edges.append(None)), 0.1
+    )
+    assert tree_calls(bus) == 1 and not bus.entered.is_set()
+    assert service._disconnect_watches[0].paths == {DEVICE_PATH}
+    emit(bus, connection_signal(bus))
+    assert edges == [None]
+    disarm()
+    # A disconnect followed by a native reconnect before arming belongs only
+    # to the old session. The cache tracks the latest state, not sticky edges.
+    emit(bus, connection_signal(bus, Variant("b", True)))
+    await service.watch_printer_disconnect("INSTAX-52006924", lambda: edges.append(None))
+    assert tree_calls(bus) == 1 and edges == [None]
+    emit(bus, connection_signal(bus))
+    assert edges == [None, None]
+    await service.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kind", ["false", "missing", "ambiguous", "connected", "name", "alias", "malformed", "unknown"]
+)
+async def test_inconclusive_cached_tree_requires_fresh_watch_snapshot(
+    monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    if kind == "false":
+        emit(bus, connection_signal(bus))
+    elif kind == "missing":
+        emit(bus, removal_signal(bus, DEVICE_PATH, "org.bluez.Device1"))
+    elif kind == "ambiguous":
+        emit(
+            bus,
+            addition_signal(
+                bus,
+                OTHER_PATH,
+                {"Name": Variant("s", "INSTAX-52006924(ANDROID)"), "Connected": Variant("b", True)},
+            ),
+        )
+    elif kind == "unknown":
+        emit(bus, connection_signal(bus, Variant("b", True), path=OTHER_PATH))
+    else:
+        signal = connection_signal(bus)
+        if kind == "malformed":
+            signal.body[1]["Connected"] = Variant("s", "true")
+        else:
+            signal.body = [
+                "org.bluez.Device1",
+                {},
+                [{"connected": "Connected", "name": "Name", "alias": "Alias"}[kind]],
+            ]
+        emit(bus, signal)
+    edges: list[None] = []
+    await service.watch_printer_disconnect("INSTAX-52006924", lambda: edges.append(None))
+    assert tree_calls(bus) == 2 and not edges
+    assert service._disconnect_watches[0].paths == {DEVICE_PATH}
+    emit(bus, connection_signal(bus))
+    assert edges == [None]
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_cache_tracks_alias_addition_and_removal_without_extra_tree_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = {}
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    emit(
+        bus,
+        addition_signal(
+            bus,
+            DEVICE_PATH,
+            {"Alias": Variant("s", "INSTAX-52006924(IOS)"), "Connected": Variant("b", True)},
+        ),
+    )
+    emit(
+        bus,
+        addition_signal(
+            bus,
+            OTHER_PATH,
+            {"Alias": Variant("s", "INSTAX-52006924(ANDROID)"), "Connected": Variant("b", False)},
+        ),
+    )
+    emit(bus, removal_signal(bus, OTHER_PATH, "org.bluez.Device1"))
+    edges: list[None] = []
+    await service.watch_printer_disconnect("INSTAX-52006924", lambda: edges.append(None))
+    assert tree_calls(bus) == 1
+    assert service._disconnect_watches[0].paths == {DEVICE_PATH}
+    emit(bus, removal_signal(bus, DEVICE_PATH, "org.bluez.Device1"))
+    assert edges == [None]
+    await service.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["owner", "adapter", "restart", "bus"])
+async def test_transport_or_owner_transition_prevents_cached_watch_arm(
+    monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    old_handler = bus.handlers[0]
+    if kind == "owner":
+        bus.change_owner(":1.20")
+        await settled(service)
+    elif kind == "adapter":
+        emit(bus, removal_signal(bus, service.adapter_path, "org.bluez.Adapter1"))
+    elif kind == "restart":
+        await service.stop()
+        await service.start()
+        old_handler(connection_signal(bus, Variant("b", True)))
+    else:
+        bus.connected = False
+    assert service._cached_watch_candidates("instax-52006924") is None
+    edges: list[None] = []
+    if kind == "bus":
+        with pytest.raises(RuntimeError, match="not ready"):
+            await service.watch_printer_disconnect("INSTAX-52006924", lambda: edges.append(None))
+        assert tree_calls(bus) == 1 and not service._disconnect_watches
+        assert not service._device_cache_complete
+        await service.stop()
+        return
+    await service.watch_printer_disconnect("INSTAX-52006924", lambda: edges.append(None))
+    assert tree_calls(bus) == 2 and not edges
+    emit(bus, connection_signal(bus))
+    assert edges == [None]
+    await service.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["disconnect", "remove", "rename", "add"])
+async def test_snapshot_in_flight_cannot_overwrite_newer_cached_identity_state(
+    monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    bus.snapshot_wait = True
+    query = asyncio.create_task(service.managed_objects_snapshot())
+    await bus.entered.wait()
+    if kind == "disconnect":
+        emit(bus, connection_signal(bus))
+    elif kind == "remove":
+        emit(bus, removal_signal(bus, DEVICE_PATH, "org.bluez.Device1"))
+    elif kind == "rename":
+        signal = connection_signal(bus, Variant("b", True))
+        signal.body[1] = {"Name": Variant("s", "INSTAX-99999999")}
+        emit(bus, signal)
+    else:
+        emit(
+            bus,
+            addition_signal(
+                bus,
+                OTHER_PATH,
+                {
+                    "Alias": Variant("s", "INSTAX-52006924(ANDROID)"),
+                    "Connected": Variant("b", True),
+                },
+            ),
+        )
+    bus.release.set()
+    await query
+    assert service._cached_watch_candidates("instax-52006924") is None
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_untrusted_owner_signals_do_not_mutate_authoritative_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    signal = connection_signal(bus, sender=":1.99")
+    emit(bus, signal)
+    assert service._cached_watch_candidates("instax-52006924") == {DEVICE_PATH: True}
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_unknown_signal_flood_and_large_snapshot_cache_remain_bounded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    for index in range(module.DEVICE_CACHE_LIMIT + 5):
+        path = (
+            module.DEFAULT_ADAPTER_PATH + f"/dev_00_11_22_33_{index // 256:02X}_{index % 256:02X}"
+        )
+        emit(bus, connection_signal(bus, Variant("b", True), path=path))
+    assert not service._device_cache_complete and not service._device_cache
+    for index in range(module.DEVICE_CACHE_LIMIT + 5):
+        path = (
+            module.DEFAULT_ADAPTER_PATH + f"/dev_00_11_22_33_{index // 256:02X}_{index % 256:02X}"
+        )
+        bus.snapshot[path] = {
+            "org.bluez.Device1": {
+                "Name": Variant("s", f"INSTAX-{index}"),
+                "Connected": Variant("b", True),
+            }
+        }
+    await service.managed_objects_snapshot()
+    assert not service._device_cache_complete and not service._device_cache
+    await service.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "properties_signature",
+        "properties_shape",
+        "added_signature",
+        "removed_shape",
+        "removed_signature",
+        "added_row",
+    ],
+)
+async def test_malformed_authenticated_device_event_degrades_cached_tree(
+    monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    if kind.startswith("properties"):
+        signal = connection_signal(bus)
+    elif kind.startswith("removed"):
+        signal = removal_signal(bus, DEVICE_PATH, "org.bluez.Device1")
+    else:
+        signal = addition_signal(bus, DEVICE_PATH, {})
+    if kind.endswith("signature"):
+        signal.signature = "ss"
+    elif kind.endswith("shape"):
+        signal.body = [DEVICE_PATH]
+    emit(bus, signal)
+    assert service._cached_watch_candidates("instax-52006924") is None
+    await service.watch_printer_disconnect("INSTAX-52006924", lambda: None)
+    assert tree_calls(bus) == 2
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_cache_does_not_share_mutable_snapshot_property_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bus = FakeBus()
+    bus.snapshot = selected_tree()
+    service = install(monkeypatch, bus)
+    await service.start()
+    tree = await service.managed_objects_snapshot()
+    tree[DEVICE_PATH]["org.bluez.Device1"]["Connected"].value = False
+    assert service._cached_watch_candidates("instax-52006924") == {DEVICE_PATH: True}
     await service.stop()

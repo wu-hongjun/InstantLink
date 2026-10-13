@@ -1741,6 +1741,97 @@ async def test_disconnect_watch_survives_detected_model_metadata_update() -> Non
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["disarm", "pause", "print", "name", "address", "stop"])
+async def test_delayed_disconnect_registration_cannot_retain_replaced_watch(
+    tmp_path: Path, change: str
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delayed_watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        unsubscribe = await watcher.watch(name, callback)
+        entered.set()
+        await release.wait()
+        return unsubscribe
+
+    ui._printer_disconnect_watcher = delayed_watch
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    arming = asyncio.create_task(ui._arm_printer_disconnect_watch(printer, ui._status_generation))
+    try:
+        await entered.wait()
+        if change == "disarm":
+            ui._disarm_printer_disconnect_watch()
+        elif change == "pause":
+            await ui.pause_printer_status()
+        elif change == "print":
+            await ui.printing_started(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.2"))
+        elif change in {"name", "address"}:
+            ui._snapshot = replace(
+                ui.snapshot,
+                paired_printer=replace(
+                    printer,
+                    name="INSTAX-87654321" if change == "name" else printer.name,
+                    address="OTHER" if change == "address" else printer.address,
+                ),
+            )
+        else:
+            await ui.stop()
+        release.set()
+        await arming
+        assert watcher.disarmed == [0]
+        assert ui._printer_disconnect_unsubscribe is None
+        assert ui._printer_disconnect_watch_token is None
+        watcher.callbacks[0]()
+        assert not ui._printer_disconnect_pending
+        assert provider.fetch_calls == 0
+    finally:
+        release.set()
+        await arming
+
+
+@pytest.mark.asyncio
+async def test_delayed_disconnect_registration_cannot_replace_new_same_generation_watch() -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delayed_first_watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        unsubscribe = await watcher.watch(name, callback)
+        if len(watcher.callbacks) == 1:
+            entered.set()
+            await release.wait()
+        return unsubscribe
+
+    ui._printer_disconnect_watcher = delayed_first_watch
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    arming = asyncio.create_task(ui._arm_printer_disconnect_watch(printer, ui._status_generation))
+    try:
+        await entered.wait()
+        ui._disarm_printer_disconnect_watch()
+        await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+        release.set()
+        await arming
+        assert watcher.disarmed == [0]
+        watcher.callbacks[0]()
+        assert not ui._printer_disconnect_pending
+        watcher.callbacks[1]()
+        assert ui._printer_disconnect_pending
+        ui._disarm_printer_disconnect_watch()
+        assert watcher.disarmed == [0, 1]
+        assert provider.fetch_calls == 0
+    finally:
+        release.set()
+        await arming
+
+
+@pytest.mark.asyncio
 async def test_disconnect_while_arming_survives_first_success_and_uses_recovery_budget() -> None:
     watcher = _DisconnectWatcher()
 

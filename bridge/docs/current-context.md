@@ -2,6 +2,14 @@
 
 ## Live stale-link recovery acceptance, 2026-10-13
 
+Final follow-up: after the clean 08:33 capture, Printer advertisement stopped at
+08:37:01 EDT (cause unobserved), producing two one-time loss warnings. Same PID 23036
+handled retirement/bond cleanup and resumed search, keeping networking and 600 MHz
+healthy. User power-on restored fresh Square film 0 / battery 20% at **08:43:12.386 EDT**
+without manual Reconnect or service restart. Power-on-to-ready latency was not measured.
+Final snapshot records both earlier warnings and successful recovery; source 79b53e9 is
+clean, native hash unchanged. No film used. See `power-return.json` and final health.
+
 Plan 080 live follow-up completed after Printer power-on, using the reviewed **d8cee35**
 source/native binaries. Production code is unchanged. Evidence is in
 `docs/assets/bridge-audit-080/live-comparison.json` and the detailed captures.

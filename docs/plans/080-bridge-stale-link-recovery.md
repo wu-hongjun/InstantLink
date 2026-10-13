@@ -127,3 +127,19 @@ The next latency candidate is the **9.4–9.8 s wait for the next status poll** 
 A disconnect event on the existing shared BlueZ bus could prompt the next check sooner,
 without increasing idle polling. Successful fresh connect/status attempts took 2.17–3.83 s
 in these runs; these are entire attempt durations, not BLE-only timings.
+
+
+### Final normal-service power-return check
+
+After the clean 08:33 capture, the Printer stopped advertising at 08:37:01 EDT.
+The cause was not observed. Two one-time status-loss warnings were logged; the same
+Bridge PID 23036 retired the link, removed the disconnected bond and resumed search.
+Hotspot/USB/FTP and 600 MHz operation remained healthy. A later camera FTP control
+session is separate from this benchmark; no upload/airtime claim.
+
+The user turned the Printer on again. Automatic discovery matched it at 08:43:08.842,
+and fresh Square film 0 / battery 20% status returned at **08:43:12.386 EDT**, with
+**no manual Reconnect action or service restart**. Power-on time was not measured.
+Final health confirms the same PID / NRestarts 0, connected, 600 MHz, reviewed native
+hash and clean runtime source 79b53e9. The two earlier warnings remain in the final
+snapshot; there is no additional fault on power-return. No film used.

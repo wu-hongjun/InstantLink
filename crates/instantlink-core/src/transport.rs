@@ -542,8 +542,11 @@ pub async fn stop_scan(adapter: &Adapter) -> Result<()> {
 /// Return `(peripheral, local_name)` pairs for the Instax devices the adapter currently knows about.
 ///
 /// Reads the adapter's peripheral cache without controlling the scan, so it can be called while a
-/// scan started by [`start_scan`] is still running.
+/// scan started by [`start_scan`] is still running. Linux excludes inactive known-only records;
+/// a connected link or RSSI is required, although retained RSSI is not a liveness guarantee.
 pub async fn collect_instax_peripherals(adapter: &Adapter) -> Result<Vec<(Peripheral, String)>> {
+    #[cfg(target_os = "linux")]
+    let mut evidence_deadline = None;
     let peripherals = adapter
         .peripherals()
         .await
@@ -566,12 +569,42 @@ pub async fn collect_instax_peripherals(adapter: &Adapter) -> Result<Vec<(Periph
                 if is_android_advertisement(&display_name) {
                     continue;
                 }
+                #[cfg(target_os = "linux")]
+                if props.rssi.is_none() {
+                    let deadline = *evidence_deadline.get_or_insert_with(|| {
+                        tokio::time::Instant::now() + Duration::from_millis(250)
+                    });
+                    if !linux_scan_candidate_has_evidence(props.rssi, p.is_connected(), deadline)
+                        .await
+                    {
+                        // BlueZ persists names/UUIDs for bonded, powered-off
+                        // Printers. A connected link remains usable without
+                        // RSSI; queries share one budget across cached devices.
+                        continue;
+                    }
+                }
                 results.push((p, display_name));
             }
         }
     }
 
     Ok(results)
+}
+
+#[cfg(any(target_os = "linux", test))]
+async fn linux_scan_candidate_has_evidence<F, E>(
+    rssi: Option<i16>,
+    connected: F,
+    deadline: tokio::time::Instant,
+) -> bool
+where
+    F: Future<Output = std::result::Result<bool, E>>,
+{
+    rssi.is_some()
+        || matches!(
+            tokio::time::timeout_at(deadline, connected).await,
+            Ok(Ok(true))
+        )
 }
 
 fn is_android_advertisement(name: &str) -> bool {
@@ -1400,6 +1433,62 @@ mod tests {
             properties: btleplug::api::CharPropFlags::empty(),
             descriptors: std::collections::BTreeSet::new(),
         }
+    }
+
+    #[tokio::test]
+    async fn scan_evidence_accepts_rssi_without_polling_connected_state() {
+        let deadline = tokio::time::Instant::now();
+        let connected = async {
+            panic!("RSSI evidence must not spend a connected-state query");
+            #[allow(unreachable_code)]
+            Ok::<bool, &str>(false)
+        };
+        assert!(linux_scan_candidate_has_evidence(Some(-70), connected, deadline).await);
+    }
+
+    #[tokio::test]
+    async fn scan_evidence_keeps_connected_printer_without_rssi() {
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(250);
+        assert!(
+            linux_scan_candidate_has_evidence(None, async { Ok::<_, &str>(true) }, deadline).await
+        );
+    }
+
+    #[tokio::test]
+    async fn scan_evidence_excludes_known_disconnected_and_unknown_records() {
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(250);
+        assert!(
+            !linux_scan_candidate_has_evidence(None, async { Ok::<_, &str>(false) }, deadline)
+                .await
+        );
+        assert!(
+            !linux_scan_candidate_has_evidence(
+                None,
+                async { Err::<bool, _>("query failed") },
+                deadline
+            )
+            .await
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn scan_evidence_cached_queries_share_deadline_instead_of_multiplying_waits() {
+        let started = tokio::time::Instant::now();
+        let deadline = started + Duration::from_millis(250);
+        for _ in 0..3 {
+            assert!(
+                !linux_scan_candidate_has_evidence(
+                    None,
+                    std::future::pending::<std::result::Result<bool, &str>>(),
+                    deadline,
+                )
+                .await
+            );
+        }
+        assert_eq!(
+            tokio::time::Instant::now() - started,
+            Duration::from_millis(250)
+        );
     }
 
     #[test]

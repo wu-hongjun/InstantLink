@@ -1,5 +1,18 @@
 # Current Bridge Context
 
+## Initial-status work: live validation pending, 2026-10-13
+
+Plan083 clean source **ffe637e** is implemented/reviewed; **not deployed**. The Bridge retains
+validated Plan082 source82f6097/native d23d3b81…f3d38. Selected Printer is not advertising;
+requested power-on is needed for baseline/candidate/installed no-film timing and freshness tests.
+No successful hardware command-count/speed claim for083. Source gates1773Bridge/308Rust+1doc/
+App156, independent Bridge55/FFI23/corePrinter23/cleanup1, PiARM23+2 connect/lifecycle cases pass.
+No status cache; atomic fresh-connect handoff, later polls remain hardware reads.
+
+Baseline observer/drop-in/socket and unit binaries removed, normal service restored. Candidate
+archive/library remain inactive under /var/tmp; host baseline artifacts saved for comparison.
+No film/image commands. See docs/assets/bridge-audit-083/source-review.json and plan083.
+
 ## Discovery and connection setup, 2026-10-13
 
 Plan082 / `docs/assets/bridge-audit-082/`: clean **82f6097** Python/native deployed.

@@ -36,6 +36,12 @@ pub struct PrinterStatus {
 /// Async trait for controlling an Instax printer. Enables mocking in tests.
 #[async_trait]
 pub trait PrinterDevice: Send + Sync {
+    /// Cheap evidence that this session is terminally closed; this does not
+    /// poll hardware or prove that an otherwise cached session is still live.
+    fn known_disconnected(&self) -> bool {
+        false
+    }
+
     /// Get the printer's current status.
     async fn status(&self) -> Result<PrinterStatus>;
 
@@ -494,6 +500,10 @@ impl BlePrinterDevice {
 
 #[async_trait]
 impl PrinterDevice for BlePrinterDevice {
+    fn known_disconnected(&self) -> bool {
+        self.transport.known_disconnected()
+    }
+
     async fn status(&self) -> Result<PrinterStatus> {
         let _guard = self.operation_lock.lock().await;
         let battery = self.battery_unlocked().await?;

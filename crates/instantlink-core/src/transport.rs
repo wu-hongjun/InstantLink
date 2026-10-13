@@ -97,6 +97,54 @@ async fn receive_expected_from_transport<T: Transport + ?Sized>(
     }
 }
 
+/// Probe only an outstanding response, after its normal fast ACK window. Query
+/// failures are inconclusive; the original protocol deadline still applies.
+async fn wait_for_confirmed_disconnect<Q, Fut>(mut query: Q)
+where
+    Q: FnMut() -> Fut,
+    Fut: Future<Output = Result<bool>>,
+{
+    loop {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        if matches!(
+            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, query()).await,
+            Ok(Ok(false))
+        ) {
+            return;
+        }
+    }
+}
+
+fn closed_link_error() -> PrinterError {
+    PrinterError::Ble("BLE link disconnected; reconnect before sending".into())
+}
+
+async fn receive_packet_with_link_checks<Q, Fut>(
+    rx: &mut mpsc::Receiver<Vec<u8>>,
+    assembler: &mut PacketAssembler,
+    timeout: Duration,
+    closed: &CancellationToken,
+    query: Q,
+) -> Result<protocol::Packet>
+where
+    Q: FnMut() -> Fut,
+    Fut: Future<Output = Result<bool>>,
+{
+    // A queued, complete ACK takes priority over a simultaneous state query.
+    // Both futures stay in this scope: receiving an ACK or cancellation drops
+    // the probe immediately, without leaving a background task behind.
+    let result = tokio::select! {
+        biased;
+        packet = receive_packet_from_channel(rx, assembler, timeout) => packet,
+        _ = closed.cancelled() => Err(closed_link_error()),
+        _ = wait_for_confirmed_disconnect(query) => Err(closed_link_error()),
+    };
+    if matches!(&result, Err(PrinterError::Ble(_))) {
+        assembler.reset();
+    }
+    result
+}
+
 /// Instax BLE service UUID.
 pub const SERVICE_UUID: Uuid = Uuid::from_u128(0x70954782_2d83_473d_9e5f_81e1d02d5273);
 /// Instax BLE write characteristic UUID.
@@ -413,6 +461,29 @@ where
     delivery.complete();
     Ok(())
 }
+
+fn close_link(session: &WriteSession, closed: &CancellationToken, listener: &CancellationToken) {
+    session.require_link_reset();
+    closed.cancel();
+    listener.cancel();
+}
+
+async fn write_fragments_on_open_link<F, Fut>(
+    data: &[u8],
+    session: &WriteSession,
+    closed: &CancellationToken,
+    write: F,
+) -> Result<()>
+where
+    F: FnMut(Vec<u8>) -> Fut,
+    Fut: Future<Output = Result<()>>,
+{
+    tokio::select! {
+        biased;
+        _ = closed.cancelled() => Err(closed_link_error()),
+        result = write_fragments(data, session, write) => result,
+    }
+}
 /// Maximum time to wait for the Instax GATT characteristics to be exported by
 /// the OS BLE stack after service discovery. BlueZ exports characteristics
 /// incrementally, so they may not all be present immediately after connect.
@@ -429,6 +500,12 @@ const BLUETOOTHCTL_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 /// Trait for BLE transport operations (enables mocking in tests).
 #[async_trait]
 pub trait Transport: Send + Sync {
+    /// Cheap, read-only evidence of terminal link closure. An uncertain ACK or
+    /// state-query failure is not proof of disconnection.
+    fn known_disconnected(&self) -> bool {
+        false
+    }
+
     /// Send raw bytes to the printer's write characteristic.
     async fn send(&self, data: &[u8]) -> Result<()>;
 
@@ -780,6 +857,8 @@ pub struct BleTransport {
     dis_model_number: Option<String>,
     /// Cancellation token signalled during `disconnect()` to stop the listener.
     cancel_token: CancellationToken,
+    /// Confirmed link loss wakes response waits and prevents further writes.
+    closed: CancellationToken,
     /// Join handle for the notification listener task.
     listener_handle: Mutex<Option<JoinHandle<()>>>,
 }
@@ -1052,6 +1131,7 @@ impl BleTransport {
                 .expect("selected diagnostic payload is nonzero"),
             dis_model_number,
             cancel_token,
+            closed: CancellationToken::new(),
             listener_handle: Mutex::new(listener_guard.0.take()),
         })
     }
@@ -1068,13 +1148,45 @@ impl BleTransport {
             data.len(),
             &data[..data.len().min(20)]
         );
-        write_fragments(data, session, |fragment| async move {
-            self.peripheral
-                .write(&self.write_char, &fragment, WriteType::WithoutResponse)
+        let result =
+            write_fragments_on_open_link(data, session, &self.closed, |fragment| async move {
+                self.peripheral
+                    .write(&self.write_char, &fragment, WriteType::WithoutResponse)
+                    .await
+                    .map_err(|e| PrinterError::Ble(format!("write failed: {e}")))
+            })
+            .await;
+        // A vanished link may reject the write before there is any ACK to
+        // await. Check only this failure path; never probe successful chunks.
+        // Unknown OS state preserves the original write error and no-replay
+        // policy rather than assuming that the Printer is disconnected.
+        if result.is_err() && !self.closed.is_cancelled() {
+            let _ = self.query_connected().await;
+        }
+        result
+    }
+
+    fn mark_disconnected(&self) {
+        // Invalidate before waking readers; an old Arc must never resume an
+        // uncertain transfer or print actuator command on a replacement link.
+        close_link(&self.write_session, &self.closed, &self.cancel_token);
+    }
+
+    async fn query_connected(&self) -> Result<bool> {
+        if self.closed.is_cancelled() {
+            return Ok(false);
+        }
+        let connected =
+            tokio::time::timeout(DEFAULT_DISCONNECT_TIMEOUT, self.peripheral.is_connected())
                 .await
-                .map_err(|e| PrinterError::Ble(format!("write failed: {e}")))
-        })
-        .await
+                .map_err(|_| PrinterError::Timeout)?
+                .map_err(|error| {
+                    PrinterError::Ble(format!("connection state query failed: {error}"))
+                })?;
+        if !connected {
+            self.mark_disconnected();
+        }
+        Ok(connected && !self.closed.is_cancelled())
     }
 
     /// Immutable payload used by ordinary production commands on this connection.
@@ -1340,6 +1452,10 @@ impl Drop for BleTransport {
 
 #[async_trait]
 impl Transport for BleTransport {
+    fn known_disconnected(&self) -> bool {
+        self.closed.is_cancelled()
+    }
+
     async fn send(&self, data: &[u8]) -> Result<()> {
         let _guard = self.command_lock.lock().await;
         self.send_bytes(data).await
@@ -1348,7 +1464,17 @@ impl Transport for BleTransport {
     async fn receive(&self, timeout: Duration) -> Result<protocol::Packet> {
         let mut rx = self.rx.lock().await;
         let mut assembler = self.assembler.lock().await;
-        receive_packet_from_channel(&mut rx, &mut assembler, timeout).await
+        let result =
+            receive_packet_with_link_checks(&mut rx, &mut assembler, timeout, &self.closed, || {
+                self.query_connected()
+            })
+            .await;
+        // An ended notification channel also makes this local session unusable,
+        // even when the OS has not yet reported physical disconnection.
+        if matches!(&result, Err(PrinterError::Ble(_))) {
+            self.mark_disconnected();
+        }
+        result
     }
 
     async fn send_and_receive(&self, data: &[u8], timeout: Duration) -> Result<protocol::Packet> {
@@ -1383,7 +1509,7 @@ impl Transport for BleTransport {
             session: &self.write_session,
             armed: true,
         };
-        self.write_session.require_link_reset();
+        self.mark_disconnected();
         // Shut down the listener before touching the peripheral so it doesn't
         // try to forward notifications after the BLE connection is gone.
         self.shutdown_listener().await;
@@ -1461,6 +1587,187 @@ mod tests {
             properties: btleplug::api::CharPropFlags::empty(),
             descriptors: std::collections::BTreeSet::new(),
         }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn fast_response_does_not_query_link_state() {
+        let (tx, mut rx) = mpsc::channel(1);
+        tx.send(protocol::build_packet(0x1234, &[1]).unwrap())
+            .await
+            .unwrap();
+        let packet = receive_packet_with_link_checks(
+            &mut rx,
+            &mut PacketAssembler::new(),
+            DEFAULT_TIMEOUT,
+            &CancellationToken::new(),
+            || async { panic!("successful ACK must not query BlueZ") },
+        )
+        .await
+        .unwrap();
+        assert_eq!(packet.opcode, 0x1234);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn outstanding_response_fails_on_confirmed_disconnect_after_one_second() {
+        let (_tx, mut rx) = mpsc::channel(1);
+        let calls = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let error = receive_packet_with_link_checks(
+            &mut rx,
+            &mut PacketAssembler::new(),
+            DEFAULT_TIMEOUT,
+            &CancellationToken::new(),
+            || async {
+                calls.fetch_add(1, Ordering::SeqCst);
+                Ok(false)
+            },
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, PrinterError::Ble(_)));
+        assert_eq!(started.elapsed(), Duration::from_secs(1));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn query_errors_and_live_links_keep_original_response_deadline() {
+        let (_tx, mut rx) = mpsc::channel(1);
+        let calls = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let error = receive_packet_with_link_checks(
+            &mut rx,
+            &mut PacketAssembler::new(),
+            Duration::from_millis(3500),
+            &CancellationToken::new(),
+            || async {
+                if calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                    Err(PrinterError::Ble("state unavailable".into()))
+                } else {
+                    Ok(true)
+                }
+            },
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, PrinterError::Timeout));
+        assert_eq!(started.elapsed(), Duration::from_millis(3500));
+        assert_eq!(calls.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn wedged_query_neither_extends_deadline_nor_leaks_after_ack() {
+        let (tx, mut rx) = mpsc::channel(1);
+        let active = Arc::new(AtomicUsize::new(0));
+        struct ActiveQuery(Arc<AtomicUsize>);
+        impl Drop for ActiveQuery {
+            fn drop(&mut self) {
+                self.0.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+        let sender = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(1500)).await;
+            tx.send(protocol::build_packet(0x5678, &[2]).unwrap())
+                .await
+                .unwrap();
+        });
+        let packet = receive_packet_with_link_checks(
+            &mut rx,
+            &mut PacketAssembler::new(),
+            DEFAULT_TIMEOUT,
+            &CancellationToken::new(),
+            || async {
+                active.fetch_add(1, Ordering::SeqCst);
+                let _guard = ActiveQuery(Arc::clone(&active));
+                std::future::pending::<Result<bool>>().await
+            },
+        )
+        .await
+        .unwrap();
+        sender.await.unwrap();
+        assert_eq!(packet.opcode, 0x5678);
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+
+        let (_tx, mut rx) = mpsc::channel(1);
+        let started = tokio::time::Instant::now();
+        let error = receive_packet_with_link_checks(
+            &mut rx,
+            &mut PacketAssembler::new(),
+            Duration::from_millis(4500),
+            &CancellationToken::new(),
+            std::future::pending::<Result<bool>>,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, PrinterError::Timeout));
+        assert_eq!(started.elapsed(), Duration::from_millis(4500));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn closed_session_wakes_waiters_but_queued_ack_wins() {
+        let closed = CancellationToken::new();
+        closed.cancel();
+        let (tx, mut rx) = mpsc::channel(1);
+        let mut assembler = PacketAssembler::new();
+        tx.send(protocol::build_packet(0x4321, &[3]).unwrap())
+            .await
+            .unwrap();
+        let packet = receive_packet_with_link_checks(
+            &mut rx,
+            &mut assembler,
+            DEFAULT_TIMEOUT,
+            &closed,
+            || async { panic!("closed session must not probe") },
+        )
+        .await
+        .unwrap();
+        assert_eq!(packet.opcode, 0x4321);
+        let started = tokio::time::Instant::now();
+        let error = receive_packet_with_link_checks(
+            &mut rx,
+            &mut assembler,
+            DEFAULT_TIMEOUT,
+            &closed,
+            || async { panic!("closed session must not probe") },
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, PrinterError::Ble(_)));
+        assert!(started.elapsed().is_zero());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancellation_drops_pending_state_query_without_background_work() {
+        let (_tx, mut rx) = mpsc::channel(1);
+        let active = Arc::new(AtomicUsize::new(0));
+        struct ActiveQuery(Arc<AtomicUsize>);
+        impl Drop for ActiveQuery {
+            fn drop(&mut self) {
+                self.0.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+        let mut assembler = PacketAssembler::new();
+        let closed = CancellationToken::new();
+        let result = tokio::time::timeout(
+            Duration::from_millis(1500),
+            receive_packet_with_link_checks(
+                &mut rx,
+                &mut assembler,
+                DEFAULT_TIMEOUT,
+                &closed,
+                || async {
+                    active.fetch_add(1, Ordering::SeqCst);
+                    let _guard = ActiveQuery(Arc::clone(&active));
+                    std::future::pending::<Result<bool>>().await
+                },
+            ),
+        )
+        .await;
+        assert!(result.is_err());
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+        assert!(
+            !closed.is_cancelled(),
+            "cancelled query cannot assert a lost link"
+        );
     }
 
     #[tokio::test]

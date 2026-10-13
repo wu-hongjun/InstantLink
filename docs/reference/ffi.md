@@ -101,7 +101,7 @@ int32_t instantlink_shutdown(void);
 int32_t instantlink_reset(void);
 ```
 
-- `instantlink_is_connected` returns `1` when connected, `0` when disconnected, or a negative error code
+- `instantlink_is_connected` returns `1` for a cached session not known closed, `0` for no session or a terminally closed session, or a negative error code. It is a cheap read-only check: it does not poll hardware or guarantee that a physical link is live.
 - `instantlink_connect_named_with_progress` is the base entry point for UI-driven reconnect flows; exposes real connection stages
 - `instantlink_connect_named_with_progress_ctx` is the preferred variant (used by macOS app) because it accepts an opaque `context` pointer, allowing per-call state without global side effects. The context is passed unchanged to each callback invocation.
   - **Context Pointer Contract**: The `context` pointer is cast to `usize` internally and back; the FFI does not dereference it. The caller is responsible for ensuring the pointer remains valid for the entire duration of the connect operation and properly life-managing the backing object.
@@ -238,6 +238,7 @@ int32_t instantlink_keepalive(void);
 int32_t instantlink_set_keepalive_interval(int32_t seconds);
 ```
 
+- Missing native replies trigger a bounded link-state check after one second. Confirmed disconnection closes the old session; inconclusive checks retain the original command deadline. Normal acknowledgements and idle sessions add no checks. Commands are never replayed.
 - `instantlink_keepalive` sends one status/keepalive request to the connected printer (`0` on success)
 - `instantlink_set_keepalive_interval` configures the background keepalive: `0` disables it, positive values are seconds; a negative value returns `-5`
 

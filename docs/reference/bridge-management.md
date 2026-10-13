@@ -127,7 +127,14 @@ recovery or alter the current UI. Retired status tasks remain owned through shut
 
 Printer polling checks the saved bond before its first fetch after startup. The existing
 BlueZ guard removes only disconnected identities and preserves the saved selection; a live
-Printer keeps its bond. Polling waits for active rebond recovery before connecting again.
+Printer keeps its bond. Polling waits for active rebond and silent-link recovery before connecting again.
+
+After a previously responsive Printer stops responding, the Bridge permits two prompt
+status/reconnect retries with at least 250 ms between attempts. If they fail, it resumes
+the configured offline search period; startup with an absent Printer keeps that ordinary
+cadence. The existing “Restart printer” retry interval still applies. Confirmed native
+session closure retires a cached link immediately; uncertain status failures retain the
+existing two-failure tolerance.
 
 Linux address probes read fresh bounded kernel snapshots, avoiding repeated `ip` launches.
 Scope, prefix, administrative state and polling/recovery timing are preserved. Incomplete,

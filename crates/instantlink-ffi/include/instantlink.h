@@ -293,7 +293,9 @@ int32_t instantlink_set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t pattern);
 int32_t instantlink_led_off(void);
 
 /**
- * Check if a printer is currently connected.
+ * Check whether a cached printer session exists and has not been closed.
+ * This is a cheap, read-only check; it does not poll hardware or guarantee
+ * that the physical link is live before the next Printer operation.
  * Returns 1 if connected, 0 if not, -3 on error.
  */
 int32_t instantlink_is_connected(void);

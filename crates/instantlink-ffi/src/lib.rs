@@ -101,6 +101,9 @@ fn start_keepalive_task(rt: &tokio::runtime::Runtime, device: DeviceArc) {
     let handle = rt.spawn(async move {
         loop {
             tokio::time::sleep(interval).await;
+            if device.known_disconnected() {
+                break;
+            }
             match device.keep_alive().await {
                 Ok(()) => log::debug!(
                     "instantlink.keepalive_ok name={} interval_s={}",
@@ -367,7 +370,7 @@ unsafe fn write_str_to_buf(s: &str, out: *mut c_char, out_len: i32) -> i32 {
     // (caller contract), and copy_len <= max = out_len - 1, so both source and destination
     // ranges are valid and non-overlapping (src is a Rust &[u8], dst is the caller's buffer).
     unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out as *mut u8, copy_len);
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out.cast::<u8>(), copy_len);
         // SAFETY: out.add(copy_len) is within the buffer because copy_len <= out_len - 1,
         // so index copy_len is the last valid byte of the out_len-byte buffer.
         *out.add(copy_len) = 0; // NUL terminator
@@ -1228,6 +1231,7 @@ mod tests {
         shutdown_calls: Arc<AtomicU32>,
         reset_calls: Arc<AtomicU32>,
         film_and_charging_calls: Arc<AtomicU32>,
+        closed: bool,
         failures: Arc<StdMutex<FakeFailures>>,
     }
 
@@ -1250,6 +1254,7 @@ mod tests {
                 shutdown_calls: Arc::new(AtomicU32::new(0)),
                 reset_calls: Arc::new(AtomicU32::new(0)),
                 film_and_charging_calls: Arc::new(AtomicU32::new(0)),
+                closed: false,
                 failures: Arc::new(StdMutex::new(FakeFailures::default())),
             }
         }
@@ -1261,6 +1266,9 @@ mod tests {
     }
 
     impl PrinterDevice for FakeDevice {
+        fn known_disconnected(&self) -> bool {
+            self.closed
+        }
         fn status<'life0, 'async_trait>(
             &'life0 self,
         ) -> Pin<
@@ -1568,7 +1576,7 @@ mod tests {
     }
 
     extern "C" fn prepared_identity_callback(sent: u32, total: u32, context: *mut c_void) {
-        let mut buffer = [0_i8; 128];
+        let mut buffer = [0 as c_char; 128];
         let name_length = unsafe { instantlink_device_name(buffer.as_mut_ptr(), 128) };
         let slots = unsafe { &*(context.cast::<(AtomicU32, AtomicU32, AtomicI32)>()) };
         slots.0.store(sent, Ordering::SeqCst);
@@ -1934,6 +1942,63 @@ mod tests {
     fn ffi_is_connected_returns_zero_without_device() {
         let _guard = install_test_device(None);
         assert_eq!(instantlink_is_connected(), 0);
+    }
+
+    #[test]
+    fn ffi_is_connected_reports_closed_session_without_mutation_or_commands() {
+        let mut device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        device.closed = true;
+        let calls = Arc::clone(&device.film_and_charging_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let original = Arc::clone(get_device_lock().lock().unwrap().as_ref().unwrap());
+        assert_eq!(instantlink_is_connected(), 0);
+        assert!(Arc::ptr_eq(
+            &original,
+            get_device_lock().lock().unwrap().as_ref().unwrap()
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn uncertain_command_timeout_does_not_assert_known_disconnection() {
+        let device =
+            FakeDevice::new("INSTAX-12345678", PrinterModel::Mini).with_failures(FakeFailures {
+                film_and_charging: Some(PrinterError::Timeout),
+                ..FakeFailures::default()
+            });
+        let _guard = install_test_device(Some(Box::new(device)));
+        assert_eq!(instantlink_film_remaining(), -4);
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn closed_keepalive_task_exits_without_printer_commands() {
+        let mut device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        device.closed = true;
+        let calls = Arc::clone(&device.film_and_charging_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        set_configured_keepalive_interval(Some(Duration::from_millis(1))).unwrap();
+        let device = Arc::clone(get_device_lock().lock().unwrap().as_ref().unwrap());
+        start_keepalive_task(get_runtime(), device);
+        get_runtime().block_on(async {
+            tokio::time::timeout(Duration::from_secs(1), async {
+                loop {
+                    let finished = get_keepalive_task_lock()
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .unwrap()
+                        .is_finished();
+                    if finished {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+            })
+            .await
+            .unwrap();
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
     }
 
     #[test]
@@ -2532,14 +2597,20 @@ pub extern "C" fn instantlink_led_off() -> i32 {
     .unwrap_or(-3)
 }
 
-/// Check if a printer is currently connected.
+/// Check whether a cached printer session exists and has not been closed.
+/// This is a cheap, read-only check; it does not poll hardware or guarantee
+/// that the physical link is live before the next Printer operation.
 /// Returns 1 if connected, 0 if not, -3 on error.
 #[unsafe(no_mangle)]
 pub extern "C" fn instantlink_is_connected() -> i32 {
     std::panic::catch_unwind(|| {
         let lock = get_device_lock();
         if let Ok(guard) = lock.lock() {
-            i32::from(guard.is_some())
+            i32::from(
+                guard
+                    .as_ref()
+                    .is_some_and(|device| !device.known_disconnected()),
+            )
         } else {
             -3
         }

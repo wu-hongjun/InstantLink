@@ -157,6 +157,89 @@ async def test_instantlink_status_uses_combined_status_call() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("connected", [0, 1, ERROR_BLE, -4])
+async def test_cached_native_connection_only_reconnects_on_confirmed_disconnect(
+    connected: int,
+) -> None:
+    class ProbedLibrary(_FakeInstantLinkStatusLibrary):
+        def __init__(self) -> None:
+            super().__init__()
+            self.probe_calls = 0
+
+        def instantlink_is_connected(self) -> int:
+            self.probe_calls += 1
+            return connected
+
+    library = ProbedLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    status = await backend.status("INSTAX-1N034655")
+
+    assert status.film_remaining == 7
+    assert library.probe_calls == 1
+    assert library.connect_calls == (1 if connected == 0 else 0)
+    assert library.disconnect_calls == (1 if connected == 0 else 0)
+    assert library.status_calls == 1
+
+
+def test_native_connection_probe_does_not_skip_changed_printer_selection() -> None:
+    class ProbedLibrary(_FakeInstantLinkStatusLibrary):
+        def instantlink_is_connected(self) -> int:
+            raise AssertionError("old selected Printer must not satisfy new selection")
+
+    library = ProbedLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    backend._ensure_connected_blocking("INSTAX-12345678", scan_duration_s=5)
+
+    assert library.connect_calls == 1
+
+
+def test_cached_connection_remains_compatible_with_library_without_probe() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    backend._ensure_connected_blocking("INSTAX-1N034655", scan_duration_s=5)
+
+    assert library.connect_calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state_after_failure", [0, 1, ERROR_BLE])
+async def test_first_status_failure_drops_only_a_known_closed_native_session(
+    state_after_failure: int,
+) -> None:
+    class ProbedLibrary(_FakeInstantLinkStatusLibrary):
+        def instantlink_is_connected(self) -> int:
+            return state_after_failure if self.status_calls else 1
+
+    library = ProbedLibrary(status_rc=ERROR_PRINT_REJECTED)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    with pytest.raises(InstantLinkBleError, match="status failed"):
+        await backend.status("INSTAX-1N034655")
+
+    assert library.connect_calls == 0
+    assert library.disconnect_calls == (1 if state_after_failure == 0 else 0)
+
+
+def test_new_native_session_does_not_inherit_previous_status_failure_streak() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    backend._consecutive_status_failures = 1
+
+    backend._ensure_connected_blocking("INSTAX-12345678", scan_duration_s=5)
+
+    assert library.connect_calls == 1
+    assert backend._consecutive_status_failures == 0
+
+
+@pytest.mark.asyncio
 async def test_instantlink_backend_configures_core_keepalive() -> None:
     library = _FakeInstantLinkStatusLibrary()
     backend = InstantLinkBackend()

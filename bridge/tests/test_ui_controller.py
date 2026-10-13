@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Coroutine
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -44,7 +45,9 @@ from instantlink_bridge.printing import PrintProgress, PrintStage
 from instantlink_bridge.system_info import SystemInfo
 from instantlink_bridge.ui.controller import (
     MIN_OFFLINE_SEARCH_GAP_S,
+    MIN_PRINTER_RECOVERY_GAP_S,
     OFFLINE_MESSAGE_AFTER_MISSES,
+    PRINTER_RECOVERY_RETRY_COUNT,
     RENDER_TICK_S,
     RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
@@ -1196,6 +1199,150 @@ def test_retry_delay_is_immediate_right_after_a_connected_drop() -> None:
     # Once searching (no longer "was online"), fall back to the configured search period.
     ui._printer_was_online = False
     assert ui._printer_status_retry_delay(False) == 30.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("outcomes", "attempt_s", "expected_starts"),
+    [
+        ([True, False, False, False], 1.0, [0.0, 10.0, 11.25, 12.5, 42.5]),
+        ([False, False], 1.0, [0.0, 30.0, 60.0]),
+        ([True, False, True, False, False, False], 1.0, [0, 10, 11.25, 21.25, 22.5, 23.75, 53.75]),
+        ([True, False, False, False], 10.0, [0, 12, 22.25, 32.5, 62.5]),
+    ],
+)
+async def test_poll_recovery_retries_are_bounded_and_restore_normal_cadence(
+    monkeypatch: pytest.MonkeyPatch,
+    outcomes: list[bool],
+    attempt_s: float,
+    expected_starts: list[float],
+) -> None:
+    clock = [0.0]
+    starts: list[float] = []
+    gaps: list[float] = []
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+
+    class SequencedProvider(_FakeStatusProvider):
+        async def fetch(self, _printer: PairedPrinter) -> PrinterStatusSnapshot:
+            starts.append(clock[0])
+            if self.fetch_calls == len(outcomes):
+                raise asyncio.CancelledError
+            online = outcomes[self.fetch_calls]
+            self.fetch_calls += 1
+            clock[0] += attempt_s
+            if not online:
+                raise PrinterStatusUnavailableError("not advertising")
+            return PrinterStatusSnapshot(3, 90, False, PrinterModel.SQUARE)
+
+    async def sleep(delay: float) -> None:
+        gaps.append(delay)
+        clock[0] += delay
+
+    async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
+        waiter.close()
+        clock[0] += duration_s
+        raise TimeoutError
+
+    provider = SequencedProvider()
+    pairer = _FakePairer([printer])
+    ui = BridgeUi(
+        BridgeConfig(printer=PrinterConfig(search_interval_s=30.0)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=pairer,
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+    monkeypatch.setattr(ui, "_monotonic", lambda: clock[0])
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(asyncio, "wait_for", wait_for)
+
+    with pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(printer, ui._status_generation)
+
+    assert starts == expected_starts
+    assert all(gap in (MIN_OFFLINE_SEARCH_GAP_S, MIN_PRINTER_RECOVERY_GAP_S) for gap in gaps)
+    assert pairer.removed_bonds == []  # Single status failures cannot reset a live bond.
+    assert provider.close_calls == 1
+    assert PRINTER_RECOVERY_RETRY_COUNT == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("superseded", [False, True])
+async def test_poll_waits_for_silent_link_recovery_before_fetching(
+    superseded: bool,
+) -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    recovery_started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def recover() -> None:
+        recovery_started.set()
+        await release.wait()
+        if superseded:
+            ui._status_generation += 1
+
+    ui._silent_link_recovery_task = asyncio.create_task(recover())
+    await recovery_started.wait()
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await asyncio.sleep(0)
+        assert provider.fetch_calls == 0
+        release.set()
+        if superseded:
+            await asyncio.wait_for(poll, 1)
+            assert provider.fetch_calls == 0
+        else:
+            await asyncio.wait_for(provider.fetch_started.wait(), 1)
+            assert provider.fetch_calls == 1
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+        await ui._silent_link_recovery_task
+
+
+@pytest.mark.asyncio
+async def test_cancelled_poll_does_not_cancel_silent_link_recovery() -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    release = asyncio.Event()
+
+    async def recover() -> None:
+        await release.wait()
+
+    ui._silent_link_recovery_task = asyncio.create_task(recover())
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await asyncio.sleep(0)
+        assert provider.fetch_calls == 0
+        poll.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await poll
+        assert not ui._silent_link_recovery_task.done()
+        assert provider.close_calls == 1
+    finally:
+        release.set()
+        await ui._silent_link_recovery_task
 
 
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:

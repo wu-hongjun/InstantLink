@@ -148,6 +148,11 @@ OFFLINE_MESSAGE_AFTER_MISSES = 3
 # event loop room to service LCD render, FTP, and BLE callbacks without
 # noticeably delaying reconnect when the printer wakes up at the 5-second setting.
 MIN_OFFLINE_SEARCH_GAP_S = 2.0
+# A proven live link gets two prompt retries: one transient status retry and, if that fails,
+# one fresh connection after the backend's two-failure teardown. Bound the burst so an absent
+# Printer returns to its configured search cadence rather than continuously scanning.
+PRINTER_RECOVERY_RETRY_COUNT = 2
+MIN_PRINTER_RECOVERY_GAP_S = 0.25
 UNLOCK_TIMEOUT_S = 10.0
 HOTSPOT_RECOVERY_STARTUP_GRACE_S = 30.0
 HOTSPOT_RECOVERY_BACKOFF_S = (30.0, 60.0, 120.0, 300.0)
@@ -4620,15 +4625,18 @@ class BridgeUi:
         try:
             await self._wait_for_printer_backend()
             startup_bond_check = True
+            recovery_retries_remaining = 0
             while True:
                 if not self._status_generation_is_current(generation):
                     return
                 # Bond removal can take longer than the offline retry gap.
                 # Never start another connect while that recovery owns BlueZ.
                 # Shield it because recovery itself may replace this poll.
-                rebond = self._auto_rebond_task
-                if rebond is not None and not rebond.done():
-                    await asyncio.shield(rebond)
+                for recovery in (self._auto_rebond_task, self._silent_link_recovery_task):
+                    if recovery is not None and not recovery.done():
+                        await asyncio.shield(recovery)
+                    if not self._status_generation_is_current(generation):
+                        return
                 if not self._status_generation_is_current(generation):
                     return
                 if startup_bond_check:
@@ -4649,17 +4657,13 @@ class BridgeUi:
                     return
                 # A tap during this check is already serviced by its result.
                 self._printer_check_requested.clear()
-                # Proactive always-fresh-pair (docs/plans/031): the connected->failed edge is the
-                # moment the link is known down (the fetch above closed any cached FFI session on
-                # failure). The Instax wipes its own pairing on power-off, so the persisted BlueZ
-                # bond is guaranteed stale now; remove it BEFORE the imminent reconnect so that
-                # reconnect pairs fresh via the NoInputNoOutput agent instead of failing an
-                # encrypted write with a stale LTK. Awaited here (not fire-and-forget) so the bond
-                # is gone before this loop re-enters fetch — the just-dropped retry delay is 0.0.
-                # The reset itself is gated on Connected=no inside the pairer, so a still-live link
-                # is never torn down (that wedges the printer). dormant auto_rebond stays as a
-                # safety net for the rare stale bond that survives this path.
+                # A failed status can be transient. The pairer must confirm Connected=no before
+                # removing a bond (docs/plans/031): a powered-off Instax clears its pairing, while
+                # a live link must stay intact. Await removal before the prompt reconnect so the
+                # NoInputNoOutput agent can pair fresh. Auto-rebond remains the fallback when a
+                # later encrypted write identifies a stale bond.
                 if was_online and not online:
+                    recovery_retries_remaining = PRINTER_RECOVERY_RETRY_COUNT
                     await self._maybe_reset_bond_on_drop(printer)
                     if not self._status_generation_is_current(generation):
                         return
@@ -4667,14 +4671,21 @@ class BridgeUi:
                 # measured from the start of each attempt. Subtract the time the attempt already
                 # consumed (its scan/connect) so the period holds whether the scan exited early on a
                 # match or ran the full window — and so a fast-failing connect does not hammer.
-                # A MIN_OFFLINE_SEARCH_GAP_S floor guarantees the asyncio event loop gets at least
-                # a couple of seconds to render the LCD and service other tasks even when the
-                # configured period equals the scan window (the optional 5s setting).
-                period = self._printer_status_retry_delay(online)
+                # Keep the two-second gap for ordinary offline scans, including the 5s setting.
+                # The bounded recovery burst has a shorter gap to retry a recently live Printer.
+                period = self._printer_status_retry_delay(
+                    online, recovery_retries_remaining=recovery_retries_remaining
+                )
+                recovering = not online and period == 0.0 and recovery_retries_remaining > 0
+                if online:
+                    recovery_retries_remaining = 0
+                elif recovering:
+                    recovery_retries_remaining -= 1
                 self._printer_was_online = online
                 elapsed = self._monotonic() - attempt_start
-                await asyncio.sleep(MIN_OFFLINE_SEARCH_GAP_S)
-                remaining = period - elapsed - MIN_OFFLINE_SEARCH_GAP_S
+                gap = MIN_PRINTER_RECOVERY_GAP_S if recovering else MIN_OFFLINE_SEARCH_GAP_S
+                await asyncio.sleep(gap)
+                remaining = period - elapsed - gap
                 if remaining > 0:
                     with suppress(TimeoutError):
                         await asyncio.wait_for(self._printer_check_requested.wait(), remaining)
@@ -4820,12 +4831,14 @@ class BridgeUi:
             self._battery_minutes_remaining = None
         return estimate
 
-    def _printer_status_retry_delay(self, online: bool) -> float:
+    def _printer_status_retry_delay(
+        self, online: bool, *, recovery_retries_remaining: int = 0
+    ) -> float:
         if online:
             return self._printer_keepalive_interval_s
         if self._snapshot.printer_status_message == "Restart printer":
             return RESTART_PRINTER_RETRY_S
-        if self._printer_was_online:
+        if self._printer_was_online or recovery_retries_remaining > 0:
             # The printer just dropped (was connected, now failing): re-search immediately rather
             # than waiting a full search period, so a power-cycle reconnects as soon as it
             # re-advertises instead of idling out the cadence.

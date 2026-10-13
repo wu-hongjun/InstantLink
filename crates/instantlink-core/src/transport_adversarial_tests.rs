@@ -146,6 +146,47 @@ async fn hanging_write_has_bounded_timeout_and_never_replays() {
     assert_eq!(policy(&session), (true, true));
 }
 
+#[tokio::test(start_paused = true)]
+async fn confirmed_disconnect_cancels_inflight_fragment_and_refuses_print_actuator() {
+    let session = Arc::new(make_session(236));
+    let closed = CancellationToken::new();
+    let listener = CancellationToken::new();
+    let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let writer_session = Arc::clone(&session);
+    let writer_closed = closed.clone();
+    let writer_calls = Arc::clone(&calls);
+    let writer = tokio::spawn(async move {
+        write_fragments_on_open_link(&[0x81; 1819], &writer_session, &writer_closed, |_| {
+            writer_calls.fetch_add(1, Ordering::SeqCst);
+            std::future::pending::<Result<()>>()
+        })
+        .await
+    });
+    tokio::task::yield_now().await;
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    let started = tokio::time::Instant::now();
+    close_link(&session, &closed, &listener);
+    assert!(session.poisoned.load(Ordering::Acquire));
+    assert!(closed.is_cancelled());
+    assert!(listener.is_cancelled());
+    assert!(matches!(writer.await.unwrap(), Err(PrinterError::Ble(_))));
+    assert!(started.elapsed().is_zero());
+    let print = Command::PrintImage.encode().unwrap();
+    assert!(
+        write_fragments_on_open_link(&print, &session, &closed, |_| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            async { Ok(()) }
+        })
+        .await
+        .is_err()
+    );
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "neither replay nor PrintImage may write"
+    );
+}
+
 #[tokio::test]
 async fn dropping_running_write_poisons_session_before_any_following_send() {
     let session = Arc::new(make_session(236));

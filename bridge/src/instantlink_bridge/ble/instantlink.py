@@ -441,7 +441,8 @@ class InstantLinkBackend:
         """Decide whether to drop the cached connection after a status error.
 
         Tear down when the printer is genuinely gone (``InstantLinkPrinterNotFoundError``),
-        OR when the link has failed on ``STALE_LINK_STATUS_FAILURE_THRESHOLD`` consecutive
+        the native session is known closed, or the link has failed on
+        ``STALE_LINK_STATUS_FAILURE_THRESHOLD`` consecutive
         attempts (a dead link, not a one-off hiccup). A single transient
         ``InstantLinkBleError`` / ``TimeoutError`` keeps the connection so the next poll
         reuses the live link; persistent failures force a fresh reconnect.
@@ -449,7 +450,13 @@ class InstantLinkBackend:
 
         if isinstance(exc, InstantLinkPrinterNotFoundError):
             return True
+        if self._native_connection_known_closed():
+            return True
         return consecutive_failures >= STALE_LINK_STATUS_FAILURE_THRESHOLD
+
+    def _native_connection_known_closed(self) -> bool:
+        is_connected = getattr(self._library(), "instantlink_is_connected", None)
+        return is_connected is not None and int(is_connected()) == 0
 
     def _log_status_failure(self, name: str, exc: BaseException, *, disconnected: bool) -> None:
         normalized_name = normalize_printer_name(name)
@@ -761,7 +768,11 @@ class InstantLinkBackend:
         target_name = _connect_target_name(name)
         connected_name = self._device_name_blocking()
         if connected_name is not None and _printer_names_match(connected_name, target_name):
-            return
+            # New native builds report terminal session state without a hardware query; older
+            # ones report cached presence. Only a confirmed closure retires a reusable session.
+            if not self._native_connection_known_closed():
+                return
+            self._disconnect_blocking()
         stage_tracker = _ConnectStageTracker()
         rc = self._connect_named_blocking(target_name, scan_duration_s, stage_tracker)
         if rc < 0:
@@ -772,6 +783,8 @@ class InstantLinkBackend:
                 # late-stage write/comms failure as the stale-bond signature.
                 exc.connect_failure_stage = stage_tracker.max_stage
                 raise
+        # The new session must not inherit a transient failure streak from the previous link.
+        self._consecutive_status_failures = 0
 
     def _connect_named_blocking(
         self,
@@ -931,6 +944,9 @@ def _configure_library(lib: ctypes.CDLL) -> None:
         lib.instantlink_connect_named_with_progress.restype = ctypes.c_int
     lib.instantlink_disconnect.argtypes = []
     lib.instantlink_disconnect.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_is_connected"):
+        lib.instantlink_is_connected.argtypes = []
+        lib.instantlink_is_connected.restype = ctypes.c_int
     lib.instantlink_status.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_int),

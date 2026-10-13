@@ -1,5 +1,35 @@
 # Current Bridge Context
 
+## Startup model-query recovery deployed, 2026-10-13
+
+Plan084: clean Python/native **b2b6c8c** installed. FFI SHA256
+`9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031`; CLI
+`1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e`.
+
+- A missed model reply permits one resend after 1s within the same 10s deadline, command lock
+  and delivery guard. Only the eight-byte read-only capability query can replay; terminal
+  timeout/cancellation/link/write failure still retires uncertain sessions. Healthy sends once.
+- Review fixed partial-frame retention at the retry boundary and end-to-end DIS normalization.
+  Authoritative dimensions remain required. Exact FI033 with Mini dimensions and FI017 with Square must
+  agree; ambiguous Link 3 identity fails safely. No image bytes/model specifications/C ABI change.
+- Initial status timing: baseline healthy 3.673s and timeout/recovery 32.271s; candidate warm starts
+  3.734/3.703/3.866s, installed 4.326s. No missed ACK recurred in candidate/installed startup,
+  so no measured live retry speedup or universal timeout-elimination claim. Deterministic
+  dropped-first-ACK test completes at 1.140s after one resend; no third write. Later polls stay fresh.
+- Candidate/installed automatic recovery 11.828/12.486s, each with a scan miss; all 33/33 samples
+  locked at 600 MHz and camera-ready. Installed abstract-input triple unlock, nonblank LCD at 1000 MHz, and relock at 600 MHz
+  and status pause/resume pass through physical LCD; contacts not actuated. No film/image commands.
+- Normal source gates: 322 Rust tests plus 1 doctest, 1773 Bridge tests (27 existing warnings), Ruff, mypy (67 modules), formatting,
+  production workspace Clippy/header drift/strict docs pass. Independent core suite (196 tests) and Pi ARM
+  8 model-query and 47 device tests pass. Source and hardware adversarial review; evidence in plan084/assets.
+- Final normal 18:54:58 EDT: PID34446/manager34001 active, NRestarts0, connected, 600 MHz,
+  43.470°C/throttle0x0/GPIO24low/GPIOv2/hotspot/USB/FTP220/200 healthy; clean manifests and
+  loaded native hashes match b2b6c8c. Final normal log has no warnings/errors/panics. Full current
+  boot service review: 9294 records, 134 historical matched messages retained, including two
+  earlier native panic episodes. Independent final-health/log review passed.
+- Observer/drop-in/socket/candidate library/ARM binary/health script removed; normal service restored.
+  Remaining setup costs: advertisement/GATT variation, BLE handshake and initial watch registration.
+
 ## Initial status handoff deployed, 2026-10-13
 
 Plan083: clean Python **83473d4**, native **ffe637e** installed. FFI SHA256

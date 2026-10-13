@@ -1,5 +1,34 @@
 # Current Bridge Context
 
+## Stale-link detection and recovery retries, 2026-10-13
+
+Plan080 / `docs/assets/bridge-audit-080/`: clean **d8cee35** source/native installed.
+FFI SHA256 `b67842fed5ce50b8b9389acdf7f55c5d2a7ad8859f30d5ec460307260dcbb06a`,
+CLI `1d549bc46df1c5819abb24a1f28d830f4b8d7b05929eb55a2adb37228c07c068`.
+
+- Missing replies trigger bounded native connectivity checks after1s; confirmed closure
+  closes the old session. Unknown state preserves original10s response deadline. Normal
+  ACKs and idle sessions add no checks; no fragment/image/execute replay or ABI change.
+- Cheap FFI getter exposes terminal closure; old keepalive exits locally. Python discards
+  confirmed-closed cache on first failure and resets failure streak after a fresh connect.
+  Two prompt retries after an online drop have250ms gaps, then ordinary offline cadence.
+  Startupabsence and Restartprinter pacing preserved. Polling waits for both bond and
+  silent-link cleanup, fixing the independently reviewed recovery/connect overlap.
+- Gates: host291+1doctest,App156,Bridge1689,PiARM190+39,Ruff,mypy67,headerdrift,format,strict
+  docs and normalhooks passed. ProductionLinuxClippy strict; four pre-existing test-only
+  lint allowances. Final independent review and16selectedcases passed.
+- Eleven kernel-to-UI cases passed for baseline and candidate on physicalLCD/CPU, including
+  tripleunlock/nonblankwake/10sexpiry. Contacts not actuated. OfflineCPU2.550→2.600% onecore
+  (3×20s each), zerochildCPU; unchanged within variation. Startupofflinecadence ~30s.
+- Printer absent; baseline readiness100stimeout retained. **Live status/drop/reconnect and
+  native before/after latency remain pending Printer power-on.** Controlled timer tests are
+  separate; no live reconnect speed/reliability or energy improvement claim. No film used.
+- Reviewed3226current-boot service records. Corrected temporary observer AttributeError
+  caused eight restarts; initialUIsocket and awakehealth attempts retained. Final normal
+  PID20395/manager20393 active/NRestarts0,600MHz/GPIO24low,throttle0x0,FTP220/200,Wi-Fi/USB
+  healthy,GPIOv2,caches0,no appWARNING/ERROR. Both clean manifests/source hashes match.
+  Test observer/drop-in/socket/source/library/mock/ARM executables removed; raw logs private.
+
 ## Native Bluetooth discovery and agent recovery, 2026-10-13
 
 Plan079 / `docs/assets/bridge-audit-079/` records the native discovery benchmark,

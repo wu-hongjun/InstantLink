@@ -1,0 +1,30 @@
+{
+  "label": "candidate",
+  "rows": [
+    {
+      "sample": 1,
+      "elapsed_s": 20.00114509699779,
+      "process_cpu_percent_one_core": 3.5497967569195445,
+      "child_cpu_percent_one_core": 0.0,
+      "cpu_khz": 600000,
+      "pid": 19546
+    },
+    {
+      "sample": 2,
+      "elapsed_s": 20.001005409001664,
+      "process_cpu_percent_one_core": 0.2999849196230724,
+      "child_cpu_percent_one_core": 0.0,
+      "cpu_khz": 600000,
+      "pid": 19546
+    },
+    {
+      "sample": 3,
+      "elapsed_s": 20.00104723199911,
+      "process_cpu_percent_one_core": 3.9497931825094708,
+      "child_cpu_percent_one_core": 0.0,
+      "cpu_khz": 600000,
+      "pid": 19546
+    }
+  ],
+  "boundary": "Three20s dark600MHz process samples; ambientBLE and separate runtime starts prevent universal CPU/energyclaims"
+}

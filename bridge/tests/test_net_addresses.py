@@ -15,6 +15,16 @@ from instantlink_bridge.net.addresses import (
 )
 
 
+@pytest.fixture(autouse=True)
+def force_portable_address_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    from instantlink_bridge.net import addresses
+
+    def unavailable(*_args: object, **_kwargs: object) -> object:
+        raise OSError("native probe unavailable in portable probe tests")
+
+    monkeypatch.setattr(addresses, "read_ipv4_interfaces", unavailable)
+
+
 def test_address_from_ip_json_extracts_first_non_host_ipv4() -> None:
     data = [
         {

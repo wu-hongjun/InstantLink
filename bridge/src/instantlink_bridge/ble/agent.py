@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from dbus_fast import BusType, Variant
+from dbus_fast import BusType, Message, MessageType, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.aio.message_bus import MessageBus as AioMessageBus
 from dbus_fast.proxy_object import BaseProxyInterface
@@ -130,6 +130,31 @@ class BluezAgentService:
             self.agent_path,
             self.adapter_path,
         )
+
+    async def managed_objects_snapshot(self) -> object:
+        """Read current BlueZ objects on the agent's existing connection.
+
+        Callers impose their own bounded deadline. Cancelling this read must
+        leave the shared pairing agent and other bus calls operational.
+        """
+        if self._bus is None or not self._registered:
+            raise RuntimeError("BlueZ pairing agent is not ready")
+        reply = await self._bus.call(
+            Message(
+                destination=BLUEZ_SERVICE,
+                path="/",
+                interface="org.freedesktop.DBus.ObjectManager",
+                member="GetManagedObjects",
+            )
+        )
+        if (
+            reply is None
+            or reply.message_type is not MessageType.METHOD_RETURN
+            or reply.signature != "a{oa{sa{sv}}}"
+            or len(reply.body) != 1
+        ):
+            raise ValueError("invalid BlueZ object snapshot reply")
+        return reply.body[0]
 
     async def stop(self) -> None:
         """Unregister the agent and close the D-Bus connection."""

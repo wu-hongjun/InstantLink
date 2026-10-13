@@ -129,6 +129,17 @@ Printer polling checks the saved bond before its first fetch after startup. The 
 BlueZ guard removes only disconnected identities and preserves the saved selection; a live
 Printer keeps its bond. Polling waits for active rebond recovery before connecting again.
 
+Linux address probes read fresh bounded kernel snapshots, avoiding repeated `ip` launches.
+Scope, prefix, administrative state and polling/recovery timing are preserved. Incomplete,
+interrupted or unavailable snapshots use the existing bounded `ip` fallback; there is no
+address cache.
+
+Silent Printer recovery reads current connected identities through the existing BlueZ
+agent connection. Exact addresses and normalized Alias matching are preserved; ambiguous
+adapter topology or unavailable/invalid data uses the existing CLI lookup. Empty/offline
+snapshots require no discovery commands. Disconnect rules, scan cadence and recovery cooldown
+are unchanged; cancellation does not disconnect the shared agent.
+
 Network readiness uses addresses from administratively enabled interfaces. An interface that
 is down can retain its IPv4 address; that address no longer suppresses hotspot recovery or
 appears in Bonjour advertisement candidates. Carrier is not required for dormant interfaces.

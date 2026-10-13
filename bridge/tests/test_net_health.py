@@ -426,6 +426,10 @@ def test_health_probe_reads_wifi_and_usb_from_single_snapshot(
         ]
         return subprocess.CompletedProcess(command, 0, json.dumps(records))
 
+    def native_unavailable(*_args: object, **_kwargs: object) -> object:
+        raise OSError("force portable probe in this hardware-independent test")
+
+    monkeypatch.setattr(addresses, "read_ipv4_interfaces", native_unavailable)
     monkeypatch.setattr(addresses.subprocess, "run", run)
     monkeypatch.setattr(health, "detect_link_carrier", lambda _: True)
     snapshot = health.probe_connection_health(

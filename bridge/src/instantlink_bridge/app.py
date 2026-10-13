@@ -13,7 +13,7 @@ from concurrent.futures import Future as ThreadFuture
 from contextlib import AsyncExitStack, suppress
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 from instantlink_bridge.ble.client import (
     DiscoveredPrinter,
@@ -70,7 +70,11 @@ from instantlink_bridge.system_info import (
 )
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiSnapshot
-from instantlink_bridge.ui.pairing import BluetoothctlPrinterPairer, PrinterPairer
+from instantlink_bridge.ui.pairing import (
+    BluetoothctlPrinterPairer,
+    BluezObjectsProvider,
+    PrinterPairer,
+)
 from instantlink_bridge.ui.status import scan_bluez_instax_printers, status_target_for_visible_match
 from instantlink_bridge.watchdog import WatchdogNotifier, run_watchdog_heartbeat
 
@@ -191,7 +195,6 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     watchdog_task: asyncio.Task[None] | None = None
     power_task: asyncio.Task[None] | None = None
     ui_event_tasks: set[asyncio.Task[None]] = set()
-    pairer = BluetoothctlPrinterPairer()
     ftp_activity = FtpActivityTracker()
     power_monitor: PowerMonitor | None = None
     cpu_performance = CpuPerformanceController()
@@ -206,6 +209,14 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     # callback so a destination flip that lands while sync setup is still
     # running is honored once setup finishes.
     sync_desired = config.sync.sync_enabled
+
+    async def current_bluez_objects() -> object:
+        provider = getattr(bluez_agent, "managed_objects_snapshot", None)
+        if not callable(provider):
+            raise RuntimeError("BlueZ pairing agent snapshot unavailable")
+        return await cast(BluezObjectsProvider, provider)()
+
+    pairer = BluetoothctlPrinterPairer(bluez_objects_provider=current_bluez_objects)
 
     async def record_power_activity() -> None:
         if power_monitor is not None:

@@ -1,0 +1,13 @@
+{
+  "bridge_tests": 1645,
+  "focused_tests": 221,
+  "ruff": "all src/tests passed",
+  "mypy": "67 source files passed",
+  "touched_format": "passed",
+  "strict_docs": "passed",
+  "host": "macOS/Python3.13.9",
+  "pi": "PiZero2W/ST7789/X306, Debian13.2/Linux6.12.47+rpt-rpi-v8/Python3.13.5/BlueZ5.82",
+  "native_ffi_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
+  "film_used": 0,
+  "deployment": "pending clean commit/install/recovery acceptance"
+}

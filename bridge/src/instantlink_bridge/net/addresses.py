@@ -10,6 +10,8 @@ from ipaddress import IPv4Interface
 from pathlib import Path
 from typing import Any
 
+from instantlink_bridge.net.linux_snapshot import read_ipv4_interfaces
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -22,6 +24,10 @@ def detect_ipv4_interfaces_by_interface(
     addresses: dict[str, list[IPv4Interface]] = {name: [] for name in names}
     if not names:
         return addresses
+    try:
+        return read_ipv4_interfaces(names)
+    except OSError:
+        LOGGER.debug("network.native_snapshot_unavailable", exc_info=True)
     try:
         result = subprocess.run(
             ["ip", "-j", "-4", "addr", "show"],
@@ -68,8 +74,16 @@ def detect_ipv4_addresses_for_interface(interface: str = "wlan0") -> list[str]:
 
 
 def detect_ipv4_interfaces_for_interface(interface: str = "wlan0") -> list[IPv4Interface]:
-    """Return non-host IPv4 interface addresses assigned to an interface."""
+    """Return assigned non-host addresses, including admin-down interfaces.
 
+    The single-interface helper retains its existing compatibility semantics;
+    receive readiness and advertisement use the admin-up batched helper.
+    """
+
+    try:
+        return read_ipv4_interfaces((interface,), require_up=False)[interface]
+    except OSError:
+        LOGGER.debug("network.native_lookup_unavailable interface=%s", interface, exc_info=True)
     try:
         result = subprocess.run(
             ["ip", "-j", "-4", "addr", "show", "dev", interface],

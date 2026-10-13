@@ -1,0 +1,51 @@
+{
+  "rows": {
+    "baseline": {
+      "process_percent_one_core": 1.5874140714504243,
+      "process_plus_child_percent_one_core": 2.242357956794479,
+      "child_cpu_s_total": 0.5900000000000001
+    },
+    "candidate": {
+      "process_percent_one_core": 2.3200995479857074,
+      "process_plus_child_percent_one_core": 3.2192714716715956,
+      "child_cpu_s_total": 0.81
+    },
+    "ip_repeat": {
+      "process_percent_one_core": 1.4320274686232708,
+      "process_plus_child_percent_one_core": 1.8205663460158117,
+      "child_cpu_s_total": 0.35
+    },
+    "native_repeat": {
+      "process_percent_one_core": 1.1433963263528826,
+      "process_plus_child_percent_one_core": 1.543028171223525,
+      "child_cpu_s_total": 0.36
+    },
+    "combined": {
+      "process_percent_one_core": 1.5763161450765975,
+      "process_plus_child_percent_one_core": 1.5763161450765975,
+      "child_cpu_s_total": 0.0
+    },
+    "legacy_both": {
+      "process_percent_one_core": 1.26548977320637,
+      "process_plus_child_percent_one_core": 1.998142127519203,
+      "child_cpu_s_total": 0.66
+    },
+    "combined_repeat": {
+      "process_percent_one_core": 1.7538940194151362,
+      "process_plus_child_percent_one_core": 1.7538940194151362,
+      "child_cpu_s_total": 0.0
+    }
+  },
+  "same_pid12639_comparison": {
+    "native_six_sample_mean_percent_one_core": 1.6651050822458668,
+    "legacy_three_sample_mean_percent_one_core": 1.998142127519203,
+    "observed_mean_reduction_percent": 16.66733515532346
+  },
+  "limits": [
+    "Samples varied with offline native Bluetooth discovery and ambient activity. No large main-process-only reduction or energy/battery claim.",
+    "Original baseline and first network-only candidate use different PIDs/startup states. All rows retained; do not attribute their difference solely to network.",
+    "Matched combined/legacy/combined repeat use samePID12639, dark600MHz, Printer offline, tracing excluded.",
+    "Private counters show18fresh network probes/90s and3fresh Bluetooth probes/90s in first combined set, zero lookup CLI/childCPU. Legacy set has19ip/2devices/2info, no mutations.",
+    "Kernel mockup inputs do not actuate physical contacts; isolated network namespace does not mutate physical interfaces."
+  ]
+}

@@ -8,9 +8,12 @@ import logging
 import os
 import re
 import tempfile
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+
+from dbus_fast import Variant
 
 from instantlink_bridge.ble.instantlink import (
     default_instantlink_backend,
@@ -21,6 +24,7 @@ from instantlink_bridge.ble.models import PrinterModel, parse_printer_model
 from instantlink_bridge.ui.models import PairedPrinter
 
 LOGGER = logging.getLogger(__name__)
+BluezObjectsProvider = Callable[[], Awaitable[object]]
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 DEVICE_LINE_RE = re.compile(r"^Device\s+(?P<address>[0-9A-Fa-f:]{17})\s+(?P<name>.+)$")
@@ -152,7 +156,9 @@ class BluetoothctlPrinterPairer:
         self,
         scan_seconds: int = 30,
         store: SelectedPrinterStore | None = None,
+        bluez_objects_provider: BluezObjectsProvider | None = None,
     ) -> None:
+        self._bluez_objects_provider = bluez_objects_provider
         self._scan_seconds = scan_seconds
         self._store = store if store is not None else SelectedPrinterStore()
 
@@ -257,7 +263,7 @@ class BluetoothctlPrinterPairer:
     async def disconnect_bluez_link(self, printer: PairedPrinter) -> bool:
         """Drop any connected-but-silent BlueZ link for ``printer`` so it re-advertises."""
 
-        return await _disconnect_bluez_link_for_identity(printer)
+        return await _disconnect_bluez_link_for_identity(printer, self._bluez_objects_provider)
 
     async def _scan_for_instax_devices(self) -> list[PairedPrinter]:
         """Scan in short passes and return as soon as an Instax printer is visible."""
@@ -350,7 +356,9 @@ class InstantLinkPrinterSelector:
         scan_seconds: int = 30,
         store: SelectedPrinterStore | None = None,
         backend: InstantLinkSelectionBackend | None = None,
+        bluez_objects_provider: BluezObjectsProvider | None = None,
     ) -> None:
+        self._bluez_objects_provider = bluez_objects_provider
         self._scan_seconds = scan_seconds
         self._store = store if store is not None else SelectedPrinterStore()
         self._backend = backend if backend is not None else default_instantlink_backend()
@@ -461,7 +469,9 @@ class InstantLinkPrinterSelector:
         is about to disconnect; the BlueZ link itself is the one BlueZ auto-reconnected.
         """
 
-        disconnected = await _disconnect_bluez_link_for_identity(printer)
+        disconnected = await _disconnect_bluez_link_for_identity(
+            printer, self._bluez_objects_provider
+        )
         if disconnected:
             await self._backend.disconnect()
         return disconnected
@@ -529,7 +539,9 @@ async def _remove_bluez_devices_for_identity(selected: PairedPrinter) -> None:
         await _run_bluetoothctl("remove", address, check=False)
 
 
-async def _disconnect_bluez_link_for_identity(selected: PairedPrinter) -> bool:
+async def _disconnect_bluez_link_for_identity(
+    selected: PairedPrinter, objects_provider: BluezObjectsProvider | None = None
+) -> bool:
     """Drop any *connected* BlueZ link for the selected printer; keep the bond.
 
     A power-cycled bonded printer is frequently auto-reconnected by BlueZ, which holds a silent
@@ -540,12 +552,19 @@ async def _disconnect_bluez_link_for_identity(selected: PairedPrinter) -> bool:
     when the printer is genuinely off no device shows ``Connected`` and this is a safe no-op.
     """
 
-    addresses = await _bluez_addresses_for_identity(selected, include_selected_address=True)
+    snapshot_available = True
+    try:
+        addresses = await _connected_bluez_addresses_from_dbus(selected, objects_provider)
+    except Exception:
+        LOGGER.debug("bluetooth.silent_link_snapshot_unavailable", exc_info=True)
+        snapshot_available = False
+        addresses = await _bluez_addresses_for_identity(selected, include_selected_address=True)
     disconnected = False
     for address in addresses:
-        info_result = await _run_bluetoothctl("info", address, check=False)
-        if not _info_bool(parse_device_info(info_result.output), "Connected"):
-            continue
+        if not snapshot_available:
+            info_result = await _run_bluetoothctl("info", address, check=False)
+            if not _info_bool(parse_device_info(info_result.output), "Connected"):
+                continue
         LOGGER.info(
             "bluetooth.disconnect_silent_link address=%s selected_name=%s",
             address,
@@ -554,6 +573,77 @@ async def _disconnect_bluez_link_for_identity(selected: PairedPrinter) -> bool:
         await _run_bluetoothctl("disconnect", address, check=False)
         disconnected = True
     return disconnected
+
+
+async def _connected_bluez_addresses_from_dbus(
+    selected: PairedPrinter, objects_provider: BluezObjectsProvider | None = None
+) -> list[str]:
+    """Read a fresh snapshot from the existing agent-owned system bus.
+
+    This lookup creates no connection and owns no shared bus lifecycle.
+    Timeout/cancellation affects this call only; missing providers use CLI.
+    """
+    if objects_provider is None:
+        raise RuntimeError("BlueZ snapshot provider unavailable")
+    async with asyncio.timeout(2.0):
+        objects = await objects_provider()
+        return _connected_addresses_from_bluez_objects(selected, objects)
+
+
+def _connected_addresses_from_bluez_objects(selected: PairedPrinter, objects: object) -> list[str]:
+    """Mirror bluetoothctl Address/Alias matching and default-adapter scope."""
+    if not isinstance(objects, dict):
+        raise ValueError("invalid BlueZ object snapshot")
+    adapters: set[str] = set()
+    devices: list[tuple[str, dict[object, object]]] = []
+    for path, interfaces in objects.items():
+        if not isinstance(path, str) or not isinstance(interfaces, dict):
+            raise ValueError("invalid BlueZ object interfaces")
+        if "org.bluez.Adapter1" in interfaces:
+            if not isinstance(interfaces["org.bluez.Adapter1"], dict):
+                raise ValueError("invalid BlueZ adapter properties")
+            adapters.add(path)
+        if "org.bluez.Device1" in interfaces:
+            properties = interfaces["org.bluez.Device1"]
+            if not isinstance(properties, dict):
+                raise ValueError("invalid BlueZ device properties")
+            devices.append((path, properties))
+    if len(adapters) > 1 or (devices and len(adapters) != 1):
+        # bluetoothctl uses its default controller. ObjectManager includes
+        # every adapter; guessing the default could disconnect another link.
+        raise ValueError("ambiguous BlueZ default adapter")
+    connected: set[str] = set()
+    for path, properties in devices:
+        adapter = _bluez_variant_value(properties.get("Adapter"), "o")
+        if adapter not in adapters or not path.startswith(str(adapter) + "/dev_"):
+            raise ValueError("invalid BlueZ device adapter")
+        address = _bluez_variant_value(properties.get("Address"), "s")
+        if not isinstance(address, str) or not _looks_like_bluez_address(address.upper()):
+            raise ValueError("invalid BlueZ device address")
+        if address.upper() == selected.address.upper():
+            matches = True
+        else:
+            alias = _bluez_variant_value(properties.get("Alias"), "s")
+            if not isinstance(alias, str):
+                raise ValueError("invalid BlueZ device alias")
+            candidate = PairedPrinter(address=address, name=alias.strip())
+            matches = is_instax_device_name(candidate.name) and _matches_selected_identity(
+                selected, candidate
+            )
+        if not matches:
+            continue
+        live = _bluez_variant_value(properties.get("Connected"), "b")
+        if type(live) is not bool:
+            raise ValueError("unknown BlueZ device connection state")
+        if live:
+            connected.add(address.upper())
+    return sorted(connected)
+
+
+def _bluez_variant_value(value: object, signature: str) -> object:
+    if not isinstance(value, Variant) or value.signature != signature:
+        raise ValueError("invalid BlueZ property variant")
+    return value.value
 
 
 async def _identity_has_connected_link(selected: PairedPrinter) -> bool:

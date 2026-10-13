@@ -1,0 +1,20 @@
+{
+  "verdict": "no remaining blocking findings",
+  "independent_network_tests": 68,
+  "independent_combined_tests": 181,
+  "final_dbus_tests": 31,
+  "independent_extra_checks": "20,000 malformed parser inputs; completion/identity/deadline cases; suffix/name/address/adapter semantics; SDK late replies after cancellation",
+  "resolved_p2": "A new MessageBus constructor could block the UI before asyncio timeout. Replaced with fresh read through existing agent-owned connection; no recurring constructor/connect/disconnect.",
+  "limits": [
+    "Separate address/link dumps are not atomic; admin flags sampled last and labels mitigate index reuse. No cache.",
+    "Netlink .25s deadline followed by existing1.5s ip fallback.",
+    "D-Bus query2s; unavailable/ambiguous data retains old CLI fallback timeouts."
+  ],
+  "source_sha256": {
+    "net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+    "net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+    "app.py": "6953654c8642f5da0daf06165934fdaa7e7afd0a05658c92d2c8814528c5fe14",
+    "ble/agent.py": "f372a4cea1b199d553a922f530e8530bd754df45af87f5511e0de7ad97941275",
+    "ui/pairing.py": "d80a12437e42f164cf4651132ef2b4ed650e6b836b3a937c3b9d6f429eb83831"
+  }
+}

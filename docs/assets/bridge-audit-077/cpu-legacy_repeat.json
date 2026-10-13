@@ -1,0 +1,338 @@
+{
+  "label": "legacy_repeat",
+  "pid": 9485,
+  "hz": 100,
+  "samples": [
+    {
+      "sample": 1,
+      "duration_s": 30.028999677000684,
+      "process_cpu_s": 3.22,
+      "process_percent_one_core": 10.722967913134347,
+      "child_cpu_s": 0.26,
+      "system_busy_percent_all_cores": 3.9347007115948096,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "9485",
+          "name": "python",
+          "cpu_s": 0.39
+        },
+        {
+          "tid": "9489",
+          "name": "python",
+          "cpu_s": 0.2
+        },
+        {
+          "tid": "9490",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9491",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9492",
+          "name": "python",
+          "cpu_s": 0.04
+        },
+        {
+          "tid": "9493",
+          "name": "python",
+          "cpu_s": 2.26
+        },
+        {
+          "tid": "9495",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9497",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9499",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9501",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9503",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9505",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9507",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9509",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9511",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9518",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.11
+        },
+        {
+          "tid": "9520",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9521",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9523",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "duration_s": 30.02994274899993,
+      "process_cpu_s": 3.44,
+      "process_percent_one_core": 11.455233294157914,
+      "child_cpu_s": 0.06,
+      "system_busy_percent_all_cores": 4.745989304812834,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "9485",
+          "name": "python",
+          "cpu_s": 0.38
+        },
+        {
+          "tid": "9489",
+          "name": "python",
+          "cpu_s": 0.35
+        },
+        {
+          "tid": "9490",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9491",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9492",
+          "name": "python",
+          "cpu_s": 0.04
+        },
+        {
+          "tid": "9493",
+          "name": "python",
+          "cpu_s": 2.27
+        },
+        {
+          "tid": "9495",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9497",
+          "name": "python",
+          "cpu_s": 0.01
+        },
+        {
+          "tid": "9499",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9501",
+          "name": "python",
+          "cpu_s": 0.01
+        },
+        {
+          "tid": "9503",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9505",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9507",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9509",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9511",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9518",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.2
+        },
+        {
+          "tid": "9520",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9521",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9523",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 3,
+      "duration_s": 30.02950483299992,
+      "process_cpu_s": 3.16,
+      "process_percent_one_core": 10.522984037110808,
+      "child_cpu_s": 0.43,
+      "system_busy_percent_all_cores": 4.829260127217944,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "9485",
+          "name": "python",
+          "cpu_s": 0.09
+        },
+        {
+          "tid": "9489",
+          "name": "python",
+          "cpu_s": 0.34
+        },
+        {
+          "tid": "9490",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9491",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9492",
+          "name": "python",
+          "cpu_s": 0.04
+        },
+        {
+          "tid": "9493",
+          "name": "python",
+          "cpu_s": 2.27
+        },
+        {
+          "tid": "9495",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9497",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9499",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9501",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9503",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9505",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9507",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9509",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "9511",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "9518",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.21
+        },
+        {
+          "tid": "9520",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9521",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "9523",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    }
+  ],
+  "boundary": "Actual Bridge process and whole-system CPU counters, dark600MHz, 3x30s. Same hardware; no energy measurement; subprocess CPU separate. No strace during CPU interval. No film used."
+}

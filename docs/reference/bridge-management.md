@@ -106,6 +106,14 @@ display transitions interrupt it immediately. About-page version/metrics collect
 started while the screen is dark. Camera receive, network recovery, Printer polling and the
 configured CPU tiers continue independently.
 
+Physical buttons use a Linux GPIO v2 event descriptor on supported Raspberry Pi controllers.
+The kernel applies the existing 50 ms stable debounce; asyncio reads only when an edge is
+ready. This removes the input alert thread's frequent idle wakeups. All eight mappings,
+physical button identities, held-press behavior and lock/unlock rules are preserved. If
+requests or event reads fail, input falls back to GPIO Zero/lgpio. Lost event sequences
+resynchronize current levels and discard uncertain presses, preventing a partial sequence
+from accidentally unlocking. Startup logs identify the backend and any fallback.
+
 At the default INFO log level, successful Printer status is recorded on first observation,
 value/recovery changes and a five-minute heartbeat. Unchanged intermediate observations and
 routine scan progress are DEBUG. Expected Printer absence is recorded once at INFO until

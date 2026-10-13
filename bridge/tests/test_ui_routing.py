@@ -145,7 +145,13 @@ async def test_gpio_button_emits_identity_without_hold_or_release_action(
     import sys
     from types import SimpleNamespace
 
+    from instantlink_bridge.ui import gpio_edges
     from instantlink_bridge.ui.input import GpioUiInput
+
+    def unsupported_kernel() -> object:
+        raise OSError("use mocked GPIO backend")
+
+    monkeypatch.setattr(gpio_edges, "button_chip", unsupported_kernel)
 
     buttons: dict[int, SimpleNamespace] = {}
 

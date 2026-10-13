@@ -125,3 +125,7 @@ Remaining latency is advertisement availability, occasional GATT export/rebond, 
 requests status again; removing duplicate status work is a possible next change with a
 carefully scoped freshness/connection contract. No further timeout/settle reduction is justified
 by these samples.
+
+Final independent hardware-evidence review also passed. All five accepted captures match
+reported timing/state/counts; final normal-process logs and clean mapped artifact hashes
+match. See `hardware-review.json` for the complete reporting limits.

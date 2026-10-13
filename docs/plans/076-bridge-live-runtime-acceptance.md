@@ -93,3 +93,21 @@ has no pytest installed; no test dependency was added. Native clean dedfdb2 SHA 
 clean8bbbd88 provenance are saved in `docs/assets/bridge-audit-076/`. Printing used811d51f;
 subsequent8bbbd88 changes only network snapshot filtering and retain identical print/native
 code. No additional physical print is needed; the Printer now has no film.
+
+## Normal service restoration
+
+Removed the root/ib-only observer socket, owned runtime drop-in, scripts, duplicate audit
+source/incoming photo and raw capture. Original user photos and saved config remain. Normal
+ExecStart is `/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config
+/etc/InstantLinkBridge/config.toml`. Final normal PIDs6248/5125 active, NRestarts0, dark
+GPIO24low/600MHz,45.084°C,throttle0x0,FTP220/200, USB/hotspot up, working caches0. Printer
+is offline at this final sample, so combined Wi-Fi/connected-Printer repetition remains
+pending the power-on question. Earlier physical print and locked Bluetooth recovery passed.
+Raw journals remain private; the final complete available current boot was reviewed again.
+
+The final kernel review also found23brcmfmac vendor-IE -52 records around Bridge startup/AP
+reconfiguration and deliberate interface-down, plus one hci_conn_timeout WARN at00:23:43UTC
+(mono1553.025s) during the earlier failing runtime before startup-bond/rebond-wait fixes.
+No repeat HCI WARN occurred in subsequent captured checks, but its kernel root cause is not
+established or claimed fixed. AP/FTP and later Printer operation recovered. These are recorded
+as driver/firmware maintenance follow-ups; no OS/kernel upgrade was performed in this audit.

@@ -189,8 +189,8 @@ const PRINT_START_LED_COLOR: (u8, u8, u8) = (248, 120, 67);
 impl BlePrinterDevice {
     /// Create a new BLE Instax device with a connected transport.
     ///
-    /// Auto-detects the printer model by querying IMAGE_SUPPORT_INFO,
-    /// using the optional DIS model number hint for Link 3 detection.
+    /// Auto-detects the printer model from IMAGE_SUPPORT_INFO dimensions,
+    /// checking known DIS model numbers for consistency and Link 3 detection.
     pub async fn new(transport: Box<dyn Transport>, name: String) -> Result<Self> {
         Self::new_with_progress(transport, name, None).await
     }
@@ -205,11 +205,8 @@ impl BlePrinterDevice {
 
         // Query image support info to detect model
         emit_connect_progress(progress, ConnectStage::ModelDetecting, None::<String>);
-        let cmd = Command::ImageSupportInfo;
         let model_result = async {
-            let packet =
-                send_command_and_receive_matching(transport.as_ref(), &cmd, DEFAULT_TIMEOUT, None)
-                    .await?;
+            let packet = transport.query_image_support(DEFAULT_TIMEOUT).await?;
             let response = Response::decode(&packet);
 
             match response {
@@ -633,11 +630,29 @@ async fn send_command_and_receive_matching(
 
 /// Detect the printer model from image support dimensions and optional DIS model string.
 fn detect_model(width: u16, height: u16, dis_model: Option<&str>) -> Result<PrinterModel> {
-    // Check DIS model string first for Link 3 detection
-    if let Some(model_str) = dis_model
-        && model_str.contains("FI033")
-    {
-        return Ok(PrinterModel::MiniLink3);
+    // DIS is supplementary evidence, never a substitute for capabilities.
+    // Link 3 shares Mini dimensions but requires a different upload orientation.
+    // Reject formerly recognized ambiguous strings instead of silently selecting
+    // Mini and changing their orientation.
+    let dis_model = dis_model.map(str::trim_ascii);
+    let known_model = match dis_model {
+        Some("FI033") => Some(PrinterModel::MiniLink3),
+        Some("FI017") => Some(PrinterModel::Square),
+        Some(model) if model.contains("FI033") => {
+            return Err(PrinterError::UnexpectedResponse(format!(
+                "ambiguous DIS model number: {model:?}"
+            )));
+        }
+        _ => None,
+    };
+    if let Some(model) = known_model {
+        let spec = model.spec();
+        if (u32::from(width), u32::from(height)) != (spec.width, spec.height) {
+            return Err(PrinterError::UnexpectedResponse(format!(
+                "DIS model {dis_model:?} conflicts with printer dimensions: {width}x{height}"
+            )));
+        }
+        return Ok(model);
     }
 
     // Fall back to dimension matching (skip MiniLink3 since it shares Mini's dimensions)
@@ -839,7 +854,7 @@ mod tests {
 
     #[tokio::test]
     async fn detect_model_link3_via_dis() {
-        // Link 3 reports same dimensions as Mini (600x800) but DIS contains "FI033"
+        // Link 3 reports Mini dimensions but an exact DIS model number.
         let (device, _) =
             make_device_with_dis(PrinterModel::Mini, vec![], Some("FI033".into())).await;
         assert_eq!(device.model(), PrinterModel::MiniLink3);
@@ -875,6 +890,122 @@ mod tests {
         };
         assert!(matches!(err, PrinterError::Timeout));
         assert_eq!(state.lock().unwrap().disconnects, 1);
+    }
+
+    #[test]
+    fn model_detection_requires_capabilities_for_every_hint() {
+        for &(width, height, expected) in &[
+            (600, 800, PrinterModel::Mini),
+            (800, 800, PrinterModel::Square),
+            (1260, 840, PrinterModel::Wide),
+        ] {
+            for hint in [None, Some(""), Some("future-model"), Some("FI999")] {
+                assert_eq!(detect_model(width, height, hint).unwrap(), expected);
+            }
+        }
+        for hint in ["FI033", " \tFI033\r\n"] {
+            assert_eq!(
+                detect_model(600, 800, Some(hint)).unwrap(),
+                PrinterModel::MiniLink3
+            );
+        }
+        for hint in ["FI017", " \tFI017\r\n"] {
+            assert_eq!(
+                detect_model(800, 800, Some(hint)).unwrap(),
+                PrinterModel::Square
+            );
+        }
+    }
+
+    #[test]
+    fn known_dis_conflicts_and_ambiguous_link3_identity_fail_closed() {
+        for (hint, width, height) in [
+            ("FI033", 800, 800),
+            ("FI033", 1260, 840),
+            ("FI033", 999, 999),
+            ("FI017", 600, 800),
+            ("FI017", 1260, 840),
+            ("FI017", 999, 999),
+            ("prefixFI033", 600, 800),
+            ("FI033suffix", 600, 800),
+            ("FI033\0", 600, 800),
+            ("\u{a0}FI033", 600, 800),
+        ] {
+            assert!(matches!(
+                detect_model(width, height, Some(hint)),
+                Err(PrinterError::UnexpectedResponse(_))
+            ));
+        }
+        assert!(detect_model(999, 999, Some("future-model")).is_err());
+    }
+
+    #[tokio::test]
+    async fn conflicting_model_hint_disconnects_without_reading_status() {
+        let (transport, state) = MockTransport::new_with_dis(
+            vec![image_support_info_packet(PrinterModel::Square)],
+            Some("FI033".into()),
+        );
+        assert!(matches!(
+            BlePrinterDevice::new(transport, "Test".into()).await,
+            Err(PrinterError::UnexpectedResponse(_))
+        ));
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 1);
+        assert_eq!(state.disconnects, 1);
+    }
+
+    #[tokio::test]
+    async fn late_duplicate_model_reply_does_not_replace_initial_status() {
+        let (device, state) = make_device_with_dis(
+            PrinterModel::Square,
+            vec![
+                image_support_info_packet(PrinterModel::Square),
+                battery_packet(79),
+                printer_function_packet(6, true),
+                history_packet(69),
+            ],
+            Some("FI017".into()),
+        )
+        .await;
+        let status = device.status().await.unwrap();
+        assert_eq!(status.model, PrinterModel::Square);
+        assert_eq!(status.battery, 79);
+        assert_eq!(status.film_remaining, 6);
+        assert!(status.is_charging);
+        assert_eq!(status.print_count, 69);
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 4);
+        assert_eq!(state.disconnects, 0);
+    }
+
+    #[tokio::test]
+    async fn malformed_model_response_disconnects_without_retry_or_hint_bypass() {
+        let (transport, state) = MockTransport::new_with_dis(
+            vec![support_function_packet(INFO_IMAGE_SUPPORT, &[0, 1])],
+            Some("FI017".into()),
+        );
+        assert!(matches!(
+            BlePrinterDevice::new(transport, "Test".into()).await,
+            Err(PrinterError::UnexpectedResponse(_))
+        ));
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 1);
+        assert_eq!(state.disconnects, 1);
+    }
+
+    #[tokio::test]
+    async fn model_link_error_disconnects_without_retry_or_hint_bypass() {
+        let (transport, state) = MockTransport::new_with_dis(
+            vec![Err(PrinterError::Ble("link closed".into()))],
+            Some("FI017".into()),
+        );
+        assert!(matches!(
+            BlePrinterDevice::new(transport, "Test".into()).await,
+            Err(PrinterError::Ble(_))
+        ));
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 1);
+        assert_eq!(state.disconnects, 1);
     }
 
     // ── Success Code Handling ─────────────────────────────────────────────

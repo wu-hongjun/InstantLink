@@ -97,6 +97,55 @@ async fn receive_expected_from_transport<T: Transport + ?Sized>(
     }
 }
 
+/// Retry only the complete, read-only capability query. Both writes and ACK
+/// waits share one deadline; the caller retains serialization and delivery
+/// ownership until this transaction completes or is retired.
+async fn query_image_support_with_retry<W, WF, R, RF>(
+    mut write: W,
+    mut receive: R,
+    timeout: Duration,
+) -> Result<protocol::Packet>
+where
+    W: FnMut(Vec<u8>) -> WF,
+    WF: Future<Output = Result<()>>,
+    R: FnMut(Duration) -> RF,
+    RF: Future<Output = Result<protocol::Packet>>,
+{
+    let encoded = Command::ImageSupportInfo.encode()?;
+    // This command fits in one fragment even at the minimum ATT MTU. The
+    // helper cannot accept arbitrary commands or replay fragmented payloads.
+    debug_assert_eq!(encoded.len(), 8);
+    if timeout.is_zero() {
+        return Err(PrinterError::Timeout);
+    }
+    let deadline = tokio::time::Instant::now() + timeout;
+    tokio::time::timeout_at(deadline, write(encoded.clone()))
+        .await
+        .map_err(|_| PrinterError::Timeout)??;
+    let first_deadline = deadline.min(tokio::time::Instant::now() + Duration::from_secs(1));
+    let first = tokio::time::timeout_at(
+        first_deadline,
+        receive(first_deadline.saturating_duration_since(tokio::time::Instant::now())),
+    )
+    .await
+    .unwrap_or(Err(PrinterError::Timeout));
+    match first {
+        Err(PrinterError::Timeout) if tokio::time::Instant::now() < deadline => {
+            log::debug!("image support query ACK delayed; resending read-only query once");
+            tokio::time::timeout_at(deadline, write(encoded))
+                .await
+                .map_err(|_| PrinterError::Timeout)??;
+            tokio::time::timeout_at(
+                deadline,
+                receive(deadline.saturating_duration_since(tokio::time::Instant::now())),
+            )
+            .await
+            .map_err(|_| PrinterError::Timeout)?
+        }
+        result => result,
+    }
+}
+
 /// Probe only an outstanding response, after its normal fast ACK window. Query
 /// failures are inconclusive; the original protocol deadline still applies.
 async fn wait_for_confirmed_disconnect<Q, Fut>(mut query: Q)
@@ -524,6 +573,21 @@ pub trait Transport: Send + Sync {
     ) -> Result<protocol::Packet> {
         self.send(data).await?;
         receive_expected_from_transport(self, timeout, expectation).await
+    }
+
+    /// Read model capabilities. Custom transports retain their ordinary
+    /// transaction behavior; BLE can safely resend this single-fragment,
+    /// idempotent query without releasing its delivery guard.
+    async fn query_image_support(&self, timeout: Duration) -> Result<protocol::Packet> {
+        let command = Command::ImageSupportInfo;
+        self.send_and_receive_expected(
+            &command.encode()?,
+            timeout,
+            command
+                .response_expectation()
+                .expect("image support expects a response"),
+        )
+        .await
     }
 
     /// Disconnect from the printer.
@@ -1300,10 +1364,12 @@ impl BleTransport {
         peripheral: &Peripheral,
         chars: &std::collections::BTreeSet<Characteristic>,
     ) -> Option<String> {
-        let dis_char = chars.iter().find(|c| c.uuid == DIS_MODEL_NUMBER_UUID)?;
+        let dis_char = chars
+            .iter()
+            .find(|c| c.uuid == DIS_MODEL_NUMBER_UUID && c.service_uuid == DIS_SERVICE_UUID)?;
         match peripheral.read(dis_char).await {
             Ok(data) => {
-                let s = String::from_utf8_lossy(&data).trim().to_string();
+                let s = String::from_utf8_lossy(&data).trim_ascii().to_string();
                 if s.is_empty() { None } else { Some(s) }
             }
             Err(e) => {
@@ -1532,6 +1598,29 @@ impl Transport for BleTransport {
         Ok(packet)
     }
 
+    async fn query_image_support(&self, timeout: Duration) -> Result<protocol::Packet> {
+        let _guard = self.command_lock.lock().await;
+        let delivery = self.write_session.delivery()?;
+        let expectation = Command::ImageSupportInfo
+            .response_expectation()
+            .expect("image support expects a response");
+        let packet = query_image_support_with_retry(
+            |encoded| async move {
+                // The first ACK slice can cancel receive before its own
+                // timeout resets an incomplete frame. Retain queued complete
+                // notifications, but never append a resend ACK to that prefix.
+                self.assembler.lock().await.reset();
+                self.send_bytes(&encoded).await
+            },
+            |remaining| receive_expected_from_transport(self, remaining, expectation),
+            timeout,
+        )
+        .await?;
+        self.pacing_session.record_ack(&packet);
+        delivery.complete();
+        Ok(packet)
+    }
+
     async fn disconnect(&self) -> Result<()> {
         // Close this transport before any await. Even cancellation by the FFI
         // deadline must not allow its old session to send or be blindly reused.
@@ -1609,6 +1698,292 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
+
+    fn model_query_reply() -> protocol::Packet {
+        protocol::Packet {
+            opcode: crate::commands::OP_SUPPORT_FUNCTION_INFO,
+            payload: vec![0, crate::commands::INFO_IMAGE_SUPPORT, 3, 32, 3, 32],
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_healthy_ack_never_resends() {
+        let writes = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let packet = query_image_support_with_retry(
+            |bytes| {
+                assert_eq!(bytes, Command::ImageSupportInfo.encode().unwrap());
+                async {
+                    writes.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                }
+            },
+            |_| async {
+                tokio::time::sleep(Duration::from_millis(140)).await;
+                Ok(model_query_reply())
+            },
+            DEFAULT_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert_eq!(packet, model_query_reply());
+        assert_eq!(writes.load(Ordering::SeqCst), 1);
+        assert_eq!(started.elapsed(), Duration::from_millis(140));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_missing_first_ack_resends_once_with_remaining_budget() {
+        let writes = AtomicUsize::new(0);
+        let reads = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        query_image_support_with_retry(
+            |bytes| {
+                assert_eq!(bytes, Command::ImageSupportInfo.encode().unwrap());
+                async {
+                    let attempt = writes.fetch_add(1, Ordering::SeqCst);
+                    assert_eq!(started.elapsed(), Duration::from_secs(attempt as u64));
+                    Ok(())
+                }
+            },
+            |remaining| {
+                assert_eq!(
+                    remaining,
+                    Duration::from_secs(if reads.load(Ordering::SeqCst) == 0 {
+                        1
+                    } else {
+                        9
+                    })
+                );
+                async {
+                    if reads.fetch_add(1, Ordering::SeqCst) == 0 {
+                        std::future::pending::<Result<protocol::Packet>>().await
+                    } else {
+                        tokio::time::sleep(Duration::from_millis(140)).await;
+                        Ok(model_query_reply())
+                    }
+                }
+            },
+            DEFAULT_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert_eq!(writes.load(Ordering::SeqCst), 2);
+        assert_eq!(started.elapsed(), Duration::from_millis(1140));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_silent_link_keeps_original_total_deadline() {
+        for timeout in [Duration::from_millis(500), DEFAULT_TIMEOUT] {
+            let writes = AtomicUsize::new(0);
+            let started = tokio::time::Instant::now();
+            let error = query_image_support_with_retry(
+                |_| async {
+                    writes.fetch_add(1, Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    Ok(())
+                },
+                |_| std::future::pending::<Result<protocol::Packet>>(),
+                timeout,
+            )
+            .await
+            .unwrap_err();
+            assert!(matches!(error, PrinterError::Timeout));
+            assert_eq!(started.elapsed(), timeout);
+            assert_eq!(
+                writes.load(Ordering::SeqCst),
+                if timeout < Duration::from_secs(1) {
+                    1
+                } else {
+                    2
+                }
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_write_errors_and_closed_link_are_not_replayed() {
+        for write_fails in [true, false] {
+            let writes = AtomicUsize::new(0);
+            let reads = AtomicUsize::new(0);
+            let error = query_image_support_with_retry(
+                |_| async {
+                    writes.fetch_add(1, Ordering::SeqCst);
+                    if write_fails {
+                        Err(PrinterError::Ble("write failed".into()))
+                    } else {
+                        Ok(())
+                    }
+                },
+                |_| async {
+                    reads.fetch_add(1, Ordering::SeqCst);
+                    Err(closed_link_error())
+                },
+                DEFAULT_TIMEOUT,
+            )
+            .await
+            .unwrap_err();
+            assert!(matches!(error, PrinterError::Ble(_)));
+            assert_eq!(writes.load(Ordering::SeqCst), 1);
+            assert_eq!(reads.load(Ordering::SeqCst), usize::from(!write_fails));
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_stalled_write_is_bounded_without_replay() {
+        let writes = AtomicUsize::new(0);
+        let reads = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let error = query_image_support_with_retry(
+            |_| async {
+                writes.fetch_add(1, Ordering::SeqCst);
+                std::future::pending::<Result<()>>().await
+            },
+            |_| async {
+                reads.fetch_add(1, Ordering::SeqCst);
+                Ok(model_query_reply())
+            },
+            DEFAULT_TIMEOUT,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, PrinterError::Timeout));
+        assert_eq!(started.elapsed(), DEFAULT_TIMEOUT);
+        assert_eq!(writes.load(Ordering::SeqCst), 1);
+        assert_eq!(reads.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_cancellation_during_resend_retires_delivery() {
+        let session = WriteSession {
+            device: "model-query-cancel-test".into(),
+            payload_size: NonZeroUsize::new(20).unwrap(),
+            poisoned: AtomicBool::new(false),
+            enlarged_attempted: AtomicBool::new(false),
+        };
+        let writes = AtomicUsize::new(0);
+        let result = tokio::time::timeout(Duration::from_millis(1500), async {
+            let delivery = session.delivery()?;
+            let packet = query_image_support_with_retry(
+                |_| async {
+                    if writes.fetch_add(1, Ordering::SeqCst) == 0 {
+                        Ok(())
+                    } else {
+                        std::future::pending::<Result<()>>().await
+                    }
+                },
+                |_| std::future::pending::<Result<protocol::Packet>>(),
+                DEFAULT_TIMEOUT,
+            )
+            .await?;
+            delivery.complete();
+            Ok::<_, PrinterError>(packet)
+        })
+        .await;
+        assert!(result.is_err());
+        assert_eq!(writes.load(Ordering::SeqCst), 2);
+        assert!(session.poisoned.load(Ordering::Acquire));
+        assert!(session.delivery().is_err());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_partial_first_reply_is_reset_and_duplicate_cannot_ack_status() {
+        let (tx, rx) = mpsc::channel(8);
+        let rx = Mutex::new(rx);
+        let assembler = Mutex::new(PacketAssembler::new());
+        let writes = AtomicUsize::new(0);
+        let model_bytes = protocol::build_packet(
+            crate::commands::OP_SUPPORT_FUNCTION_INFO,
+            &model_query_reply().payload,
+        )
+        .unwrap();
+        let battery_bytes = protocol::build_packet(
+            crate::commands::OP_SUPPORT_FUNCTION_INFO,
+            &[0, crate::commands::INFO_BATTERY, 3, 79],
+        )
+        .unwrap();
+        let packet = query_image_support_with_retry(
+            |_| async {
+                // This is the production write preparation: an outer ACK
+                // slice may have cancelled receive with a buffered prefix.
+                assembler.lock().await.reset();
+                if writes.fetch_add(1, Ordering::SeqCst) == 0 {
+                    tx.send(model_bytes[..8].to_vec()).await.unwrap();
+                } else {
+                    tx.send(model_bytes.clone()).await.unwrap();
+                    tx.send(model_bytes.clone()).await.unwrap();
+                    tx.send(battery_bytes.clone()).await.unwrap();
+                }
+                Ok(())
+            },
+            |remaining| {
+                let rx = &rx;
+                let assembler = &assembler;
+                async move {
+                    receive_packet_from_channel(
+                        &mut *rx.lock().await,
+                        &mut *assembler.lock().await,
+                        // Force the outer slice to cancel before the inner
+                        // channel timeout can clear the buffered prefix.
+                        remaining + Duration::from_millis(1),
+                    )
+                    .await
+                }
+            },
+            DEFAULT_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert_eq!(packet, model_query_reply());
+        assert_eq!(writes.load(Ordering::SeqCst), 2);
+        let expectation = Command::BatteryStatus.response_expectation().unwrap();
+        let duplicate = receive_packet_from_channel(
+            &mut *rx.lock().await,
+            &mut *assembler.lock().await,
+            DEFAULT_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(!expectation.matches(&duplicate));
+        let fresh_battery = receive_packet_from_channel(
+            &mut *rx.lock().await,
+            &mut *assembler.lock().await,
+            DEFAULT_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(expectation.matches(&fresh_battery));
+        assert_eq!(fresh_battery.payload[3], 79);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn model_query_terminal_timeout_retires_delivery_without_third_write() {
+        let session = WriteSession {
+            device: "model-query-silent-test".into(),
+            payload_size: NonZeroUsize::new(20).unwrap(),
+            poisoned: AtomicBool::new(false),
+            enlarged_attempted: AtomicBool::new(false),
+        };
+        let writes = AtomicUsize::new(0);
+        let result = async {
+            let delivery = session.delivery()?;
+            let packet = query_image_support_with_retry(
+                |_| async {
+                    writes.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                },
+                |_| std::future::pending::<Result<protocol::Packet>>(),
+                DEFAULT_TIMEOUT,
+            )
+            .await?;
+            delivery.complete();
+            Ok::<_, PrinterError>(packet)
+        }
+        .await;
+        assert!(matches!(result, Err(PrinterError::Timeout)));
+        assert_eq!(writes.load(Ordering::SeqCst), 2);
+        assert!(session.poisoned.load(Ordering::Acquire));
+        assert!(session.delivery().is_err());
+    }
 
     fn make_char(uuid: Uuid) -> Characteristic {
         Characteristic {

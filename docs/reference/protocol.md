@@ -129,8 +129,9 @@ Colors are sent in **BGR** order.
 2. Discover services and subscribe to notifications
 3. Query `Image Support Info`
 4. Detect the model:
-   - use DIS model hint `FI033` first for Mini Link 3
-   - otherwise fall back to the reported width and height
+   - match the reported width and height
+   - use exact DIS model number `FI033` to distinguish Mini Link 3 at `600 × 800`
+   - reject known DIS numbers that conflict with the reported dimensions
 5. Resize and JPEG-encode the image for the detected model
 6. Apply vertical flip if required by model (see **Mini Link 3** section below)
 7. Send `Download Start` and wait for ACK
@@ -139,6 +140,12 @@ Colors are sent in **BGR** order.
 10. Send `Print Image` and accept `0` or the model-specific success code
 11. Disconnect
 
+The native BLE transport may resend the read-only `Image Support Info` query once if no
+matching ACK arrives within one second. Both writes and response waits share the original
+ten-second deadline and retain command serialization. Write failures, link errors and
+malformed responses do not trigger a resend. A failed model query retires the connection;
+this retry does not apply to image transfer or print commands.
+
 ### Mini Link 3 Vertical-Flip Behavior
 
 The Mini Link 3 printer requires a vertically flipped image upload. This is the only printing difference between the Mini Link 3 and the standard Mini Link.
@@ -146,10 +153,16 @@ The Mini Link 3 printer requires a vertically flipped image upload. This is the 
 **Detection**
 
 Mini Link 3 is detected via the BLE Device Information Service (DIS) model number characteristic:
-- If the DIS model string contains `FI033`, the device is identified as `PrinterModel::MiniLink3`
-- Both Mini Link and Mini Link 3 report the same image support dimensions (`600 × 800`), so the DIS hint is necessary to distinguish them
 
-See `crates/instantlink-core/src/device.rs`, `detect_model()` function (line 473–489).
+- After trimming ASCII whitespace, the DIS model number must equal `FI033` and the image
+  support dimensions must equal `600 × 800` to select `PrinterModel::MiniLink3`.
+- Both Mini Link and Mini Link 3 report `600 × 800`, so the DIS hint is necessary to
+  distinguish them.
+- Strings containing `FI033` with other characters are rejected rather than selecting Mini
+  with a different upload orientation. Exact `FI017` requires Square dimensions (`800 × 800`).
+- Other unknown or missing DIS hints use the reported dimensions. Unknown dimensions are rejected.
+
+See `crates/instantlink-core/src/device.rs`, `detect_model()`.
 
 **Flip Application**
 

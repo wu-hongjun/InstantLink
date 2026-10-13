@@ -35,7 +35,7 @@ Additional references:
 
 ## Model Detection
 
-Do not hard-code a printer model in normal operation. The bridge should query Image Support Info
+Do not hard-code a Printer model in normal operation. The Bridge queries Image Support Info
 after BLE notification subscription and infer the film/output format from the reported dimensions:
 
 | Reported dimensions | Format/model family |
@@ -44,8 +44,17 @@ after BLE notification subscription and infer the film/output format from the re
 | `800x800` | Square Link |
 | `1260x840` | Wide Link |
 
-If the Device Information Service model number contains `FI033`, treat the `600x800` printer as
-Mini Link 3 for protocol timing/flip behavior. Otherwise, report it as Mini format.
+After trimming ASCII whitespace, exact Device Information Service model number `FI033`
+requires `600x800` dimensions and selects Mini Link 3 timing and upload orientation. Exact
+`FI017` requires `800x800` Square dimensions. Conflicting dimensions and strings containing
+`FI033` with extra characters are rejected. Other unknown or missing hints use dimensions;
+`600x800` then selects Mini.
+
+The native BLE transport may resend this read-only capability query once after a one-second
+ACK wait. Both attempts share the original ten-second deadline, command lock and delivery
+guard. Write failures, link errors and malformed responses do not trigger a resend. Failed
+model detection retires the link so automatic reconnect starts a fresh session. This retry
+does not apply to image transfer or print commands.
 
 ## v1 Scope
 

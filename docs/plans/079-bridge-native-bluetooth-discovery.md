@@ -143,3 +143,13 @@ FTP220/200, no current application warnings/errors, and no temporary observer/dr
 or GPIO mock. Printer absent at that capture; no film was used. A later real agent
 authorization and film0 status succeeded in the candidate after daemon restarts;
 this is separate from agent-registration timing and no rapid Printer recovery claim.
+
+Final installed offline CPU intervals measured **1.465 / 0.766 / 0.733%** of one core,
+mean **0.988%**, zero child CPU, all600MHz. Native caches/ambient conditions differ
+following daemon restarts; no extra causal reduction or energy claim is made.
+Final service-journal capture contains **2830 records**. Repaired candidate shutdown
+has no agent-unregister error, and normal installed PID17914 has zero WARNING/ERROR.
+Normal temperature42.932°C, throttle0x0, services17914/17912 active/NRestarts0,
+FTP220/200 and zero working caches. All owned Pi test files, source overlay, archive,
+observer, socket, drop-in and GPIO mock are removed. Printer absent in that final
+capture. Firmware/source hashes match the clean reviewed commits; raw logs remain private.

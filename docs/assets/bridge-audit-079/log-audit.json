@@ -3,7 +3,7 @@
   "records": 2592,
   "normal_bridge_pid": 16829,
   "normal_bridge_severity": {
-    "INFO": 32
+    "INFO": 25
   },
   "candidate_observer_pid": 15365,
   "candidate_observer_severity": {
@@ -20,5 +20,13 @@
     "Production agent_unregister_failed at candidate shutdown: DBusError Does Not Exist, proving lost registration after daemon restart. Event-driven lifecycle repair required before completion."
   ],
   "normal_application_warning_error_lines": [],
-  "no_film": true
+  "no_film": true,
+  "final_record_count": 2830,
+  "repaired_candidate_pid": 17231,
+  "repaired_candidate_severity": {
+    "INFO": 103,
+    "WARNING": 6
+  },
+  "repaired_agent_stop_errors": [],
+  "installed_agent_errors": []
 }

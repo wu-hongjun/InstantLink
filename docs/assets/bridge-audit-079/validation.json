@@ -17,7 +17,8 @@
     "Initial host Clippy mixed Homebrew 1.96 driver with rustup 1.97 artifacts; matching rustup Clippy installed and gate passed.",
     "Initial ARM all-test link ran out of Mac disk space; removed this task-owned header build cache with cargo clean, then all targets compiled.",
     "First GPIO UI lock press was intentionally ignored by production startup_settle guard; rerun after settle passed all eleven cases. No physical contacts were actuated.",
-    "Normal precommit doctest link exhausted Mac disk space; cargo clean of task-owned workspace package build artifacts freed space; retry required."
+    "Normal precommit doctest link exhausted Mac disk space; cargo clean of task-owned workspace package build artifacts freed space; retry required.",
+    "Cleanup guard initially omitted ib-owned benchmark JSON and stopped; added only the known runtime UID and completed cleanup."
   ],
   "boundary": "No physical film/image commands. CPU benchmarks are observations, not energy/runtime claims.",
   "kernel_to_ui_cases": 11,
@@ -34,5 +35,7 @@
   "firmware_native_commit": "a8b637cb17c2754d1fcfedd63dfe2ad42768c3ce",
   "firmware_python_commit": "78d771f86e8c64ca9858a312e66c0c6c03766edc",
   "hardware": "Raspberry Pi Zero 2 W Rev1.0 / ST7789 240x240 / X306 2300mAh; Instax Link Square INSTAX-52006924",
-  "os": "Debian13.2 / Linux6.12.47+rpt-rpi-v8 / Python3.13.5 / BlueZ5.82"
+  "os": "Debian13.2 / Linux6.12.47+rpt-rpi-v8 / Python3.13.5 / BlueZ5.82",
+  "owned_temporary_resources_removed": true,
+  "installed_cpu_mean_percent_one_core": 0.9880048444146966
 }

@@ -1,0 +1,13 @@
+{
+  "pid": 5127,
+  "duration_s": 30.002166134000163,
+  "process_cpu_s": 3.1,
+  "percent_one_core": 10.332587274379843,
+  "cpu_khz": 600000,
+  "boundary": "One dark-idle process sample with Printer offline. Private observer attached but no read requests during interval. Excludes system/kernel/radio energy and subprocess CPU; no before/after claim.",
+  "hot_thread_lifetime_cpu_percent": 6.9,
+  "hot_thread_kind": "Native thread outside Python threading registry; ppoll on eight GPIO-line FDs, mostly 500000 ns timeout.",
+  "strace_duration_s": 1,
+  "strace_outside_cpu_sample": true,
+  "measurement_is_not_energy": true
+}

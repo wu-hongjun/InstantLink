@@ -116,3 +116,11 @@ Cancelling a native operation retains serialization until its blocking worker ha
 or the existing stuck-worker deadline triggers recovery. Completed worker/sender failures
 are distinguished from watchdog deadline expiry, and obsolete status results cannot initiate
 recovery or alter the current UI. Retired status tasks remain owned through shutdown cleanup.
+
+Printer polling checks the saved bond before its first fetch after startup. The existing
+BlueZ guard removes only disconnected identities and preserves the saved selection; a live
+Printer keeps its bond. Polling waits for active rebond recovery before connecting again.
+
+Network readiness uses addresses from administratively enabled interfaces. An interface that
+is down can retain its IPv4 address; that address no longer suppresses hotspot recovery or
+appears in Bonjour advertisement candidates. Carrier is not required for dormant interfaces.

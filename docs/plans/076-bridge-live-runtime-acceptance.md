@@ -60,3 +60,36 @@ Bonjour advertising an administratively down endpoint. Do not require LOWER_UP/c
 operstate=UP: dormant AP/USB interfaces must remain available. Five cases cover down and
 admin-up/dormant/unknown state; the two down cases fail before the fix. No additional poll,
 subprocess, public field or sync wire-contract change is needed.
+
+## Hardware results and remaining cost
+
+- GPIO-equivalent queue events on the actual ST7789 framebuffer passed prompt/nonblank frame,
+  button-identity reset, three same-button unlock and 10-second abandonment. Timeout/lock
+  returned to 600MHz; awake prompt/unlock ran at 1000MHz. No electrical contacts actuated.
+- One production FTP print of DSC02832.jpeg passed, film1→0, history67→68 on later fresh
+  connection. Initial post-print history remained67 while the Printer finished its own work.
+  Exactly one PrintImage, 58 ordered indexed ACKs and exact 104,552-byte/800×800/quality88 JPEG
+  and RGB reference hashes, Square flip=false. Captured image reviewed upright; developed
+  film not inspected. 19.779s FTP-start→Bridge completion; processing1.844s, download15.238s,
+  native handoff→completion16.340s. Same-Pi FTP excludes camera airtime and mechanical/development
+  time. All65 sampled job clocks were1000MHz, throttle0x0; locked600MHz resumed afterward.
+- Forced authoritative BlueZ disconnect recovered automatically in44.340s with unchanged
+  Bridge PID3981, fresh status and physical Connected=true. Screen stayed locked600MHz.
+  Genuine warnings caused by the injected lost link are recorded, not suppressed.
+- The retained-IP wlan0 fault failed before the network fix; the interface was manually
+  restored. With the fix, a second outage recovered via the normal hotspot helper in32.706s,
+  restoring AP/readiness while locked600MHz. This repeat had the Printer offline; connected
+  Printer retention during the new recovery still requires a powered Printer. No camera
+  association/airtime measurement.
+- A30s dark/offline sample used3.1 process CPU seconds (10.33% of one core at600MHz). Native
+  GPIO polling was the largest identified thread (6.9% lifetime CPU); a separate1s strace
+  showed ppoll on8GPIO-line FDs with mostly500µs timeouts. Python GPIO held threads and Rust
+  workers were low. No dependency/alert timer changed: that needs electrical input latency,
+  bounce and held-button validation. This is not an energy measurement or before/after claim.
+
+Local gates: Bridge1551, Rust282 including doctest, App156; Ruff/strict mypy65 files, touched
+format, Rust build/fmt/Clippy/header drift, strict docs and normal hooks passed. Pi runtime
+has no pytest installed; no test dependency was added. Native clean dedfdb2 SHA and runtime
+clean8bbbd88 provenance are saved in `docs/assets/bridge-audit-076/`. Printing used811d51f;
+subsequent8bbbd88 changes only network snapshot filtering and retain identical print/native
+code. No additional physical print is needed; the Printer now has no film.

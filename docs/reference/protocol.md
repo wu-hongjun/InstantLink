@@ -258,3 +258,11 @@ The download-only diagnostic can sweep intermediate delays and can exercise the 
 transfer loop followed by checked DownloadCancel. Its wrapper rejects LED/PrintImage/reset/shutdown
 commands; the helper fixes print option 0. No-film tests establish outbound bytes, ACK acceptance,
 unchanged counters and reconnects, rather than developed-film or mechanical-print measurements.
+
+## Linux discovery records
+
+BlueZ retains names and service UUIDs for saved Printers after they are powered off. Linux
+discovery excludes a matching record with neither RSSI nor a confirmed connected link.
+Connected-state queries share a 250 ms budget per collection. Connected Printers remain
+usable without an advertisement. RSSI may persist after a prior scan, so this is an inactive
+cache guard rather than proof that every returned Printer is currently reachable.

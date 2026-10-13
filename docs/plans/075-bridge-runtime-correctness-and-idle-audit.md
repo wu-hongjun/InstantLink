@@ -84,3 +84,11 @@ The candidate is committed/pushed for review. It is **not deployed** while the P
 disconnected. Installed native `f574445` and its firmware runtime are unchanged. On a future
 connection, verify real lock/wake, Print/Sync transitions, cancellation/reconnect and a full
 runtime journal before claiming hardware efficiency or complete live-log acceptance.
+
+## Subsequent live acceptance
+
+The Pi was reconnected later on 2026-10-12. Plan076 records deployment of these changes,
+review of all retained application/service journals plus the current kernel journal, and
+real-runtime lock/unlock, FTP print and recovery checks. The offline counts above remain
+unchanged historical evidence. Additional native discovery, startup bond and network
+readiness fixes are recorded in plan076 rather than attributed to this offline audit.

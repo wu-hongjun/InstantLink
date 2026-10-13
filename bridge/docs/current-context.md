@@ -1,5 +1,39 @@
 # Current Bridge Context
 
+## Live runtime acceptance, 2026-10-12
+
+Plan076 deploys the plan075 runtime audit and adds fixes found in the full live logs:
+inactive Linux BlueZ cache records, disconnected startup bonds, overlapping rebond/connect,
+and wlan0-down readiness with a retained IPv4 address. Clean runtime **8bbbd88** is pushed
+and installed; native source **dedfdb2**, FFI SHA-256
+`5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8`.
+
+- Reviewed12,693 retained service records across8boots plus403current-boot kernel records.
+  Clock sync crossed midnight UTC; correlate by boot/PID/monotonic time. Historical shutdown
+  errors and controlled deployment/fault-injection events are distinguished from new faults.
+- Real framebuffer/CPU, GPIO-equivalent queue inputs: same-button triple unlock, different
+  identities sharing Select, immediate nonblank prompt/home and10s abandonment passed.
+  Awake1000MHz, locked600MHz. Electrical switch contacts were not actuated.
+- One user-selected **DSC02832.jpeg** production FTP print at811d51f: **19.779s** upload start
+  to Bridge completion, **15.238s** native download. Captured exact104,552-byte/800×800/quality88
+  JPEG/RGB reference,58indexed ACKs and onePrintImage. Film1→0; history67→68 on later fresh
+  connection. Job sampled1000MHz; locked600MHz resumed. Saved Vivid/saturation1.5 and neutral
+  Correction preserved. Subsequent network-only8bbbd88 keeps identical print/native code.
+  Camera Wi-Fi airtime, physical/developed-film quality and mechanical time not measured.
+- Forced BlueZ disconnect automatically recovered in**44.340s**, same Bridge PID3981,
+  locked600MHz, fresh status and authoritative Connected=true. No manual connect/restart.
+- wlan0-down/retained-IP probe failed before the network fix and was manually restored.
+  The fixed watchdog restored AP/readiness in**32.706s** while locked600MHz with Printer
+  offline. A connected-Printer repetition still awaits power-on; no further film will be used.
+-30s dark/offline process sample:3.1CPU seconds /10.33% of one core at600MHz. Largest observed
+  cost was a native GPIO thread (6.9% lifetime CPU): ppoll on8GPIO-line FDs, mostly500µs
+  timeout. No GPIO/dependency timer changed; electrical latency/bounce/hold checks are needed
+  before changing it. No energy/battery-duration or before/after efficiency claim.
+- Gates passed: Bridge1551, Rust282 incl.doctest, App156, Ruff/mypy65source files,
+  touched format, Rust build/fmt/Clippy/header drift, strict docs and normal hooks. Pi runtime
+  has no pytest; no test dependency installed. Sanitized evidence under
+  `docs/assets/bridge-audit-076/`; raw journals/photo captures stay outside Git.
+
 ## Offline runtime correctness audit, 2026-10-12
 
 The Pi is disconnected for other work. Plan075 / `docs/assets/bridge-audit-075/` record a

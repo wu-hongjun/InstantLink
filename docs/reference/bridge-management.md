@@ -182,8 +182,7 @@ bound to the current agent lifecycle/BlueZ owner and used only while the shared 
 Missing, invalidated or ambiguous state retains the bounded fresh-snapshot fallback. The identity
 cache is capped at 512 device rows, adds no startup task or query, and is never used for the fresh
 bond-removal gate. Stale iOS/Android identities are ignored and ambiguous identities retain polling.
-Authenticated
-connection-loss, device/adapter-removal and BlueZ-owner events wake the serialized status
+Authenticated connection-loss, device/adapter-removal and BlueZ-owner events wake the serialized status
 loop, including its ordinary waiting gap. Callbacks do not issue Printer commands or change
 CPU tiers. Printing pauses and selection/generation changes disarm the watch. A delayed registration must
 still own its token and selected address/name before its result can retain a subscription.

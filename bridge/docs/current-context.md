@@ -1,5 +1,38 @@
 # Current Bridge Context
 
+## Initial disconnect-watch registration deployed, 2026-10-13
+
+Plan085: clean Python **57e7db9** installed. Native b2b6c8c is unchanged (FFI SHA256
+`9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031`).
+
+- Complete owner/lifecycle-bound identity state is seeded by existing fresh snapshots and
+  authenticated signals. Initial watch registration fell from 10.984/13.524ms to 0.495ms
+  candidate/0.484ms installed, removing one snapshot. No extra startup task/query or per-poll
+  work; 512-row cap, live bus and unique connected identity required. Fresh bond gate preserved.
+- Safe fallback remains: installed reconnect 26.486ms used one snapshot when cache was
+  inconclusive; installed forced fallback 10.061ms passed and removed its temporary watch.
+  Candidate reconnect 0.792ms and installed resume 0.541ms used no extra snapshot.
+- Delayed registration must still own token/generation/current selected identity. Normal gates
+  1807 Bridge tests (27 existing warnings), Ruff, mypy (67 modules)/format/strict docs; independent 392
+  affected tests plus 3 adversarial cases pass. Native/C ABI/config/sync schema unchanged.
+- Recovery 11.824/7.179/12.588s baseline/candidate/installed; failed first scans retained in
+  baseline/installed. All 32/15/35 observations locked at 600 MHz and camera-ready, periodic status still
+  fresh. Triple unlock, nonblank LCD at 1000 MHz, and relock at 600 MHz and status pause/resume pass through actual
+  controller/LCD; contacts not actuated. No film/image/print commands.
+- Timing correction: earlier ~223ms Connected→fetch tail excluded watch (which starts later).
+  Direct candidate NoFilm render measured 219.344ms; visible LCD rendering is the larger local
+  cost. Historical timing stays valid, earlier watch attribution is corrected by plan085.
+- Existing model-query retry exercised on hardware: no first-window ACK, one resend after
+  1.002s, matching reply 186ms later and fresh status on the same connection. Reply-to-write
+  attribution is unknown; no claim that resend caused the response.
+- Final normal 19:33:33 EDT PID36582/manager36128 active/NRestarts0, connected, 600 MHz powersave,
+  41.856°C/throttle0x0/GPIO24low/GPIOv2/hotspot/USB/FTP220/200 healthy; clean exact hashes.
+  All task 085 observed service logs have no matched warnings/errors/panics. Full current-boot
+  service review: 10681 records, 134 historical matched messages and two earlier panic episodes
+  retained. Source/hardware/final-health independent review passed; owned fixtures removed.
+- Evidence in docs/plans/085-bridge-disconnect-watch-registration.md and assets/bridge-audit-085.
+  Next: visible LCD render (~220ms per changed frame), advertisement/GATT variation and handshake.
+
 ## Startup model-query recovery deployed, 2026-10-13
 
 Plan084: clean Python/native **b2b6c8c** installed. FFI SHA256

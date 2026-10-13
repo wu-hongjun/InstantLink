@@ -1,0 +1,184 @@
+{
+  "reviewer": "watch_registration_review",
+  "source_review": "pass",
+  "source_hashes": {
+    "agent": "1e659407946e9a9cf5e2abb592612cebe3314f97889289c3b221a9be85ceee3d",
+    "controller": "caeaba46a30b4ddefd358aa1fbf0ed13638d00fc96d7ee24dce5b96bca97cdd8"
+  },
+  "independent_tests": {
+    "affected": 392,
+    "additional_adversarial": 3,
+    "additional_harness": "/tmp/test_watch_registration_adversarial_085.py"
+  },
+  "film_used": false,
+  "baseline_startup": [
+    {
+      "capture": "baseline1",
+      "watch_ms": 10.983801999827847,
+      "extra_snapshot_reads": 1,
+      "correct_physical_path": true
+    },
+    {
+      "capture": "baseline2",
+      "watch_ms": 13.5243749973597,
+      "extra_snapshot_reads": 1,
+      "correct_physical_path": true
+    }
+  ],
+  "candidate": {
+    "registrations": [
+      {
+        "watch_ms": 0.49520899483468384,
+        "extra_snapshot_reads": 0,
+        "correct_physical_path": true
+      },
+      {
+        "watch_ms": 0.79197900777217,
+        "extra_snapshot_reads": 0,
+        "correct_physical_path": true
+      }
+    ],
+    "successful_status_attempts": 29,
+    "final_locked_600_camera_ready_fresh": true
+  },
+  "installed_review": "pass",
+  "normal_runtime_review": "pass",
+  "blockers": [],
+  "claim_limits": [
+    "Watch registration occurs after status fetch; native connected-to-fetch-return render time is outside watch scope.",
+    "Radio scan variance prevents assigning whole reconnect-time difference to this change.",
+    "No physical image or film test was performed because transport and image behavior are unchanged.",
+    "Installed external-disconnect reconnect used one fresh snapshot fallback; zero extra snapshots is not guaranteed for every session."
+  ],
+  "reconnect": {
+    "baseline": {
+      "recovered_s": 11.824106350002694,
+      "sample_count": 32,
+      "all_locked_600_camera_ready": true,
+      "passed": true
+    },
+    "candidate": {
+      "recovered_s": 7.178837131999899,
+      "sample_count": 15,
+      "all_locked_600_camera_ready": true,
+      "passed": true
+    },
+    "installed": {
+      "recovered_s": 12.588317077999818,
+      "sample_count": 35,
+      "all_locked_600_camera_ready": true,
+      "passed": true,
+      "initial_scan_failure_retained": true,
+      "watch_used_safe_snapshot_fallback": true
+    }
+  },
+  "incidental_plan084_physical_retry": {
+    "result": "passed on candidate startup",
+    "journal": "/tmp/instantlink-watch-candidate-journal-085.jsonl",
+    "first_model_write_monotonic": 84179.655855,
+    "one_resend_monotonic": 84180.658043,
+    "capability_ack_monotonic": 84180.8444,
+    "observed_resend_interval_s": 1.002188,
+    "observed_ack_after_resend_s": 0.186357,
+    "observed_ack_after_first_write_s": 1.188545,
+    "same_connection": true,
+    "capabilities_model": "Square",
+    "width": 800,
+    "height": 800,
+    "following_initial_hardware_status_selectors": [
+      1,
+      2,
+      3
+    ],
+    "reply_attribution_limit": "The identical first and resent read-only commands share an opcode, so the received ACK cannot be attributed to either write. No matching first-window reply was observed before the single resend."
+  },
+  "installed": {
+    "registrations": [
+      {
+        "audit_probe": false,
+        "watch_ms": 0.4844270006287843,
+        "extra_snapshot_reads": 0,
+        "paths_during_arm": [
+          [
+            "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+          ]
+        ]
+      },
+      {
+        "audit_probe": true,
+        "watch_ms": 10.060519998660311,
+        "extra_snapshot_reads": 1,
+        "paths_during_arm": [
+          [
+            "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+          ],
+          [
+            "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+          ]
+        ]
+      },
+      {
+        "audit_probe": false,
+        "watch_ms": 26.486040995223448,
+        "extra_snapshot_reads": 1,
+        "paths_during_arm": [
+          [
+            "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+          ]
+        ]
+      },
+      {
+        "audit_probe": false,
+        "watch_ms": 0.5408849974628538,
+        "extra_snapshot_reads": 0,
+        "paths_during_arm": [
+          [
+            "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+          ]
+        ]
+      }
+    ],
+    "correct_final_physical_path": true,
+    "final_single_watch": true,
+    "final_film": 0,
+    "final_locked_600_camera_ready_fresh": true,
+    "successful_status_attempts": 24,
+    "failed_attempts": 1,
+    "packet_review": {
+      "all_96_sent_commands_status_or_model_only": true,
+      "each_successful_periodic_status_fetch_selectors": [
+        1,
+        2,
+        3
+      ],
+      "native_errors_or_panic_or_watchfailures": 0
+    },
+    "ui_smoke": {
+      "passed": true,
+      "same_gpio20_button_three_presses": true,
+      "awake_1000_locked_600": true,
+      "pause_removes_watch_resume_rearms_one": true,
+      "physical_contacts_actuated": false
+    }
+  },
+  "normal_runtime": {
+    "capture": "/tmp/instantlink-watch-health-085.json",
+    "runtime_commit": "57e7db9853564657c19b0640b3a511f8619175ea",
+    "clean_source": true,
+    "reviewed_source_hashes_match": true,
+    "normal_entrypoint_restored": true,
+    "audit_dropin_socket_absent": true,
+    "unchanged_native_manifest_hash_matches": true,
+    "cpu_600_powersave_no_throttle": true,
+    "printer_connected": true,
+    "native_gpio_v2_started": true,
+    "normal_scope_warning_error_count": 0,
+    "input_failure_count": 0,
+    "hotspot_ftp_greeting_noop": [
+      "220",
+      "200"
+    ],
+    "wireless_airtime_or_upload_tested": false
+  },
+  "overall_review": "pass; no outstanding blocker"
+}

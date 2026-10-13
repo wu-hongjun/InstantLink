@@ -49,3 +49,14 @@ The same live attempt showed reactive bond removal racing a later status connect
 active rebond recovery before their startup guard or another fetch, using shielded ownership
 because recovery may replace the polling generation. A regression test verifies the wait
 and that cancelling a poll does not cancel the recovery task.
+
+## Live finding: down interface with retained IPv4
+
+A locked wlan0-down fault left 192.168.8.1 assigned, and the address-only health snapshot
+continued reporting receive-ready indefinitely. Recovery did not run; Printer stayed
+connected. Restore wlan0 explicitly after this failed probe. The shared bounded address
+snapshot now excludes interfaces whose explicit Linux flags omit UP. This also avoids
+Bonjour advertising an administratively down endpoint. Do not require LOWER_UP/carrier or
+operstate=UP: dormant AP/USB interfaces must remain available. Five cases cover down and
+admin-up/dormant/unknown state; the two down cases fail before the fix. No additional poll,
+subprocess, public field or sync wire-contract change is needed.

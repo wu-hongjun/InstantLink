@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 def detect_ipv4_interfaces_by_interface(
     interfaces: Iterable[str],
 ) -> dict[str, list[IPv4Interface]]:
-    """Read requested interfaces from one consistent, bounded address snapshot."""
+    """Read assigned addresses on admin-up interfaces from one bounded snapshot."""
 
     names = tuple(dict.fromkeys(interfaces))
     addresses: dict[str, list[IPv4Interface]] = {name: [] for name in names}
@@ -40,6 +40,13 @@ def detect_ipv4_interfaces_by_interface(
         return addresses
     for interface in data:
         if not isinstance(interface, dict):
+            continue
+        # Linux keeps assigned addresses after `ip link set ... down`.
+        # They cannot prove receive readiness or advertise a usable endpoint.
+        # Only admin state matters here: dormant APs/USB links need not have
+        # carrier yet. Legacy snapshots without flags retain prior behavior.
+        flags = interface.get("flags")
+        if isinstance(flags, list) and "UP" not in flags:
             continue
         name = interface.get("ifname")
         if isinstance(name, str) and name in addresses:

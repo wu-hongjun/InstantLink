@@ -156,3 +156,56 @@ def test_address_snapshot_failure_is_safe_and_does_not_retry_per_interface(
         "usb0": [],
     }
     assert calls == 1
+
+
+@pytest.mark.parametrize("flags", [["BROADCAST", "MULTICAST"], []])
+def test_address_snapshot_excludes_admin_down_interface_with_retained_ip(
+    monkeypatch: pytest.MonkeyPatch, flags: list[str]
+) -> None:
+    from instantlink_bridge.net import addresses
+
+    records = [
+        {
+            "ifname": "wlan0",
+            "flags": flags,
+            "operstate": "DOWN",
+            "addr_info": [{"local": "192.168.8.1", "prefixlen": 24}],
+        },
+        {
+            "ifname": "usb0",
+            "flags": ["UP"],
+            "addr_info": [{"local": "192.168.7.1", "prefixlen": 24}],
+        },
+    ]
+    monkeypatch.setattr(
+        addresses.subprocess,
+        "run",
+        lambda command, **_kw: subprocess.CompletedProcess(command, 0, json.dumps(records)),
+    )
+    result = addresses.detect_ipv4_interfaces_by_interface(("wlan0", "usb0"))
+    assert result["wlan0"] == []
+    assert result["usb0"] == [IPv4Interface("192.168.7.1/24")]
+
+
+@pytest.mark.parametrize("operstate", ["DORMANT", "UNKNOWN", "UP"])
+def test_address_snapshot_keeps_admin_up_interface_without_carrier_requirement(
+    monkeypatch: pytest.MonkeyPatch, operstate: str
+) -> None:
+    from instantlink_bridge.net import addresses
+
+    records = [
+        {
+            "ifname": "wlan0",
+            "flags": ["BROADCAST", "MULTICAST", "UP"],
+            "operstate": operstate,
+            "addr_info": [{"local": "192.168.8.1", "prefixlen": 24}],
+        }
+    ]
+    monkeypatch.setattr(
+        addresses.subprocess,
+        "run",
+        lambda command, **_kw: subprocess.CompletedProcess(command, 0, json.dumps(records)),
+    )
+    assert addresses.detect_ipv4_interfaces_by_interface(("wlan0",))["wlan0"] == [
+        IPv4Interface("192.168.8.1/24")
+    ]

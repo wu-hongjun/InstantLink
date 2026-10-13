@@ -30,6 +30,10 @@ use crate::error::{PrinterError, Result};
 use crate::models::PrinterModel;
 use crate::protocol::{self, PacketAssembler};
 
+#[cfg(target_os = "linux")]
+#[path = "transport_discovery.rs"]
+mod discovery;
+
 async fn receive_packet_from_channel(
     rx: &mut mpsc::Receiver<Vec<u8>>,
     assembler: &mut PacketAssembler,
@@ -552,8 +556,24 @@ pub async fn collect_instax_peripherals(adapter: &Adapter) -> Result<Vec<(Periph
         .await
         .map_err(|e| PrinterError::Ble(format!("failed to list peripherals: {e}")))?;
 
+    #[cfg(target_os = "linux")]
+    let snapshot = if peripherals.is_empty() {
+        None
+    } else {
+        discovery::snapshot().await
+    };
+
     let mut results = Vec::new();
+    #[cfg(target_os = "linux")]
+    let mut skipped = 0;
     for p in peripherals {
+        #[cfg(target_os = "linux")]
+        if snapshot.as_ref().is_some_and(|objects| {
+            discovery::definitely_non_instax(objects, &format!("/org/bluez/{}", p.id()))
+        }) {
+            skipped += 1;
+            continue;
+        }
         if let Ok(Some(props)) = p.properties().await {
             let matches_name = props
                 .local_name
@@ -587,6 +607,14 @@ pub async fn collect_instax_peripherals(adapter: &Adapter) -> Result<Vec<(Periph
             }
         }
     }
+
+    #[cfg(target_os = "linux")]
+    log::debug!(
+        "native discovery bulk prefilter: snapshot={}, unrelated_skipped={}, candidates={}",
+        snapshot.is_some(),
+        skipped,
+        results.len()
+    );
 
     Ok(results)
 }

@@ -1,0 +1,179 @@
+{
+  "label": "candidate",
+  "pid": 14813,
+  "hz": 100,
+  "samples": [
+    {
+      "sample": 1,
+      "audit_before": null,
+      "audit_after": null,
+      "duration_s": 30.027643113000522,
+      "process_cpu_s": 0.48,
+      "process_percent_one_core": 1.598527057863503,
+      "child_cpu_s": 0.0,
+      "system_busy_percent_all_cores": 2.131734532434008,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "14813",
+          "name": "instantlink-bri",
+          "cpu_s": 0.07
+        },
+        {
+          "tid": "14815",
+          "name": "instantlink-bri",
+          "cpu_s": 0.27
+        },
+        {
+          "tid": "14817",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14820",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "14821",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14822",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.12
+        },
+        {
+          "tid": "14823",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14824",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "audit_before": null,
+      "audit_after": null,
+      "duration_s": 30.02695009299896,
+      "process_cpu_s": 0.37,
+      "process_percent_one_core": 1.2322263794825725,
+      "child_cpu_s": 0.0,
+      "system_busy_percent_all_cores": 0.9319354301880513,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "14813",
+          "name": "instantlink-bri",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "14815",
+          "name": "instantlink-bri",
+          "cpu_s": 0.2
+        },
+        {
+          "tid": "14817",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14820",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "14821",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14822",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.08
+        },
+        {
+          "tid": "14823",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14824",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 3,
+      "audit_before": null,
+      "audit_after": null,
+      "duration_s": 30.028130873999544,
+      "process_cpu_s": 0.29,
+      "process_percent_one_core": 0.9657610765613862,
+      "child_cpu_s": 0.0,
+      "system_busy_percent_all_cores": 0.8569764539479158,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "14813",
+          "name": "instantlink-bri",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "14815",
+          "name": "instantlink-bri",
+          "cpu_s": 0.14
+        },
+        {
+          "tid": "14817",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14820",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "14821",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14822",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "14823",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "14824",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    }
+  ],
+  "boundary": "Actual Bridge process and whole-system CPU counters, dark600MHz, 3x30s. Same hardware; no energy measurement; subprocess CPU separate. No strace during CPU interval. No film used."
+}

@@ -140,6 +140,12 @@ adapter topology or unavailable/invalid data uses the existing CLI lookup. Empty
 snapshots require no discovery commands. Disconnect rules, scan cadence and recovery cooldown
 are unchanged; cancellation does not disconnect the shared agent.
 
+Native Linux discovery uses fresh bulk BlueZ metadata to skip clearly unrelated
+cached devices. Possible Printers retain their existing property and connection
+checks. Invalid or unavailable metadata falls back to those checks; scan cadence,
+unfiltered advertisements and saved-Printer reconnect behavior are preserved.
+The extra reader has a bounded query budget and owns its separate bus resource.
+
 Network readiness uses addresses from administratively enabled interfaces. An interface that
 is down can retain its IPv4 address; that address no longer suppresses hotspot recovery or
 appears in Bonjour advertisement candidates. Carrier is not required for dormant interfaces.

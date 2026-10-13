@@ -1,0 +1,24 @@
+{
+  "host_workspace_tests": 282,
+  "macos_tests": 156,
+  "pi_core_unit_tests": 183,
+  "linux_discovery_tests": 14,
+  "rust_build_locked": "passed",
+  "host_clippy_locked": "passed",
+  "format": "passed",
+  "ffi_header_drift": "passed",
+  "linux_library_clippy": "strict passed",
+  "linux_test_clippy": "passed with two existing Rust 1.97 Linux test lints allowed: new_ret_no_self and items_after_test_module",
+  "adversarial_blockers": 0,
+  "strict_docs": "passed",
+  "film_used": 0,
+  "rejected_attempts": [
+    "Full-runtime CPU measurement started before normal 60-second auto-lock; 20-second wait expired at 1000 MHz. No timing samples accepted.",
+    "Initial host Clippy mixed Homebrew 1.96 driver with rustup 1.97 artifacts; matching rustup Clippy installed and gate passed.",
+    "Initial ARM all-test link ran out of Mac disk space; removed this task-owned header build cache with cargo clean, then all targets compiled.",
+    "First GPIO UI lock press was intentionally ignored by production startup_settle guard; rerun after settle passed all eleven cases. No physical contacts were actuated.",
+    "Normal precommit doctest link exhausted Mac disk space; cargo clean of task-owned workspace package build artifacts freed space; retry required."
+  ],
+  "boundary": "No physical film/image commands. CPU benchmarks are observations, not energy/runtime claims.",
+  "kernel_to_ui_cases": 11
+}

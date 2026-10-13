@@ -1,0 +1,28 @@
+{
+  "source_files": {
+    "transport.rs": "baf62629955b64b1a0e4b764283c156949e4d249cd473018863c20766234a38a",
+    "transport_discovery.rs": "f660daa55abf0254cb7f8bb260276d0ea17cfc78a1fd20ea589c8b4efd737f61"
+  },
+  "blocking_findings": 0,
+  "linux_tests": 14,
+  "independent_execution": "ARM64 Ubuntu Noble container, read-only test-binary mount, network disabled",
+  "parent_execution": "Final ARM unit binary on actual Pi: 183 passed, 0 failed",
+  "test_binary_sha256": "a787b6b67ac1ee4a42bcf5522aea822a84b326e37a9ffa3b3ced217afdb139f6",
+  "covered": [
+    "real candidate properties remain authoritative",
+    "Android exclusion and ambiguity unchanged",
+    "malformed/path-absent fallback",
+    "query mutex timeout ownership",
+    "in-flight cancellation closes only owned resource",
+    "query timeout/error invalidation",
+    "fresh results on reused connection",
+    "finished resource reopens",
+    "blocking open permit survives cancellation and late result drops",
+    "actual D-Bus wire decoding of services/liveness fields"
+  ],
+  "inherited_limits": [
+    "non-atomic metadata updates observed next poll",
+    "retained RSSI is not liveness proof",
+    "cached selected adapter does not support replacement at another hci index"
+  ]
+}

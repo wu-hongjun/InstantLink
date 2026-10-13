@@ -1,0 +1,35 @@
+{
+  "label": "baseline",
+  "library": "libinstantlink_ffi.so",
+  "pid": 14210,
+  "rows": [
+    {
+      "trial": 1,
+      "elapsed_s": 5.344145205999666,
+      "cpu_s": 0.46380886500000007,
+      "result": -1,
+      "fd_before": 10,
+      "fd_after": 11,
+      "discovering": "b false"
+    },
+    {
+      "trial": 2,
+      "elapsed_s": 5.36053609100054,
+      "cpu_s": 0.4588255840000002,
+      "result": -1,
+      "fd_before": 11,
+      "fd_after": 11,
+      "discovering": "b false"
+    },
+    {
+      "trial": 3,
+      "elapsed_s": 5.535221664998971,
+      "cpu_s": 0.6555929620000001,
+      "result": -1,
+      "fd_before": 11,
+      "fd_after": 11,
+      "discovering": "b false"
+    }
+  ],
+  "no_film": true
+}

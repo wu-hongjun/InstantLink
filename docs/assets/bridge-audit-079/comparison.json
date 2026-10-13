@@ -1,0 +1,10 @@
+{
+  "baseline_mean_percent_one_core": 1.876048366034974,
+  "candidate_mean_percent_one_core": 1.2655048379691538,
+  "observed_reduction_percent": 32.54412514727449,
+  "baseline_direct_search_mean_cpu_s": 0.5260758036666667,
+  "candidate_direct_search_mean_cpu_s": 0.4647644090000001,
+  "baseline_direct_search_mean_elapsed_s": 5.413300987333059,
+  "candidate_direct_search_mean_elapsed_s": 5.375349477333657,
+  "limitations": "Three 30-second intervals each, same board at 600 MHz, Printer offline, separate process starts and ambient BLE vary. No energy, battery runtime, connected-workload or universal CPU claim. All rows retained."
+}

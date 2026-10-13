@@ -1,0 +1,61 @@
+{
+  "baseline": {
+    "mean_cpu_percent_one_core": 0.8999501543636776,
+    "rows": [
+      {
+        "sample": 1,
+        "elapsed_s": 20.00114525299432,
+        "process_cpu_percent_one_core": 1.9498883442267592,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 23767
+      },
+      {
+        "sample": 2,
+        "elapsed_s": 20.000987076004094,
+        "process_cpu_percent_one_core": 0.34998272702241545,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 23767
+      },
+      {
+        "sample": 3,
+        "elapsed_s": 20.001030460996844,
+        "process_cpu_percent_one_core": 0.39997939184185827,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 23767
+      }
+    ]
+  },
+  "candidate": {
+    "mean_cpu_percent_one_core": 0.38331426611606606,
+    "rows": [
+      {
+        "sample": 1,
+        "elapsed_s": 20.00106030399911,
+        "process_cpu_percent_one_core": 0.3499814456636774,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 24547
+      },
+      {
+        "sample": 2,
+        "elapsed_s": 20.00096650300111,
+        "process_cpu_percent_one_core": 0.4499782547333183,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 24547
+      },
+      {
+        "sample": 3,
+        "elapsed_s": 20.000965878003626,
+        "process_cpu_percent_one_core": 0.3499830979512024,
+        "child_cpu_percent_one_core": 0.0,
+        "cpu_khz": 600000,
+        "pid": 24547
+      }
+    ]
+  },
+  "boundary": "Separate runtime starts and an elevated first baseline sample prevent universal CPU/energy reduction claims. No observed CPU increase. Three20s connected600MHz samples each; child CPU0."
+}

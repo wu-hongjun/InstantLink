@@ -1,5 +1,37 @@
 # Current Bridge Context
 
+## Bluetooth disconnect events, 2026-10-13
+
+Plan 081 / `docs/assets/bridge-audit-081/`: clean **ec960c2** Python source installed;
+CLI/FFI unchanged from plan 080 (FFI SHA256 b67842fe…bb06a). Shared BlueZ bus events wake
+serialized status/recovery; ten-second periodic fallback remains. Watch once per connected
+episode, coalesce events, authenticate sender/path/selection/generation and own cleanup.
+No print/image replay, new polling, config/ABI change or clock-tier change.
+
+- Aligned baseline first fetch 9.885 s after disconnect request. Final candidate / installed
+  signal-to-fetch **261.538 / 261.527 ms**, including intentional 250 ms recovery gap.
+  Full recovery observed by baseline 12.401 s, candidates 19.558 / 13.963 s, installed
+  **12.888 s**. Target visibility/handshake vary; no universal total-speedup claim.
+  All accepted samples locked at 600 MHz/camera-ready; rejected wake-confounded baseline retained.
+- Connected idle CPU (3×20 s at 600 MHz) baseline mean 0.900%, candidate 0.383% of one core;
+  zero child CPU. Elevated first baseline and separate starts prevent universal energy/CPU
+  reduction claims. No observed increase; no per-poll watch IPC.
+- Independent review fixed stale alias selection, repeated failed-watch IPC/warnings, and
+  model-metadata callback rejection; 36 independent targeted cases passed. Full normal hooks
+  1724 tests, agent 48, controller/runtime 288, Ruff, strict mypy67, format and strict docs pass.
+- Eleven kernel GPIO mock-to-real LCD/CPU cases passed, including nonblank wake/1000 MHz,
+  same-button triple unlock, debounce/held/rapid presses and ten-second expiry to dark600.
+  Physical contacts not actuated. Printing serialization/cancellation tested locally;
+  status-only hardware tests used **no film** and do not claim a new physical print-quality test.
+- Final normal snapshot 09:45:22 EDT: PID25926/manager25301 active, NRestarts0, connected
+  Printer, 600 MHz/GPIO24 low, 42.932°C/throttle0x0, hotspot/USB/FTP220/200 healthy,
+  GPIOv2, zero warning/errors. Reviewed4300 current-boot service records, 41 final-normal
+  records; 99 historical warning/errors retained/classified. Raw journals private.
+  Observer/drop-in/socket/source overrides and owned GPIO mock removed; saved photos/config
+  unchanged. Runtime and native hashes match; battery last5%, film0. No battery-duration claim.
+- Next latency candidate: remaining discovery/handshake after link loss. Preserve target
+  visibility/reconnect reliability; current results do not justify reducing safe gaps further.
+
 ## Live stale-link recovery acceptance, 2026-10-13
 
 Final follow-up: after the clean 08:33 capture, Printer advertisement stopped at

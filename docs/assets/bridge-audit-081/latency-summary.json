@@ -1,0 +1,45 @@
+{
+  "rows": [
+    {
+      "label": "baseline-aligned",
+      "passed": true,
+      "observed_recovery_s": 12.400807548001467,
+      "first_fetch_after_request_s": 9.884615465001843,
+      "bluez_loss_signal_after_request_s": null,
+      "first_fetch_after_signal_s": null,
+      "failed_attempts": 0,
+      "all_samples_locked600_camera_ready": true
+    },
+    {
+      "label": "candidate-aligned",
+      "passed": true,
+      "observed_recovery_s": 19.55830452399823,
+      "first_fetch_after_request_s": 2.771019946994784,
+      "bluez_loss_signal_after_request_s": 2.5094933840009617,
+      "first_fetch_after_signal_s": 0.26152656299382215,
+      "failed_attempts": 2,
+      "all_samples_locked600_camera_ready": true
+    },
+    {
+      "label": "candidate-final",
+      "passed": true,
+      "observed_recovery_s": 13.962800515997515,
+      "first_fetch_after_request_s": 2.724778124000295,
+      "bluez_loss_signal_after_request_s": 2.4632397910027066,
+      "first_fetch_after_signal_s": 0.26153833299758844,
+      "failed_attempts": 1,
+      "all_samples_locked600_camera_ready": true
+    },
+    {
+      "label": "installed",
+      "passed": true,
+      "observed_recovery_s": 12.887793223999324,
+      "first_fetch_after_request_s": 2.195080050994875,
+      "bluez_loss_signal_after_request_s": 1.933552967995638,
+      "first_fetch_after_signal_s": 0.2615270829992369,
+      "failed_attempts": 1,
+      "all_samples_locked600_camera_ready": true
+    }
+  ],
+  "boundary": "No universal total-speedup claim; source-check delay removed, target visibility and reconnect setup still vary. First baseline harness excluded for protected-wake CPU confound; complete capture retained. No film/image commands."
+}

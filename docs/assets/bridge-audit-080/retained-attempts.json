@@ -16,8 +16,16 @@
     {
       "test": "First normal health capture",
       "outcome": "Expected1000MHz awake at44s;60s idle threshold had not elapsed. Later600MHz health passed"
+    },
+    {
+      "test": "First live baseline direct setup",
+      "outcome": "Single five-second connect returned -1; subsequent retry setup returned -1 then0. Both failed scans retained; cause unproven."
+    },
+    {
+      "test": "Live baseline forceddisconnect",
+      "outcome": "Missed100s deadline, recovered in samePID at104.242s; postdeadline state retained."
     }
   ],
-  "live_printer_benchmark": "Pending Printerpoweron; no before/after live latency claim",
+  "live_printer_benchmark": "Completed in subsequent power-on; installed two passes and baseline postdeadline eventual recovery. See live-comparison.json.",
   "film_used": 0
 }

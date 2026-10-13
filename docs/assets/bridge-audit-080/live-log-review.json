@@ -1,0 +1,16 @@
+{
+  "records": 3697,
+  "normal_pid": "23036",
+  "normal_records": 39,
+  "normal_warning_error_messages": [],
+  "normal_status_messages": [
+    "2026-10-13 08:32:15,058 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=20 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+  ],
+  "full_boot_priority_counts": {
+    "6": 3388,
+    "5": 292,
+    "4": 9,
+    "3": 8
+  },
+  "boundary": "Full current-boot Bridge/manager service logs; baseline controlled-disconnect warnings and earlier079/temporaryobserver faults retained; rawjournal private0600. No kernelclaim."
+}

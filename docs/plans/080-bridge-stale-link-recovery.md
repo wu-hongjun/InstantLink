@@ -72,9 +72,9 @@ Both manifests are clean and installed Python hashes match independent review.
   versus the unchanged ten-second deadline for live/unknown state. Controller fake-clock tests
   show two250ms gaps then30s cadence. These are controlled timing assertions, not live Printer
   or end-to-end performance measurements.
-- The Printer was absent throughout. Baseline readiness timed out after100s without issuing
-  a disconnect; direct native comparison and live automatic reconnect remain pending power-on.
-  No live latency improvement or physical reconnect reliability claim is made.
+- During the initial session, the Printer was absent. Baseline readiness timed out after100s
+  without issuing a disconnect. Subsequent power-on completed the live checks below; the initial
+  failed attempt remains in evidence.
 - Reviewed3226current-boot Bridge/manager journal records. Normal installed PID20395 has no
   app warnings/errors; historical079faults remain. Temporary observer had a wrong method name
   and restarted eight times; corrected before candidate tests. An early UI socket check and
@@ -85,6 +85,45 @@ Both manifests are clean and installed Python hashes match independent review.
 - Owned observer/drop-in/socket/source/library and ARM test executables removed; mockup
   unloaded. Saved photos/configuration unchanged. Raw journals private0600. No film used.
 
-Evidence: `docs/assets/bridge-audit-080/`. Live Printer status/drop/reconnect check is the
-remaining hardware validation; source review, ARM execution, offline/UI checks and deployment
-are complete.
+Evidence: `docs/assets/bridge-audit-080/`. The following power-on session completed the
+remaining live validation without production changes.
+
+## Live acceptance after Printer power-on
+
+The normal installed runtime automatically reconnected and reported Square film 0 / battery 20%
+at 08:18:20 EDT on 2026-10-13. No manual Reconnect action was used.
+
+- Two external Device1 disconnects recovered automatically, observed by **19.867 s** and
+  **11.610 s** on the installed firmware. Every sampled state stayed locked at 600 MHz, with
+  camera receive readiness preserved and fresh film 0 status after recovery. Harness times
+  include state reply and a final BlueZ query; status timestamps were 19.780 / 11.561 s.
+- Historical source 4c9e28b was archived and rebuilt with the same toolchain/flags. Its FFI
+  SHA256 exactly matches the previously installed baseline (fdd47e…5973). Full-runtime baseline
+  missed its 100 s deadline, then recovered in the same PID at **104.242 s**. All timed rows and
+  the subsequent state are retained. Different poll phases and target visibility prevent a
+  universal speedup claim; the target matched on a later attempt, with cause unproven.
+- Baseline reused the dead cache twice, then started fresh connection attempts at 39.235,
+  69.237 and 99.240 s. Installed fresh attempts started at 9.849 and 9.390 s; the first run
+  needed one prompt retry after a five-second miss. This verifies the cache/retry changes.
+- Direct native tests: the first status won the disconnect race on both builds (~89 ms).
+  The next failed status took 2.793 ms baseline / 6.035 ms installed; baseline still returned
+  connectivity 1, while installed returned 0. These show correct retirement, not reduced write
+  latency or a hardware measurement of the one-second missing-ACK probe. Successful direct
+  status reads all showed film 0 / history 68. Keepalive was disabled only in these test processes.
+- Initial baseline direct setup missed a scan; retried setup missed another then connected.
+  All failures are retained. No radio cause or baseline connection defect is inferred.
+- Independent evidence review passed after correcting stale pending conclusions and timing
+  labels. No additional source correctness issue; no image/print commands or film used.
+- Normal service restored: Bridge PID 23036 / manager 20393, active / NRestarts 0, 600 MHz,
+  GPIO24 low, temperature 42.932°C, throttle 0x0, hotspot/USB/FTP healthy, Printer connected
+  with fresh Square status. Reviewed 3697 current-boot service records; normal PID has
+  39 records and no warnings/errors at capture. Controlled baseline warnings and earlier
+  harness/historical faults remain in the full journal; raw logs are private.
+- Observer/drop-in/socket, baseline source/library and test scripts removed; configuration
+  and saved photos unchanged. Current native artifacts/clean manifest restored after the
+  historical rebuild; installed hashes remain the reviewed d8cee35 binaries.
+
+The next latency candidate is the **9.4–9.8 s wait for the next status poll** after a drop.
+A disconnect event on the existing shared BlueZ bus could prompt the next check sooner,
+without increasing idle polling. Successful fresh connect/status attempts took 2.17–3.83 s
+in these runs; these are entire attempt durations, not BLE-only timings.

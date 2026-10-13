@@ -1,5 +1,36 @@
 # Current Bridge Context
 
+## Live stale-link recovery acceptance, 2026-10-13
+
+Plan 080 live follow-up completed after Printer power-on, using the reviewed **d8cee35**
+source/native binaries. Production code is unchanged. Evidence is in
+`docs/assets/bridge-audit-080/live-comparison.json` and the detailed captures.
+
+- Normal installed firmware automatically reconnected to INSTAX-52006924, reporting Square
+  film 0 / battery 20% at 08:18:20 EDT. No manual Reconnect action or film was used.
+- Two forced Device1 disconnects recovered automatically, **observed by 19.867 / 11.610 s**.
+  All sampled states stayed locked at 600 MHz and camera-ready. These are harness elapsed
+  times; actual fresh-status timestamps were 19.780 / 11.561 s after disconnect request.
+- Historical baseline FFI rebuilt from 4c9e28b exactly matched its prior SHA256 fdd47e…5973.
+  Full baseline missed the 100 s deadline then recovered in the same PID at 104.242 s.
+  Poll phases and target visibility differ; no universal speedup or radio-cause claim.
+- Old cache reused twice, then fresh attempts started at 39.235 / 69.237 / 99.240 s.
+  Installed fresh attempts began at 9.849 / 9.390 s, validating retirement/retry behavior.
+  Direct native failed-status getter remained 1 on baseline and became 0 on installed.
+  Successful ACKs won both direct disconnect races; one-second missing-ACK checks remain
+  controlled-test evidence. Failed-write latency was 2.793 / 6.035 ms, not an improvement.
+- Initial baseline scan misses and postdeadline state retained. Independent evidence review
+  passed with timing/stale-doc clarifications; no additional correctness finding. All
+  successful direct status reads showed film 0 / history 68; no image/print commands.
+- Final normal PID 23036 / manager 20393 active, NRestarts 0, 600 MHz / GPIO24 low,
+  42.932°C / throttle 0x0, hotspot/USB/FTP healthy, Printer connected with fresh status.
+  Reviewed 3697 service journal records; normal PID 39 records / zero warnings or errors.
+  Earlier controlled baseline/harness faults remain; raw journals private. No kernel claim.
+- Observer/drop-in/socket and owned baseline fixtures removed; saved photos/config unchanged.
+  Shared build artifacts restored to candidate hashes / clean manifest after baseline rebuild.
+  The remaining latency is mostly waiting 9.4–9.8 s for the next status poll. A disconnect
+  event on the shared BlueZ bus is the next candidate; idle polling need not increase.
+
 ## Stale-link detection and recovery retries, 2026-10-13
 
 Plan080 / `docs/assets/bridge-audit-080/`: clean **d8cee35** source/native installed.
@@ -20,9 +51,8 @@ CLI `1d549bc46df1c5819abb24a1f28d830f4b8d7b05929eb55a2adb37228c07c068`.
 - Eleven kernel-to-UI cases passed for baseline and candidate on physicalLCD/CPU, including
   tripleunlock/nonblankwake/10sexpiry. Contacts not actuated. OfflineCPU2.550→2.600% onecore
   (3×20s each), zerochildCPU; unchanged within variation. Startupofflinecadence ~30s.
-- Printer absent; baseline readiness100stimeout retained. **Live status/drop/reconnect and
-  native before/after latency remain pending Printer power-on.** Controlled timer tests are
-  separate; no live reconnect speed/reliability or energy improvement claim. No film used.
+- Printer absent; baseline readiness100stimeout retained. Live checks were pending in this initial session; the power-on acceptance above completed
+  them. Controlled timer tests remain separate from physical measurements. No film used.
 - Reviewed3226current-boot service records. Corrected temporary observer AttributeError
   caused eight restarts; initialUIsocket and awakehealth attempts retained. Final normal
   PID20395/manager20393 active/NRestarts0,600MHz/GPIO24low,throttle0x0,FTP220/200,Wi-Fi/USB

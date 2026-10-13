@@ -28,5 +28,22 @@
   "quality_boundary": "Captured JPEG and decoded RGB equal same-settings preparation exactly. Square has no transport flip; captured image reviewed upright. Developed film has not been inspected.",
   "input_boundary": "GPIO-equivalent queue events and real framebuffer, not electrical button contacts.",
   "timing_boundary": "Same-Pi hotspot-address FTP replay; no camera Wi-Fi airtime or mechanical/development timing. One physical print; no retry.",
-  "battery_discharge_test": false
+  "battery_discharge_test": false,
+  "combined_wifi_printer_acceptance": {
+    "passed": true,
+    "recovery_s": 32.672213790000114,
+    "locked_khz": 600000,
+    "connected_samples": 31,
+    "status_observations": 4,
+    "max_status_age_s": 9.542704007000339,
+    "film_before_after": [
+      0,
+      0
+    ],
+    "history_before_after": [
+      68,
+      68
+    ],
+    "boundary": "Real runtime with private observer, wlan0 down retained IPv4, normal recovery only; no camera association/airtime test."
+  }
 }

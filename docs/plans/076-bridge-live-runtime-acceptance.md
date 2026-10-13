@@ -111,3 +111,17 @@ reconfiguration and deliberate interface-down, plus one hci_conn_timeout WARN at
 No repeat HCI WARN occurred in subsequent captured checks, but its kernel root cause is not
 established or claimed fixed. AP/FTP and later Printer operation recovered. These are recorded
 as driver/firmware maintenance follow-ups; no OS/kernel upgrade was performed in this audit.
+
+## Connected Wi-Fi acceptance completed, 2026-10-12
+
+The user powered the Printer on. Installed clean cee3755 (documentation successor to8bbbd88,
+identical runtime/native code) passed the final wlan0-down/retained-IP repetition in32.672s.
+Across31samples the real Bridge stayed locked600MHz, PID7032 unchanged, and authoritative
+BlueZ Connected=true. Four successful status observations, maximum status age9.543s, prove
+continued communication during the outage/recovery. Film0→0/history68→68; no photo upload
+or print command requested. The normal hotspot helper alone restored AP and receive readiness.
+No camera association/airtime test. This completes the pending combined check above.
+
+The temporary observer/socket/drop-in was removed again. Normal ExecStart/PID7530 returned
+and automatically connected, with fresh film0 status, manager PID5125 active/NRestarts0.
+Record the final dark-idle/FTP/network health separately after its normal idle timeout.

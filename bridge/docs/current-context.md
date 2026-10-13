@@ -24,7 +24,10 @@ and installed; native source **dedfdb2**, FFI SHA-256
   locked600MHz, fresh status and authoritative Connected=true. No manual connect/restart.
 - wlan0-down/retained-IP probe failed before the network fix and was manually restored.
   The fixed watchdog restored AP/readiness in**32.706s** while locked600MHz with Printer
-  offline. A connected-Printer repetition still awaits power-on; no further film will be used.
+  offline. After Printer power-on, the combined repeat passed in **32.672 s**: all **31**
+  samples locked at **600 MHz** with authoritative Printer Connected=true. Four successful
+  status observations, maximum age **9.543 s**; film **0→0**, history **68→68**. No film used.
+  Evidence: `docs/assets/bridge-audit-076/wifi-recovery-connected.json`.
 -30s dark/offline process sample:3.1CPU seconds /10.33% of one core at600MHz. Largest observed
   cost was a native GPIO thread (6.9% lifetime CPU): ppoll on8GPIO-line FDs, mostly500µs
   timeout. No GPIO/dependency timer changed; electrical latency/bounce/hold checks are needed

@@ -1535,6 +1535,29 @@ class BridgeUi:
         """Pause polling while preserving the shared connection for print handoff."""
 
         await self._cancel_status_refresh()
+        # Native status workers serialize with print through the backend lock,
+        # but BlueZ mutations run outside it. Cancel and join those owners before
+        # handing the connection to print; their subprocess cleanup must finish.
+        recoveries = [
+            task
+            for task in (
+                self._proactive_bond_reset_task,
+                self._auto_rebond_task,
+                self._silent_link_recovery_task,
+            )
+            if task is not None and not task.done()
+        ]
+        for task in recoveries:
+            if not task.cancelling():
+                task.cancel()
+        if recoveries:
+            cleanup = asyncio.gather(*recoveries, return_exceptions=True)
+            if await _join_ui_cleanup(cleanup, timeout_s=UI_TASK_CANCEL_BUDGET_S):
+                raise asyncio.CancelledError
+            if not cleanup.done():
+                # Retain the task references, but abort this print rather than
+                # sharing the Printer with a mutation whose cleanup is stuck.
+                raise TimeoutError("Printer recovery cleanup timed out")
 
     async def resume_printer_status(self) -> None:
         """Refresh the boot printer status after a modal print state."""
@@ -4636,6 +4659,7 @@ class BridgeUi:
             startup_bond_check = True
             recovery_retries_remaining = 0
             while True:
+                bond_checked_before_fetch = False
                 if not self._status_generation_is_current(generation):
                     return
                 # Bond removal can take longer than the offline retry gap.
@@ -4643,7 +4667,15 @@ class BridgeUi:
                 # Shield it because recovery itself may replace this poll.
                 for recovery in (self._auto_rebond_task, self._silent_link_recovery_task):
                     if recovery is not None and not recovery.done():
-                        await asyncio.shield(recovery)
+                        try:
+                            await asyncio.shield(recovery)
+                        except asyncio.CancelledError:
+                            current = asyncio.current_task()
+                            if current is not None and current.cancelling():
+                                raise
+                            # A print handoff may have cancelled this older
+                            # recovery. Its completed cleanup must not cancel
+                            # the replacement poll and stop automatic reconnect.
                     if not self._status_generation_is_current(generation):
                         return
                 if not self._status_generation_is_current(generation):
@@ -4662,6 +4694,15 @@ class BridgeUi:
                     await self._close_cached_printer_session()
                     if not self._status_generation_is_current(generation):
                         return
+                    # A confirmed disconnect can leave BlueZ's stale bond or
+                    # auto-reconnect state hiding the Printer from discovery.
+                    # Run the same live-link gate before the first fresh scan,
+                    # rather than paying for a failed scan before cleanup.
+                    await self._maybe_reset_bond_on_drop(printer, reason="disconnect_event")
+                    if not self._status_generation_is_current(generation):
+                        return
+                    bond_checked_before_fetch = True
+                    startup_bond_check = False
                 if startup_bond_check:
                     # A reboot loses the online->offline edge while BlueZ keeps
                     # its bond. The pairer refuses to remove connected identities.
@@ -4702,9 +4743,10 @@ class BridgeUi:
                 # later encrypted write identifies a stale bond.
                 if was_online and not online:
                     recovery_retries_remaining = PRINTER_RECOVERY_RETRY_COUNT
-                    await self._maybe_reset_bond_on_drop(printer)
-                    if not self._status_generation_is_current(generation):
-                        return
+                    if not bond_checked_before_fetch:
+                        await self._maybe_reset_bond_on_drop(printer)
+                        if not self._status_generation_is_current(generation):
+                            return
                 # The retry delay is the total cadence PERIOD (e.g. the configured search interval),
                 # measured from the start of each attempt. Subtract the time the attempt already
                 # consumed (its scan/connect) so the period holds whether the scan exited early on a
@@ -5045,7 +5087,18 @@ class BridgeUi:
             return
         task = self._proactive_bond_reset_task
         if task is not None and not task.done():
-            return
+            try:
+                # A retired poll may still own cancellation-resistant subprocess
+                # cleanup. No replacement poll can connect until it is finished.
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                current = asyncio.current_task()
+                if current is not None and current.cancelling():
+                    raise
+                # The child was independently cancelled and has finished cleanup;
+                # run this poll's fresh live-link gate rather than cancelling it.
+            else:
+                return
         self._proactive_bond_reset_task = asyncio.create_task(
             self._run_proactive_bond_reset(printer, reason=reason)
         )

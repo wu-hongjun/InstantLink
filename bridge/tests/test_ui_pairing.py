@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -600,3 +601,65 @@ async def test_pairer_scan_returns_after_first_visible_instax(
         ("--timeout", "1", "scan", "on"),
         ("devices",),
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("timed_out", [False, True])
+@pytest.mark.parametrize("repeat_cancel", [False, True])
+async def test_bluetoothctl_cancellation_and_timeout_kill_and_reap_owned_child(
+    monkeypatch: pytest.MonkeyPatch, timed_out: bool, repeat_cancel: bool
+) -> None:
+    communicating = asyncio.Event()
+    reaping = asyncio.Event()
+    release = asyncio.Event()
+
+    class Process:
+        returncode: int | None = None
+        kills = 0
+
+        async def communicate(self) -> tuple[bytes, bytes]:
+            communicating.set()
+            await asyncio.Future[None]()
+            return b"", b""
+
+        def kill(self) -> None:
+            self.kills += 1
+
+        async def wait(self) -> int:
+            reaping.set()
+            await release.wait()
+            self.returncode = -9
+            return -9
+
+    process = Process()
+
+    async def spawn(*_args: str, **_kwargs: object) -> Process:
+        return process
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    task = asyncio.create_task(
+        pairing._run_bluetoothctl(
+            "remove", "FA:AB:BC:51:CC:E2", timeout_seconds=0.001 if timed_out else 10
+        )
+    )
+    await communicating.wait()
+    if not timed_out:
+        task.cancel()
+    await reaping.wait()
+    assert process.kills == 1
+    assert not task.done()
+    if repeat_cancel:
+        task.cancel()
+        await asyncio.sleep(0)
+        task.cancel()
+        await asyncio.sleep(0)
+        assert not task.done()
+    release.set()
+    if timed_out and not repeat_cancel:
+        with pytest.raises(pairing.PrinterPairingError, match="timed out"):
+            await task
+    else:
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert process.returncode == -9
+    assert process.kills == 1

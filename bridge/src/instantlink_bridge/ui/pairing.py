@@ -245,7 +245,7 @@ class BluetoothctlPrinterPairer:
         removal is gated on ``Connected=no`` because removing a live bond wedges the printer.
         """
 
-        if await _identity_has_connected_link(printer):
+        if await _identity_has_connected_link(printer, self._bluez_objects_provider):
             LOGGER.info(
                 "bluetooth.reset_bond skipped=connected address=%s name=%s",
                 printer.address,
@@ -446,7 +446,7 @@ class InstantLinkPrinterSelector:
         a bond was actually removed so the next connect re-pairs fresh.
         """
 
-        if await _identity_has_connected_link(printer):
+        if await _identity_has_connected_link(printer, self._bluez_objects_provider):
             LOGGER.info(
                 "instantlink.reset_bond skipped=connected address=%s name=%s",
                 printer.address,
@@ -513,13 +513,28 @@ async def _bluez_addresses_for_identity(
     selected: PairedPrinter,
     *,
     include_selected_address: bool,
+    require_success: bool = False,
 ) -> list[str]:
     """Return BlueZ device addresses matching a printer identity, sorted ascending."""
 
     addresses: set[str] = set()
-    if include_selected_address and _looks_like_bluez_address(selected.address.upper()):
+    if (
+        include_selected_address
+        and not require_success
+        and _looks_like_bluez_address(selected.address.upper())
+    ):
         addresses.add(selected.address.upper())
     devices_result = await _run_bluetoothctl("devices", check=False)
+    if require_success and devices_result.returncode != 0:
+        raise PrinterPairingError("Unable to confirm BlueZ devices before bond reset")
+    if include_selected_address and require_success:
+        # A persisted physical address can disappear after mode/address rotation.
+        # Successful inventory is authoritative for absence, while a listed
+        # exact address still needs a live-link check even if its Alias changed.
+        for line in clean_bluetoothctl_output(devices_result.output).splitlines():
+            match = DEVICE_LINE_RE.match(_strip_bluetoothctl_prefix(line.strip()))
+            if match is not None and match.group("address").upper() == selected.address.upper():
+                addresses.add(selected.address.upper())
     for printer in parse_instax_devices(devices_result.output):
         if _matches_selected_identity(selected, printer):
             addresses.add(printer.address.upper())
@@ -646,7 +661,9 @@ def _bluez_variant_value(value: object, signature: str) -> object:
     return value.value
 
 
-async def _identity_has_connected_link(selected: PairedPrinter) -> bool:
+async def _identity_has_connected_link(
+    selected: PairedPrinter, objects_provider: BluezObjectsProvider | None = None
+) -> bool:
     """Return true when any BlueZ device matching the identity reports ``Connected=yes``.
 
     Used to gate the proactive bond reset (docs/plans/031): the bond must only be removed when the
@@ -655,13 +672,44 @@ async def _identity_has_connected_link(selected: PairedPrinter) -> bool:
     ``_disconnect_bluez_link_for_identity``.
     """
 
-    addresses = await _bluez_addresses_for_identity(selected, include_selected_address=True)
+    if objects_provider is not None:
+
+        async def scoped_snapshot() -> object:
+            objects = await objects_provider()
+            # Unlike silent-link lookup, an authoritative negative here permits
+            # destructive bond removal. Require a known single controller even
+            # when BlueZ returns no devices during adapter/daemon startup.
+            if (
+                not isinstance(objects, dict)
+                or sum(
+                    isinstance(interfaces, dict) and "org.bluez.Adapter1" in interfaces
+                    for interfaces in objects.values()
+                )
+                != 1
+            ):
+                raise ValueError("unknown BlueZ bond-gate adapter scope")
+            return objects
+
+        try:
+            # The agent already owns a system bus. One bounded, fresh snapshot can
+            # check every IOS/ANDROID identity without starting devices/info
+            # subprocesses. Unknown properties or adapter scope still use the
+            # established CLI gate before any bond-removal command is issued.
+            return bool(await _connected_bluez_addresses_from_dbus(selected, scoped_snapshot))
+        except Exception:
+            LOGGER.debug("bluetooth.bond_gate_snapshot_unavailable", exc_info=True)
+    addresses = await _bluez_addresses_for_identity(
+        selected, include_selected_address=True, require_success=True
+    )
     for address in addresses:
         # Short timeout: this gate runs on the drop edge, just before the immediate reconnect, so a
         # momentarily-busy BlueZ must not stall it (a timeout raises and the caller skips removal,
         # falling back to the dormant auto_rebond). bluetoothctl info normally returns sub-second.
         info_result = await _run_bluetoothctl("info", address, check=False, timeout_seconds=4)
-        if _info_bool(parse_device_info(info_result.output), "Connected"):
+        connected = parse_device_info(info_result.output).get("Connected", "").casefold()
+        if info_result.returncode != 0 or connected not in {"yes", "true", "no", "false"}:
+            raise PrinterPairingError("Unable to confirm BlueZ link state before bond reset")
+        if connected in {"yes", "true"}:
             return True
     return False
 
@@ -720,9 +768,12 @@ async def _run_bluetoothctl(
     )
     try:
         stdout, _stderr = await asyncio.wait_for(process.communicate(), timeout=timeout_seconds)
+    except asyncio.CancelledError:
+        await _kill_and_reap_bluetoothctl(process)
+        raise
     except TimeoutError as exc:
-        process.kill()
-        await process.wait()
+        if await _kill_and_reap_bluetoothctl(process):
+            raise asyncio.CancelledError from exc
         raise PrinterPairingError(f"bluetoothctl {' '.join(args)} timed out") from exc
 
     output = clean_bluetoothctl_output(stdout.decode(errors="replace"))
@@ -730,6 +781,24 @@ async def _run_bluetoothctl(
     if check and result.returncode != 0:
         raise PrinterPairingError(_last_relevant_line(output, "bluetoothctl failed"))
     return result
+
+
+async def _kill_and_reap_bluetoothctl(process: asyncio.subprocess.Process) -> bool:
+    """Retain subprocess ownership through repeated cancellation until it is reaped."""
+    if process.returncode is None:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass
+    waiter = asyncio.create_task(process.wait())
+    interrupted = False
+    while not waiter.done():
+        try:
+            await asyncio.shield(waiter)
+        except asyncio.CancelledError:
+            interrupted = True
+    waiter.result()
+    return interrupted
 
 
 def _strip_bluetoothctl_prefix(line: str) -> str:

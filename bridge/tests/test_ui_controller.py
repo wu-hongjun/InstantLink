@@ -1314,7 +1314,8 @@ async def test_poll_waits_for_silent_link_recovery_before_fetching(
 
 
 @pytest.mark.asyncio
-async def test_cancelled_poll_does_not_cancel_silent_link_recovery() -> None:
+@pytest.mark.parametrize("owner_attribute", ["_auto_rebond_task", "_silent_link_recovery_task"])
+async def test_cancelled_poll_does_not_cancel_shared_link_recovery(owner_attribute: str) -> None:
     printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
     provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
     ui = BridgeUi(
@@ -1330,7 +1331,8 @@ async def test_cancelled_poll_does_not_cancel_silent_link_recovery() -> None:
     async def recover() -> None:
         await release.wait()
 
-    ui._silent_link_recovery_task = asyncio.create_task(recover())
+    owner = asyncio.create_task(recover())
+    setattr(ui, owner_attribute, owner)
     poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
     try:
         await asyncio.sleep(0)
@@ -1338,11 +1340,11 @@ async def test_cancelled_poll_does_not_cancel_silent_link_recovery() -> None:
         poll.cancel()
         with pytest.raises(asyncio.CancelledError):
             await poll
-        assert not ui._silent_link_recovery_task.done()
+        assert not owner.done()
         assert provider.close_calls == 1
     finally:
         release.set()
-        await ui._silent_link_recovery_task
+        await owner
 
 
 class _DisconnectWatcher:
@@ -1481,6 +1483,10 @@ async def test_disconnect_event_poll_preserves_bounded_retries_with_fake_clock(
     assert provider.close_cached_calls == 1
     assert watcher.disarmed == [0]
     assert not ui._printer_disconnect_pending
+    assert isinstance(ui._pairer, _FakePairer)
+    # One startup gate and one event gate. The failed first reconnect must not
+    # repeat cleanup, and duplicate signals cannot expand the recovery budget.
+    assert len(ui._pairer.reset_bond_calls) == 2
 
 
 @pytest.mark.asyncio
@@ -1513,6 +1519,101 @@ async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_sta
         assert watcher.disarmed == [0]
         assert watcher.names == ["INSTAX-12345678"]
     finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("link_still_connected", [False, True])
+async def test_disconnect_event_checks_bond_after_close_before_first_reconnect(
+    monkeypatch: pytest.MonkeyPatch, link_still_connected: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    order: list[str] = []
+
+    class Provider(_FakeStatusProvider):
+        async def close_cached_session(self) -> None:
+            order.append("close")
+            await super().close_cached_session()
+
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            order.append("fetch")
+            assert order == ["close", "gate", "fetch"]
+            raise asyncio.CancelledError
+
+    class Pairer(_FakePairer):
+        async def reset_bond_if_disconnected(self, printer: PairedPrinter) -> bool:
+            order.append("gate")
+            assert order == ["close", "gate"]
+            return await super().reset_bond_if_disconnected(printer)
+
+    async def sleep(_delay: float) -> None:
+        return
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    provider = Provider()
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    pairer = Pairer([printer])
+    pairer.link_is_connected = link_still_connected
+    ui._pairer = pairer
+    ui._printer_was_online = True
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    watcher.callbacks[0]()
+    with pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(printer, ui._status_generation)
+    assert pairer.reset_bond_calls == [printer]
+    assert pairer.removed_bonds == ([] if link_still_connected else [printer])
+    assert ui.snapshot.paired_printer == printer
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("superseded", [False, True])
+async def test_disconnect_event_bond_gate_cancellation_or_generation_change_prevents_fetch(
+    monkeypatch: pytest.MonkeyPatch, superseded: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    class Pairer(_FakePairer):
+        async def reset_bond_if_disconnected(self, printer: PairedPrinter) -> bool:
+            assert provider.close_cached_calls == 1
+            entered.set()
+            await release.wait()
+            ui._status_generation += 1
+            return False
+
+    async def sleep(_delay: float) -> None:
+        return
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    ui._pairer = Pairer([printer])
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    watcher.callbacks[0]()
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await entered.wait()
+        assert provider.fetch_calls == 0
+        if superseded:
+            release.set()
+            await poll
+        else:
+            poll.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await poll
+            assert ui._proactive_bond_reset_task is not None
+            assert ui._proactive_bond_reset_task.cancelled()
+        assert provider.fetch_calls == 0
+        assert provider.close_calls == 1
+    finally:
+        release.set()
         poll.cancel()
         with suppress(asyncio.CancelledError):
             await poll
@@ -3466,11 +3567,195 @@ async def test_proactive_bond_reset_guard_prevents_overlap() -> None:
     ui._proactive_bond_reset_task = asyncio.create_task(_blocking_reset())
     await started.wait()
 
-    await ui._maybe_reset_bond_on_drop(printer)
+    joiner = asyncio.create_task(ui._maybe_reset_bond_on_drop(printer))
+    await asyncio.sleep(0)
+    assert not joiner.done()
     assert pairer.reset_bond_calls == []
 
     release.set()
+    await joiner
     await ui._proactive_bond_reset_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancel_child", [False, True])
+@pytest.mark.parametrize(
+    "owner_attribute",
+    ["_proactive_bond_reset_task", "_auto_rebond_task", "_silent_link_recovery_task"],
+)
+async def test_replacement_poll_joins_old_bond_cleanup_before_fetch(
+    cancel_child: bool, owner_attribute: str
+) -> None:
+    printer = PairedPrinter(address="INSTANTLINK:1N034655", name="INSTAX-1N034655")
+    pairer = _FakePairer([printer])
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _make_auto_rebond_ui(printer, pairer, provider)
+    started = asyncio.Event()
+    cleanup_started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def old_reset() -> None:
+        started.set()
+        try:
+            await asyncio.Future[None]()
+        except asyncio.CancelledError:
+            cleanup_started.set()
+            await release.wait()
+            if cancel_child:
+                raise
+
+    old = asyncio.create_task(old_reset())
+    setattr(ui, owner_attribute, old)
+    await started.wait()
+    old.cancel()
+    await cleanup_started.wait()
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await asyncio.sleep(0)
+        assert provider.fetch_calls == 0
+        release.set()
+        await asyncio.wait_for(provider.fetch_started.wait(), 1)
+        assert old.done()
+        fresh_gate = cancel_child or owner_attribute != "_proactive_bond_reset_task"
+        assert pairer.reset_bond_calls == ([printer] if fresh_gate else [])
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+        with suppress(asyncio.CancelledError):
+            await old
+
+
+@pytest.mark.asyncio
+async def test_cancelled_bond_gate_waiter_preserves_existing_recovery_owner() -> None:
+    printer = PairedPrinter(address="INSTANTLINK:1N034655", name="INSTAX-1N034655")
+    pairer = _FakePairer([printer])
+    ui = _make_auto_rebond_ui(printer, pairer, _FakeStatusProvider())
+    release = asyncio.Event()
+    started = asyncio.Event()
+
+    async def recover() -> None:
+        started.set()
+        await release.wait()
+
+    owner = asyncio.create_task(recover())
+    ui._proactive_bond_reset_task = owner
+    await started.wait()
+    waiter = asyncio.create_task(ui._maybe_reset_bond_on_drop(printer))
+    try:
+        await asyncio.sleep(0)
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        assert not owner.done()
+        assert pairer.reset_bond_calls == []
+    finally:
+        release.set()
+        await owner
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "owner_attribute",
+    ["_proactive_bond_reset_task", "_auto_rebond_task", "_silent_link_recovery_task"],
+)
+@pytest.mark.parametrize("cancel_print", [False, True])
+async def test_print_handoff_joins_mutating_recovery_cleanup(
+    tmp_path: Path, owner_attribute: str, cancel_print: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def mutate() -> None:
+        started.set()
+        try:
+            await asyncio.Future[None]()
+        except asyncio.CancelledError:
+            cleaning.set()
+            await release.wait()
+            raise
+
+    owner = asyncio.create_task(mutate())
+    setattr(ui, owner_attribute, owner)
+    await started.wait()
+    printing = asyncio.create_task(
+        ui.printing_started(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.2"))
+    )
+    try:
+        await cleaning.wait()
+        assert not printing.done()
+        assert ui.snapshot.mode is not UiMode.PRINTING
+        watcher.callbacks[0]()
+        assert not ui._printer_disconnect_pending
+        if cancel_print:
+            printing.cancel()
+            await asyncio.sleep(0)
+            printing.cancel()
+            await asyncio.sleep(0)
+            assert not printing.done()
+            assert not owner.done()
+        release.set()
+        if cancel_print:
+            with pytest.raises(asyncio.CancelledError):
+                await printing
+            assert ui.snapshot.mode is not UiMode.PRINTING
+        else:
+            await printing
+            assert ui.snapshot.mode is UiMode.PRINTING
+        assert owner.done()
+    finally:
+        release.set()
+        printing.cancel()
+        with suppress(asyncio.CancelledError):
+            await printing
+        with suppress(asyncio.CancelledError):
+            await owner
+
+
+@pytest.mark.asyncio
+async def test_print_handoff_cleanup_timeout_aborts_print_and_retains_mutator(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from instantlink_bridge.ui import controller
+
+    monkeypatch.setattr(controller, "UI_TASK_CANCEL_BUDGET_S", 0.001)
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def mutate() -> None:
+        started.set()
+        try:
+            await asyncio.Future[None]()
+        except asyncio.CancelledError:
+            cleaning.set()
+            await release.wait()
+            raise
+
+    owner = asyncio.create_task(mutate())
+    ui._proactive_bond_reset_task = owner
+    await started.wait()
+    try:
+        with pytest.raises(TimeoutError, match="Printer recovery cleanup timed out"):
+            await ui.printing_started(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.2"))
+        assert cleaning.is_set()
+        assert ui.snapshot.mode is not UiMode.PRINTING
+        assert not owner.done()
+        assert ui._proactive_bond_reset_task is owner
+    finally:
+        release.set()
+        with suppress(asyncio.CancelledError):
+            await owner
 
 
 @pytest.mark.asyncio

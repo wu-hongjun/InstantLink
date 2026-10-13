@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 from dbus_fast import Message, MessageType, Variant
@@ -407,3 +408,208 @@ async def test_instantlink_selector_provider_preserves_cached_backend_when_offli
         backend=Backend(), bluez_objects_provider=provider
     )
     assert not await selector.disconnect_bluez_link(SELECTED)
+
+
+class BondBackend:
+    def __init__(self) -> None:
+        self.disconnect_calls = 0
+
+    async def scan(self, _timeout_s: float = 1.0) -> list[str]:
+        return []
+
+    async def disconnect(self) -> None:
+        self.disconnect_calls += 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("native_selector", [False, True])
+@pytest.mark.parametrize("connected", [False, True])
+async def test_bond_reset_snapshot_gate_preserves_live_alias_and_removal_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    native_selector: bool,
+    connected: bool,
+) -> None:
+    store = pairing.SelectedPrinterStore(tmp_path / "printer.json")
+    store.save(SELECTED)
+    backend = BondBackend()
+    queries = 0
+
+    async def provider() -> object:
+        nonlocal queries
+        queries += 1
+        # The old IOS address is down; the Android identity can still be live.
+        return objects(
+            device(connected=False), device(OTHER_ADDRESS, "INSTAX-1N034655(ANDROID)", connected)
+        )
+
+    calls: list[tuple[str, ...]] = []
+
+    async def command(*args: str, **_kwargs: object) -> pairing._CommandResult:
+        calls.append(args)
+        if args == ("devices",):
+            return pairing._CommandResult(0, f"Device {ADDRESS} INSTAX-1N034655(IOS)")
+        assert args == ("remove", ADDRESS)
+        assert backend.disconnect_calls == 0
+        return pairing._CommandResult(0, "")
+
+    monkeypatch.setattr(pairing, "_run_bluetoothctl", command)
+    pairer: pairing.PrinterPairer
+    if native_selector:
+        pairer = pairing.InstantLinkPrinterSelector(
+            store=store, backend=backend, bluez_objects_provider=provider
+        )
+    else:
+        pairer = pairing.BluetoothctlPrinterPairer(store=store, bluez_objects_provider=provider)
+    assert await pairer.reset_bond_if_disconnected(SELECTED) is not connected
+    assert queries == 1
+    assert calls == ([] if connected else [("devices",), ("remove", ADDRESS)])
+    assert backend.disconnect_calls == int(native_selector and not connected)
+    assert store.load() == SELECTED
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure", ["unavailable", "unknown_connected", "multiple_adapters", "empty", "no_adapter"]
+)
+async def test_bond_gate_snapshot_failure_uses_cli_before_authorizing_removal(
+    monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    snapshot = objects(device())
+    if failure == "unknown_connected":
+        properties = device()
+        properties.pop("Connected")
+        snapshot = objects(properties)
+    elif failure == "multiple_adapters":
+        snapshot["/org/bluez/hci1"] = {"org.bluez.Adapter1": {}}
+    elif failure == "empty":
+        snapshot = {}
+    elif failure == "no_adapter":
+        snapshot.pop(ADAPTER)
+
+    async def provider() -> object:
+        if failure == "unavailable":
+            raise OSError("bus unavailable")
+        return snapshot
+
+    calls: list[tuple[str, ...]] = []
+
+    async def command(*args: str, **_kwargs: object) -> pairing._CommandResult:
+        calls.append(args)
+        if args == ("devices",):
+            return pairing._CommandResult(0, f"Device {ADDRESS} INSTAX-1N034655(IOS)")
+        assert args == ("info", ADDRESS)
+        return pairing._CommandResult(0, "Connected: yes")
+
+    monkeypatch.setattr(pairing, "_run_bluetoothctl", command)
+    pairer = pairing.BluetoothctlPrinterPairer(bluez_objects_provider=provider)
+    assert not await pairer.reset_bond_if_disconnected(SELECTED)
+    assert calls == [("devices",), ("info", ADDRESS)]
+
+
+@pytest.mark.asyncio
+async def test_bond_gate_cancellation_never_falls_back_or_removes_bond(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    entered = asyncio.Event()
+
+    async def provider() -> object:
+        entered.set()
+        return await asyncio.Future[object]()
+
+    async def forbidden(*_args: str, **_kwargs: object) -> pairing._CommandResult:
+        raise AssertionError("cancelled bond gate cannot issue CLI commands")
+
+    monkeypatch.setattr(pairing, "_run_bluetoothctl", forbidden)
+    pairer = pairing.BluetoothctlPrinterPairer(bluez_objects_provider=provider)
+    task = asyncio.create_task(pairer.reset_bond_if_disconnected(SELECTED))
+    await entered.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+@pytest.mark.asyncio
+async def test_bond_gate_timeout_falls_back_and_keeps_live_bond(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_timeout = asyncio.timeout
+    timeouts: list[float | None] = []
+
+    def short_timeout(delay: float | None) -> asyncio.Timeout:
+        timeouts.append(delay)
+        return original_timeout(0.001)
+
+    async def provider() -> object:
+        return await asyncio.Future[object]()
+
+    calls: list[tuple[str, ...]] = []
+
+    async def command(*args: str, **_kwargs: object) -> pairing._CommandResult:
+        calls.append(args)
+        if args == ("devices",):
+            return pairing._CommandResult(0, f"Device {ADDRESS} INSTAX-1N034655(IOS)")
+        assert args == ("info", ADDRESS)
+        return pairing._CommandResult(0, "Connected: yes")
+
+    monkeypatch.setattr(pairing.asyncio, "timeout", short_timeout)
+    monkeypatch.setattr(pairing, "_run_bluetoothctl", command)
+    pairer = pairing.BluetoothctlPrinterPairer(bluez_objects_provider=provider)
+    assert not await pairer.reset_bond_if_disconnected(SELECTED)
+    assert timeouts == [2.0]
+    assert calls == [("devices",), ("info", ADDRESS)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["devices_error", "info_error", "missing", "unknown"])
+async def test_bond_gate_unknown_cli_state_cannot_authorize_removal(
+    monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    async def provider() -> object:
+        return {}
+
+    calls: list[tuple[str, ...]] = []
+
+    async def command(*args: str, **_kwargs: object) -> pairing._CommandResult:
+        calls.append(args)
+        if args == ("devices",):
+            return pairing._CommandResult(
+                int(failure == "devices_error"), f"Device {ADDRESS} INSTAX-1N034655(IOS)"
+            )
+        assert args == ("info", ADDRESS)
+        output = "Connected: unknown" if failure == "unknown" else ""
+        return pairing._CommandResult(int(failure == "info_error"), output)
+
+    backend = BondBackend()
+    monkeypatch.setattr(pairing, "_run_bluetoothctl", command)
+    selector = pairing.InstantLinkPrinterSelector(backend=backend, bluez_objects_provider=provider)
+    with pytest.raises(pairing.PrinterPairingError, match="Unable to confirm"):
+        await selector.reset_bond_if_disconnected(SELECTED)
+    assert not any(args[0] == "remove" for args in calls)
+    assert backend.disconnect_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_bond_gate_cli_skips_absent_old_address_but_checks_renamed_exact_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    selected = PairedPrinter(address=ADDRESS, name=SELECTED.name)
+    inventory = [f"Device {OTHER_ADDRESS} INSTAX-1N034655(ANDROID)", f"Device {ADDRESS} Renamed"]
+    calls: list[tuple[str, ...]] = []
+
+    async def command(*args: str, **_kwargs: object) -> pairing._CommandResult:
+        calls.append(args)
+        if args == ("devices",):
+            return pairing._CommandResult(0, inventory[0])
+        assert args[0] == "info"
+        return pairing._CommandResult(
+            0, "Connected: no" if args[1] == OTHER_ADDRESS else "Connected: yes"
+        )
+
+    monkeypatch.setattr(pairing, "_run_bluetoothctl", command)
+    assert not await pairing._identity_has_connected_link(selected)
+    assert calls == [("devices",), ("info", OTHER_ADDRESS)]
+    inventory.pop(0)
+    calls.clear()
+    assert await pairing._identity_has_connected_link(selected)
+    assert calls == [("devices",), ("info", ADDRESS)]

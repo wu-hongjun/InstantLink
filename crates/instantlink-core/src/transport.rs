@@ -174,7 +174,6 @@ pub const DEFAULT_PHYSICAL_DISCONNECT_TIMEOUT: Duration = DEFAULT_DISCONNECT_TIM
 
 /// Timeout to wait for the listener task to exit gracefully after cancellation.
 const LISTENER_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
-#[cfg(target_os = "linux")]
 const MTU_DISCOVERY_TIMEOUT: Duration = Duration::from_secs(1);
 #[cfg(target_os = "linux")]
 static MTU_BUS_OPEN: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(1);
@@ -829,6 +828,39 @@ async fn negotiated_write_mtu(
     None
 }
 
+/// Read already-published MTU metadata while the notification listener settles.
+/// The minimum settle interval is unchanged, including on platforms without MTU
+/// metadata. If publication races the early query, retry after that interval;
+/// both queries share the original settle-plus-discovery budget. No query or
+/// resource task survives cancellation of this setup future.
+async fn settle_and_read_mtu<Q, F>(mut query: Q) -> Option<u16>
+where
+    Q: FnMut() -> F,
+    F: Future<Output = Option<u16>>,
+{
+    let settle = Duration::from_millis(200);
+    let deadline = tokio::time::Instant::now() + settle + MTU_DISCOVERY_TIMEOUT;
+    let (_, early_mtu) = tokio::join!(
+        tokio::time::sleep(settle),
+        tokio::time::timeout_at(deadline, query())
+    );
+    if tokio::time::Instant::now() >= deadline {
+        return early_mtu.ok().flatten();
+    }
+    let early_mtu = early_mtu.ok().flatten();
+    match early_mtu {
+        // ATT's default MTU may be published before the exchange completes.
+        // Refresh it after settling, but keep the known small limit if that
+        // query fails rather than replacing it with the larger legacy fallback.
+        Some(23) | None => tokio::time::timeout_at(deadline, query())
+            .await
+            .ok()
+            .flatten()
+            .or(early_mtu),
+        Some(mtu) => Some(mtu),
+    }
+}
+
 fn diagnostic_command_allowed(command: &Command) -> bool {
     matches!(
         command,
@@ -1092,10 +1124,8 @@ impl BleTransport {
         });
         let mut listener_guard = AbortOnDrop(Some(handle));
 
-        // Brief delay to let the BLE connection stabilize
-        tokio::time::sleep(Duration::from_millis(200)).await;
-
-        let negotiated_mtu = negotiated_write_mtu(&peripheral, &write_char).await;
+        let negotiated_mtu =
+            settle_and_read_mtu(|| negotiated_write_mtu(&peripheral, &write_char)).await;
         let payload_size = protocol::fragment_payload_size(negotiated_mtu, conservative);
         let diagnostic_payload_size =
             protocol::diagnostic_fragment_payload_size(negotiated_mtu, conservative);
@@ -1587,6 +1617,139 @@ mod tests {
             properties: btleplug::api::CharPropFlags::empty(),
             descriptors: std::collections::BTreeSet::new(),
         }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn mtu_metadata_lookup_overlaps_but_preserves_minimum_settle() {
+        let queries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let mtu = settle_and_read_mtu(|| async {
+            queries.fetch_add(1, Ordering::Relaxed);
+            tokio::time::sleep(Duration::from_millis(75)).await;
+            Some(247)
+        })
+        .await;
+        assert_eq!(mtu, Some(247));
+        assert_eq!(queries.load(Ordering::Relaxed), 1);
+        assert_eq!(started.elapsed(), Duration::from_millis(200));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn mtu_publication_race_retries_only_after_settle() {
+        let queries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let mtu = settle_and_read_mtu(|| async {
+            let attempt = queries.fetch_add(1, Ordering::Relaxed);
+            if attempt == 0 {
+                assert_eq!(started.elapsed(), Duration::ZERO);
+                None
+            } else {
+                assert_eq!(started.elapsed(), Duration::from_millis(200));
+                tokio::time::sleep(Duration::from_millis(25)).await;
+                Some(247)
+            }
+        })
+        .await;
+        assert_eq!(mtu, Some(247));
+        assert_eq!(queries.load(Ordering::Relaxed), 2);
+        assert_eq!(started.elapsed(), Duration::from_millis(225));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn default_att_mtu_is_refreshed_but_never_replaced_by_larger_fallback() {
+        for late_mtu in [Some(247), None] {
+            let queries = AtomicUsize::new(0);
+            let started = tokio::time::Instant::now();
+            let mtu = settle_and_read_mtu(|| async {
+                if queries.fetch_add(1, Ordering::Relaxed) == 0 {
+                    Some(23)
+                } else {
+                    assert_eq!(started.elapsed(), Duration::from_millis(200));
+                    late_mtu
+                }
+            })
+            .await;
+            assert_eq!(mtu, late_mtu.or(Some(23)));
+            assert_eq!(queries.load(Ordering::Relaxed), 2);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn slower_mtu_query_finishes_within_original_budget_without_extra_settle() {
+        let started = tokio::time::Instant::now();
+        let mtu = settle_and_read_mtu(|| async {
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            Some(247)
+        })
+        .await;
+        assert_eq!(mtu, Some(247));
+        assert_eq!(started.elapsed(), Duration::from_millis(300));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn mtu_missing_or_unavailable_retains_safe_fallback_and_one_total_budget() {
+        let queries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let mtu = settle_and_read_mtu(|| async {
+            queries.fetch_add(1, Ordering::Relaxed);
+            tokio::time::sleep(MTU_DISCOVERY_TIMEOUT).await;
+            None
+        })
+        .await;
+        assert_eq!(mtu, None);
+        assert_eq!(queries.load(Ordering::Relaxed), 2);
+        assert_eq!(started.elapsed(), Duration::from_millis(1200));
+
+        let started = tokio::time::Instant::now();
+        assert_eq!(settle_and_read_mtu(|| async { None }).await, None);
+        assert_eq!(started.elapsed(), Duration::from_millis(200));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancelling_mtu_setup_drops_query_without_background_work() {
+        struct QueryDrop<'a>(&'a AtomicUsize);
+        impl Drop for QueryDrop<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_sub(1, Ordering::Relaxed);
+            }
+        }
+        for cancel_after in [50, 300] {
+            let active = AtomicUsize::new(0);
+            let queries = AtomicUsize::new(0);
+            let result = tokio::time::timeout(
+                Duration::from_millis(cancel_after),
+                settle_and_read_mtu(|| async {
+                    let attempt = queries.fetch_add(1, Ordering::Relaxed);
+                    if cancel_after == 300 && attempt == 0 {
+                        return None;
+                    }
+                    active.fetch_add(1, Ordering::Relaxed);
+                    let _owned = QueryDrop(&active);
+                    std::future::pending::<Option<u16>>().await
+                }),
+            )
+            .await;
+            assert!(result.is_err());
+            assert_eq!(active.load(Ordering::Relaxed), 0);
+            assert_eq!(
+                queries.load(Ordering::Relaxed),
+                usize::from(cancel_after == 300) + 1
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn wedged_early_mtu_query_is_bounded_without_starting_late_retry() {
+        let queries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let mtu = settle_and_read_mtu(|| async {
+            queries.fetch_add(1, Ordering::Relaxed);
+            std::future::pending::<Option<u16>>().await
+        })
+        .await;
+        assert_eq!(mtu, None);
+        assert_eq!(queries.load(Ordering::Relaxed), 1);
+        assert_eq!(started.elapsed(), Duration::from_millis(1200));
     }
 
     #[tokio::test(start_paused = true)]

@@ -147,6 +147,16 @@ adapter topology or unavailable/invalid data uses the existing CLI lookup. Empty
 snapshots require no discovery commands. Disconnect rules, scan cadence and recovery cooldown
 are unchanged; cancellation does not disconnect the shared agent.
 
+Before a proactive bond reset, the Bridge checks all matching connected identities using a
+fresh, bounded snapshot on that same agent bus. Exactly one known adapter is required; unknown
+connection state, incomplete scope, ambiguous topology or unavailable data uses the established
+CLI gate. A live identity prevents bond removal. Removal commands and their ordering are unchanged.
+
+Native notification setup overlaps the read-only MTU lookup with its existing 200 ms settling
+interval. Missing metadata or the default ATT MTU is refreshed after settling within the
+original total budget; known small limits are retained on refresh failure. No initial command
+can start before settling, and fragment fallback, print bytes and command pacing are preserved.
+
 Native Linux discovery uses fresh bulk BlueZ metadata to skip clearly unrelated
 cached devices. Possible Printers retain their existing property and connection
 checks. Invalid or unavailable metadata falls back to those checks; scan cadence,

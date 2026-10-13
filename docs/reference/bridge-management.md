@@ -146,6 +146,12 @@ checks. Invalid or unavailable metadata falls back to those checks; scan cadence
 unfiltered advertisements and saved-Printer reconnect behavior are preserved.
 The extra reader has a bounded query budget and owns its separate bus resource.
 
+The pairing agent tracks BlueZ owner changes on its existing bus and registers
+again after a daemon restart. If the agent manager or selected adapter appears
+late, its interface-added event retries registration. These watches do not poll
+while ready. Owner changes invalidate stale registration and snapshot results;
+shutdown removes its matches and waits for owned tasks to finish.
+
 Network readiness uses addresses from administratively enabled interfaces. An interface that
 is down can retain its IPv4 address; that address no longer suppresses hotspot recovery or
 appears in Bonjour advertisement candidates. Carrier is not required for dormant interfaces.

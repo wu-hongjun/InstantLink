@@ -20,5 +20,13 @@
     "Normal precommit doctest link exhausted Mac disk space; cargo clean of task-owned workspace package build artifacts freed space; retry required."
   ],
   "boundary": "No physical film/image commands. CPU benchmarks are observations, not energy/runtime claims.",
-  "kernel_to_ui_cases": 11
+  "kernel_to_ui_cases": 11,
+  "bridge_tests": 1672,
+  "bridge_warnings": "27 expected host GPIO fallback/deprecation warnings",
+  "mypy_source_files": 67,
+  "agent_focused_tests": 83,
+  "agent_hardware_restarts": 3,
+  "agent_recovery_kernel_ui_cases": 11,
+  "agent_source_sha256": "7f4c9dfb8864a457c6273d9082755841aa8615c0e4ce51b908fb8068b25e9b33",
+  "source_hardware_candidate": "Three actual daemon restarts, same Bridge process and agent bus; automatic registration <1.01s, all locked600/camera-ready. Separate Printer-status acceptance, not three Printer reconnects."
 }

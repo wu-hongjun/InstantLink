@@ -1,0 +1,24 @@
+{
+  "scope": "Complete current-boot Bridge and manager service journals; raw records private. No kernel-journal claim.",
+  "records": 2592,
+  "normal_bridge_pid": 16829,
+  "normal_bridge_severity": {
+    "INFO": 32
+  },
+  "candidate_observer_pid": 15365,
+  "candidate_observer_severity": {
+    "INFO": 225,
+    "WARNING": 25,
+    "ERROR": 1
+  },
+  "historical_faults": "Prior task faults remain in full journal; no reclassification.",
+  "current_task_observations": [
+    "Initial candidate power-return command timed out; subsequent status succeeded automatically.",
+    "Controlled external Device1 disconnect caused BLE status/disconnect errors; 65-second deadline failed; later status recovered automatically.",
+    "Controlled Bluetooth daemon restart caused transient BLE errors and absence; 180-second deadline failed. No radio/power cause established.",
+    "Temporary UI press at startup was correctly ignored by startup_settle; later eleven cases passed.",
+    "Production agent_unregister_failed at candidate shutdown: DBusError Does Not Exist, proving lost registration after daemon restart. Event-driven lifecycle repair required before completion."
+  ],
+  "normal_application_warning_error_lines": [],
+  "no_film": true
+}

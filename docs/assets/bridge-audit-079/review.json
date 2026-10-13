@@ -24,5 +24,19 @@
     "non-atomic metadata updates observed next poll",
     "retained RSSI is not liveness proof",
     "cached selected adapter does not support replacement at another hci index"
+  ],
+  "agent_source_sha256": "7f4c9dfb8864a457c6273d9082755841aa8615c0e4ce51b908fb8068b25e9b33",
+  "agent_tests_sha256": "71628c72d0fcd3722ec17632f5595a9032b8414d4945f7e4de6794c8f51e8738",
+  "agent_focused_tests": 83,
+  "agent_review_blockers": 0,
+  "agent_covered": [
+    "unique-owner registration after daemon replacement",
+    "late AgentManager and selected-adapter readiness",
+    "exact signal filtering and no device-event traffic",
+    "partial registration retry",
+    "stale generation and snapshot rejection",
+    "startup/connect cancellation cleanup",
+    "owned shielded shutdown cleanup",
+    "no polling while ready"
   ]
 }

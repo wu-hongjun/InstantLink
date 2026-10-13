@@ -85,3 +85,50 @@ boundary at their final collection time.
   concern. INFO logs do not establish a radio cause or an exact delay breakdown.
   Short forced-disconnect recovery is not claimed; status-lock/retry latency remains
   a separate optimization candidate.
+
+## Recovery defect found by hardware testing
+
+The 180-second Bluetooth daemon restart check did not pass. The later shutdown
+journal showed `bluetooth.agent_unregister_failed`, ending in BlueZ `Does Not Exist`.
+The process still held `_registered=True` even though the restarted daemon had lost
+its pairing agent. This is a concrete lifecycle defect, separate from the unproven
+radio cause of individual status failures. The full service log capture contains
+2592 records; the temporary candidate process has 225 INFO, 25 WARNING and one ERROR.
+The error is a production agent lifecycle error, not an observer writer failure.
+
+Extend this work with event-driven owner tracking on the existing Python agent bus.
+An awaited match rule and handler precede the initial owner query. Registration uses
+fresh proxies addressed to the current unique owner, owned bounded retry tasks and
+checks after awaits. Owner loss clears readiness immediately. Shutdown removes its
+handler/tasks, unregisters the current partial/full registration, and closes its bus;
+BlueZ's expected missing-agent reply is handled narrowly. No idle polling or process
+launches are added. Test daemon absence/return, repeated signals, partial registration,
+owner/stop races and snapshot reply freshness, then rerun the real restart gate.
+
+The native optimization itself is clean **a8b637c**, pushed and installed. Native FFI
+SHA-256 `fdd47eaddb35f630534b5f250c8810515c5c14ac0ad5a68fa46a83f46f185973`;
+CLI `3744699d034ab1870e563bbca2c3aad88aff43f0485097ae6bf929595d051cee`.
+Both baseline and candidate ELF comments identify Rust 1.97.1 and the same compiler
+and linker versions. Installed normal PID16829 / manager16827 are active, NRestarts0,
+dark600MHz, FTP220/200 and no current application WARNING/ERROR; Printer offline
+at that capture. A fresh installed Printer check and agent-recovery deployment remain.
+
+## Agent repair acceptance
+
+- Independent review passed **83** focused Python cases. Full Bridge suite **1672**,
+  Ruff and strict mypy **67** source files passed; the 27 test warnings are expected
+  host GPIO fallback/deprecation warnings. Cancellation review caught cleanup gaps
+  before deployment; owned shielded cleanup and tests resolve them. Late interface
+  readiness is event-driven after a bounded retry window, avoiding permanent polling.
+- Candidate actual Pi: **three** Bluetooth daemon restarts re-registered the agent
+  in **1.000 / 0.774 / 0.782 s** from command start, same PID17231 and same Python
+  bus connection. Every observed state remained locked600MHz and camera-ready;
+  registration tasks were empty afterward. These are agent-registration timings,
+  not three Printer reconnect timings. Eleven kernel-to-UI cases passed again.
+- The installed native firmware found the Printer after the later user power-on,
+  dark600MHz. Its retained transient BLE warnings are in the evidence; rapid
+  dead-link teardown remains a separate optimization. The agent repair adds no
+  idle polling, dependency or public contract changes; native artifacts stay a8b637c.
+- [D-Bus match-rule contract](https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules)
+  supports exact object-path filters with `arg0path`; `arg0` only matches strings.
+  The implementation also validates the exact body path and current unique sender.

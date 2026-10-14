@@ -1,0 +1,472 @@
+{
+  "baseline": "a952cb88048c56ec6e83f0da18347b4fb3eed744",
+  "candidate_sha256": "608d52b29c5b4aad4c116fd0e63111b4f6155dfa81e26ab2fe679513ac17af1a",
+  "pillow_version": "11.3.0",
+  "duration_seconds": 5.009245667024516,
+  "checks": [
+    {
+      "label": "all_16777216_rgb_values",
+      "bytes": 33554432,
+      "sha256": "67320994e853fd614d1f25e7bdc096bb0c1f9b769b7b51b4e27aaa940a13e24c",
+      "error": null
+    },
+    {
+      "label": "mode_1",
+      "bytes": 182,
+      "error": null,
+      "sha256": "795849d3d783aa1eceaa0d9543d17df138f2c4790b0ae1f056f310dd794ae6cc"
+    },
+    {
+      "label": "mode_L",
+      "bytes": 182,
+      "error": null,
+      "sha256": "97022e486ecd37df3aaf39361d6ae533919abc0ebbc0987056cea90ba10f778d"
+    },
+    {
+      "label": "mode_P",
+      "bytes": 182,
+      "error": null,
+      "sha256": "6a121b226de80742cd350ff8deb2636ff7d92617f1cf85b122bca2f880e5544f"
+    },
+    {
+      "label": "mode_RGB",
+      "bytes": 182,
+      "error": null,
+      "sha256": "928f42a1afff4b11e4c66dfffc47062c5a06f6387a422f1472f60e46d0e36ff2"
+    },
+    {
+      "label": "mode_RGBA",
+      "bytes": 182,
+      "error": null,
+      "sha256": "ccee24a26c122786b2d92149e7c5efbf931509f43d93d8903e6240ff1415e953"
+    },
+    {
+      "label": "mode_RGBX",
+      "bytes": 182,
+      "error": null,
+      "sha256": "e902c534ca84b4a5f407567109b2abac4c4f0c901ca43e44721493cfe171bf0f"
+    },
+    {
+      "label": "mode_CMYK",
+      "bytes": 182,
+      "error": null,
+      "sha256": "121d7798233807cd1fe7d1b8ad23378096de8622768462d3b5160b12a75b003a"
+    },
+    {
+      "label": "mode_YCbCr",
+      "bytes": 182,
+      "error": null,
+      "sha256": "d74d05321401a5d3ad2da9080c5bacb351dc4559cc00b07a0491f2cd1655f61a"
+    },
+    {
+      "label": "mode_I",
+      "bytes": 182,
+      "error": null,
+      "sha256": "c19e6b804da88c47d7d53c306bcb7bd3c1623167523721aa1ba76f3b8a321483"
+    },
+    {
+      "label": "mode_F",
+      "bytes": 182,
+      "error": null,
+      "sha256": "0fa172697163761f54fe6baa7b75039687693e928709014c97479ceabe7c485a"
+    },
+    {
+      "label": "mode_LA",
+      "bytes": 182,
+      "error": null,
+      "sha256": "7d2bcffc9fa3fed24b140035f6cea61623050bce4a67b3693147e651eeabcb6a"
+    },
+    {
+      "label": "mode_PA",
+      "bytes": 182,
+      "error": null,
+      "sha256": "e78c7d5c7e8f1bef1522569eacfdd629f7445a29170dd58441ff24e624d611f6"
+    },
+    {
+      "label": "mode_HSV",
+      "bytes": 182,
+      "error": null,
+      "sha256": "05863af0f35f050c61738f5f2a8bcd964c6d0167917f74adf5da30704dd94c65"
+    },
+    {
+      "label": "mode_LAB",
+      "bytes": 182,
+      "error": null,
+      "sha256": "0184e9f6df0a05dfdfde202f4c4b9189e541eeef0a9d9465d9df7c65d13c361f"
+    },
+    {
+      "label": "mode_I;16",
+      "bytes": 182,
+      "error": null,
+      "sha256": "c6a903270b44169190ff2a58ca07523821b0bd1534c2f36577be04ffb80d89ee"
+    },
+    {
+      "label": "mode_I;16B",
+      "bytes": 182,
+      "error": null,
+      "sha256": "839ff1fe6a7c3aae2f833dac7e302f2da1a1748c650bf20cda9c5fe8d3f99901"
+    },
+    {
+      "label": "mode_I;16L",
+      "bytes": 182,
+      "error": null,
+      "sha256": "c6a903270b44169190ff2a58ca07523821b0bd1534c2f36577be04ffb80d89ee"
+    },
+    {
+      "label": "size_(0, 0)",
+      "bytes": 0,
+      "error": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "size_(0, 5)",
+      "bytes": 0,
+      "error": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "size_(5, 0)",
+      "bytes": 0,
+      "error": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "size_(1, 1)",
+      "bytes": 2,
+      "error": null,
+      "sha256": "029cb8b70c437776de7f42efc3273d96502c0b103c356b1c990ac18e977fb42d"
+    },
+    {
+      "label": "size_(3, 5)",
+      "bytes": 30,
+      "error": null,
+      "sha256": "591ab16b42790721159e8acdaba347738f86552886a7b64ce91f08abc8995d10"
+    },
+    {
+      "label": "size_(239, 241)",
+      "bytes": 115198,
+      "error": null,
+      "sha256": "0e1ae7fa690fb9a1a46df2f7890325330505ac51a31d4c22e3fa33b74a328bbc"
+    },
+    {
+      "label": "size_(321, 241)",
+      "bytes": 154722,
+      "error": null,
+      "sha256": "96dff9087336e20b69d6f6ae8961a751acd4dcb3b1f55c0eda30cc180c8443e3"
+    },
+    {
+      "label": "size_(1, 70000)",
+      "bytes": 140000,
+      "error": null,
+      "sha256": "bb13b779ef2b521b3ca5e9eec1d039ab424bcbaf1ec41bedd7cfc7c618bec797"
+    },
+    {
+      "label": "size_(70000, 1)",
+      "bytes": 140000,
+      "error": null,
+      "sha256": "bdfc08f2302cf0bfcd2aa1264278e2bf3fc08c9e677e5271b2ba78b87d9a9761"
+    },
+    {
+      "label": "array_reverse",
+      "bytes": 15554,
+      "error": null,
+      "sha256": "d7f4f66b8a0efbdc6f0b1a22730dd2d77fd2812a9e6d09d5551e6a86a17474c9"
+    },
+    {
+      "label": "array_transpose",
+      "bytes": 15554,
+      "error": null,
+      "sha256": "240d08caaa2b25d1d6f29973de2908140d99439e46ac3c5a7494d77a162f0a55"
+    },
+    {
+      "label": "array_strided",
+      "bytes": 2652,
+      "error": null,
+      "sha256": "26081c7dd43c13eea5088abf1058ff4397873aaf996dc4c63e6cf4773782066c"
+    },
+    {
+      "label": "snapshot_light_booting",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "a0a219224b66c4105b2f78f4949154d6767f6822fc7cd2b84e38c74a19d666d4"
+    },
+    {
+      "label": "snapshot_light_unlocking",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "0a3e44413c3e0e0ac5c8dfa0498d72be97f9a2d92bfc96f91a27663a104aec9d"
+    },
+    {
+      "label": "snapshot_light_settings",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "e936dbef3ac7ae3db01529e66eeeede29ccc7e978ab1643a9e0f90a30a2ef2bb"
+    },
+    {
+      "label": "snapshot_light_adjustment_edit",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "5bee5daeba387ec3873ef2466c4106df9fddc45bbcee16648d6b5921d63865b4"
+    },
+    {
+      "label": "snapshot_light_needs_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "4c7d8c8f73eea0115237e9900a105ee7a3db38620727a781dc45d74fc6f952e7"
+    },
+    {
+      "label": "snapshot_light_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "50b868e589e4f6e57241505261bd6329709cddc42869957d4e4f245e1bd1d4d1"
+    },
+    {
+      "label": "snapshot_light_printer_searching",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "739f24d228da0c86a27aa7ae11d8977bc9d01c801d39e006ea368ea4bcab5c71"
+    },
+    {
+      "label": "snapshot_light_printer_offline",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "db7165f7b9ad161ed5c3cfa6d0ef4bc911b06950d21b03a4b60a70d7b3d6a89d"
+    },
+    {
+      "label": "snapshot_light_validation",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "73c06873a70c452256b08f9c30c283281f83769ebdc1f2e6454a2fc2183882f0"
+    },
+    {
+      "label": "snapshot_light_ready",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "67666ed7e7a6b4f99676906decf25b8a5182c10406ea3798de6ba95f10f49ff7"
+    },
+    {
+      "label": "snapshot_light_no_film",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "548c6a3989898910b4ce73a29acafa8571b2bd3a602489d19a8166558d9efc5d"
+    },
+    {
+      "label": "snapshot_light_image_received",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "03573d64b980531e9af13c1d1ca0ee1bc47e97a8ffd251860bcbb4fa3d1899f0"
+    },
+    {
+      "label": "snapshot_light_awaiting_confirm",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "005b5b15efcfe9aa832cd7248653216af43894d6aa448278b874ae2c383e4c0a"
+    },
+    {
+      "label": "snapshot_light_printing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "36867effb930526b967c12f031bb5458ec72d8cc8c0fb251e44c75b65da6817b"
+    },
+    {
+      "label": "snapshot_light_print_complete",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "1c28748eb506de4ca9bf77ef42fc7cb0689252d5e3fdc80fd48b2a993a37364a"
+    },
+    {
+      "label": "snapshot_light_pair_failed",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "dfb65f50585f91e4612b558773f0cfa3e84b55876b4b79f9ea4e077951e99f4b"
+    },
+    {
+      "label": "snapshot_light_error",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "b77fd7ef985f6a83e46696d3ceee30eece5649258781fe1696af08adee2b1e2b"
+    },
+    {
+      "label": "snapshot_light_confirmation_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "a1df6b4a2d4f2a6f5b4b9f552f315aac33033c62c6f71e3461f662f92a64cfd0"
+    },
+    {
+      "label": "snapshot_light_help_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "e35a72be4d24e5da8170498a1b6ae82c6b3e9fc02e31b547bb20ad4d04c1e6e6"
+    },
+    {
+      "label": "snapshot_light_sync_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "c1e1e7b4a3addfb5794329ab4d46dcd3e9090dfcac03bc549e212438c60c3a25"
+    },
+    {
+      "label": "snapshot_dark_booting",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "1a40f857ae498953851d6bc5bc0a2dcc4699a0822db7009ed50f018ccd2401ed"
+    },
+    {
+      "label": "snapshot_dark_unlocking",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "66cd4a0f97ebb5d29817b2f1a73c04384786982536dd2df507aa5f04a834edc4"
+    },
+    {
+      "label": "snapshot_dark_settings",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "03c7df900a633f362ded92e260ac6ee7311f72ffed7bd14d536c733f0960ef90"
+    },
+    {
+      "label": "snapshot_dark_adjustment_edit",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "fb056b8b47dd10330f4aa9dbb320a4bfa28b941d79c6c8bbaf94702430a927d9"
+    },
+    {
+      "label": "snapshot_dark_needs_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "90d3b2bbc272b3b28d4e2a717e3251a8e1e15b9c53c876f634f4aa445c4ec1de"
+    },
+    {
+      "label": "snapshot_dark_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "ed27a5adfece2409638a74fe52b60b34abf1718c6171b7707908fc317407078b"
+    },
+    {
+      "label": "snapshot_dark_printer_searching",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "3355b4fe4865f2ee44ffe34d56bfc4e8daae78b584ef3027ad5d82a1ba36f670"
+    },
+    {
+      "label": "snapshot_dark_printer_offline",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "1453ea00457c8625a3b8b4c9aceaccf12bbe4e23f89a5a40af66b1917c1126f8"
+    },
+    {
+      "label": "snapshot_dark_validation",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "b339c01afec466d3fac67c924cdf51a1493ae4f80ff831d3c377ca28ed8b8aa6"
+    },
+    {
+      "label": "snapshot_dark_ready",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "490b03b03f897007e2b084338e9cb88d65d9dee9fdab06dab71b7bcd92207254"
+    },
+    {
+      "label": "snapshot_dark_no_film",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "e9008d08367aef15adad1ac611b9cb8441211c6aae1b6cb59f6ecf58b731f973"
+    },
+    {
+      "label": "snapshot_dark_image_received",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "9e8651873aaf0a7090b9b7713adcd0260678dda9032d28647688bf656285bf3e"
+    },
+    {
+      "label": "snapshot_dark_awaiting_confirm",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "ec3117b462775ab08c5cb2ecfedd6aecbebbbf8c9323b719cc1cdd1a7ed5974b"
+    },
+    {
+      "label": "snapshot_dark_printing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "cecedfca25468d85251842f553330b38de7a1e8faf3937a02b842422c1b199e9"
+    },
+    {
+      "label": "snapshot_dark_print_complete",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "00333ff3a21f5c0d1fd44e8e4a8892a80e958b95d7e8d8e9740ff26abdce5e68"
+    },
+    {
+      "label": "snapshot_dark_pair_failed",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "fd50f3a0dbe577c8ed9bbfba412fd100114b5bf7eaa90ee68c299fed8480394b"
+    },
+    {
+      "label": "snapshot_dark_error",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "51803364a419516fa49e55f1d1ff98b009421782b1b3289e28f4c3432d40749f"
+    },
+    {
+      "label": "snapshot_dark_confirmation_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "8dbb2fdb7bd5add49f9eebad256b1873d10910c151cbddbcfb73b6cc835d6344"
+    },
+    {
+      "label": "snapshot_dark_help_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "346abd9e918be38b9fb64a410925d80026d1132ad1f2f6563dcfa8d7b574e9bc"
+    },
+    {
+      "label": "snapshot_dark_sync_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "59d7de0cdf7977a78b5a6e1f18d59cdb880f89dfbbc828b48e2171b7a80df4f4"
+    },
+    {
+      "label": "64_concurrent_calls_8_threads",
+      "passed": true
+    }
+  ],
+  "source_review_blockers": [],
+  "source_review": {
+    "packing": "Every RGB colour and five routes (scalar,oldPillow,dispatch,newNumPy,fallbackPillow) exact little-endian truncation; zero dimensions and nonRGB modes preserve return/error parity. No caller mutation.",
+    "memory": "Only per-call RGB bytes/output/scratch; no global mutable arrays. Previously measured519650bytes traced peak at240x240 and760bytes retained after1000calls. Imported NumPy resident memory measured separately by root.",
+    "concurrency": "64 concurrent calls over8threads byte-identical; UI frame drawing/write/backlight remain synchronous.",
+    "warmup": "Updated final delta: constructor creates no task; loading schedules only after first successful synchronous framebuffer write and backlight. Failed writes/backlight never schedule. Owned async task imports dependency in worker only, adopts immutable function only on live instance. Closed guard+task cancel prevent delayed swap; one ever-task prevents retries after failures/cancellation; no-loop retainsPillow. MissingNumPy quiet exact cached fallback; unexpected dependency failure logs once per display and staysPillow. Two independent blocked-worker cases preserved frame bytes, main-thread framebuffer I/O and20heartbeat yields.",
+    "startup": "Post-firstpaint scheduling avoids NumPy worker competition during initial draw. ActualPi startup/firstpack/input evidence remains pending."
+  },
+  "independent_tests": {
+    "count": 594,
+    "scope": "display/controller/render/textcache/unlock/GPIOinput/UIaboutconcurrency",
+    "log": "/tmp/instantlink-rgb565-independent-tests-088.log"
+  },
+  "lifecycle": {
+    "checks": [
+      {
+        "close_while_warming": false,
+        "main_thread_framebuffer_writes": true,
+        "warmup_never_writes_frame": true,
+        "old_and_new_bytes_identical": true,
+        "20_heartbeat_yields_while_blocked_import": true
+      },
+      {
+        "close_while_warming": true,
+        "main_thread_framebuffer_writes": true,
+        "warmup_never_writes_frame": true,
+        "old_and_new_bytes_identical": true,
+        "20_heartbeat_yields_while_blocked_import": true
+      }
+    ]
+  },
+  "fallback": {
+    "fallback_import_failure_exact_and_cached": true,
+    "eager_numpy_import_absent": true,
+    "1000_packs_retained_bytes": 760,
+    "240x240_peak_tracemalloc_bytes": 519650,
+    "allocation_model": "3N immutable RGB source + 2N output + 2N scratch + 2N returned bytes, RGB conversion image temporary; no global frame buffers"
+  },
+  "quantization_validation_sha256": "901c4042ae375e61697b76ce099b6baf071b04e96960c3c3655b1a85159a96fe",
+  "quantization_implementation_unchanged_in_final_delta": true
+}

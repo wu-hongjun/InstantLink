@@ -1,0 +1,20 @@
+{
+  "scope": "Installed source status-only validation after user turned Printer on. No image/print commands or manual Reconnect. Candidate Printer-off timeout retained; availability-inclusive waits are not boot/setup benchmark.",
+  "film_used": 0,
+  "candidate_status_wait": {
+    "passed": false,
+    "error": "No fresh startup status within100s while Printer not advertising; user laterturned on; no candidate reconnectrun."
+  },
+  "installed": {
+    "successful_status_attempt_s": 3.442864217009628,
+    "availability_inclusive_first_to_ready_s": 243.45887480300735,
+    "periodic_fresh": true,
+    "reconnect_passed": true,
+    "recovered_s": 11.649239371006843,
+    "observations": 31,
+    "all_locked600": true,
+    "all_camera_ready": true,
+    "final_fresh": true,
+    "final_connected": true
+  }
+}

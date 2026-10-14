@@ -1,5 +1,47 @@
 # Current Bridge Context
 
+## RGB565 packing deployed, 2026-10-13
+
+Plan088: clean Python **398dde5** installed; native b2b6c8c unchanged (FFI SHA256
+`9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031`).
+
+- Optional existing NumPy packs exact little-endian RGB565 with local uint16 output/scratch.
+  Original Pillow fallback, conversion, quantization and order preserved. No dependency,
+  native/C ABI/config/schema change, shared mutable buffers or asynchronous frame queue.
+- First successful paint/backlight finishes before one owned background preload starts.
+  Closing prevents late swaps; missing NumPy keeps quiet fallback, other load failures warn
+  once. No-loop boot splash stays Pillow. Review fixed provisional import contention.
+- Settled actual framebuffer: 18 equivalent 1000 MHz frames per variant, exact hashes.
+  Median total **14.121 → 7.905 candidate / 7.784 ms installed**, packing 9.852 → 3.186 / 3.311 ms,
+  rendering thread CPU 13.772 → 7.513 / 7.479 ms (45.7% lower installed). Changed-frame
+  measurements do not establish whole-device idle CPU, energy or battery runtime.
+- First frame 129.009/128.165/149.037 ms, same pixels; candidate/installed loading starts after
+  paint and finishes ~1.486/1.468s later. Warm service ExecStart-to-first 2.729/2.758/2.398s
+  with prebaked bytecode/pagecache warm; no cold-power-on speed claim. Standalone NumPy import
+  531ms and ~15.4 MiB peak RSS increase retained. Settled samples replace preliminary trials.
+- Independent 16,777,216-colour arithmetic oracle is unchanged by final scheduling delta;
+  71 additional checks, 594 affected tests and lifecycle probes pass. Producer 63/runtime 122
+  tests pass. Normal 1956 Bridge tests (27 existing warnings), Ruff/touched formatting,
+  strict mypy 67 modules and strict docs pass.
+- All 11 kernel GPIO mockup cases per variant pass through production input/controller and
+  actual LCD: debounce, held/rapid, same-button triple unlock, mixed-button reset, nonblank
+  wake, 10s timeout, awake 1000/locked 600 MHz. Physical GPIOv2 input retained; contacts not
+  actuated and queue timing is descriptive, excluding contact/scanout.
+- Printer-off candidate 100s status timeout retained. After the user turned it on, installed
+  successful status 3.443s then fresh periodic reads; 243.459s availability-inclusive wait is
+  not startup timing. Automatic recovery 11.649s, all 31 observations locked at 600 MHz and
+  camera-ready, final fresh connected status. No manual Reconnect/image/print commands/film.
+- Final normal 22:14:50 EDT PID43539/manager43015 active, zero restarts, connected, 600 MHz
+  powersave, 44.008°C/throttle0x0/GPIO24low/GPIOv2/FTP220+200/hotspot/USB healthy; clean exact
+  source/native hashes. Owned fixtures including bytecode removed. Independent source,
+  candidate, installed and final health/log/cleanup gates accepted.
+- Full boot 14728 records/146 matched: 144 historical plus two baseline requested-restart
+  status-worker cancellation warnings, no accompanying grace-expired/worker-stuck faults.
+  Provisional/final candidate/installed/normal logs have no matched issues. Historical
+  panic/CRITICAL/systemd faults retained; raw journals private.
+- Evidence docs/plans/088-bridge-rgb565-packing.md and assets/bridge-audit-088. Current changed
+  frame costs: ~3.3ms packing, ~2.7ms drawing, ~1ms backlight, excluding physical scanout.
+
 ## LCD text/layout drawing deployed, 2026-10-13
 
 Plan087: clean Python **06bbe86** installed; native b2b6c8c unchanged (FFI SHA256

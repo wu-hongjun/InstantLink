@@ -60,5 +60,8 @@
       "cpu_khz": 1000000
     }
   ],
-  "scope": "Normal installed service reboot; core/UI/FTP timings from kernel monotonic clock, excludes firmware latency. No input injected. Fresh status may be absent if Printer unavailable. SSH CPU sampling begins after SSH availability, not guaranteed during interpreter imports. No image/print/actuator commands."
+  "scope": "Normal installed service reboot; core/UI/FTP timings from kernel monotonic clock, excludes firmware latency. No input injected. Fresh status may be absent if Printer unavailable. SSH CPU sampling begins after SSH availability, not guaranteed during interpreter imports. No image/print/actuator commands.",
+  "boot_to_receive_ready_s": 20.177862,
+  "boot_to_first_discovery_policy_s": 15.01313,
+  "boot_to_ffi_loaded_s": 14.291217
 }

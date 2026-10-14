@@ -1,4 +1,4 @@
-# Earlier startup performance and saved-Printer lookup
+# Faster saved-Printer lookup during startup
 
 ## Scope
 
@@ -12,9 +12,6 @@ pre-kernel firmware latency and do not establish a matched radio-availability co
 
 ## Changes
 
-- Apply the existing privileged CPU `performance` helper before the Python entry point imports.
-  The systemd pre-start command is nonfatal and cannot prompt. Existing stop cleanup restores
-  `ondemand`, including failed startup; the application continues to own awake/locked/job tiers.
 - Use the agent's fresh BlueZ object snapshot to resolve selected cached identities and trust
   state. Already trusted devices need no CLI inventory/trust process. Matching untrusted devices
   retain the existing trust command. An authoritative absent device has nothing to trust; the
@@ -23,6 +20,7 @@ pre-kernel firmware latency and do not establish a matched radio-availability co
   not launch fallback work. Startup bond reset and live-link protection remain unchanged.
 
 No new configuration field, API payload, native ABI, native artifact or system security policy.
+The existing service launch, CPU tiers, stop cleanup and LCD/FTP startup dependencies remain.
 
 ## Evidence and review
 
@@ -47,3 +45,14 @@ strict mypy. The race correction additionally passed 137 agent/pairing tests. A 
 baseline reboot of `0d79921` reached UI 14.045 s, FTP 14.036 s and core 14.059 s; the Printer was
 not advertising, so that run establishes no connected-time baseline. The attempted connected
 baseline timed out before any reboot because no fresh Printer status was available.
+
+## Rejected early CPU boost
+
+The first candidate also tried a nonfatal `ExecStartPre` call to the existing CPU performance
+helper before Python imports. The normal reboot comparison showed no clear benefit: UI
+14.045→14.306 s, FTP14.036→14.916 s, core14.059→14.930 s and receive-ready20.178→20.437 s.
+Process-start→import completion improved only 3.350→3.110 s; startup variation and the added
+pre-start process offset the isolated import result. Existing firmware `initial_turbo=30` may
+also make the hook redundant, but its effect on frequency during imports was not measured.
+Independent evidence review recommended rejecting this additional startup dependency. The
+pre-start hook and its two tests were removed; existing application CPU policy is retained.

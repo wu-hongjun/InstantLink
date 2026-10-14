@@ -467,6 +467,36 @@ async def test_confirmed_gatt_or_authentication_failure_preserves_bond_recovery(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("detail", "suspected"),
+    [
+        (b"BLE error: connect failed: org.bluez.Error.AuthenticationFailed: bad key", True),
+        (b"BLE error: connect failed: Not connected", False),
+        (b"BLE error: connect failed: org.bluez.Error.AuthenticationFailedOther", False),
+        (b"BLE error: connect failed: other.org.bluez.Error.AuthenticationFailed", False),
+    ],
+)
+async def test_early_native_authentication_failure_requires_exact_error_token(
+    detail: bytes, suspected: bool
+) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 2, 3, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert captured.value.stale_bond_suspected is suspected
+
+
+def test_generic_python_authentication_text_is_not_native_authentication_evidence() -> None:
+    exc = InstantLinkBleError("org.bluez.Error.AuthenticationFailed", code=ERROR_BLE)
+    exc.connect_failure_stage = 3
+    assert not status_module._is_stale_bond_signature(exc)
+
+
+@pytest.mark.asyncio
 async def test_status_provider_flags_printer_not_found() -> None:
     # A connect that cannot find the printer in the advertisement scan must set printer_not_found
     # so the controller can recover the BlueZ silent-link deadlock by dropping the stale link.

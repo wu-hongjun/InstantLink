@@ -2,12 +2,12 @@
   "reviewer": "gatt_readiness_adversarial",
   "task": "092 Bluetooth GATT readiness after service restart",
   "scope": "Independent source review and local tests; no repository edits or hardware mutations",
-  "result": "Updated source review passed; latest Linux and live acceptance pending",
+  "result": "Final native and Python source review passed; post-refinement installed acceptance pending",
   "source_sha256": {
     "crates/instantlink-core/src/transport.rs": "a0c0d504fc241848928348181f78dbdf5207e22d879fd3ed435f9e17af05e304",
     "bridge/src/instantlink_bridge/ble/instantlink.py": "4813bf2b36ad7fd842b7a6ff6a1950703953a8fa3a6065bf27f9869171b61e4e",
-    "bridge/src/instantlink_bridge/ui/status.py": "a635595e7e3d2c1740bc827a764eedc69d5859546a71606365f8b5f25d2e0c85",
-    "bridge/tests/test_ui_status.py": "7e839558b76866e8c5729962134ce0e29c48bb3a0dba72f3a3adb4f838670b1f"
+    "bridge/src/instantlink_bridge/ui/status.py": "f82c6128f9e1b4b30ad421cd22e92046d951b1271cec0269230473d179616337",
+    "bridge/tests/test_ui_status.py": "2dc58ff6d27260ae3a982fbdd77ee2cbca61364584f6fe025f10696cce1d749e"
   },
   "checks": [
     {
@@ -39,6 +39,11 @@
       "area": "Image/status/native ownership boundaries",
       "result": "pass",
       "detail": "No image, protocol, status freshness, FFI session ownership or disconnect-listener implementation changes in reviewed diff."
+    },
+    {
+      "area": "Early canonical native authentication failures",
+      "result": "pass",
+      "detail": "Actual native Failed detail with BLE error prefix and exact org.bluez.Error.AuthenticationFailed token remains actionable before lookup. Regex excludes foreign namespaces/token suffixes; generic Python exception text is not native authentication evidence. Anchored uncertain-readiness errors without canonical authentication remain ordinary reconnect failures."
     }
   ],
   "resolved_findings": [
@@ -94,13 +99,18 @@
       "passed": 15,
       "failed": 0,
       "boundary": "Updated final guarded-cache candidate; Linux-only exact-device test excluded on host."
+    },
+    {
+      "command": "python -m pytest -q tests/test_ui_status.py tests/test_instantlink_initial_status.py",
+      "platform": "host Python virtual environment",
+      "passed": 66,
+      "failed": 0,
+      "boundary": "Final Python authentication refinement; added early canonical token/generic-drop/suffix/foreign namespace cases and Python-only text negative."
     }
   ],
   "outstanding_source_findings": [],
   "pending_acceptance": [
-    "Linux-specific compilation and execution for final guarded-cache candidate",
-    "Live service restart and locked automatic reconnect with fresh status and unchanged film count",
-    "Final installed source/native hashes and running-log review"
+    "Final Python authentication-refinement clean deployment/source hashes and normal-service acceptance; native and previously captured live validation passed unchanged."
   ],
   "hardware_mutations": false,
   "film_used": false,

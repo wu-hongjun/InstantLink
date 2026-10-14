@@ -1,0 +1,48 @@
+{
+  "source_commit": "6d61384c064e6a3110bf4f3642b4b941b4690d1f",
+  "linux_final_focused_gatt_tests": 16,
+  "linux_focused_failed": 0,
+  "linux_seconds": 0.03,
+  "full_core_previous_linux_tests": 227,
+  "full_core_current_host_tests": 212,
+  "bridge_tests": 2383,
+  "bridge_existing_warnings": 27,
+  "rust_workspace_fmt_clippy_tests": true,
+  "header_drift": true,
+  "ruff_strict_mypy": true,
+  "artifact_manifest": {
+    "artifacts": {
+      "instantlink": {
+        "sha256": "f1d325ac2fe436ee13b704183cd1ce9bc1490476c0e6080acbd7676d6631b21f",
+        "source_path": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release/instantlink"
+      },
+      "libinstantlink_ffi.so": {
+        "sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175",
+        "source_path": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release/libinstantlink_ffi.so"
+      }
+    },
+    "artifacts_dir": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release",
+    "built_at_utc": "2026-10-14T15:57:46Z",
+    "cargo": {
+      "command": "cargo zigbuild",
+      "locked": true,
+      "packages": [
+        "instantlink-ffi",
+        "instantlink-cli"
+      ],
+      "profile": "release"
+    },
+    "instantlink_workspace": {
+      "branch": "codex/bridge-battery-day",
+      "commit_sha": "6d61384c064e6a3110bf4f3642b4b941b4690d1f",
+      "dirty": false
+    },
+    "schema_version": 1,
+    "target_triple": "aarch64-unknown-linux-gnu"
+  },
+  "film_used": 0,
+  "boundary": "Final Linux16 GATT tests execute corrected reused/assisted cached-table guard, device-path conversion, actual deadline/future-drop checks on the Pi. FullLinux227 prior to final guarded-cache delta; no unnecessary rerun of unrelated tests.",
+  "final_focused_bridge_tests": 86,
+  "final_independent_focused_bridge_tests": 66,
+  "canonical_auth_refinement_review_passed": true
+}

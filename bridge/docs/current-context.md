@@ -1551,3 +1551,27 @@ no extra JPEG library is required on the Pi.
   readiness is a remaining follow-up, not fixed or attributed to the media alias profile.
   Final logs preserve five associated Bluetooth warnings plus one expected AP listener wait;
   GPU/media and vendor-IE errors0. Independent connected evidence review clear.
+
+
+## 2026-10-14 — Bluetooth GATT readiness after restart (plan092)
+
+- Native clean6d61384 installed: FFIb91cf3fd…ea1175 / CLIf1d325ac…31b21f. All67Python/native
+  hashes match. Prior native rollback artifacts retained privately on host. Wi-Fi backport and
+  root unused-media profile preserved. No C ABI/model/image/pacing changes.
+- Reused/CLI-assisted links now verify exact typed Connected/ServicesResolved even with complete
+  cached GATT exports. Ordinary successful btleplug connect retains healthy fast path. All lookup
+  probes/discovery/waits share real2s deadline; uncertainty/drop no longer appears as missingchar.
+- Python captures terminal native detail, resets phase on retries and avoids false bond removal;
+  canonical typed authentication errors preserve genuine pairing recovery before lookup too.
+- Two baseline/candidate warm restarts all pass: medians16.291→16.171s; first status attempt
+  medians3.532→3.540s. Small healthy samples do not establish speedup or reproduce old rare failure.
+- Locked automatic Disconnect recovery7.191s; all16samples locked600/camera-ready/samePID5266,
+  finalfresh/watch1/retired0. ExactLCD/triple-unlock1000/relock600/10s/pause-resume passed.
+  No film/actuator commands; physical contacts not actuated.
+- Normal unobserved restart fresh7.204s dispatch/4.811s app marker, warnings0; final5618/637
+  active0restarts, connected50% LinkSquare/600powersave/FTP220+200/GPIOv2/no fallback/throttle0x0.
+  Fullboot945service/378kernel records preserve historical6flags/expected10kernel notices;
+  currentcandidate/normalflags0,VCHI/vendorIE0. Normal and observer timings not interchangeable.
+- Three subagents/independent reviews passed; host2383Bridge/Ruff/strictmypy67, corrected212core/
+  workspacefmt/clippy/tests/headerdrift; Linuxfull227beforeguard plusfinal16GATT cases pass.
+  Final canonical-auth classifier refinement and its updated gate follow in plan092.

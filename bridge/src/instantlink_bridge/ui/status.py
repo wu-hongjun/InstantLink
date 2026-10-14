@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import re
 import time
 from collections.abc import Awaitable, Callable, Sequence
 from contextlib import suppress
@@ -598,6 +599,12 @@ def _is_stale_bond_signature(exc: InstantLinkBleError | TimeoutError) -> bool:
     if not isinstance(exc, InstantLinkBleError):
         return False
     detail = exc.connect_failure_detail or ""
+    if detail.startswith("BLE error: ") and re.search(
+        r"(?<![\w.])org\.bluez\.Error\.AuthenticationFailed(?![\w.])", detail
+    ):
+        # Service readiness can expose real authentication failure before lookup. Only the
+        # canonical error in native terminal progress is evidence, not generic Python text.
+        return True
     if detail.startswith(
         (
             "BLE error: GATT readiness not confirmed",
@@ -606,9 +613,7 @@ def _is_stale_bond_signature(exc: InstantLinkBleError | TimeoutError) -> bool:
     ):
         # A connected flag/empty incremental table or failed state RPC is not evidence of bad
         # pairing keys. Keep these native readiness failures on ordinary reconnect recovery.
-        # Preserve explicit BlueZ authentication failure returned by actual rediscovery.
-        _, marker, discovery_error = detail.partition("; last discovery error: ")
-        return bool(marker and "org.bluez.Error.AuthenticationFailed" in discovery_error)
+        return False
     stage = exc.connect_failure_stage
     return stage is not None and stage >= CONNECT_STAGE_STALE_BOND_MIN
 

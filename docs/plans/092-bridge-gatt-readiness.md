@@ -81,3 +81,37 @@ guard. Full normal host checks2383Bridge tests/27existingwarnings, Rustworkspace
 Ruff/strictmypy67 and FFIheaderdrift passed. One unchanged HIF descendant-timeout fixture failed
 under concurrent compilation; four affected cases then full normal gate passed unchanged.
 Corrected Linux guarded-path execution and live comparisons follow; no film used.
+
+## Live acceptance
+
+| Matched warm restart | Baseline (two runs) | Corrected candidate (two runs) |
+| --- | --- | --- |
+| Dispatch→fresh status |16.314/16.268s (median16.291)|16.127/16.215s (median16.171)|
+| First status attempt→fresh |3.461/3.604s (median3.532)|3.556/3.523s (median3.540)|
+
+Both cohorts started Connected/ServicesResolved and completed a subsequent fresh periodic poll.
+These small healthy samples show no established speedup and do not reproduce the earlier
+intermittent failure. Timings under the observer cannot be compared directly with normal service.
+Final Linux16GATT tests passed on the Pi, including complete-cache guard and deadline/cancellation;
+corrected host212core tests and full workspace gates passed. Native/source hashes match clean
+6d61384; FFIb91cf3fd…ea1175, CLI f1d325ac…31b21f.
+
+Status-only external Disconnect recovered automatically in **7.191s**, all16samples locked600MHz/
+samePID5266/camera-ready; invalid timestamps marked stale, fresh status restored watch1/retired0.
+Same-button triple unlock/exact nonblank LCD1000MHz, relock600,10s abandonment and status
+pause/resume/watch rearm passed. Physical switch contacts not actuated. Film0 unchanged.
+
+Normal service without observer restarted successfully: dispatch→observed fresh7.204s and
+boot-start marker→fresh4.811s, no warning/error records. Final PID5618/manager637 active with
+zero automatic restarts, connected50% LinkSquare,600MHz powersave/FTP220+200/GPIOv2/no fallback,
+throttle0x0. No cold-boot, physical-camera upload, battery or transport-speedup claim.
+
+Full available boot journals945service/378kernel records: six historical service flags belong
+to earlier manager/PID2626 scopes; no candidate/normal flags. Ten expected hardware/staging/
+backport notices remain, zero VCHI/media-null unregister and Wi-Fi vendor-IE errors. Raw journals
+private; independent source, Linux and live evidence reviews passed.
+
+Final review preserves canonical native org.bluez.Error.AuthenticationFailed recovery even at
+connect-stage3: actual authentication can fail before lookup under the readiness barrier. Generic
+early BLE errors, near-match error names and generic Python exception text do not authorize
+rebond. This final classifier refinement changes no native/image/healthy-connect path.

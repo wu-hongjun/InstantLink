@@ -48,6 +48,20 @@ mode or stopping the Bridge cancels recovery; Wired, Auto and Same Wi-Fi do not 
 The runtime rechecks saved configuration before activation, preserving network changes from
 the App even while its own runtime configuration awaits a restart.
 
+The root helper retains a healthy hotspot after verifying its selected profile, saved/applied
+settings and live address. A private per-boot activation stamp under
+`/run/InstantLinkBridge-wifi` also binds the PIN digest to the NetworkManager owner, activation
+and applied version. A first apply, changed credentials/settings, stale state or failed probe
+uses normal activation; a matching repeat avoids disconnecting camera clients. Root mode
+changes are serialized, and cancellation releases the owned command/lock. Diagnostic non-root
+calls retain the privileged activation path. Administrators can override the runtime directory
+with `INSTANTLINK_BRIDGE_WIFI_STATE_DIR`; it must be root-owned and private.
+
+WPS enrollment advertisement is disabled. Cameras continue to join using the saved SSID and
+8-digit WPA2 password; no camera settings change is required. This avoids the observed paired
+vendor-IE cleanup errors on subsequent AP transitions. It is a configuration correction rather
+than a replacement kernel/firmware. See plan 090 for the measured scope and remaining limits.
+
 The root Wi-Fi helper also handles a Pi SDIO firmware initialization failure: if `wlan0` is
 missing, it reloads `brcmfmac` and waits up to 10 seconds for the interface. A present interface
 is never reloaded. USB administration and Bluetooth are not restarted by this recovery.

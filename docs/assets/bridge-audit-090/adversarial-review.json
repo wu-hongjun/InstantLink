@@ -1,0 +1,15 @@
+{
+  "reviewer": "wifi_adversarial_review",
+  "final_helper_sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2",
+  "independent_targeted_tests": 76,
+  "implementation_targeted_tests": 110,
+  "findings_resolved": [
+    "Foreground PSK pipeline deferred main-shell TERM and retained mode lock; replaced with direct stdin redirection.",
+    "PSK permission/generation work under command substitution escaped main child ownership; preparation now occurs in main shell."
+  ],
+  "additional_root_finding_resolved": "Background root/sudo commands lost piped stdin to /dev/null; explicit input inheritance fixes stamp and generated PIN writes.",
+  "bash_syntax": "pass",
+  "ruff_check_and_format": "pass",
+  "remaining_source_findings": [],
+  "hardware_used_by_reviewer": false
+}

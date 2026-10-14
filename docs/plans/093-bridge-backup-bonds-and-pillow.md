@@ -72,3 +72,26 @@ retain root ownership. A regression test covers private presets and nested crede
 The independent ownership refinement review passed 92 focused tests with deprecations treated
 as errors. Repeat installed restore and normal runtime acceptance follow below; the initial
 integrity-only live result is preserved separately and is not final acceptance.
+
+Clean ownership refinement `1a0c4b2` passed all 2,432 Bridge tests and was installed. Repeated
+production backup/restore verified 28 files in 2.978/14.925 seconds from dispatch to reply.
+Private presets remained `ib`-owned, readable and mode 0600; contents, selection and native
+library remained unchanged. Both normal services were active with zero automatic restarts.
+PID 9078 had zero warnings/errors, locked 600 MHz/backlight low, FTP 220/200, no throttling,
+and no active backup worker. Isolated synthetic LTK/adapter identity restoration passed again.
+
+The installed Pi Pillow 11.3.0 passed the six-profile exact RGB pixel comparison with warnings
+treated as errors; no source pixels changed and no film was used.
+
+### Preserve active firmware provenance
+
+The final review identified another correctness issue: archives contain deployment fingerprints
+but no matching firmware/native binaries. Applying an older configuration backup must not
+overwrite the installed build's provenance. The broker now verifies the complete archive,
+including these contextual metadata files, then omits `.deployment` entries from the live apply
+plan. Counts and restored paths describe only applied files. Existing or absent deployment
+records remain unchanged; modified contextual metadata still fails integrity verification before
+services stop. Generic isolated-root archive restoration remains available for recovery tooling.
+
+The independent final source review passed 95 focused tests with deprecations treated as errors.
+The prior ownership live check predates this filter; final installed filtered-restore results follow.

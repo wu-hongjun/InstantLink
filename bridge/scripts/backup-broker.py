@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import time
+from dataclasses import replace
 from pathlib import Path
 
 # Provisioning copies backup.py alongside this script into a root-owned directory.
@@ -113,6 +114,17 @@ def _restore(backup_id: str, *, root: Path = Path("/")) -> dict[str, object]:
     if any(entry.path.split("/")[3] not in adapters for entry in bonds):
         raise BackupPathError("pairing backup belongs to a different Bluetooth adapter")
     plan = plan_backup_restore(archive, manifest, root=root, allow_live_root=True)
+    # Deployment fingerprints describe code/native artifacts, which this archive
+    # does not contain. Verify them as context, then preserve the running release.
+    plan = replace(
+        plan,
+        entries=tuple(
+            entry
+            for entry in plan.entries
+            if entry.path != "opt/InstantLinkBridge/.deployment"
+            and not entry.path.startswith("opt/InstantLinkBridge/.deployment/")
+        ),
+    )
     identities = [entry for entry in bonds if entry.path.endswith("/identity")]
     for identity in identities:
         target = root / identity.path

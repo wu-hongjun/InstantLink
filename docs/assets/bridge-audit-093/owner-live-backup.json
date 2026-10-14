@@ -1,0 +1,36 @@
+{
+  "film_used": 0,
+  "boundary": "Installed production backup client under manager-equivalent sandbox; identical local backup restore. Synthetic bonds restore into isolated temporary roots only. No image/print/actuator commands.",
+  "before_pid": 8369,
+  "create_dispatch_to_reply_s": 2.9779647899995325,
+  "live_backup": {
+    "verified": true,
+    "files": 28,
+    "selected_identity_included": true,
+    "bluez_files": 0,
+    "directory_private": true,
+    "artifacts_root_private": true
+  },
+  "restore_dispatch_to_reply_s": 14.925359786000627,
+  "live_restore": {
+    "private_presets_runtime_owned": true,
+    "private_presets_mode_0600": true,
+    "private_presets_runtime_readable": true,
+    "restored_count": 28,
+    "tracked_contents_unchanged": true,
+    "config_group_ib": true,
+    "selected_owner_ib": true
+  },
+  "synthetic_bond_roundtrip": {
+    "passed": true,
+    "key_bytes_identical": true,
+    "remote_and_adapter_identity_included": true,
+    "unrelated_device_excluded": true,
+    "restored_keys_0600_dirs_0700": true,
+    "temporary_roots_removed": true
+  },
+  "services": "MainPID=9078\nNRestarts=0\nActiveState=active\n\nMainPID=8053\nNRestarts=0\nActiveState=active\n",
+  "socket_state": "active",
+  "manager_no_new_privileges": "yes",
+  "passed": true
+}

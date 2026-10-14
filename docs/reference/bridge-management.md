@@ -32,6 +32,8 @@ identity is rejected if another saved device could be affected. The Bridge runti
 restore; BlueZ also stops and reloads when pairing state is restored. Previously active services
 are started again on completion or failure. Restored Bridge state remains writable by `ib`,
 while pairing files remain root-only. Old archives without pairing data remain supported.
+Deployment records are retained in the archive for context and integrity checks but are not
+applied during configuration restore: the current firmware and native fingerprints stay intact.
 
 ## Listener recovery
 

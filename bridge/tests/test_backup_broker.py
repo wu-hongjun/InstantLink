@@ -276,3 +276,71 @@ def test_private_config_files_restore_runtime_owner_and_secret_modes(
     assert stat.S_IMODE(restored_credential.parent.stat().st_mode) == 0o2770
     assert stat.S_IMODE(restored_credential.parent.parent.stat().st_mode) == 0o2770
     assert stat.S_IMODE((root / "etc/InstantLinkBridge/config.toml").stat().st_mode) == 0o660
+
+
+@pytest.mark.parametrize("current_metadata", [True, False])
+def test_live_restore_preserves_deployment_provenance_without_binaries(
+    broker: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, current_metadata: bool
+) -> None:
+    storage, root, _first = _archive(tmp_path)
+    source = tmp_path / "source"
+    old_metadata = source / "opt/InstantLinkBridge/.deployment/manifest.json"
+    old_metadata.parent.mkdir(parents=True)
+    old_metadata.write_text("old synthetic release fingerprints", encoding="utf-8")
+    created = backup.create_backup_archive(storage, root=source, backup_id="deployment-context")
+    assert any(
+        entry.path == old_metadata.relative_to(source).as_posix()
+        for entry in created.manifest.files
+    )
+    current = root / old_metadata.relative_to(source)
+    if current_metadata:
+        current.parent.mkdir(parents=True)
+        current.write_text("current synthetic release fingerprints", encoding="utf-8")
+    _restore_env(broker, monkeypatch, storage)
+    monkeypatch.setattr(broker.os, "fchown", lambda *args: None)
+    result = broker._restore(created.manifest.backup_id, root=root)
+    assert result["restore"]["restored_count"] == 4
+    assert str(current) not in result["restore"]["restored_paths"]
+    if current_metadata:
+        assert current.read_text(encoding="utf-8") == "current synthetic release fingerprints"
+    else:
+        assert not current.parent.exists()
+    assert (root / "etc/InstantLinkBridge/config.toml").is_file()
+    assert (root / "var/lib/bluetooth" / ADAPTER / PRINTER / "info").is_file()
+    assert (root / "var/lib/bluetooth" / ADAPTER / "identity").is_file()
+
+
+def test_skipped_deployment_metadata_remains_integrity_verified(
+    broker: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import io
+    import tarfile
+    from dataclasses import replace
+
+    storage, root, _first = _archive(tmp_path, bond=False)
+    source = tmp_path / "source"
+    metadata = source / "opt/InstantLinkBridge/.deployment/manifest.json"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text("old synthetic fingerprints", encoding="utf-8")
+    created = backup.create_backup_archive(storage, root=source, backup_id="tampered-metadata")
+    members: list[tuple[tarfile.TarInfo, bytes]] = []
+    with tarfile.open(created.archive_path, "r:gz") as container:
+        for member in container.getmembers():
+            handle = container.extractfile(member)
+            assert handle is not None
+            content = handle.read()
+            if member.name == metadata.relative_to(source).as_posix():
+                content = b"tampered synthetic fingerprint"
+                member.size = len(content)
+            members.append((member, content))
+    with tarfile.open(created.archive_path, "w:gz") as container:
+        for member, content in members:
+            container.addfile(member, io.BytesIO(content))
+    # Update the aggregate digest to exercise the skipped entry's individual hash.
+    altered = replace(created.manifest, archive_sha256=backup.sha256_file(created.archive_path))
+    created.manifest_path.write_text(altered.to_json(), encoding="utf-8")
+    calls = _restore_env(broker, monkeypatch, storage)
+    with pytest.raises(backup.BackupVerificationError):
+        broker._restore(created.manifest.backup_id, root=root)
+    assert calls == []
+    assert list(root.iterdir()) == []

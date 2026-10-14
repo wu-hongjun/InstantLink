@@ -1,0 +1,24 @@
+{
+  "pid": 9078,
+  "service_states": "MainPID=9078\nNRestarts=0\nActiveState=active\n\nMainPID=8053\nNRestarts=0\nActiveState=active",
+  "runtime_commit": "1a0c4b2d2d063d38077da682b81bcc014a24da0a",
+  "cpu_khz": 600000,
+  "governor": "powersave",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "throttle": "throttled=0x0",
+  "temperature": "temp=45.6'C",
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "runtime_log_records": 22,
+  "warning_error_messages": [],
+  "active_backup_workers": "",
+  "socket_active": "active",
+  "manager_no_new_privileges": "yes",
+  "file_sha256": {
+    "/usr/local/libexec/instantlink-bridge-backup/broker.py": "79afe95a660c57908a9de8aaf9eb19ad6a1e352c1e6e62e2f25ef2628d47dea5",
+    "/usr/local/libexec/instantlink-bridge-backup/backup.py": "e07149eee854c7ae4a11fe1ff7090b3e830a12aabfa943498b1ab7f5a775dc09",
+    "/opt/InstantLinkBridge/lib/libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+  },
+  "film_used": 0,
+  "boundary": "Current restored normal service; synthetic FTP greeting/NOOP via same-Pi hotspot address, no wireless airtime or image print."
+}

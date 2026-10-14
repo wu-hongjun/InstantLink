@@ -515,7 +515,10 @@ class BluezAgentService:
             ):
                 self._invalidate_device_cache()
                 return
-            relevant = {"Name", "Alias", "Connected", "Address", "Adapter"}
+            # Full-tree callers also use Trusted to avoid redundant writes. Even
+            # though the disconnect cache does not store it, a newer trust signal
+            # must prevent a pending older snapshot from being accepted.
+            relevant = {"Name", "Alias", "Connected", "Address", "Adapter", "Trusted"}
             if not (relevant.intersection(changed) or relevant.intersection(invalidated)):
                 return
             self._device_revision += 1

@@ -34,3 +34,16 @@ A controlled warm-cache fresh-process import probe on the Pi measured 2.584/2.59
 600 MHz powersave and 1.701/1.688 seconds with 1 GHz performance, in slow/fast/fast/slow order.
 This includes process/runuser startup, retains the production service and restores its original
 powersave tier. It isolates import cost; it is not a complete boot speedup measurement.
+
+The primary review found a trust-snapshot freshness race: device revision tracking covered
+connection and identity changes but omitted `Trusted`, which the new lookup consumes. A newer
+trust change/invalidation could therefore leave a pending older `Trusted=true` reply acceptable.
+The independent reviewer confirmed the issue. Trust signals now invalidate pending snapshots;
+two integration regressions require the bounded retry to return the fresh untrusted target while
+preserving the shared bus. No trust values are added to the compact disconnect-watch cache.
+
+Initial source gate passed 2,495 tests, eight expected host GPIO fallback warnings, Ruff and
+strict mypy. The race correction additionally passed 137 agent/pairing tests. A controlled normal
+baseline reboot of `0d79921` reached UI 14.045 s, FTP 14.036 s and core 14.059 s; the Printer was
+not advertising, so that run establishes no connected-time baseline. The attempted connected
+baseline timed out before any reboot because no fresh Printer status was available.

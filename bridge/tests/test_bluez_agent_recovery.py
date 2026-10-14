@@ -1217,3 +1217,54 @@ async def test_cache_does_not_share_mutable_snapshot_property_values(
     tree[DEVICE_PATH]["org.bluez.Device1"]["Connected"].value = False
     assert service._cached_watch_candidates("instax-52006924") == {DEVICE_PATH: True}
     await service.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalidated", [False, True])
+async def test_trust_change_during_snapshot_cannot_skip_required_trust(
+    monkeypatch: pytest.MonkeyPatch, invalidated: bool
+) -> None:
+    from instantlink_bridge.ui.models import PairedPrinter
+    from instantlink_bridge.ui.pairing import _untrusted_bluez_addresses_from_dbus
+
+    bus = FakeBus()
+    address = "FA:AB:BC:C7:95:64"
+    selected = PairedPrinter(address=address, name="INSTAX-52006924")
+
+    def tree(trusted: bool) -> dict[str, object]:
+        result = selected_tree()
+        result[module.DEFAULT_ADAPTER_PATH] = {"org.bluez.Adapter1": {}}
+        result[DEVICE_PATH]["org.bluez.Device1"].update(
+            {
+                "Address": Variant("s", address),
+                "Adapter": Variant("o", module.DEFAULT_ADAPTER_PATH),
+                "Trusted": Variant("b", trusted),
+            }
+        )
+        return result
+
+    bus.snapshot = tree(True)
+    service = install(monkeypatch, bus)
+    await service.start()
+    await service.managed_objects_snapshot()
+    bus.snapshot_wait = True
+    query = asyncio.create_task(
+        _untrusted_bluez_addresses_from_dbus(selected, service.managed_objects_snapshot)
+    )
+    await bus.entered.wait()
+    signal = connection_signal(bus)
+    signal.body[1:] = [{}, ["Trusted"]] if invalidated else [{"Trusted": Variant("b", False)}, []]
+    emit(bus, signal)
+    original_call = bus.call
+
+    async def refreshed_call(request: Message) -> Message:
+        bus.snapshot = tree(False)
+        return await original_call(request)
+
+    bus.call = refreshed_call
+    bus.release.set()
+    assert await query == [address]
+    # Seed, superseded read, fresh retry: the old Trusted=true reply was rejected.
+    assert tree_calls(bus) == 3
+    assert bus.disconnects == 0
+    await service.stop()

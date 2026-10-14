@@ -1003,9 +1003,12 @@ impl BleTransport {
                 }
             }
         }
+        let mut gatt_evidence = GattConnectionEvidence::Reused;
         if !already_connected {
             emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
-            if let Err(error) = peripheral.connect().await {
+            let connect_result = peripheral.connect().await;
+            gatt_evidence = GattConnectionEvidence::from_connect_result(&connect_result);
+            if let Err(error) = connect_result {
                 // A "connect failed: In Progress" here is the active-scan background connect still
                 // completing — do NOT cancel it; the next poll cycle finds it connected. Only fall
                 // back to bluetoothctl when BlueZ did not mark the device connected.
@@ -1030,7 +1033,9 @@ impl BleTransport {
             log::debug!("Initial service discovery failed: {}", e);
             Self::disconnect_quietly(&peripheral, None).await;
             emit_connect_progress(progress, ConnectStage::BleConnecting, None::<String>);
-            if let Err(connect_error) = peripheral.connect().await {
+            let connect_result = peripheral.connect().await;
+            gatt_evidence = GattConnectionEvidence::from_connect_result(&connect_result);
+            if let Err(connect_error) = connect_result {
                 if !peripheral.is_connected().await.unwrap_or(false) {
                     let _ = connect_with_bluez_cli(&peripheral).await;
                 }
@@ -1056,13 +1061,15 @@ impl BleTransport {
 
         emit_connect_progress(progress, ConnectStage::CharacteristicLookup, None::<String>);
         let mut chars = peripheral.characteristics();
-        if !has_instax_characteristics(&chars) {
-            // BlueZ exports characteristics incrementally, so a single discovery
-            // pass can race ahead of the OS and miss the Instax characteristics.
-            // Poll service discovery on a bounded loop until both are present,
-            // the link drops, or the resolve deadline elapses.
+        if gatt_evidence.requires_lookup(&chars) {
+            // BlueZ retains exported objects after ServicesResolved becomes false.
+            // Reused or CLI-assisted connections must confirm readiness even
+            // when the first discovery returns a complete cached table. A normal
+            // successful btleplug connect already awaited ServicesResolved.
+            // Missing exports on any route use the same bounded lookup.
             log::debug!(
-                "Instax characteristics missing after discovery; polling characteristic lookup. chars={}",
+                "Checking Instax GATT readiness: connection={:?} chars={}",
+                gatt_evidence,
                 format_characteristic_uuids(&chars)
             );
             chars = match resolve_instax_characteristics(
@@ -1073,6 +1080,7 @@ impl BleTransport {
                     })?;
                     Ok(peripheral.characteristics())
                 },
+                !gatt_evidence.services_resolved(),
                 CHARACTERISTIC_RESOLVE_TIMEOUT,
             )
             .await
@@ -1435,6 +1443,33 @@ impl BleTransport {
     }
 }
 
+/// Only a successful btleplug connect includes BlueZ's ServicesResolved barrier.
+/// Reuse and accepting Connected after a failed/CLI-assisted connect do not.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum GattConnectionEvidence {
+    Reused,
+    ResolvedConnect,
+    UnconfirmedConnect,
+}
+
+impl GattConnectionEvidence {
+    fn from_connect_result<T, E>(result: &std::result::Result<T, E>) -> Self {
+        if result.is_ok() {
+            Self::ResolvedConnect
+        } else {
+            Self::UnconfirmedConnect
+        }
+    }
+
+    fn services_resolved(self) -> bool {
+        matches!(self, Self::ResolvedConnect)
+    }
+
+    fn requires_lookup(self, chars: &std::collections::BTreeSet<Characteristic>) -> bool {
+        !self.services_resolved() || !has_instax_characteristics(chars)
+    }
+}
+
 /// A connection bit alone does not prove that BlueZ has exported a GATT table.
 /// Unknown state keeps the discovery fallback available without asserting link loss.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1494,12 +1529,14 @@ async fn gatt_readiness(peripheral: &Peripheral) -> GattReadiness {
     }
 }
 
-/// Retry only the setup metadata when the first discovery sees incomplete exports.
+/// Resolve setup metadata after incomplete exports or an unconfirmed connection.
+/// Guarded reuse/assisted paths require Ready before trusting even a complete table.
 /// Both futures and every sleep share one real deadline. Dropping this future
 /// drops its in-flight query; no background worker or connection task is spawned.
 async fn resolve_instax_characteristics<Q, QF, D, DF>(
     mut query: Q,
     mut discover: D,
+    require_ready: bool,
     timeout: Duration,
 ) -> Result<std::collections::BTreeSet<Characteristic>>
 where
@@ -1523,7 +1560,7 @@ where
                 "BLE link disconnected during GATT setup".into(),
             ));
         }
-        if state != GattReadiness::Pending {
+        if state != GattReadiness::Pending && (!require_ready || state == GattReadiness::Ready) {
             match tokio::time::timeout_at(deadline, discover()).await {
                 Ok(Ok(chars)) if has_instax_characteristics(&chars) => return Ok(chars),
                 Ok(Ok(chars)) => {
@@ -2531,6 +2568,122 @@ mod tests {
         let chars = resolve_instax_characteristics(
             || async { GattReadiness::Ready },
             || async { Ok(complete_instax_chars()) },
+            false,
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(has_instax_characteristics(&chars));
+        assert_eq!(started.elapsed(), Duration::ZERO);
+    }
+
+    #[test]
+    fn gatt_connect_outcomes_gate_complete_cached_exports() {
+        let complete = complete_instax_chars();
+        let incomplete = std::collections::BTreeSet::new();
+        assert!(GattConnectionEvidence::Reused.requires_lookup(&complete));
+        for error in [
+            "In Progress",
+            "service discovery timed out",
+            "CLI accepted Connected",
+        ] {
+            let connect_result: std::result::Result<(), &str> = Err(error);
+            let evidence = GattConnectionEvidence::from_connect_result(&connect_result);
+            assert!(evidence.requires_lookup(&complete));
+            assert!(evidence.requires_lookup(&incomplete));
+            assert!(!evidence.services_resolved());
+        }
+        // Also covers a successful internal reconnect after discovery failed:
+        // its fresh result replaces the earlier reuse/assisted evidence.
+        let connect_result: std::result::Result<(), &str> = Ok(());
+        let evidence = GattConnectionEvidence::from_connect_result(&connect_result);
+        assert!(!evidence.requires_lookup(&complete));
+        assert!(evidence.requires_lookup(&incomplete));
+        assert!(evidence.services_resolved());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_complete_cached_exports_cannot_bypass_pending_or_unknown_readiness() {
+        for state in [GattReadiness::Pending, GattReadiness::Unknown] {
+            let discoveries = AtomicUsize::new(0);
+            let started = tokio::time::Instant::now();
+            let error = resolve_instax_characteristics(
+                || async { state },
+                || async {
+                    discoveries.fetch_add(1, Ordering::Relaxed);
+                    Ok(complete_instax_chars())
+                },
+                true,
+                CHARACTERISTIC_RESOLVE_TIMEOUT,
+            )
+            .await
+            .unwrap_err();
+            assert!(error.to_string().contains("GATT readiness not confirmed"));
+            assert_eq!(started.elapsed(), CHARACTERISTIC_RESOLVE_TIMEOUT);
+            assert_eq!(discoveries.load(Ordering::Relaxed), 0);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_complete_cached_exports_wait_for_confirmed_ready_before_fresh_discovery() {
+        let queries = AtomicUsize::new(0);
+        let discoveries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let chars = resolve_instax_characteristics(
+            || async {
+                match queries.fetch_add(1, Ordering::Relaxed) {
+                    0 => GattReadiness::Pending,
+                    1 => GattReadiness::Unknown,
+                    _ => GattReadiness::Ready,
+                }
+            },
+            || async {
+                discoveries.fetch_add(1, Ordering::Relaxed);
+                assert_eq!(started.elapsed(), Duration::from_millis(600));
+                Ok(complete_instax_chars())
+            },
+            true,
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(has_instax_characteristics(&chars));
+        assert_eq!(discoveries.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_complete_cached_exports_cannot_hide_disconnect_during_readiness_wait() {
+        let queries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let error = resolve_instax_characteristics(
+            || async {
+                if queries.fetch_add(1, Ordering::Relaxed) == 0 {
+                    GattReadiness::Pending
+                } else {
+                    GattReadiness::Disconnected
+                }
+            },
+            || async { panic!("cached complete table must not bypass readiness") },
+            true,
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("BLE link disconnected during GATT setup")
+        );
+        assert_eq!(started.elapsed(), Duration::from_millis(300));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_guarded_ready_link_has_no_fixed_delay() {
+        let started = tokio::time::Instant::now();
+        let chars = resolve_instax_characteristics(
+            || async { GattReadiness::Ready },
+            || async { Ok(complete_instax_chars()) },
+            true,
             CHARACTERISTIC_RESOLVE_TIMEOUT,
         )
         .await
@@ -2557,6 +2710,7 @@ mod tests {
                 assert_eq!(started.elapsed(), Duration::from_millis(600));
                 Ok(complete_instax_chars())
             },
+            false,
             CHARACTERISTIC_RESOLVE_TIMEOUT,
         )
         .await
@@ -2570,6 +2724,7 @@ mod tests {
         let error = resolve_instax_characteristics(
             || async { GattReadiness::Disconnected },
             || async { panic!("disconnected link cannot rediscover") },
+            false,
             CHARACTERISTIC_RESOLVE_TIMEOUT,
         )
         .await
@@ -2587,6 +2742,7 @@ mod tests {
         let chars = resolve_instax_characteristics(
             || async { GattReadiness::Unknown },
             || async { Ok(complete_instax_chars()) },
+            false,
             CHARACTERISTIC_RESOLVE_TIMEOUT,
         )
         .await
@@ -2605,6 +2761,7 @@ mod tests {
                     discoveries.fetch_add(1, Ordering::Relaxed);
                     Ok(std::collections::BTreeSet::new())
                 },
+                false,
                 CHARACTERISTIC_RESOLVE_TIMEOUT,
             )
             .await
@@ -2629,6 +2786,7 @@ mod tests {
                 GattReadiness::Ready
             },
             || async { Ok([make_char(NOTIFY_CHAR_UUID)].into_iter().collect()) },
+            false,
             CHARACTERISTIC_RESOLVE_TIMEOUT,
         )
         .await
@@ -2655,6 +2813,7 @@ mod tests {
                     }
                 },
                 || async { Ok(std::collections::BTreeSet::new()) },
+                false,
                 CHARACTERISTIC_RESOLVE_TIMEOUT,
             )
             .await
@@ -2700,6 +2859,7 @@ mod tests {
                     std::future::pending::<Result<std::collections::BTreeSet<Characteristic>>>()
                         .await
                 },
+                false,
                 CHARACTERISTIC_RESOLVE_TIMEOUT,
             )
             .await
@@ -2715,6 +2875,7 @@ mod tests {
         let error = resolve_instax_characteristics(
             || async { panic!("zero budget must not query") },
             || async { panic!("zero budget must not discover") },
+            false,
             Duration::ZERO,
         )
         .await
@@ -2727,6 +2888,7 @@ mod tests {
         let error = resolve_instax_characteristics(
             || async { GattReadiness::Ready },
             || async { Err(PrinterError::Ble("Authentication Failed".into())) },
+            false,
             CHARACTERISTIC_RESOLVE_TIMEOUT,
         )
         .await

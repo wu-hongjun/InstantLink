@@ -31,7 +31,9 @@ barrier is proven to prevent radio drops.
 
 ## Changes
 
-Healthy complete first discovery is unchanged. On incomplete exports, the native resolver reads
+Successful ordinary btleplug connect with a complete table keeps its healthy path. Reused and
+CLI-assisted connections must confirm readiness even for a complete cached table. Otherwise,
+on incomplete exports the native resolver reads
 fresh typed Connected/ServicesResolved for the exact Linux device and uses one2s deadline for
 state queries, rediscovery and waits. Unknown state retains bounded discovery fallback; pending
 resolution waits. Link loss/unconfirmed readiness produces explicit transient setup detail.
@@ -61,3 +63,21 @@ blocked I/O deadlines, cancellation, genuine missing characteristics, phase regr
 explicit authentication failures. Linux-specific execution and live candidate/installed tests
 follow before final acceptance. Full running logs are retained privately; sanitized evidence
 under docs/assets/bridge-audit-092.
+
+### Additional cached-table finding
+
+[BlueZ5.82 GATT client](https://raw.githubusercontent.com/bluez/bluez/5.82/src/gatt-client.c)
+retains exported characteristic objects when its connection client is cleared; the
+[device lifecycle](https://raw.githubusercontent.com/bluez/bluez/5.82/src/device.c)
+resets ServicesResolved separately. A complete cache is therefore insufficient for reuse or
+CLI-assisted connections. The provisional b2e4e2a candidate was installed while the Printer
+was off; it was not accepted as the final live fix. Independent review identified this case
+before live acceptance. The corrected evidence policy tracks successful btleplug connect
+versus reuse/assistance and updates after internal reconnect. Unknown or pending state cannot
+accept cached characteristics on guarded paths. Fifteen independent Mac GATT tests now pass.
+
+Full first-stage Linux core tests227passed on the Pi, including11GATT tests, before this additional
+guard. Full normal host checks2383Bridge tests/27existingwarnings, Rustworkspacefmt/clippy/tests,
+Ruff/strictmypy67 and FFIheaderdrift passed. One unchanged HIF descendant-timeout fixture failed
+under concurrent compilation; four affected cases then full normal gate passed unchanged.
+Corrected Linux guarded-path execution and live comparisons follow; no film used.

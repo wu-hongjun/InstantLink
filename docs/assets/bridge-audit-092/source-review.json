@@ -2,9 +2,9 @@
   "reviewer": "gatt_readiness_adversarial",
   "task": "092 Bluetooth GATT readiness after service restart",
   "scope": "Independent source review and local tests; no repository edits or hardware mutations",
-  "result": "Source review passed; Linux execution and live acceptance pending",
+  "result": "Updated source review passed; latest Linux and live acceptance pending",
   "source_sha256": {
-    "crates/instantlink-core/src/transport.rs": "a5cee24ce4ca24d01e65b96bf9c5d8c5b59ed91c9f378ed13255d54f9ce50ba7",
+    "crates/instantlink-core/src/transport.rs": "a0c0d504fc241848928348181f78dbdf5207e22d879fd3ed435f9e17af05e304",
     "bridge/src/instantlink_bridge/ble/instantlink.py": "4813bf2b36ad7fd842b7a6ff6a1950703953a8fa3a6065bf27f9869171b61e4e",
     "bridge/src/instantlink_bridge/ui/status.py": "a635595e7e3d2c1740bc827a764eedc69d5859546a71606365f8b5f25d2e0c85",
     "bridge/tests/test_ui_status.py": "7e839558b76866e8c5729962134ce0e29c48bb3a0dba72f3a3adb4f838670b1f"
@@ -13,7 +13,7 @@
     {
       "area": "GATT metadata readiness",
       "result": "pass",
-      "detail": "Exact-device typed Connected/ServicesResolved lookup; unresolved state waits; unknown state preserves discovery fallback; complete first discovery adds no new readiness queries."
+      "detail": "Exact-device typed Connected/ServicesResolved lookup. Reused and error/CLI-assisted connections require Ready; Pending/Unknown on these paths cannot authorize cached complete exports. Successful normal btleplug connect keeps zero added lookup for complete first discovery; missing exports preserve unknown-state fallback only after that successful readiness barrier."
     },
     {
       "area": "Deadline and cancellation",
@@ -46,6 +46,24 @@
       "title": "Linux PeripheralId must be restored to absolute BlueZ path",
       "found_by": "root agent during source review",
       "detail": "Pinned btleplug PeripheralId delegates to DeviceId Display and yields hci0/dev_*; initial candidate used that relative identifier for absolute ObjectManager lookup, always returning Unknown. Corrected production wrapper restores /org/bluez/ prefix and Linux test covers the same wrapper with Ready/Pending/wrong-adapter cases. Independently rechecked call-site and pinned Display implementation."
+    },
+    {
+      "priority": "P1",
+      "title": "Complete cached GATT exports do not prove readiness after link reuse",
+      "detail": "BlueZ 5.82 disconnect clears active GATT backend without removing exported services/characteristics; a reused or CLI-assisted connected link can yield complete discovery while ServicesResolved is false. First complete discovery currently bypasses readiness and may cause false encrypted-write/rebond failure. Gate explicit readiness on reused/connect-error paths, while preserving successful ordinary btleplug connect fast path, which already awaits ServicesResolved.",
+      "sources": [
+        "https://raw.githubusercontent.com/bluez/bluez/5.82/src/gatt-client.c",
+        "https://raw.githubusercontent.com/bluez/bluez/5.82/src/device.c"
+      ],
+      "source_locations": [
+        "gatt-client.c:btd_gatt_client_disconnected",
+        "gatt-client.c:characteristic_read_value/characteristic_write_value",
+        "gatt-client.c:characteristic_start_notify",
+        "device.c:device_remove_connection",
+        "device.c:gatt_client_ready_cb"
+      ],
+      "resolution": "Targeted connection evidence distinguishes reused/error-assisted links from successful btleplug connect. Reused and unconfirmed routes now require explicit Ready before fresh discovery even with complete cached exports; Pending/Unknown cannot authorize the cached table. Successful ordinary connect with complete initial discovery retains no added readiness lookup. Evidence is refreshed after internal reconnect.",
+      "independent_validation": "Reviewed initialization and both connect/reconnect call sites; independently executed all fifteen Mac GATT tests, including five added cached-complete/policy cases."
     }
   ],
   "independent_tests": [
@@ -69,14 +87,28 @@
       "passed": 61,
       "failed": 0,
       "boundary": "Reviewed final Python candidate including transient/authentication classification and attempt regression tests."
+    },
+    {
+      "command": "cargo test -p instantlink-core --locked gatt_",
+      "platform": "arm64 macOS",
+      "passed": 15,
+      "failed": 0,
+      "boundary": "Updated final guarded-cache candidate; Linux-only exact-device test excluded on host."
     }
   ],
   "outstanding_source_findings": [],
   "pending_acceptance": [
-    "Linux-specific corrected lookup compilation/test execution",
+    "Linux-specific compilation and execution for final guarded-cache candidate",
     "Live service restart and locked automatic reconnect with fresh status and unchanged film count",
     "Final installed source/native hashes and running-log review"
   ],
   "hardware_mutations": false,
-  "film_used": false
+  "film_used": false,
+  "reported_linux_validation": {
+    "reported_by": "root",
+    "core_passed": 227,
+    "elapsed_s": 80.85,
+    "gatt_cases_passed": 11,
+    "boundary": "Reported Pi execution for previous candidate; reviewer did not independently execute hardware tests."
+  }
 }

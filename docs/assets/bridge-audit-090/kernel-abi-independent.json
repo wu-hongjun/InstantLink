@@ -1,0 +1,145 @@
+{
+  "metadata": {
+    "stock": {
+      "name": "brcmfmac",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64",
+      "depends": "brcmutil,cfg80211",
+      "srcversion": "FBBF7D1EF3ACBA683834518",
+      "license": "Dual BSD/GPL",
+      "intree": "Y",
+      "signer": ""
+    },
+    "baseline": {
+      "name": "brcmfmac",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64",
+      "depends": "brcmutil,cfg80211",
+      "srcversion": "FBBF7D1EF3ACBA683834518",
+      "license": "Dual BSD/GPL",
+      "intree": "",
+      "signer": ""
+    },
+    "candidate": {
+      "name": "brcmfmac",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64",
+      "depends": "brcmutil,cfg80211",
+      "srcversion": "2254D80EF43499080344466",
+      "license": "Dual BSD/GPL",
+      "intree": "",
+      "signer": ""
+    }
+  },
+  "sha256": {
+    "stock": "17220c97a914247bdc4a789caac0dee5c2533e897cd3892834402595d3dce1d7",
+    "baseline": "8ff164d9338f552b822528f12d6cf8d75fc173541f8f4a8abbf9b2da45ac18af",
+    "candidate": "a2b930a1668775132fa9446d69bc33edc7785aed48bfa6fb35873ae6a14a02c7"
+  },
+  "sizes": {
+    "stock": 139788,
+    "baseline": 636936,
+    "candidate": 636856
+  },
+  "elf_header": "ELF64 AArch64",
+  "config": {
+    "CONFIG_CC_VERSION_TEXT": "\"aarch64-linux-gnu-gcc-14 (Debian 14.2.0-19) 14.2.0\"",
+    "CONFIG_KPROBES": "y",
+    "CONFIG_MODVERSIONS": "y",
+    "CONFIG_BRCMUTIL": "m",
+    "CONFIG_BRCMFMAC": "m",
+    "CONFIG_BRCMFMAC_PROTO_BCDC": "y",
+    "CONFIG_BRCMFMAC_SDIO": "y",
+    "CONFIG_BRCMFMAC_USB": "y",
+    "CONFIG_BRCMDBG": "y",
+    "CONFIG_BRCM_CHAR_DRIVERS": "y",
+    "CONFIG_BRCM_USB_PINMAP": "y",
+    "CONFIG_BRCMSTB_L2_IRQ": "y",
+    "CONFIG_KPROBE_EVENTS": "y"
+  },
+  "cfg_sha256": "fd2b571a27aadce13ec49bdea9e61548f2cc39da7a46665716c0907a52794ed3",
+  "checks": {
+    "stock_baseline_srcversion_equal": true,
+    "candidate_srcversion_changed": true,
+    "vermagic_equal": true,
+    "name_equal": true,
+    "dependencies_equal": true,
+    "license_equal": true,
+    "imports_equal": true,
+    "exports_equal": true,
+    "aarch64": true,
+    "exact_upstream_patch_source": true,
+    "modversions_enabled": true,
+    "signature_enforcement_disabled": true,
+    "debug_flag_matches": true
+  },
+  "imports_counts": {
+    "stock": 254,
+    "baseline": 254,
+    "candidate": 254
+  },
+  "exports_counts": {
+    "stock": 11,
+    "baseline": 11,
+    "candidate": 11
+  },
+  "exports_symbols": {
+    "brcmf_set_wsec": [
+      "0xbd0eb7bd",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_cmd_data_set": [
+      "0x31ff02c2",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_cmd_data_get": [
+      "0x9b1b73b0",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_iovar_data_set": [
+      "0xf0f7f5ff",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_iovar_data_get": [
+      "0xbbe72812",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_bsscfg_data_set": [
+      "0x64af2f28",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_bsscfg_data_get": [
+      "0x9568e5f9",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_xtlv_data_set": [
+      "0xa7df6186",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fil_xtlv_data_get": [
+      "0x8284912e",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fwvid_register_vendor": [
+      "0xe2678cd5",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ],
+    "brcmf_fwvid_unregister_vendor": [
+      "0x04afa93f",
+      "EXPORT_SYMBOL_GPL",
+      "BRCMFMAC"
+    ]
+  },
+  "source_pin": "359f37f0faefb712add32a39f98751aea67d5c1f",
+  "expected_cfg_sha256": "fd2b571a27aadce13ec49bdea9e61548f2cc39da7a46665716c0907a52794ed3",
+  "utc": "2026-10-14T13:07:36.189497+00:00",
+  "read_only": true,
+  "passed": true
+}

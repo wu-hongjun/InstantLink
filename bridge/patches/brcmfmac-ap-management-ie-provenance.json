@@ -1,0 +1,16 @@
+{
+  "kernel_release": "6.12.47+rpt-rpi-v8",
+  "raspberry_pi_source_commit": "359f37f0faefb712add32a39f98751aea67d5c1f",
+  "source_archive_url": "https://codeload.github.com/raspberrypi/linux/tar.gz/359f37f0faefb712add32a39f98751aea67d5c1f",
+  "source_archive_sha256": "85c882310e7c74657855b25bba700b5a856327a31547fe49f5758951984c92d9",
+  "audited_subtree_archive_sha256": "c8431ce04c144c307fedfccd8b5c26b9e69cb3f0d5071e56f82c933478da3b71",
+  "upstream_commit": "aba23b0a6a0df84b06ed0323ce127bf7257e4025",
+  "upstream_patch_url": "https://github.com/torvalds/linux/commit/aba23b0a6a0df84b06ed0323ce127bf7257e4025.patch",
+  "upstream_patch_sha256": "36a55fd0afb9aab74e787843d8e2f5ad16d2f6d38fc16fede0aa50cc451c6970",
+  "stock_cfg80211_sha256": "b3eab58af69380e0ff93b1d0af9e73e3d1810811018a7f98eca3f5fe5f599546",
+  "patched_cfg80211_sha256": "fd2b571a27aadce13ec49bdea9e61548f2cc39da7a46665716c0907a52794ed3",
+  "stock_srcversion": "FBBF7D1EF3ACBA683834518",
+  "patched_srcversion": "2254D80EF43499080344466",
+  "scope": "Upstream AP ASSOCRSP versus station PRBREQ management-IE clearing only. No P2P, MBO, Bluetooth, firmware, or protocol changes.",
+  "license": "Linux kernel GPL-2.0; original upstream patch authorship and sign-offs retained. See the pinned source COPYING."
+}

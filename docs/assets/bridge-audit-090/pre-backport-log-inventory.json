@@ -1,0 +1,22 @@
+{
+  "services": {
+    "all_boot_records": 22929,
+    "all_boot_flagged_records": 278,
+    "post_application_deployment_flagged_records": 9,
+    "post_application_deployment_categories": {
+      "no_upstream_dns_while_offline_hotspot": 7,
+      "supplicant_registration_not_supported": 2
+    },
+    "current_bridge_pid_warning_error_records": 0
+  },
+  "kernel": {
+    "all_boot_records": 668,
+    "all_boot_flagged_records": 262,
+    "post_application_deployment_flagged_records": 6,
+    "post_application_deployment_categories": {
+      "vendor_ie_cleanup": 6
+    }
+  },
+  "boundary": "Complete available current-boot journal, private raw logs; historical faults predate current runtime. Transition-triggered residual cleanup errors remain before kernel backport. Offline hotspot has no internet upstream DNS.",
+  "installed_bridge_start_monotonic_us": 130778497227
+}

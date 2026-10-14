@@ -1,0 +1,14 @@
+{
+  "clean_source_commit": "982d8c6a2eabf99c21362fb7cf2d9e3b4145c2d8",
+  "bridge_tests": 2339,
+  "existing_warnings": 27,
+  "bash_syntax": "pass",
+  "ruff_check": "pass",
+  "touched_format": "pass",
+  "strict_mypy": "67 sources pass",
+  "strict_docs": "pass",
+  "normal_commit_hooks": "pass",
+  "independent_adversarial_review": "clear after recorded cancellation corrections",
+  "native_artifacts": "unchanged",
+  "film_used": 0
+}

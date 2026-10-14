@@ -1466,3 +1466,28 @@ no extra JPEG library is required on the Pi.
   records; six added vendor-IE driver errors during service reconfiguration, no new HCI fault.
   Earlier kernel/firmware limitations remain; AP/FTP healthy. No further application finding.
   Raw logs retained privately; sanitized inventory/evidence under plan089.
+
+
+## 2026-10-14 — Wi-Fi continuity and AP driver cleanup (plan 090)
+
+- Clean application source `982d8c6` installed; privileged helper SHA `736cf4ba…afed2`, all
+  67 Python hashes match, native `b2b6c8c` / FFI `9e31f998…34031` / CLI `1068fcb5…ce38e` unchanged.
+- Healthy repeated hotspot setup now retains the verified activation; median 3.742 → 2.187 s,
+  FTP greeting/NOOP failures 9 → 0 during four isolated 8 MiB checksum-verified receives.
+  Same-Pi hotspot IP path only; no wireless airtime/physical camera throughput claim.
+  Candidate trial retained connected Link Square, lock/600 MHz, fresh status in all45 samples.
+- WPS enrollment disabled while retaining SSID/PIN/WPA2-PSK/RSN/CCMP. After radio cycling, one
+  residual cleanup error persisted. Scalar probes identified wrong probe-request AP cleanup;
+  disabling P2P did not fix it and was removed by restarting the supplicant.
+- Exact upstream `aba23b0` backported to Raspberry Pi source `359f37f0` for running
+  `6.12.47+rpt-rpi-v8`. Native unchanged rebuild matches packaged stock source identity; all254
+  imported CRCs and all11 exports/types/namespaces match stock. Candidate module SHA
+  `a2b930a1…a02c7`, srcversion `2254D80EF43499080344466`. Stock module remains unchanged.
+- Reversible exact-kernel override installed under `updates/instantlink/brcmfmac.ko`; private
+  manifest/stock backup under `/var/lib/InstantLinkBridgeKernelBackports/6.12.47+rpt-rpi-v8`.
+  Build/install/rollback/verify instructions in `bridge/patches/README.md`. This separate kernel
+  override is not automatically installed by application firmware updates or rebuilt for new kernels.
+- Install/rollback/reinstall passed on Pi. Loaded AP cleanup now uses association-response IE
+  `0x4`/return0; station probe-request scan handling retained. Wi-Fi-only reload retained USB,
+  Bridge PID, locked600/camera readiness; Printer was offline. Out-of-tree taint expected; no
+  kernel/firmware/initramfs change. Final connected recovery/reboot acceptance follows below.

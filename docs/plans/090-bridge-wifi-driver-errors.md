@@ -17,9 +17,16 @@ FFI/CLI remain the previously verified configuration. Kernel BRCM tracing is not
 
 - The driver maps any negative firmware reply to Linux `-EBADE` (52); this message cannot
   identify the specific firmware rejection. [Raspberry Pi fwil.c](https://raw.githubusercontent.com/raspberrypi/linux/stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/fwil.c).
-- AP teardown resets firmware before clearing cached management IEs. Vendor parsing excludes
-  WPA/WME IEs. The paired errors fit that cleanup sequence; exact firmware cause remains an
-  inference, without a firmware-error/OUI trace. [Raspberry Pi cfg80211.c](https://raw.githubusercontent.com/raspberrypi/linux/stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c).
+- Initial source inspection found AP teardown resets firmware before clearing cached
+  management IEs. Later scalar entry/return probes narrowed the residual failure to
+  `brcmf_cfg80211_stop_ap` clearing probe-request IEs (`pktflag=0x10`, length 0, return -52).
+  Scan calls with that flag returned 0. No pointers, IE payloads or key material were traced.
+  [Raspberry Pi cfg80211.c](https://raw.githubusercontent.com/raspberrypi/linux/stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c).
+- The accepted [upstream correction, aba23b0](https://github.com/torvalds/linux/commit/aba23b0a6a0df84b06ed0323ce127bf7257e4025),
+  clears association-response IEs for AP teardown and retains probe-request cleanup for other
+  modes. Beacon/probe-response cleanup is unchanged. The installed Raspberry Pi 6.12.47
+  source lacks this correction. Disabling P2P reduced scan IE length from 150 to 24 bytes but
+  did not remove the failure; that diagnostic configuration is not a production fix.
 - NetworkManager translates disabled WPS into `wps_disabled=1`. Supplicant normally enables
   WPS for WPA2-Personal APs unless disabled. Existing WPA2-PSK authentication can remain while
   unused enrollment advertisement is disabled. [NetworkManager 1.52.1](https://raw.githubusercontent.com/NetworkManager/NetworkManager/1.52.1/src/core/supplicant/nm-supplicant-config.c),
@@ -96,4 +103,72 @@ film 0, camera readiness true, screen locked and board 600 MHz, with no retired 
 Maximum serial monitor span was 0.407 s. Paced transfers took about 7.86 s instead of 9.35 s
 under AP reactivation; the deliberate pace and local address path preclude radio speed claims.
 The unpaced single-transfer result (50.54 MiB/s versus baseline 50.11) does not establish a
-throughput change. Deployment and final recovery acceptance follow after clean commit gates.
+throughput change.
+
+## Application deployment and residual driver gate
+
+Clean source `982d8c6` was installed, including the separately installed privileged helper.
+All 67 Python file hashes match committed source; helper copies match the reviewed SHA;
+native Printer artifacts are unchanged. The complete Bridge suite passed 2,339 tests, Ruff,
+strict mypy and Bash syntax gates. Strict docs also passed.
+
+The installed helper repeat took 2.144 s with zero vendor errors and production FTP probe
+outages; two isolated 8 MiB receives passed checksums. The Printer was offline for that trial.
+Automatic hotspot recovery after external NetworkManager connection-down took 35.020 s
+with the Printer offline, then 32.349 s with all samples retaining the connected Printer,
+locked screen, 600 MHz and the same Bridge PID. The healthy-state recovery grace is 30 s.
+The connected trial still emitted one vendor-IE error after a preceding radio cycle.
+Status-only Bluetooth disconnect/reconnect passed in 9.547 s with freshness invalidation,
+one disconnect watch, no retired status tasks, camera readiness and lock retained.
+
+Radio-off/restore recovered functional AP and FTP service, but failed the zero-vendor-error
+gate. WPS removal resolves the measured paired advertisement errors; it does not correct the
+wrong probe-request cleanup in the kernel. The scalar trace and P2P diagnostic identify the
+narrow upstream backport required before claiming this residual driver issue is resolved.
+
+
+## Pinned kernel build and review
+
+The matching Raspberry Pi source commit is `359f37f0faefb712add32a39f98751aea67d5c1f`.
+A native two-job GCC 14 build against the packaged 6.12.47+rpt-rpi-v8 headers preserves
+`CONFIG_BRCMDBG=y`'s parent `-DDEBUG` flag. The unchanged rebuild exactly matches stock
+`srcversion` `FBBF7D1EF3ACBA683834518`; the exact upstream patch applies without fuzz
+(with a 22-line context offset) and produces `2254D80EF43499080344466`.
+An independent read-only hardware review confirms all 254 imported symbol CRCs, all 11
+exported CRCs/types/namespaces, vermagic, dependencies, license and AArch64 ELF identity
+match stock. The independently reconstructed patched source SHA also matches.
+Candidate module SHA: `a2b930a1668775132fa9446d69bc33edc7785aed48bfa6fb35873ae6a14a02c7`.
+
+`bridge/scripts/brcmfmac-ap-ie-backport.py` provides pinned build/attest/install/rollback/verify
+operations; the unmodified upstream patch, provenance and reproduction instructions live in
+`bridge/patches/`. The installer preserves packaged stock, installs only a per-kernel base
+module override, retains stock companions, stages privately and serializes maintenance.
+It refuses incompatible source identities/ABIs, existing overrides, unsupported signature
+enforcement or boot layouts. Failed installation restores stock depmod selection. Rollback
+does not require build headers. This exact-kernel override is separate from application
+firmware deployment; future kernels require their own review. No P2P/MBO/firmware change.
+
+Fresh adversarial review identified and corrected candidate identity binding, archive snapshot
+ownership, failed-install stock selection, rollback header dependence, backup symlink handling
+and runtime signing checks. Thirty-one focused tool tests pass, including malformed/source/ABI
+inputs, failed depmod rollback and protected override ownership. Actual installation, loaded
+module verification, driver trace, recovery and reboot acceptance are recorded below when
+complete.
+
+
+## Loaded-driver acceptance
+
+Actual Pi install → rollback → stock selection/running verification → reinstall passed without
+replacing packaged stock. A deliberate Wi-Fi-only reload retained USB/g_ether, the same Bridge
+PID, locked 600 MHz and camera readiness in 6.956 s. The Printer was offline; connected retention
+is not claimed for that reload. Restarting the supplicant removed the temporary P2P diagnostic.
+The loaded module's sysfs srcversion and selected file match the candidate. The expected
+out-of-tree module taint bit was added (1536 → 5632); no kernel/firmware upgrade or initramfs
+change was performed. This is a local upstream backport, not a vendor-packaged module.
+
+Repeating scalar probes now shows AP teardown clearing association-response IEs (`0x4`,
+length 0, return 0), with normal probe-request scan handling (`0x10`, including 150-byte scan
+IEs) retained. Every captured management-IE return was 0 across radio-off/on and AP-down
+transitions. Probe definitions and tracing instance were removed in `finally`; no payloads or
+keys captured. Evidence preserves old and new traces; this establishes the changed driver
+behavior, not merely absence of a log message.

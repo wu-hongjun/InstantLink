@@ -1,0 +1,553 @@
+{
+  "label": "patched-kernel-offline",
+  "timestamp_utc": "2026-10-14T13:24:43.190488+00:00",
+  "boundary": "Installed isolated FTP receive service on alternate port; same-Pi hotspot IP path, NO wireless airtime. Pacing included in continuity trial; unpaced transfer separate.",
+  "journal_cursor_before": "s=93f30971186345e5a63ec3fba3036d79;i=e18511;b=29672bc56fa049e2bbfe25dd1b1be5dd;m=1f5a2c03ba;t=65dccd155a04d;x=fd4a7bf4ffd211b5",
+  "start_monotonic": 134812.985379652,
+  "isolated_storage": "/var/tmp (SD)",
+  "storage_free_before_bytes": 50853761024,
+  "storage_required_bytes": 92274688,
+  "film_used": 0,
+  "payload_bytes": 8388608,
+  "payload_sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+  "production_uploads": 0,
+  "uploads": [
+    {
+      "name": "unpaced.jpg",
+      "started_monotonic": 134813.002385121,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.0,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 0.17546911499812268,
+      "MiB_s_including_pacing": 45.59206900932732
+    },
+    {
+      "name": "paced-0.jpg",
+      "started_monotonic": 134813.180345642,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 7.850104423996527,
+      "MiB_s_including_pacing": 1.0190947238288024
+    }
+  ],
+  "helper_calls": [
+    {
+      "start": 134813.430896683,
+      "elapsed_s": 2.2586689579766244,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 134822.534365638,
+      "vendor_ie_errors_to_next_call": 0,
+      "kernel_events_to_next_call": []
+    }
+  ],
+  "end_monotonic": 134822.534365638,
+  "journal_cursor_after": "s=93f30971186345e5a63ec3fba3036d79;i=e18511;b=29672bc56fa049e2bbfe25dd1b1be5dd;m=1f5a2c03ba;t=65dccd155a04d;x=fd4a7bf4ffd211b5",
+  "kernel_events": [],
+  "vendor_ie_errors": 0,
+  "samples": [
+    {
+      "monotonic": 134813.004488871,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 34.29848901578225
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134813.57178236
+    },
+    {
+      "monotonic": 134813.826598819,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.743124995613471
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134814.234340173
+    },
+    {
+      "monotonic": 134814.48662611,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 8.276822976768017
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134814.880256839
+    },
+    {
+      "monotonic": 134815.136901995,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 9.117032022913918
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134815.533562099
+    },
+    {
+      "monotonic": 134815.786369391,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.64052098384127
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134816.130099391
+    },
+    {
+      "monotonic": 134816.382126891,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.473958976333961
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134816.71891163
+    },
+    {
+      "monotonic": 134816.970852463,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.106823002686724
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134817.307765276
+    },
+    {
+      "monotonic": 134817.559956057,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 6.9334379804786295
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134817.895196994
+    },
+    {
+      "monotonic": 134818.147404442,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.357447000686079
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134818.484149702
+    },
+    {
+      "monotonic": 134818.736275952,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.479843974579126
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134819.080139077
+    },
+    {
+      "monotonic": 134819.332243816,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.0339580124709755
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134819.677335639
+    },
+    {
+      "monotonic": 134819.929984806,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.440260000294074
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134820.271296368
+    },
+    {
+      "monotonic": 134820.523459285,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.747916999505833
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134820.866185378
+    },
+    {
+      "monotonic": 134821.120348764,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.320105010876432
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134821.459994337
+    },
+    {
+      "monotonic": 134821.71245793,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.37296900479123
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134822.04995392
+    },
+    {
+      "monotonic": 134822.30185043,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.850469002733007
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134822.649726055
+    },
+    {
+      "monotonic": 134822.901995326,
+      "network": "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118",
+      "addresses": "4: wlan0    inet 192.168.8.1/24 brd 192.168.8.255 scope global noprefixroute wlan0\\       valid_lft forever preferred_lft forever",
+      "usb_addresses": "2: usb0    inet 192.168.7.1/24 brd 192.168.7.255 scope global usb0\\       valid_lft forever preferred_lft forever",
+      "services": "MainPID=52250\nNRestarts=0\nActiveState=active\n\nMainPID=52248\nNRestarts=0\nActiveState=active",
+      "printer_connected": "ERROR:CalledProcessError",
+      "production_ftp": {
+        "greeting": "220",
+        "noop": "200",
+        "elapsed_ms": 7.795000012265518
+      },
+      "cpu_khz": 600000,
+      "observer": {
+        "pid": 52250,
+        "locked": true,
+        "unlocking": false,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0
+      },
+      "finished_monotonic": 134823.253331471
+    }
+  ],
+  "receipts": [
+    {
+      "name": "unpaced.jpg",
+      "bytes": 8388608,
+      "sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+      "source_ip": "192.168.8.1",
+      "monotonic": 134813.42327809
+    },
+    {
+      "name": "paced-0.jpg",
+      "bytes": 8388608,
+      "sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+      "source_ip": "192.168.8.1",
+      "monotonic": 134821.267363607
+    }
+  ],
+  "receive_checksums_passed": true,
+  "all_uploads_completed": true,
+  "helper_calls_passed": true,
+  "production_ftp_failures": 0,
+  "printer_connected_samples": 0,
+  "active_connection_snapshots": [
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/118"
+  ],
+  "monitor_max_span_s": 0.5672934890026227
+}

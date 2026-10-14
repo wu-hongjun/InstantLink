@@ -59,8 +59,13 @@ with `INSTANTLINK_BRIDGE_WIFI_STATE_DIR`; it must be root-owned and private.
 
 WPS enrollment advertisement is disabled. Cameras continue to join using the saved SSID and
 8-digit WPA2 password; no camera settings change is required. This avoids the observed paired
-vendor-IE cleanup errors on subsequent AP transitions. It is a configuration correction rather
-than a replacement kernel/firmware. See plan 090 for the measured scope and remaining limits.
+vendor-IE cleanup errors on subsequent AP transitions. A separate kernel defect can still
+produce one error after a radio cycle: the installed 6.12.47 driver clears station probe-request
+IEs when stopping an AP. The audited Pi uses the exact upstream AP cleanup backport described
+in `bridge/patches/README.md`, with matching-kernel ABI checks and explicit rollback. It keeps
+P2P/MBO and the existing Wi-Fi firmware. Application firmware deployment does not automatically
+install this kernel-specific override; assess it again when changing the kernel. See plan 090
+for the measured scope and remaining limits.
 
 The root Wi-Fi helper also handles a Pi SDIO firmware initialization failure: if `wlan0` is
 missing, it reloads `brcmfmac` and waits up to 10 seconds for the interface. A present interface

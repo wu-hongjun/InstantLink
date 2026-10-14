@@ -1,0 +1,52 @@
+{
+  "label": "installed-cached",
+  "timestamp_utc": "2026-10-14T12:20:34.852106+00:00",
+  "boundary": "Installed isolated FTP receive service on alternate port; same-Pi hotspot IP path, NO wireless airtime. Pacing included in continuity trial; unpaced transfer separate.",
+  "film_used": 0,
+  "production_uploads": 0,
+  "payload_bytes": 8388608,
+  "uploads": [
+    {
+      "name": "unpaced.jpg",
+      "started_monotonic": 130964.656842683,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.0,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 0.20851536399277393,
+      "MiB_s_including_pacing": 38.366477399129394
+    },
+    {
+      "name": "paced-0.jpg",
+      "started_monotonic": 130964.874355808,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 7.8709130700008245,
+      "MiB_s_including_pacing": 1.0164005025657286
+    }
+  ],
+  "helper_calls": [
+    {
+      "start": 130965.124587214,
+      "elapsed_s": 2.144452446998912,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 130974.249341169,
+      "vendor_ie_errors_to_next_call": 0,
+      "kernel_events_to_next_call": []
+    }
+  ],
+  "vendor_ie_errors": 0,
+  "receive_checksums_passed": true,
+  "all_uploads_completed": true,
+  "helper_calls_passed": true,
+  "production_ftp_failures": 0,
+  "printer_connected_samples": 0,
+  "active_connection_snapshots": [
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/108"
+  ],
+  "monitor_max_span_s": 0.43961880198912695,
+  "printer_limit": "Printer offline in installed repeat phase; connected retention separately measured in candidate-cached and final live acceptance.",
+  "samples_count": 18
+}

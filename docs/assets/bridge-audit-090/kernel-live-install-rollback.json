@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "tool_sha256": "7a1c34ed5a0cacc5c795f2ed6e513731c690eddb03d191fc74fbf476d24966cc",
+  "film_used": 0,
+  "boundary": "Actual Pi install\u2192rollback\u2192verify stock selected and still running\u2192reinstall; no driver unload during selection checks.",
+  "steps": [
+    "Override installed; running driver unchanged. Reload Wi-Fi during the validation window.",
+    "Stock module selection restored; reload Wi-Fi explicitly to restore the running driver.",
+    "{\"state\": \"rolled_back\", \"selected_path\": \"/usr/lib/modules/6.12.47+rpt-rpi-v8/kernel/drivers/net/wireless/broadcom/brcm80211/brcmfmac/brcmfmac.ko.xz\", \"running_srcversion\": \"FBBF7D1EF3ACBA683834518\", \"stock_preserved\": true}",
+    "Override installed; running driver unchanged. Reload Wi-Fi during the validation window."
+  ]
+}

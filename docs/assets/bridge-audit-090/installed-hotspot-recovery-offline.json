@@ -1,0 +1,1456 @@
+{
+  "require_connected_printer": false,
+  "film_used": 0,
+  "boundary": "External NM connection down with radio on; production automatic hotspot recovery, same installed Bridge PID, locked600MHz, Printer status only. No wireless client or physical camera action.",
+  "initial": {
+    "pid": 52250,
+    "monotonic": 131142.655911886,
+    "locked": true,
+    "unlocking": false,
+    "fresh": false,
+    "film": null,
+    "cpu_khz": 600000,
+    "camera_ready": true,
+    "last_status_ok": null,
+    "disconnect_watch_count": 0,
+    "retired_status_tasks": 0
+  },
+  "network_before": [
+    "100 (connected)",
+    "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+    "/org/freedesktop/NetworkManager/ActiveConnection/108",
+    "192.168.8.1/24"
+  ],
+  "down_started_monotonic": 131142.78818475,
+  "recovered_s": 35.019524205999915,
+  "passed": true,
+  "vendor_ie_errors": 0,
+  "samples": [
+    {
+      "pid": 52250,
+      "monotonic": 131143.688229489,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)",
+        "",
+        "",
+        "192.168.8.1/24"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 1.074236040993128
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131144.115847979,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 1.5234986979921814
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131144.56496001,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 1.9662604159966577
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131145.007289593,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 2.3996700510033406
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131145.44106402,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 2.833143644995289
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131145.874527614,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 3.2662472389929462
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131146.307540634,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 3.697898696991615
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131146.738816988,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 4.128899946983438
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131147.169961311,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 4.559575466992101
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131147.600763707,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 4.991913799982285
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131148.033813759,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 5.428920414997265
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131148.470413706,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 5.872013487998629
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131148.913111675,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 6.304549372987822
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131149.345562248,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 6.735283330985112
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131149.776364175,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 7.167752601992106
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131150.209323602,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 7.606608017988037
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131150.647994383,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 8.039092184975743
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131151.080175997,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 8.470311975979712
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131151.51137907,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 8.905301872000564
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131151.946362351,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 9.34046275698347
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131152.381541205,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 9.774708329990972
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131152.816244694,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 10.207421870989492
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131153.248591257,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 10.645213329989929
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131153.686505111,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 11.082121193991043
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131154.123114954,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 11.518126401992049
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131154.5591436,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 11.9529719229904
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131154.994101985,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 12.392216974985786
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131155.43327662,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 12.827150515979156
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131155.868290683,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 13.259130203980021
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131156.300197401,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 13.69370119299856
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131156.734885734,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 14.12565733899828
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131157.166604068,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 14.56085322398576
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131157.60194162,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 14.997243744990556
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131158.03836339,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 15.429488952999236
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131158.470426671,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 15.863318171002902
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131158.904432088,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 16.298458743985975
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131159.339388442,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 16.731569160998333
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131159.772596202,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 17.168857180979103
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131160.210121619,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 17.60751712898491
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131160.649194483,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 18.041987128992332
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131161.083317972,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 18.475528379000025
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131161.516736774,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 18.911363742983667
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131161.952479326,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 19.346111086983
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131162.387060889,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 19.779096085985657
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131162.820153961,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 20.21389025298413
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131163.255225992,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 20.64898973199888
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131163.690056513,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 21.086230825982057
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131164.127256878,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 21.52211853399058
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131164.563128648,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 21.955609158991138
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131164.99695844,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 22.3942210849782
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131165.435202919,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 22.826974834984867
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131165.867986721,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 23.26251900198986
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131166.303486825,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 23.7036431680026
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131166.744851564,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 24.13570488698315
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131167.17694672,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 24.568414365989156
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131167.609545418,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 25.001792333991034
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131168.042830053,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 25.436927229980938
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131168.477857136,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 25.8716808759782
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131168.912863022,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 26.30850827100221
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131169.349503386,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 26.750378739990992
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131169.791305573,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 27.183475197991356
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131170.224802604,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 27.619524676993024
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131170.660874896,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 28.054070771002444
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131171.095109323,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 28.494060405995697
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131171.535116823,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 28.933410561992787
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131171.974329114,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 29.36854540600325
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131172.409593593,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 29.80261910299305
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131172.844593072,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 30.267711759981466
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131173.309638749,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 30.741771239001537
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131173.784599634,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 31.213791706977645
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131174.255606822,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "30 (disconnected)"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 31.681889206985943
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131174.723142707,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "50 (connecting (configuring))",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 32.17979993598419
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131175.22242729,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "70 (connecting (getting IP configuration))",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 32.70576545697986
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131175.750635154,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "100 (connected)",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109",
+        "192.168.8.1/24"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 33.16340347699588
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131176.205200727,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "100 (connected)",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109",
+        "192.168.8.1/24"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 33.64447847698466
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131176.687048383,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "100 (connected)",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109",
+        "192.168.8.1/24"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 34.10214852899662
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131177.144395518,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "100 (connected)",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109",
+        "192.168.8.1/24"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 34.581980090995785
+    },
+    {
+      "pid": 52250,
+      "monotonic": 131177.623077862,
+      "locked": true,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "cpu_khz": 600000,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "disconnect_watch_count": 0,
+      "retired_status_tasks": 0,
+      "network": [
+        "100 (connected)",
+        "c4a44a6d-5eea-363d-b444-0e6df922b66f",
+        "/org/freedesktop/NetworkManager/ActiveConnection/109",
+        "192.168.8.1/24"
+      ],
+      "printer_connected": false,
+      "elapsed_s": 35.019524205999915
+    }
+  ]
+}

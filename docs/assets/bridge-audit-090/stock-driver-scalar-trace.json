@@ -1,0 +1,60 @@
+{
+  "scalar_only": true,
+  "steps": [
+    {
+      "mode": "off",
+      "start": 131998.452313486,
+      "end": 132000.243238225
+    },
+    {
+      "mode": "hotspot",
+      "start": 132001.243389944,
+      "end": 132005.019617025
+    },
+    {
+      "mode": "connection-down",
+      "start": 132006.148315983,
+      "end": 132006.887419733
+    }
+  ],
+  "trace_lines": [
+    "  wpa_supplicant-481     [001] d.... 131999.393655: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=0",
+    "  wpa_supplicant-481     [001] d..1. 131999.394495: ie_return: (brcmf_cfg80211_stop_ap+0x2d8/0x488 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=-52",
+    "  wpa_supplicant-481     [001] d.... 131999.394504: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x2 len=0",
+    "  wpa_supplicant-481     [001] d..1. 131999.394512: ie_return: (brcmf_cfg80211_stop_ap+0x2ec/0x488 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 131999.394516: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x1 len=0",
+    "  wpa_supplicant-481     [001] d..1. 131999.394522: ie_return: (brcmf_cfg80211_stop_ap+0x300/0x488 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 131999.495370: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=0",
+    "  wpa_supplicant-481     [001] d..1. 131999.495400: ie_return: (brcmf_cfg80211_scan+0xe8/0x2a0 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 132002.038457: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=0",
+    "  wpa_supplicant-481     [001] d..1. 132002.038483: ie_return: (brcmf_cfg80211_scan+0xe8/0x2a0 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [002] d.... 132003.158144: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x1 len=113",
+    "  wpa_supplicant-481     [002] d..1. 132003.158170: ie_return: (brcmf_config_ap_mgmt_ie+0x40/0x160 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [002] d.... 132003.158176: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x2 len=0",
+    "  wpa_supplicant-481     [002] d..1. 132003.158184: ie_return: (brcmf_config_ap_mgmt_ie+0x78/0x160 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [002] d.... 132003.158188: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x4 len=0",
+    "  wpa_supplicant-481     [002] d..1. 132003.158194: ie_return: (brcmf_config_ap_mgmt_ie+0xa4/0x160 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [000] d.... 132003.175500: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=150",
+    "  wpa_supplicant-481     [000] d..1. 132003.177889: ie_return: (brcmf_cfg80211_scan+0xe8/0x2a0 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [000] d.... 132006.753727: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=0",
+    "  wpa_supplicant-481     [000] d..1. 132006.754486: ie_return: (brcmf_cfg80211_stop_ap+0x2d8/0x488 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=-52",
+    "  wpa_supplicant-481     [000] d.... 132006.754494: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x2 len=0",
+    "  wpa_supplicant-481     [000] d..1. 132006.754502: ie_return: (brcmf_cfg80211_stop_ap+0x2ec/0x488 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [000] d.... 132006.754506: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x1 len=0",
+    "  wpa_supplicant-481     [000] d..1. 132006.754513: ie_return: (brcmf_cfg80211_stop_ap+0x300/0x488 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 132006.845922: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=0",
+    "  wpa_supplicant-481     [001] d..1. 132006.845951: ie_return: (brcmf_cfg80211_scan+0xe8/0x2a0 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [000] d.... 132007.580859: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=0",
+    "  wpa_supplicant-481     [000] d..1. 132007.580931: ie_return: (brcmf_cfg80211_scan+0xe8/0x2a0 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 132008.816043: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x1 len=113",
+    "  wpa_supplicant-481     [001] d..1. 132008.816070: ie_return: (brcmf_config_ap_mgmt_ie+0x40/0x160 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 132008.816077: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x2 len=0",
+    "  wpa_supplicant-481     [001] d..1. 132008.816085: ie_return: (brcmf_config_ap_mgmt_ie+0x78/0x160 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 132008.816088: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x4 len=0",
+    "  wpa_supplicant-481     [001] d..1. 132008.816095: ie_return: (brcmf_config_ap_mgmt_ie+0xa4/0x160 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0",
+    "  wpa_supplicant-481     [001] d.... 132008.830276: ie_entry: (brcmf_vif_set_mgmt_ie+0x0/0x540 [brcmfmac]) pktflag=0x10 len=150",
+    "  wpa_supplicant-481     [001] d..1. 132008.831346: ie_return: (brcmf_cfg80211_scan+0xe8/0x2a0 [brcmfmac] <- brcmf_vif_set_mgmt_ie) ret=0"
+  ],
+  "upstream_fix": "aba23b0a6a0df84b06ed0323ce127bf7257e4025",
+  "boundary": "Kernel function entry/return flags, length and return scalar values only; no IE payload, pointers or key material captured."
+}

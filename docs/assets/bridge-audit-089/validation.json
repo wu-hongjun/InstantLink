@@ -9,6 +9,19 @@
   "normal_commit_hooks": "pass",
   "fresh_reviews": "4 clear after recorded corrections",
   "installed_source_files_verified": 67,
-  "printer_live_reconnect": "pending: not advertising; power-on requested",
-  "film_used": 0
+  "printer_live_reconnect": "pass: 2026-10-14 installed status-only recovery while locked",
+  "film_used": 0,
+  "live_followup": {
+    "source_commit": "4145e771e4c2f46ff4d2fa06c654666b5a3878de",
+    "bridge_tests": 2270,
+    "existing_warnings": 27,
+    "normal_commit_hooks": "pass",
+    "targeted_review_tests": 27,
+    "fresh_independent_review": "clear",
+    "all_installed_source_hashes_match": 67,
+    "no_film": "pass",
+    "recovery_from_disconnect_request_s": 10.887405203990056,
+    "same_button_unlock_relock_and_watch_pause_resume": "pass",
+    "published_freshness_invalidation": "pass"
+  }
 }

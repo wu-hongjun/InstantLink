@@ -1,0 +1,20 @@
+{
+  "all_owned_helper_outputs_dropin_socket_paths_absent": true,
+  "owned_bytecode_absent": true,
+  "mockup_absent": true,
+  "normal_services": "MainPID=47710\nNRestarts=0\nActiveState=active\n\nMainPID=47345\nNRestarts=0\nActiveState=active",
+  "printer_connected": true,
+  "checked_paths": [
+    "/tmp/instantlink-polish-runtime-observer-089.py",
+    "/tmp/instantlink-polish-baseline-render-089.py",
+    "/tmp/instantlink-polish-client-089.py",
+    "/tmp/instantlink-polish-reconnect-089.py",
+    "/tmp/instantlink-polish-ui-smoke-089.py",
+    "/tmp/instantlink-polish-health-089.py",
+    "/tmp/instantlink-polish-reconnect-live-locked-089.json",
+    "/tmp/instantlink-polish-reconnect-validated-locked-089.json",
+    "/tmp/instantlink-polish-installed-ui-smoke-089.json",
+    "/run/systemd/system/instantlink-bridge.service.d/089-polish-audit.conf",
+    "/run/instantlink-polish-audit-089"
+  ]
+}

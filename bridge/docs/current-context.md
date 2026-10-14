@@ -1440,6 +1440,29 @@ no extra JPEG library is required on the Pi.
   observer/drop-in/socket/mockup/helpers. Final retained service/kernel logs classified in
   plan089; old driver findings plus ten vendor-IE reconfiguration errors remain maintenance
   limits. Raw journals private; sanitized evidence under `docs/assets/bridge-audit-089/`.
-- Printer INSTAX-52006924 unavailable/not advertising; power-on requested. Installed live
-  status-only disconnect/reconnect is pending, not claimed passed. Host/source reconnect,
-  ownership and freshness regressions passed. No camera airtime or developed-film verification.
+- Initially, Printer INSTAX-52006924 was unavailable and live reconnect was pending. The
+  follow-up below resolves that gate; no camera airtime or developed-film verification.
+
+### 2026-10-14 — Live locked reconnect follow-up
+
+- The normal Bridge at 600 MHz automatically connected after the user powered on
+  INSTAX-52006924 (Link Square, film 0, battery 80%). No film/image/actuator commands used.
+- Source `6a60165` passed locked reconnect in 12.373 s, but its published fresh-status flag
+  briefly outlived the timestamp invalidation. Fixed immediate state publication/render wake
+  in clean source **4145e771e4c2f46ff4d2fa06c654666b5a3878de**, now installed; all 67 Python
+  source hashes match, native artifacts unchanged. Independent review clear; 27 targeted tests
+  and normal hooks (2,270 tests / 27 existing warnings, Ruff, mypy) passed; touched format passed.
+- Updated runtime PID47347 recovered automatically in **10.887 s** from external BlueZ
+  Disconnect dispatch to new fresh status. Event→first fetch 0.466 s. All samples locked/600 MHz,
+  camera receive readiness true, same PID; invalid timestamp always published stale. New status
+  restored a single disconnect watch. Radio timing uncontrolled; no transport speedup claim.
+- Same-button triple unlock restored a nonblank LCD/1000 MHz, then relocked/600 MHz;
+  status pause/resume rearmed the watch and refreshed status while locked. Shared production
+  action queue used; physical switch contacts not actuated. Evidence in plan089/live JSON files.
+- Restored normal Bridge/manager **47710/47345**, active/NRestarts0, Printer connected,
+  powersave/600 MHz, GPIO24 low, 42.932°C, throttle0x0, hotspot FTP220/200, no working cache
+  or input/network fallback. Removed owned observer/drop-in/socket/helpers/bytecode; no mockup.
+- Full available current-boot journals reviewed: 262 added service records, zero new flagged
+  records; six added vendor-IE driver errors during service reconfiguration, no new HCI fault.
+  Earlier kernel/firmware limitations remain; AP/FTP healthy. No further application finding.
+  Raw logs retained privately; sanitized inventory/evidence under plan089.

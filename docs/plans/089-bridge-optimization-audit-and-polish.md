@@ -127,8 +127,68 @@ ones during service reconfiguration), five early multimedia failures and the sam
 HCI timeout warning; no new HCI warning. AP/FTP operation remains healthy. Driver causes are
 recorded maintenance limits, not claimed repaired by these changes.
 
-**Pending hardware gate:** INSTAX-52006924 was not advertising throughout this round. Its
+**Initially pending hardware gate (resolved by the follow-up below):** INSTAX-52006924 was not
+advertising during the initial round. Its
 power-on was requested; no film was consumed and no actual Printer disconnect/reconnect test
 is claimed. Source/mock safety and freshness tests passed, including both selection backends,
 current-owner identity changes and failed removal commands. Repeat the installed status-only
 reconnect check when the Printer is available.
+
+## 2026-10-14 live status-only follow-up
+
+The normal installed Bridge automatically found INSTAX-52006924 when the user turned it on,
+while the board was already in powersave at 600 MHz. Printer status reported Square, film 0,
+battery 80%. The same Pi/OS/native artifacts listed above were used; no image, download,
+print, LED-test or other actuator command was dispatched, and no film was consumed.
+
+An observer around the installed production controller measured external BlueZ
+`Device1.Disconnect` recovery with no manual Reconnect action. Source `6a60165` recovered in
+12.373 s, remaining locked at 600 MHz with camera receive readiness true and the same PID.
+This trace exposed a published-state inconsistency: the successful-status timestamp was
+invalidated by the event, but `live_snapshot.printer_status_fresh` remained true until a later
+dark-screen maintenance tick. The saved pre-fix trace includes this failure rather than
+presenting the entire test as a correctness pass.
+
+Clean source **4145e771e4c2f46ff4d2fa06c654666b5a3878de** fixes the disconnect callback to
+publish stale status immediately and wake the render converger. The callback performs no
+Bluetooth or display I/O; cleanup and reconnect remain in the serialized poll. Current
+watch-token, generation and selected-identity guards still reject stale callbacks. Existing
+in-flight reply protection prevents a pre-drop ACK from restoring readiness. A fresh independent
+review was clear with 27 relevant tests; added awake/locked, stale-callback and pending-reply
+assertions passed the normal hooks: **2,270 Bridge tests**, 27 existing warnings, Ruff and mypy
+on 67 source files. Both changed Python files pass formatting. All 67 installed source hashes
+match the clean new commit; native FFI/CLI hashes are unchanged.
+
+The final installed reconnect passed in **10.887 s from Disconnect dispatch to sampled fresh
+status**. The disconnect signal arrived at 2.118 s; the serialized reconnect fetch began
+0.466 s after that event. All sampled states remained locked at 600 MHz, with camera receive
+readiness true, the same PID 47347, no retired status task, and stale published status whenever
+the success timestamp was invalid. Recovery obtained a new successful status and rearmed
+exactly one disconnect watch. Timing includes BlueZ link teardown, radio discovery and protocol
+setup; radio availability was not controlled. These two runs do not establish a transport
+speedup from the freshness fix.
+
+Three presses of the same KEY2 action unlocked to a nonblank physical framebuffer and
+1000 MHz; KEY2 relocked at 600 MHz. Status pause/resume removed/rearmed the watch and restored
+fresh status while locked. These actions used the shared production action queue; physical
+switch contacts were not actuated. The retained photo/film verification from earlier rounds
+was not repeated. Sanitized traces and review/source-integrity evidence are in
+`docs/assets/bridge-audit-089/live-*.json`.
+
+
+Final normal services are Bridge/manager **47710/47345**, active with NRestarts 0. The Printer
+is connected, board powersave/600 MHz, GPIO24 low, temperature 42.932°C and throttle `0x0`.
+Hotspot-address FTP returned 220/200; no working cache, input/network fallback, mockup or
+observer drop-in/socket remains. Owned helper scripts, outputs and bytecode were removed.
+
+The complete available current-boot service journal now contains 15,434 records. All 262
+records added since the prior final capture were reviewed, with **zero new warning/error/panic
+records**. The expanded severity/priority/panic predicate marks 150 records, all previously
+present (including two historical unwrap lines omitted by the earlier count of 148). The old
+normal process, both follow-up observers, and final normal Bridge/manager have zero flags.
+One transient not-advertising INFO in the first disconnect test recovered on the next bounded
+retry; the final test recovered on its first scan. The 644 kernel records include 199 flags:
+six additional brcmfmac vendor-IE errors occurred during the three service reconfigurations;
+there is no new HCI fault. The known driver/firmware limitations remain, with AP/FTP healthy.
+No further application defect was identified in this follow-up. Raw logs remain private;
+`live-log-inventory.json` records counts and the exact predicate.

@@ -327,13 +327,20 @@ class BluetoothctlPrinterPairer:
             await _run_bluetoothctl("remove", address, check=False)
 
     async def _trust_selected_bluez_devices(self, selected: PairedPrinter) -> None:
-        devices_result = await _run_bluetoothctl("devices", check=False)
-        addresses = {selected.address.upper()}
-        for printer in parse_instax_devices(devices_result.output):
-            if _matches_selected_identity(selected, printer):
-                addresses.add(printer.address.upper())
+        try:
+            addresses = await _untrusted_bluez_addresses_from_dbus(
+                selected, self._bluez_objects_provider
+            )
+        except Exception:
+            LOGGER.debug("bluetooth.trust_snapshot_unavailable", exc_info=True)
+            devices_result = await _run_bluetoothctl("devices", check=False)
+            fallback_addresses = {selected.address.upper()}
+            for printer in parse_instax_devices(devices_result.output):
+                if _matches_selected_identity(selected, printer):
+                    fallback_addresses.add(printer.address.upper())
+            addresses = sorted(fallback_addresses)
 
-        for address in sorted(addresses):
+        for address in addresses:
             if not _looks_like_bluez_address(address):
                 continue
             LOGGER.info(
@@ -609,6 +616,45 @@ async def _connected_bluez_addresses_from_dbus(
     async with asyncio.timeout(2.0):
         objects = await objects_provider()
         return _connected_addresses_from_bluez_objects(selected, objects)
+
+
+async def _untrusted_bluez_addresses_from_dbus(
+    selected: PairedPrinter, objects_provider: BluezObjectsProvider | None = None
+) -> list[str]:
+    """Trust only matching cached identities that need it, using a fresh full tree.
+
+    A trusted device needs no subprocess. An absent device has nothing to trust yet;
+    the registered agent authorizes it when it appears. Any uncertain property or
+    adapter scope keeps the existing bluetoothctl enumeration/trust fallback.
+    """
+    if objects_provider is None:
+        raise RuntimeError("BlueZ snapshot provider unavailable")
+    async with asyncio.timeout(2.0):
+        objects = await objects_provider()
+        if (
+            not isinstance(objects, dict)
+            or sum(
+                isinstance(interfaces, dict) and "org.bluez.Adapter1" in interfaces
+                for interfaces in objects.values()
+            )
+            != 1
+        ):
+            raise ValueError("unknown BlueZ trust adapter scope")
+        states = _identity_states_from_bluez_objects(selected, objects)
+        untrusted: list[str] = []
+        for interfaces in objects.values():
+            properties = interfaces.get("org.bluez.Device1")
+            if properties is None:
+                continue
+            address = _bluez_variant_value(properties.get("Address"), "s")
+            if not isinstance(address, str) or address.upper() not in states:
+                continue
+            trusted = _bluez_variant_value(properties.get("Trusted"), "b")
+            if type(trusted) is not bool:
+                raise ValueError("unknown BlueZ device trust state")
+            if not trusted:
+                untrusted.append(address.upper())
+        return sorted(untrusted)
 
 
 def _connected_addresses_from_bluez_objects(selected: PairedPrinter, objects: object) -> list[str]:

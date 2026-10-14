@@ -185,6 +185,14 @@ keepalive, health probing and optional Sync construction off the UI/FTP critical
 Plan 068 additionally starts CPU helper I/O, FTP setup and Bluetooth registration together;
 the first UI/input and core READY still wait for the maximum awake CPU tier.
 
+Plan 096 applies the existing CPU performance helper in a nonfatal systemd `ExecStartPre`,
+before the Python entry point imports. The application still manages runtime power tiers;
+`ExecStopPost` restores normal scaling after stop or failed startup. A missing helper or an
+unsupported board must not block service startup. Saved-Printer lookup uses the registered
+agent's fresh BlueZ snapshot to avoid redundant CLI inventory/trust operations, retaining CLI
+fallback when adapter, identity or trust state is uncertain. Agent/core readiness gates,
+live-link protection and startup bond-reset behavior remain unchanged.
+
 The product metric is time from X306 button press to the LCD showing Ready with healthy FTP and
 Printer status. Kernel-monotonic reboot measurements exclude power-button/firmware latency.
 The 2026-10-11 controlled baseline at runtime `4574aa9` reached core readiness at 16.146 s,

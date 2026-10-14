@@ -80,3 +80,7 @@ manager659 active/zero automatic restarts, accepted source/unit hashes and clean
 `handoff-health.json` records this later snapshot; it does not replace or invalidate the earlier
 passing tests. Do not describe the Printer as connected at final handoff. No further Printer
 availability is needed to complete the already accepted unit audit; no film used.
+
+`handoff-events.json` retains the later current-boot journal records after the accepted fresh
+status. It confirms the subsequent disconnect and not-advertising scan; the older failure array
+in the health snapshot alone does not prove that event ordering. No physical power inference.

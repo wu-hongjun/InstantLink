@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from random import Random
+from threading import Event
+from types import ModuleType
 
 import pytest
 from PIL import Image
 
+from instantlink_bridge.ui import display as display_module
 from instantlink_bridge.ui.display import (
     FramebufferBacklightError,
     FramebufferDisplay,
@@ -13,6 +18,16 @@ from instantlink_bridge.ui.display import (
     _st7789_framebuffer,
 )
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
+
+
+@pytest.fixture(params=["numpy", "pillow"])
+def rgb565_backend(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    if request.param == "numpy":
+        pytest.importorskip("numpy")
+        packer = display_module._rgb565_bytes_numpy
+    else:
+        packer = display_module._rgb565_bytes_pillow
+    monkeypatch.setattr(display_module, "_rgb565_packer", lambda: packer)
 
 
 def _reference_rgb565(image: Image.Image) -> bytes:
@@ -26,14 +41,16 @@ def _reference_rgb565(image: Image.Image) -> bytes:
     return bytes(output)
 
 
-def test_rgb565_known_colors_preserve_channel_order_and_little_endian() -> None:
+def test_rgb565_known_colors_preserve_channel_order_and_little_endian(rgb565_backend: None) -> None:
     image = Image.new("RGB", (6, 1))
     image.putdata([(0, 0, 0), (255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (8, 4, 8)])
 
     assert _rgb565_bytes(image) == bytes.fromhex("0000 ffff 00f8 e007 1f00 2108")
 
 
-def test_rgb565_matches_oracle_at_every_channel_value_and_quantization_boundary() -> None:
+def test_rgb565_matches_oracle_at_every_channel_value_and_quantization_boundary(
+    rgb565_backend: None,
+) -> None:
     boundaries = (0, 3, 4, 7, 8, 31, 32, 127, 128, 248, 252, 255)
     pixels = [
         pixel
@@ -50,6 +67,7 @@ def test_rgb565_matches_oracle_at_every_channel_value_and_quantization_boundary(
 @pytest.mark.parametrize("size", [(0, 0), (0, 3), (3, 0), (1, 1), (3, 5), (240, 240), (321, 241)])
 def test_rgb565_matches_oracle_for_arbitrary_sizes_and_pixel_combinations(
     size: tuple[int, int],
+    rgb565_backend: None,
 ) -> None:
     random = Random(565)
     image = Image.frombytes("RGB", size, random.randbytes(size[0] * size[1] * 3))
@@ -60,7 +78,7 @@ def test_rgb565_matches_oracle_for_arbitrary_sizes_and_pixel_combinations(
 
 
 @pytest.mark.parametrize("mode", ["1", "L", "LA", "P", "RGBA", "CMYK", "YCbCr", "I", "F"])
-def test_rgb565_preserves_conversion_from_non_rgb_modes(mode: str) -> None:
+def test_rgb565_preserves_conversion_from_non_rgb_modes(mode: str, rgb565_backend: None) -> None:
     random = Random(565)
     image = Image.frombytes("RGB", (13, 7), random.randbytes(13 * 7 * 3)).convert(mode)
     if mode in {"LA", "RGBA"}:
@@ -72,6 +90,216 @@ def test_rgb565_preserves_conversion_from_non_rgb_modes(mode: str) -> None:
     assert _rgb565_bytes(image) == _reference_rgb565(image)
     assert image.mode == mode
     assert image.tobytes() == original
+
+
+def test_rgb565_concurrent_frames_have_independent_buffers(rgb565_backend: None) -> None:
+    random = Random(565)
+    images = [Image.frombytes("RGB", (13, 7), random.randbytes(13 * 7 * 3)) for _ in range(24)]
+    originals = [image.tobytes() for image in images]
+    expected = [_reference_rgb565(image) for image in images]
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        actual = list(executor.map(_rgb565_bytes, images))
+
+    assert actual == expected
+    assert [image.tobytes() for image in images] == originals
+
+
+@pytest.mark.parametrize("available", [True, False])
+def test_rgb565_selects_lazy_backend_once_and_preserves_missing_numpy_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+    available: bool,
+) -> None:
+    imports: list[str] = []
+
+    def load(name: str) -> ModuleType:
+        imports.append(name)
+        if not available:
+            raise ImportError("NumPy is not installed")
+        return ModuleType(name)
+
+    monkeypatch.setattr(display_module, "import_module", load)
+    display_module._rgb565_packer.cache_clear()
+    try:
+        expected = (
+            display_module._rgb565_bytes_numpy if available else display_module._rgb565_bytes_pillow
+        )
+        assert imports == []
+        assert display_module._rgb565_packer() is expected
+        assert display_module._rgb565_packer() is expected
+        assert imports == ["numpy"]
+        if not available:
+            image = Image.new("RGB", (3, 5), (31, 128, 248))
+            assert _rgb565_bytes(image) == _reference_rgb565(image)
+            assert imports == ["numpy"]
+    finally:
+        display_module._rgb565_packer.cache_clear()
+
+
+def test_framebuffer_without_event_loop_does_not_load_numpy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unexpected_load() -> object:
+        raise AssertionError("boot splash must not load NumPy")
+
+    monkeypatch.setattr(display_module, "_rgb565_packer", unexpected_load)
+    sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
+    display.set_idle_stage("screen_off")
+
+    assert display._packer_task is None
+    assert framebuffer.read_bytes() == b"\0\0\0\0"
+    display.close()
+
+
+@pytest.mark.asyncio
+async def test_framebuffer_renders_and_handles_idle_while_backend_load_is_blocked(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    started, release = Event(), Event()
+    calls = 0
+
+    def load() -> object:
+        nonlocal calls
+        calls += 1
+        started.set()
+        assert release.wait(5)
+        return display_module._rgb565_bytes_numpy
+
+    monkeypatch.setattr(display_module, "_rgb565_packer", load)
+    sysfs_root, framebuffer, backlight = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    try:
+        assert await asyncio.wait_for(asyncio.to_thread(started.wait, 2), 3)
+        snapshot = UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1")
+        display.render(snapshot)
+        original = framebuffer.read_bytes()
+        expected = _reference_rgb565(display_module.render_snapshot(snapshot).resize((2, 1)))
+        assert original == expected
+        display.set_idle_stage("screen_off")
+        display.set_idle_stage("active")
+        assert framebuffer.read_bytes() == original
+        assert (backlight / "brightness").read_text(encoding="ascii") == "7\n"
+        assert display._packer is display_module._rgb565_bytes_pillow
+        assert calls == 1
+        release.set()
+        assert display._packer_task is not None
+        await asyncio.wait_for(display._packer_task, 3)
+        assert display._packer is display_module._rgb565_bytes_numpy
+        display.render(snapshot)
+        assert framebuffer.read_bytes() == expected
+    finally:
+        release.set()
+        display.close()
+
+
+@pytest.mark.asyncio
+async def test_framebuffer_close_cancels_loading_and_never_switches_closed_display(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    started, release, finished = Event(), Event(), Event()
+
+    def load() -> object:
+        started.set()
+        assert release.wait(5)
+        finished.set()
+        return display_module._rgb565_bytes_numpy
+
+    monkeypatch.setattr(display_module, "_rgb565_packer", load)
+    sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    try:
+        assert await asyncio.wait_for(asyncio.to_thread(started.wait, 2), 3)
+        display.close()
+        display.close()
+        assert display._packer_task is not None
+        with pytest.raises(asyncio.CancelledError):
+            await display._packer_task
+        release.set()
+        assert await asyncio.wait_for(asyncio.to_thread(finished.wait, 2), 3)
+        await asyncio.sleep(0)
+        assert display._packer is display_module._rgb565_bytes_pillow
+        assert display._packer_task.cancelled()
+    finally:
+        release.set()
+        display.close()
+
+
+@pytest.mark.asyncio
+async def test_framebuffer_close_before_loader_runs_does_not_start_worker(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unexpected_load() -> object:
+        raise AssertionError("closed display must not start loading")
+
+    monkeypatch.setattr(display_module, "_rgb565_packer", unexpected_load)
+    sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    display.close()
+    assert display._packer_task is not None
+    with pytest.raises(asyncio.CancelledError):
+        await display._packer_task
+    assert display._packer is display_module._rgb565_bytes_pillow
+
+
+@pytest.mark.asyncio
+async def test_framebuffer_missing_numpy_loads_fallback_without_warnings_or_retries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    calls = 0
+
+    def missing(name: str) -> ModuleType:
+        nonlocal calls
+        calls += 1
+        raise ImportError("optional NumPy unavailable")
+
+    monkeypatch.setattr(display_module, "import_module", missing)
+    display_module._rgb565_packer.cache_clear()
+    sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    try:
+        assert display._packer_task is not None
+        await display._packer_task
+        display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
+        display.set_idle_stage("screen_off")
+        display.set_idle_stage("active")
+        assert display._packer is display_module._rgb565_bytes_pillow
+        assert calls == 1
+        assert not any("ui.framebuffer_packer_unavailable" in r.message for r in caplog.records)
+    finally:
+        display.close()
+        display_module._rgb565_packer.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_framebuffer_loader_failure_keeps_pillow_and_logs_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def load() -> object:
+        raise RuntimeError("native dependency cannot load")
+
+    monkeypatch.setattr(display_module, "_rgb565_packer", load)
+    sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    try:
+        assert display._packer_task is not None
+        await display._packer_task
+        display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
+        display.render(UiSnapshot(mode=UiMode.READY, ftp_host="192.168.7.1"))
+        assert display._packer is display_module._rgb565_bytes_pillow
+        assert len(framebuffer.read_bytes()) == 4
+        assert sum("ui.framebuffer_packer_unavailable" in r.message for r in caplog.records) == 1
+    finally:
+        display.close()
 
 
 def test_st7789_framebuffer_discovers_matching_fb_without_hardcoded_number(

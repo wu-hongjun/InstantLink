@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, cast
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 from instantlink_bridge.config import UiSurface
 from instantlink_bridge.ui.models import UiSnapshot
@@ -17,6 +16,10 @@ from instantlink_bridge.ui.render import render_snapshot
 LOGGER = logging.getLogger(__name__)
 ST7789_FRAMEBUFFER_NAME = "fb_st7789v"
 BACKLIGHT_OFF_STAGES = {"screen_off", "deep_idle", "poweroff"}
+_RGB565_RED_HIGH = tuple(value & 0xF8 for value in range(256))
+_RGB565_GREEN_HIGH = tuple(value >> 5 for value in range(256))
+_RGB565_GREEN_LOW = tuple((value & 0x1C) << 3 for value in range(256))
+_RGB565_BLUE_LOW = tuple(value >> 3 for value in range(256))
 
 
 class _BacklightDevice(Protocol):
@@ -398,12 +401,11 @@ def _read_sysfs_int(path: Path) -> int:
 
 
 def _rgb565_bytes(image: Image.Image) -> bytes:
-    rgb = image.convert("RGB")
-    output = bytearray(rgb.width * rgb.height * 2)
-    index = 0
-    for red, green, blue in cast(Iterable[tuple[int, int, int]], rgb.getdata()):
-        value = ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3)
-        output[index] = value & 0xFF
-        output[index + 1] = value >> 8
-        index += 2
-    return bytes(output)
+    """Pack little-endian RGB565 using Pillow's native band operations."""
+    red, green, blue = image.convert("RGB").split()
+    # These fields occupy disjoint bits, so addition equals bitwise OR and
+    # cannot overflow. LA is only a two-byte interleaving container here;
+    # neither byte is interpreted as luminance or alpha by the framebuffer.
+    low = ImageChops.add(green.point(_RGB565_GREEN_LOW), blue.point(_RGB565_BLUE_LOW))
+    high = ImageChops.add(red.point(_RGB565_RED_HIGH), green.point(_RGB565_GREEN_HIGH))
+    return Image.merge("LA", (low, high)).tobytes()

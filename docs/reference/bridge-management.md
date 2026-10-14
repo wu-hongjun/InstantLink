@@ -95,6 +95,10 @@ unlock timer. Active preparation/printing remains boosted; background receive,
 Sync and Printer reconnect remain operational.
 
 When disabled, one input wakes and repaints the screen without executing its normal action.
+The Linux framebuffer packs pixels as little-endian RGB565 using native Pillow band operations,
+with the same channel quantization and pixel ordering. Changed frames are drawn and written
+synchronously; wake restores pixels before enabling the backlight.
+
 The physical and virtual LCDs share this behavior and the existing abstract input API. This
 input guard prevents accidental button actions; it is not an authentication mechanism.
 

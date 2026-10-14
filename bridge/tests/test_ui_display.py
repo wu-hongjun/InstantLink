@@ -1,15 +1,77 @@
 from __future__ import annotations
 
 from pathlib import Path
+from random import Random
 
 import pytest
+from PIL import Image
 
 from instantlink_bridge.ui.display import (
     FramebufferBacklightError,
     FramebufferDisplay,
+    _rgb565_bytes,
     _st7789_framebuffer,
 )
 from instantlink_bridge.ui.models import UiMode, UiSnapshot
+
+
+def _reference_rgb565(image: Image.Image) -> bytes:
+    """Independent scalar oracle for the framebuffer's existing pixel format."""
+    rgb = image.convert("RGB").tobytes()
+    output = bytearray()
+    for index in range(0, len(rgb), 3):
+        red, green, blue = rgb[index : index + 3]
+        value = ((red >> 3) << 11) | ((green >> 2) << 5) | (blue >> 3)
+        output.extend(value.to_bytes(2, "little"))
+    return bytes(output)
+
+
+def test_rgb565_known_colors_preserve_channel_order_and_little_endian() -> None:
+    image = Image.new("RGB", (6, 1))
+    image.putdata([(0, 0, 0), (255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (8, 4, 8)])
+
+    assert _rgb565_bytes(image) == bytes.fromhex("0000 ffff 00f8 e007 1f00 2108")
+
+
+def test_rgb565_matches_oracle_at_every_channel_value_and_quantization_boundary() -> None:
+    boundaries = (0, 3, 4, 7, 8, 31, 32, 127, 128, 248, 252, 255)
+    pixels = [
+        pixel
+        for value in range(256)
+        for fixed in boundaries
+        for pixel in ((value, fixed, fixed), (fixed, value, fixed), (fixed, fixed, value))
+    ]
+    image = Image.new("RGB", (len(pixels), 1))
+    image.putdata(pixels)
+
+    assert _rgb565_bytes(image) == _reference_rgb565(image)
+
+
+@pytest.mark.parametrize("size", [(0, 0), (0, 3), (3, 0), (1, 1), (3, 5), (240, 240), (321, 241)])
+def test_rgb565_matches_oracle_for_arbitrary_sizes_and_pixel_combinations(
+    size: tuple[int, int],
+) -> None:
+    random = Random(565)
+    image = Image.frombytes("RGB", size, random.randbytes(size[0] * size[1] * 3))
+    original = image.tobytes()
+
+    assert _rgb565_bytes(image) == _reference_rgb565(image)
+    assert image.tobytes() == original
+
+
+@pytest.mark.parametrize("mode", ["1", "L", "LA", "P", "RGBA", "CMYK", "YCbCr", "I", "F"])
+def test_rgb565_preserves_conversion_from_non_rgb_modes(mode: str) -> None:
+    random = Random(565)
+    image = Image.frombytes("RGB", (13, 7), random.randbytes(13 * 7 * 3)).convert(mode)
+    if mode in {"LA", "RGBA"}:
+        image.putalpha(Image.frombytes("L", image.size, random.randbytes(13 * 7)))
+    elif mode == "P":
+        image.info["transparency"] = 0
+    original = image.tobytes()
+
+    assert _rgb565_bytes(image) == _reference_rgb565(image)
+    assert image.mode == mode
+    assert image.tobytes() == original
 
 
 def test_st7789_framebuffer_discovers_matching_fb_without_hardcoded_number(

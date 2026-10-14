@@ -236,3 +236,43 @@ def test_client_sends_only_fixed_operation_metadata(monkeypatch: pytest.MonkeyPa
         "verified": True,
     }
     assert json.loads(sent[0]) == {"action": "create", "version": "0.1.17"}
+
+
+def test_private_config_files_restore_runtime_owner_and_secret_modes(
+    broker: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage, root, _first = _archive(tmp_path, bond=False)
+    source = tmp_path / "source"
+    presets = source / "etc/InstantLinkBridge/presets.toml"
+    presets.write_text("private synthetic preset", encoding="utf-8")
+    presets.chmod(0o600)
+    credential = source / "etc/InstantLinkBridge/private/nested/credential.json"
+    credential.parent.mkdir(parents=True)
+    credential.write_text("private nested synthetic credential", encoding="utf-8")
+    credential.chmod(0o600)
+    created = backup.create_backup_archive(storage, root=source, backup_id="private-config")
+    _restore_env(broker, monkeypatch, storage)
+    monkeypatch.setattr(
+        broker.pwd, "getpwnam", lambda name: SimpleNamespace(pw_uid=1234, pw_gid=5678)
+    )
+    records: list[tuple[bytes, int, int]] = []
+
+    def record_owner(descriptor: int, uid: int, gid: int) -> None:
+        value = os.fstat(descriptor)
+        if stat.S_ISREG(value.st_mode):
+            records.append((os.pread(descriptor, 4096, 0), uid, gid))
+
+    monkeypatch.setattr(broker.os, "fchown", record_owner)
+    broker._restore(created.manifest.backup_id, root=root)
+    assert (b"private synthetic preset", 1234, 5678) in records
+    assert not any(
+        content == b"private synthetic preset" and uid == 0 for content, uid, _ in records
+    )
+    restored = root / "etc/InstantLinkBridge/presets.toml"
+    assert stat.S_IMODE(restored.stat().st_mode) == 0o600
+    restored_credential = root / credential.relative_to(source)
+    assert (b"private nested synthetic credential", 1234, 5678) in records
+    assert stat.S_IMODE(restored_credential.stat().st_mode) == 0o600
+    assert stat.S_IMODE(restored_credential.parent.stat().st_mode) == 0o2770
+    assert stat.S_IMODE(restored_credential.parent.parent.stat().st_mode) == 0o2770
+    assert stat.S_IMODE((root / "etc/InstantLinkBridge/config.toml").stat().st_mode) == 0o660

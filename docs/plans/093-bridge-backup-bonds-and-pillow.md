@@ -48,3 +48,27 @@ Real pairing secrets and backup archives remain on the Bridge; committed evidenc
 only verification results and measurements. Physical hardware: Raspberry Pi Zero 2 W Rev 1.0,
 ST7789 LCD, Debian 13.2, Linux 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82 and Link Square
 INSTAX-52006924. No film, image, reset or actuator commands are permitted in this validation.
+
+### Installed restore ownership refinement
+
+The corrected offline fixture passed its 20 affected cases. Normal commit gates then passed
+all 2,431 Bridge tests, with only eight expected host GPIO fallback warnings. Clean `870fb21`
+was installed along with the root-owned helper, and the manager was restarted to load its client.
+
+Production create/restore ran under an `ib` systemd sandbox matching the manager restrictions.
+It verified and restored 28 files in 2.112/16.786 seconds from dispatch to reply; the broker
+reported 321/14,916 ms for its operation intervals. Configuration, selection and native-library
+contents remained unchanged. The isolated synthetic LTK/adapter identity roundtrip passed exact
+bytes, private permissions and unrelated-device exclusion. The physical Printer has no persisted
+bond, so its live backup correctly included selection and zero BlueZ files.
+
+The subsequent application log check found a real ownership defect: private `presets.toml`
+retained mode 0600 but became root-owned, preventing the runtime from loading it. The Bridge was
+recovered by restoring its `ib` ownership and restarting. The final code now restores product
+configuration files as `ib:ib` while keeping their private modes. Review also required repairing
+nested product directory access. BlueZ keys and OS configuration outside the product directory
+retain root ownership. A regression test covers private presets and nested credentials.
+
+The independent ownership refinement review passed 92 focused tests with deprecations treated
+as errors. Repeat installed restore and normal runtime acceptance follow below; the initial
+integrity-only live result is preserved separately and is not final acceptance.

@@ -174,15 +174,18 @@ def _restore(backup_id: str, *, root: Path = Path("/")) -> dict[str, object]:
                     directory = directory.parent
             elif relative.startswith("etc/InstantLinkBridge/"):
                 with _open_backup_file(path, root) as handle:
-                    os.fchown(handle.fileno(), 0, runtime.pw_gid)
+                    os.fchown(handle.fileno(), runtime.pw_uid, runtime.pw_gid)
                     if relative == "etc/InstantLinkBridge/config.toml":
                         os.fchmod(handle.fileno(), 0o660)
-                descriptor = _restore_parent_descriptor(path.parent, root, create=False)
-                try:
-                    os.fchown(descriptor, 0, runtime.pw_gid)
-                    os.fchmod(descriptor, 0o2770)
-                finally:
-                    os.close(descriptor)
+                directory = path.parent
+                while directory != root / "etc":
+                    descriptor = _restore_parent_descriptor(directory, root, create=False)
+                    try:
+                        os.fchown(descriptor, 0, runtime.pw_gid)
+                        os.fchmod(descriptor, 0o2770)
+                    finally:
+                        os.close(descriptor)
+                    directory = directory.parent
         return {
             "restore": {
                 "backup_id": backup_id,

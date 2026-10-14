@@ -1,5 +1,44 @@
 # Current Bridge Context
 
+## LCD text/layout drawing deployed, 2026-10-13
+
+Plan087: clean Python **06bbe86** installed; native b2b6c8c unchanged (FFI SHA256
+`9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031`).
+
+- Bounded text metrics/glyph-mask LRUs reuse exact Pillow work (512 metrics/256 masks).
+  Retained mask pixels below 3 MiB; metadata/fonts additional. Effective font/core/text/anchor
+  keys, original fallback for unsupported cases. Current layout/theme/clipping/clock remain
+  live; no async frames/controller/GPIO/config/C ABI/dependency changes.
+- Pi actual framebuffer, 18 equivalent 1000 MHz frames per variant: median rendering
+  **42.092 → 18.576 candidate / 13.994 ms installed**; text/layout 31.158 → 3.656 / 2.663 ms;
+  rendering thread CPU 41.417 → 15.600 / 13.728 ms (66.9% lower installed). All frame hashes
+  identical. Candidate heartbeat includes BLE setup and is not an isolated LCD latency.
+- Glyph-cache-cold/warm installed draw-only 27.013/2.899 ms vs original 30.263/30.019 ms;
+  fonts loaded, all 12 original RGB comparisons match. Pi 240 mode/theme/language/font-size
+  RGB comparisons exact and preview unchanged. First mixed-clock baseline trial rejected;
+  accepted baseline rerun sequentially at 1000 MHz. No film/image/print commands.
+- Independent 1303 pixel/behavior/cache checks + 80 concurrent frames and 454 affected tests
+  pass. Producer 220 and runtime 136 tests pass. Normal 1926 Bridge tests (27 existing
+  warnings), Ruff/touched formatting/mypy 67 modules/strict docs passed.
+- All 11 kernel GPIO mockup cases per variant pass through production input/controller/actual
+  LCD: bounce/held/rapid presses, same-button triple unlock, mixed-button reset, nonblank wake,
+  10s timeout/black/600 MHz and awake 1000 MHz. Physical contacts not actuated; queue timing
+  excludes contact/scanout. Physical GPIOv2 reader preserved after detach.
+- Candidate/installed startup status 3.534/3.910s, later polls fresh. Baseline first-to-ready
+  123.760s included initially offline Printer; actual successful baseline attempt 3.749s.
+  Automatic recovery 8.848/12.463/6.650s; all 21/32/15 observations locked 600 MHz/camera-ready,
+  final new fresh status and connected Printer. No LCD-attributed reconnect-speed claim.
+- Final normal 21:27:25 EDT PID40805/manager40331 active, zero restarts, connected, 600 MHz
+  powersave, 49.388°C/throttle0x0/GPIO24low/GPIOv2/FTP220+200/hotspot/USB healthy; exact clean
+  hashes. All owned fixtures removed. Independent source/candidate/installed/final-health reviews accepted.
+- Full boot review 12949 records/144 historical matched messages, including eight systemd
+  priority3 startup failures omitted by the older filter. Two older native panic episodes,
+  worker-stuck CRITICAL and prior cancellation warning retained. All task087 baseline/
+  candidate/installed/normal logs have no matched issues. Raw journals private.
+- Evidence docs/plans/087-bridge-lcd-text-layout.md and assets/bridge-audit-087. Next measured
+  rendering cost: RGB565 packing (~10 ms); these are changed-frame CPU/write timings, not
+  whole-device idle CPU, battery lifetime or physical scanout measurements.
+
 ## LCD rendering deployed, 2026-10-13
 
 Plan086: clean Python **cac3318** installed; native b2b6c8c unchanged (FFI SHA256

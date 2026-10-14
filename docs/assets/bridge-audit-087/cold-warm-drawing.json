@@ -1,0 +1,763 @@
+{
+  "scope": "Pi draw-only, fixedclock pixel equality against frozen original; cold clears only added text caches per state; fonts preloaded; immediate warm repeat. Not fontdiskcold boot or framebuffer timings.",
+  "variants": {
+    "candidate": {
+      "rows": [
+        {
+          "mode": "ready",
+          "phase": "cold",
+          "draw_ms": 28.196666011353955,
+          "draw_cpu_ms": 28.19854200000016,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "a9585e0fee94f0083d1b8377110e83de821658f3b1992efde5852e20cb1cc4aa",
+          "baseline_draw_ms": 30.29036399675533,
+          "baseline_draw_cpu_ms": 30.300521000000025,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 13,
+              "misses": 8,
+              "maxsize": 512,
+              "currsize": 8
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 10,
+              "maxsize": 256,
+              "currsize": 10
+            },
+            "_has_font_variations": {
+              "hits": 27,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "ready",
+          "phase": "warm",
+          "draw_ms": 2.8569790010806173,
+          "draw_cpu_ms": 2.852292000000034,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "a9585e0fee94f0083d1b8377110e83de821658f3b1992efde5852e20cb1cc4aa",
+          "baseline_draw_ms": 30.433646010351367,
+          "baseline_draw_cpu_ms": 30.442655999999957,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 34,
+              "misses": 8,
+              "maxsize": 512,
+              "currsize": 8
+            },
+            "_cached_text_mask": {
+              "hits": 10,
+              "misses": 10,
+              "maxsize": 256,
+              "currsize": 10
+            },
+            "_has_font_variations": {
+              "hits": 58,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "no_film",
+          "phase": "cold",
+          "draw_ms": 26.80135400441941,
+          "draw_cpu_ms": 26.801406000000583,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "b9d7f993b5cee27d9e7533d3e09c0925447755b32a76533bf2a995b27e06eb6a",
+          "baseline_draw_ms": 29.789479012833908,
+          "baseline_draw_cpu_ms": 29.793020999999698,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 13,
+              "misses": 9,
+              "maxsize": 512,
+              "currsize": 9
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 9,
+              "maxsize": 256,
+              "currsize": 9
+            },
+            "_has_font_variations": {
+              "hits": 27,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "no_film",
+          "phase": "warm",
+          "draw_ms": 2.5561980000929907,
+          "draw_cpu_ms": 2.5500000000002743,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "b9d7f993b5cee27d9e7533d3e09c0925447755b32a76533bf2a995b27e06eb6a",
+          "baseline_draw_ms": 29.774636001093313,
+          "baseline_draw_cpu_ms": 29.782655999999186,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 35,
+              "misses": 9,
+              "maxsize": 512,
+              "currsize": 9
+            },
+            "_cached_text_mask": {
+              "hits": 9,
+              "misses": 9,
+              "maxsize": 256,
+              "currsize": 9
+            },
+            "_has_font_variations": {
+              "hits": 58,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "settings",
+          "phase": "cold",
+          "draw_ms": 27.806511003291234,
+          "draw_cpu_ms": 27.80880200000002,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "6ebd17cabde4c73a62ab74aea71307e82540247e4741177bdfa1a5bd5bfcaf55",
+          "baseline_draw_ms": 32.05859400623012,
+          "baseline_draw_cpu_ms": 32.066979999999745,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 16,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 12,
+              "maxsize": 256,
+              "currsize": 12
+            },
+            "_has_font_variations": {
+              "hits": 37,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "settings",
+          "phase": "warm",
+          "draw_ms": 3.026927006430924,
+          "draw_cpu_ms": 3.0240619999997165,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "6ebd17cabde4c73a62ab74aea71307e82540247e4741177bdfa1a5bd5bfcaf55",
+          "baseline_draw_ms": 32.051665999460965,
+          "baseline_draw_cpu_ms": 32.05869800000016,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 44,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 12,
+              "misses": 12,
+              "maxsize": 256,
+              "currsize": 12
+            },
+            "_has_font_variations": {
+              "hits": 77,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "unlocking",
+          "phase": "cold",
+          "draw_ms": 20.779947997652926,
+          "draw_cpu_ms": 20.779061999999904,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "57d1ab57084c81ec2adda066db0325c94fb4fc0449f0f42b35b2942dfb291cde",
+          "baseline_draw_ms": 19.172030995832756,
+          "baseline_draw_cpu_ms": 19.177551999999487,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 1,
+              "misses": 4,
+              "maxsize": 512,
+              "currsize": 4
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 4,
+              "maxsize": 256,
+              "currsize": 4
+            },
+            "_has_font_variations": {
+              "hits": 7,
+              "misses": 2,
+              "maxsize": 32,
+              "currsize": 2
+            }
+          }
+        },
+        {
+          "mode": "unlocking",
+          "phase": "warm",
+          "draw_ms": 1.9361979939276353,
+          "draw_cpu_ms": 1.9291670000001204,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "57d1ab57084c81ec2adda066db0325c94fb4fc0449f0f42b35b2942dfb291cde",
+          "baseline_draw_ms": 19.128490006551147,
+          "baseline_draw_cpu_ms": 19.13385400000056,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 6,
+              "misses": 4,
+              "maxsize": 512,
+              "currsize": 4
+            },
+            "_cached_text_mask": {
+              "hits": 4,
+              "misses": 4,
+              "maxsize": 256,
+              "currsize": 4
+            },
+            "_has_font_variations": {
+              "hits": 16,
+              "misses": 2,
+              "maxsize": 32,
+              "currsize": 2
+            }
+          }
+        },
+        {
+          "mode": "adjustment_edit",
+          "phase": "cold",
+          "draw_ms": 25.288749995524995,
+          "draw_cpu_ms": 25.292187000000688,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "dc4e28e5d0b199a5389aeac7783ddd4173729d58a72370f54dc9cad005bd6dbd",
+          "baseline_draw_ms": 28.531354008009657,
+          "baseline_draw_cpu_ms": 28.50260400000071,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 13,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 11,
+              "maxsize": 256,
+              "currsize": 11
+            },
+            "_has_font_variations": {
+              "hits": 33,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "adjustment_edit",
+          "phase": "warm",
+          "draw_ms": 3.6433339992072433,
+          "draw_cpu_ms": 3.642082999999907,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "dc4e28e5d0b199a5389aeac7783ddd4173729d58a72370f54dc9cad005bd6dbd",
+          "baseline_draw_ms": 28.293645998928696,
+          "baseline_draw_cpu_ms": 28.300469000000383,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 38,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 11,
+              "misses": 11,
+              "maxsize": 256,
+              "currsize": 11
+            },
+            "_has_font_variations": {
+              "hits": 69,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "printing",
+          "phase": "cold",
+          "draw_ms": 17.52182299969718,
+          "draw_cpu_ms": 17.523802000000366,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "53317eeb39a29938240d84b3703aa2c83a77e1d88ee60e17514aed6a40e1de04",
+          "baseline_draw_ms": 17.61109399376437,
+          "baseline_draw_cpu_ms": 17.522968999999833,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 5,
+              "misses": 6,
+              "maxsize": 512,
+              "currsize": 6
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 6,
+              "maxsize": 256,
+              "currsize": 6
+            },
+            "_has_font_variations": {
+              "hits": 13,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "printing",
+          "phase": "warm",
+          "draw_ms": 2.628021000418812,
+          "draw_cpu_ms": 2.6240109999999817,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "53317eeb39a29938240d84b3703aa2c83a77e1d88ee60e17514aed6a40e1de04",
+          "baseline_draw_ms": 17.212031001690775,
+          "baseline_draw_cpu_ms": 17.220155999999598,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 16,
+              "misses": 6,
+              "maxsize": 512,
+              "currsize": 6
+            },
+            "_cached_text_mask": {
+              "hits": 6,
+              "misses": 6,
+              "maxsize": 256,
+              "currsize": 6
+            },
+            "_has_font_variations": {
+              "hits": 30,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        }
+      ],
+      "boundary": "Synchronous draw-only on Pi; fonts already loaded, cold means clear only added text caches before each state. Warm repeats immediately. No framebuffer writes, film or Printer commands.",
+      "label": "candidate",
+      "film_used": 0
+    },
+    "installed": {
+      "rows": [
+        {
+          "mode": "ready",
+          "phase": "cold",
+          "draw_ms": 30.344530998263508,
+          "draw_cpu_ms": 30.348178000000114,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "a9585e0fee94f0083d1b8377110e83de821658f3b1992efde5852e20cb1cc4aa",
+          "baseline_draw_ms": 36.67328099254519,
+          "baseline_draw_cpu_ms": 36.6843750000001,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 13,
+              "misses": 8,
+              "maxsize": 512,
+              "currsize": 8
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 10,
+              "maxsize": 256,
+              "currsize": 10
+            },
+            "_has_font_variations": {
+              "hits": 27,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "ready",
+          "phase": "warm",
+          "draw_ms": 3.124740003840998,
+          "draw_cpu_ms": 3.1278640000000912,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "a9585e0fee94f0083d1b8377110e83de821658f3b1992efde5852e20cb1cc4aa",
+          "baseline_draw_ms": 32.98911500314716,
+          "baseline_draw_cpu_ms": 32.99765600000004,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 34,
+              "misses": 8,
+              "maxsize": 512,
+              "currsize": 8
+            },
+            "_cached_text_mask": {
+              "hits": 10,
+              "misses": 10,
+              "maxsize": 256,
+              "currsize": 10
+            },
+            "_has_font_variations": {
+              "hits": 58,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "no_film",
+          "phase": "cold",
+          "draw_ms": 32.898436998948455,
+          "draw_cpu_ms": 32.89781300000038,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "b9d7f993b5cee27d9e7533d3e09c0925447755b32a76533bf2a995b27e06eb6a",
+          "baseline_draw_ms": 39.82755201286636,
+          "baseline_draw_cpu_ms": 39.837604999999776,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 13,
+              "misses": 9,
+              "maxsize": 512,
+              "currsize": 9
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 9,
+              "maxsize": 256,
+              "currsize": 9
+            },
+            "_has_font_variations": {
+              "hits": 27,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "no_film",
+          "phase": "warm",
+          "draw_ms": 2.789739999570884,
+          "draw_cpu_ms": 2.7957290000002466,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "b9d7f993b5cee27d9e7533d3e09c0925447755b32a76533bf2a995b27e06eb6a",
+          "baseline_draw_ms": 33.59812499547843,
+          "baseline_draw_cpu_ms": 33.60453099999994,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 35,
+              "misses": 9,
+              "maxsize": 512,
+              "currsize": 9
+            },
+            "_cached_text_mask": {
+              "hits": 9,
+              "misses": 9,
+              "maxsize": 256,
+              "currsize": 9
+            },
+            "_has_font_variations": {
+              "hits": 58,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "settings",
+          "phase": "cold",
+          "draw_ms": 28.417030989658087,
+          "draw_cpu_ms": 28.41927100000019,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "6ebd17cabde4c73a62ab74aea71307e82540247e4741177bdfa1a5bd5bfcaf55",
+          "baseline_draw_ms": 32.38197999598924,
+          "baseline_draw_cpu_ms": 32.39124999999987,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 16,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 12,
+              "maxsize": 256,
+              "currsize": 12
+            },
+            "_has_font_variations": {
+              "hits": 37,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "settings",
+          "phase": "warm",
+          "draw_ms": 3.0078639974817634,
+          "draw_cpu_ms": 3.0088539999999497,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "6ebd17cabde4c73a62ab74aea71307e82540247e4741177bdfa1a5bd5bfcaf55",
+          "baseline_draw_ms": 31.930780998663977,
+          "baseline_draw_cpu_ms": 31.937864000000094,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 44,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 12,
+              "misses": 12,
+              "maxsize": 256,
+              "currsize": 12
+            },
+            "_has_font_variations": {
+              "hits": 77,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "unlocking",
+          "phase": "cold",
+          "draw_ms": 20.94234300602693,
+          "draw_cpu_ms": 20.940052999999903,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "57d1ab57084c81ec2adda066db0325c94fb4fc0449f0f42b35b2942dfb291cde",
+          "baseline_draw_ms": 19.147917002555914,
+          "baseline_draw_cpu_ms": 19.15239599999996,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 1,
+              "misses": 4,
+              "maxsize": 512,
+              "currsize": 4
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 4,
+              "maxsize": 256,
+              "currsize": 4
+            },
+            "_has_font_variations": {
+              "hits": 7,
+              "misses": 2,
+              "maxsize": 32,
+              "currsize": 2
+            }
+          }
+        },
+        {
+          "mode": "unlocking",
+          "phase": "warm",
+          "draw_ms": 1.8802600097842515,
+          "draw_cpu_ms": 1.8770319999998897,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "57d1ab57084c81ec2adda066db0325c94fb4fc0449f0f42b35b2942dfb291cde",
+          "baseline_draw_ms": 19.15812499646563,
+          "baseline_draw_cpu_ms": 19.164686999999958,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 6,
+              "misses": 4,
+              "maxsize": 512,
+              "currsize": 4
+            },
+            "_cached_text_mask": {
+              "hits": 4,
+              "misses": 4,
+              "maxsize": 256,
+              "currsize": 4
+            },
+            "_has_font_variations": {
+              "hits": 16,
+              "misses": 2,
+              "maxsize": 32,
+              "currsize": 2
+            }
+          }
+        },
+        {
+          "mode": "adjustment_edit",
+          "phase": "cold",
+          "draw_ms": 25.6094270007452,
+          "draw_cpu_ms": 25.51520800000029,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "dc4e28e5d0b199a5389aeac7783ddd4173729d58a72370f54dc9cad005bd6dbd",
+          "baseline_draw_ms": 28.14395799941849,
+          "baseline_draw_cpu_ms": 28.15177099999966,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 13,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 11,
+              "maxsize": 256,
+              "currsize": 11
+            },
+            "_has_font_variations": {
+              "hits": 33,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "adjustment_edit",
+          "phase": "warm",
+          "draw_ms": 3.651510996860452,
+          "draw_cpu_ms": 3.650520999999962,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "dc4e28e5d0b199a5389aeac7783ddd4173729d58a72370f54dc9cad005bd6dbd",
+          "baseline_draw_ms": 28.106875004596077,
+          "baseline_draw_cpu_ms": 28.11380200000002,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 38,
+              "misses": 12,
+              "maxsize": 512,
+              "currsize": 12
+            },
+            "_cached_text_mask": {
+              "hits": 11,
+              "misses": 11,
+              "maxsize": 256,
+              "currsize": 11
+            },
+            "_has_font_variations": {
+              "hits": 69,
+              "misses": 3,
+              "maxsize": 32,
+              "currsize": 3
+            }
+          }
+        },
+        {
+          "mode": "printing",
+          "phase": "cold",
+          "draw_ms": 17.605989007279277,
+          "draw_cpu_ms": 17.603957999999587,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "53317eeb39a29938240d84b3703aa2c83a77e1d88ee60e17514aed6a40e1de04",
+          "baseline_draw_ms": 17.34614600718487,
+          "baseline_draw_cpu_ms": 17.35500000000023,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 5,
+              "misses": 6,
+              "maxsize": 512,
+              "currsize": 6
+            },
+            "_cached_text_mask": {
+              "hits": 0,
+              "misses": 6,
+              "maxsize": 256,
+              "currsize": 6
+            },
+            "_has_font_variations": {
+              "hits": 13,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        },
+        {
+          "mode": "printing",
+          "phase": "warm",
+          "draw_ms": 2.636353994603269,
+          "draw_cpu_ms": 2.633645999999601,
+          "cpu_khz": 1000000,
+          "rgb_sha256": "53317eeb39a29938240d84b3703aa2c83a77e1d88ee60e17514aed6a40e1de04",
+          "baseline_draw_ms": 17.252708988962695,
+          "baseline_draw_cpu_ms": 17.261562999999924,
+          "baseline_rgb_equal": true,
+          "cache": {
+            "_cached_text_bbox": {
+              "hits": 16,
+              "misses": 6,
+              "maxsize": 512,
+              "currsize": 6
+            },
+            "_cached_text_mask": {
+              "hits": 6,
+              "misses": 6,
+              "maxsize": 256,
+              "currsize": 6
+            },
+            "_has_font_variations": {
+              "hits": 30,
+              "misses": 4,
+              "maxsize": 32,
+              "currsize": 4
+            }
+          }
+        }
+      ],
+      "boundary": "Synchronous draw-only on Pi; fonts already loaded, cold means clear only added text caches before each state. Warm repeats immediately. No framebuffer writes, film or Printer commands.",
+      "label": "installed",
+      "film_used": 0
+    }
+  }
+}

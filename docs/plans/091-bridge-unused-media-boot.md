@@ -97,7 +97,7 @@ An initial 100-second readiness wait expired while the Printer was off; no Disco
 dispatched. After the user powered on Link Square INSTAX-52006924, installed runtime PID2138
 recovered automatically in **6.269 seconds** after external BlueZ Device1.Disconnect. Every
 sample remained locked at 600 MHz, camera-ready and in the same PID. Invalidated timestamps
-published stale immediately; fresh status restored one disconnect watch and zero retired tasks.
+were consistently marked stale; fresh status restored one disconnect watch and zero retired tasks.
 Radio advertising timing is uncontrolled, so this is reliability validation, not a speedup claim.
 Film remained zero; no image/print/actuator commands.
 
@@ -126,7 +126,7 @@ throttle0x0. Source/native hashes and clean manifest match.
 Full final installed-boot logs include five Bluetooth warning records after the observed-to-normal
 service restart: two missing-write-characteristic connection setup failures plus existing
 auto-rebond. Normal runtime recovered automatically after **66.480 seconds** from its boot-start
-marker, with fresh film0/battery50% status and connected final health. This remains an existing
+marker, with fresh film0/battery50% status and connected final health. This remains a
 connection-setup follow-up (GATT service/cache readiness); the media profile changes no Bluetooth
 source/dependencies. Do not describe these logs as fault-free or conflate this restoration timing
 with the successful6.269s external-disconnect test. The expected manager listener wait remained

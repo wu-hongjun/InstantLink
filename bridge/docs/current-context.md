@@ -1733,3 +1733,22 @@ no extra JPEG library is required on the Pi.
 - **Live automatic boot-to-Printer and disconnect/reconnect pending Printer availability.** Printer
   not advertising/connected at handoff. Earlier readiness observers obtained no fresh status and
   issued no Disconnect. Scope and rejected CPU experiments in plan096/assets/bridge-audit-096.
+
+#### Plan 096 live follow-up — boot and screen-off reconnect accepted
+
+- After Printer power-on, unchanged production4049bcd/clean manifest40e0911 rebooted to fresh
+  Printer status19.186s, LCD13.911s/core13.924s. No Bridge button action; film10→10. Earlier095
+  run20.041s is an individual observation, not controlled radio/cache/bond or percentage speedup.
+- Live untrusted cached target retained CLI trust and guarded reset: FFI→first discovery0.874s,
+  so earlier offline absent-target0.072s is not universal. Remaining measured startup costs:
+  interpreter launch→boot marker3.349s, trust/reset~0.85s, BLEconnect→service discovery1.763s.
+- External BlueZ Disconnect→fresh status11.267s. All21samples samePID497/600MHz/powersave/
+  GPIO24low/FTP220+200; film10→10. Samples begin2.273s after dispatch. No setup failure/manual
+  Reconnect; normal automatic screen-off idle observed, not physical contacts/internal lock flags.
+- Bridge497/manager655 active/zero automatic restarts, Printer connected/fresh, throttle0x0,
+  network/Bluetooth/backup socket active, reviewed source/unit/unchanged FFI. Current-boot Bridge
+  journal91records/zero warnings-errors. Wider logs retain BlueZ directory-mode/no-matching-
+  connection notices and manager bind retry, resolved1.007s later. No global warning-free claim.
+- Independent evidence review accepted both trials. Availability gap completed; no film or Printer
+  image/print/actuator commands. Evidence in assets/bridge-audit-096/boot-connected.json,
+  reconnect.json, connected-health.json and live-log-review.json. Device/OS unchanged.

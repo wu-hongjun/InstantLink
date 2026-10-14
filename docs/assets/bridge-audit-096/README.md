@@ -26,7 +26,7 @@ baseline; final no-hook hardware results must be evaluated separately. In the ex
 FFI-loaded→first discovery policy fell from baseline0.722 s to0.104/0.104 s, consistent with removing
 redundant inventory/trust processes. That is pre-discovery setup, not a connected-time result.
 
-Connected-time measurement and the installed disconnect/reconnect acceptance depend on the
+At the initial handoff, connected-time and installed reconnect acceptance were pending the
 Printer advertising. The attempted connected baseline timed out before reboot or Disconnect;
 it is not a passing connection result. A later reconnect readiness observer was interrupted by
 the repeat reboot before it could obtain status or issue Disconnect; it is not a reconnect test.
@@ -58,5 +58,32 @@ use film. It does not test a physical camera or normal print dispatch. The first
 an unreadable login-home cwd; retry used the deployed service's normal `/opt/InstantLinkBridge`
 working directory. No production FTP change was required. Temporary files/server were cleaned up.
 
-**Full automatic boot-to-Printer and installed disconnect/reconnect remain pending availability.**
-The saved Printer is not connected at handoff. No firmware-warning-free or live-reconnect claim.
+Full automatic boot-to-Printer and installed reconnect were pending at that checkpoint. The live
+follow-up below completes them; the earlier offline results remain separately scoped.
+
+## Live follow-up — accepted
+
+After Printer power-on, the unchanged production source booted automatically to fresh Printer
+status at **19.186 s**, LCD at13.911 s and core at13.924 s, with no button action. Film **10→10**.
+`boot-connected.json` records clean manifest40e0911 (docs over production4049bcd). Kernel startup
+clock excludes firmware latency. Earlier plan095 measured20.041 s; this individual run was0.855 s
+lower, not a controlled radio/bond/cache comparison or a general percentage speedup.
+
+This live cached-but-untrusted device needed the retained trust command and guarded startup
+bond reset: FFI-loaded→first discovery was **0.874 s**. The offline absent-target0.072 s result
+does not describe every connection. Remaining measured startup costs include process launch→
+boot marker3.349 s, trust/reset about0.85 s and BLE-connect→service-discovery1.763 s.
+
+`reconnect.json` records external BlueZ Disconnect dispatch→accepted fresh status **11.267 s**.
+All21 samples retained Bridge497,600MHz/powersave/backlight low and FTP220/200; film **10→10**.
+Samples begin2.273 s after dispatch because Disconnect blocks initially; no continuous observation
+claim during that initial interval. Normal automatic screen-off idle was observed; no physical
+button contacts or internal manual-lock flags were tested. No setup failure or warning/error.
+
+`connected-health.json` confirms Bridge497/manager655 active, zero automatic restarts, Printer
+connected/fresh, throttle0x0, active network/Bluetooth/backup socket, reviewed source and unchanged
+FFI hashes. Complete current-boot Bridge PID journal91records has no warning/error matches.
+`live-log-review.json` retains three wider records: BlueZ directory mode, manager hotspot bind
+pending (listening1.007 s later), and BlueZ's no-matching-connection notice. No whole-system
+warning-free claim. Independent evidence review accepted both trials. No film or Printer image/
+print/actuator commands; physical camera and film output were not tested.

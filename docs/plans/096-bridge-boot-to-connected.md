@@ -83,8 +83,32 @@ backend guarantee no print; no physical camera or normal application dispatch cl
 fixture's inherited login-home cwd was unreadable by `ib`; matching production WorkingDirectory
 resolved it without changing FTP code. Probe resources were removed.
 
-**Automatic boot-to-Printer and installed disconnect/reconnect are pending Printer availability.**
+Automatic boot-to-Printer and installed reconnect were pending at the initial handoff.
 The first readiness probe timed out before reboot. A later readiness observer ended during the
 repeat reboot before fresh status or Disconnect; neither is a passing Printer test. Source and
 component validation are complete, with no film or Printer actuator use. Evidence:
 [plan096 measurements](../assets/bridge-audit-096/README.md).
+
+## Live acceptance after Printer power-on
+
+Unchanged production4049bcd, clean manifest40e0911, passed automatic reboot→fresh Printer status
+**19.186 s**, LCD13.911 s and core13.924 s. No Bridge button action before connection; film10→10.
+The earlier plan095 run was20.041 s. This0.855 s lower observation is not a controlled general
+speedup claim; radio/bond/cache/boot variation remains. Kernel timing excludes firmware startup.
+
+The cached untrusted device correctly retained CLI trust before the guarded startup reset;
+FFI-loaded→first discovery took0.874 s, versus0.072 s for the earlier absent-target case. Do not
+generalize the offline shortcut to all connections. Remaining measured costs are interpreter
+launch→boot marker3.349 s, trust/reset around0.85 s and BLE connect→service discovery1.763 s.
+
+External BlueZ Disconnect→fresh automatic status passed **11.267 s** in normal screen-off idle.
+All21 samples were samePID497/600MHz/powersave/GPIO24low/FTP220+200; film10→10. First sample
+starts2.273 s after dispatch, so no continuous initial Disconnect-call observation claim.
+No setup failure, manual Reconnect, physical contacts or internal lock-flag introspection.
+
+Accepted health: Bridge497/manager655 active/zero automatic restarts, connected/fresh Printer,
+throttle0x0, network/Bluetooth/backup socket active, reviewed source/unit/unchanged FFI hashes.
+Full current-boot Bridge PID journal91records has zero warnings/errors. Wider service logs retain
+three notices: BlueZ directory mode and no-matching-connection, plus manager hotspot bind pending
+which became listening1.007 s later. Independent live evidence review accepted the checks.
+Initial availability gap is complete. No film or Printer image/print/actuator commands were used.

@@ -1,0 +1,19 @@
+{
+  "frame_count_each": 18,
+  "bytes_identical": true,
+  "boundary": "Actual framebufferdraw/pack/write/backlight atawake1000MHz, test-only UI snapshots; no Printer/image actions or film. Timings end at kernel write return, not physical panel scanout.",
+  "baseline": {
+    "total_ms": 7.62677050079219,
+    "draw_ms": 2.7272394945612177,
+    "pack_ms": 3.2039320067269728,
+    "cpu_ms": 7.384895499999988
+  },
+  "installed": {
+    "total_ms": 7.702578499447554,
+    "draw_ms": 2.585390495369211,
+    "pack_ms": 3.3473959992988966,
+    "cpu_ms": 7.319687499999894
+  },
+  "cpu_khz": 1000000,
+  "film_used": 0
+}

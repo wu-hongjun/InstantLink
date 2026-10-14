@@ -75,7 +75,60 @@ thread CPU 7.385 ms. These are controlled frame measurements, not a full-print t
 All available current-boot Bridge/manager service logs and kernel logs were copied privately and
 classified. At the initial review, 14,796 service records included 144 historical flagged records
 and no warning/error from the installed baseline process. The 626 kernel records included 177
-brcmfmac vendor-IE errors, four early multimedia initialization failures and one earlier HCI
+brcmfmac vendor-IE errors, five early multimedia initialization failures and one earlier HCI
 connection-timeout warning. These precede this audit's installation and are retained historical
 driver/firmware findings; this application polish does not claim to repair their kernel causes.
 Raw journals remain private; only count inventories are committed.
+
+## Final local gates and installed acceptance
+
+Clean source **6a60165ae7993722a034e9389e0516db1819df85** passed the normal commit hooks:
+**2,269 Bridge tests**, 27 existing warnings, Ruff, all **152** Python files formatted, and
+strict mypy on **67** source files. Strict MkDocs passed. The first full run exposed an old
+cancellation test that expected its EXIF reader to outlive its owner; it now requires joined
+cleanup while proving input remains responsive. Four independent fix reviews have no remaining
+scoped findings, including the later transactional outbox changes. Their histories remain in
+`polish-reviews.json`.
+
+Installed on Pi Zero 2 W Rev 1.0 / ST7789 240×240 / X306 2300 mAh; Debian 13.2,
+Linux 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82 and NumPy 2.4.6. All 67 installed Python
+source hashes match the clean commit. Native source remains `b2b6c8c`; the existing FFI SHA
+`9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031` and CLI SHA
+`1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e` are unchanged.
+
+- Eleven real kernel GPIO-mockup cases through the production action queue passed bounce,
+  held/mixed controls, 75 ms presses, triple unlock, ten-second abandonment, framebuffer
+  restoration and 600/1000 MHz policy. Physical switch contacts were not actuated. The slowest
+  observed unlock frame write completed 52.2 ms after accepted input. Queue completion can
+  include governor warmup (maximum 400.2 ms); it is not a pure display-latency measurement.
+- A one-shot governor failure recovered autonomously in **0.337 s**. Cancellation after the
+  real helper wrote performance restored the locked board to powersave/600 MHz, with no photo
+  work begun. The intentional warning and traceback remain in the test journal.
+- Eighteen awake frames matched every baseline RGB565 byte. Median render **7.627 → 7.703 ms**,
+  thread CPU **7.385 → 7.320 ms**; this small sample does not establish a rendering speedup.
+- Installed file-ownership tests used synthetic files on the Pi filesystem: separate spool
+  inodes/checksums, failed add/ACK publication retaining the committed index/original, legacy
+  pre-open detachment and reload migration all passed. No production camera upload was made.
+- Eight concurrent real manager hello requests had median 326.1 ms including a shared cold
+  collection; fifteen concurrent time requests had median 5.71 ms, maximum 50.46 ms. No manager
+  delay was injected; these are HTTP responsiveness observations, not CPU/energy measurements.
+- Normal production dark/offline runtime at 600 MHz used **0.37 CPU seconds / 30.029 seconds**,
+  about **1.23% of one core**, versus 1.53% in the initial 30-second sample. Neither sample used
+  an observer. Short samples and scan phase limit comparison; no battery/energy result is claimed.
+
+Normal Bridge/manager PIDs **45900/45198** are active, NRestarts 0, with powersave/600 MHz,
+no throttling, FTP 220/200 on the Pi hotspot address and no normal-runtime warning/error or
+input fallback. Removed the owned observer, runtime drop-in/socket, GPIO mockup and helper
+scripts. The final complete available service journal has 15,172 records / 148 flagged records:
+144 historical, two bounded status-worker cancellation waits during test restarts, and the two
+intentional governor fault records. The normal restored process has zero flagged records.
+The kernel journal has 637 records / 193 flagged records: 187 vendor-IE errors (ten additional
+ones during service reconfiguration), five early multimedia failures and the same historical
+HCI timeout warning; no new HCI warning. AP/FTP operation remains healthy. Driver causes are
+recorded maintenance limits, not claimed repaired by these changes.
+
+**Pending hardware gate:** INSTAX-52006924 was not advertising throughout this round. Its
+power-on was requested; no film was consumed and no actual Printer disconnect/reconnect test
+is claimed. Source/mock safety and freshness tests passed, including both selection backends,
+current-owner identity changes and failed removal commands. Repeat the installed status-only
+reconnect check when the Printer is available.

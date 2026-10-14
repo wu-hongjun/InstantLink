@@ -1413,3 +1413,33 @@ Native JPEG validation also needs CMake and a C compiler (NASM for x86 SIMD buil
 ARM64 artifacts with `scripts/build-instantlink-artifacts.sh`, which records source and artifact
 provenance, before deploying with `--instantlink-artifacts`. The validator is statically bundled;
 no extra JPEG library is required on the Pi.
+
+## 2026-10-14 — Optimization audit and polish (plan 089)
+
+- Installed clean runtime `6a60165ae7993722a034e9389e0516db1819df85`; all 67 Python source hashes
+  match. Native `b2b6c8c` / FFI `9e31f998…34031` / CLI `1068fcb5…ce38e` unchanged. Bridge package
+  version remains 0.1.17. Pi Zero 2 W Rev 1.0, ST7789 240×240, X306 2300 mAh; Debian 13.2 /
+  Linux 6.12.47+rpt-rpi-v8 / Python 3.13.5 / BlueZ 5.82 / NumPy 2.4.6.
+- One fresh subagent per plan 057–088 audited frozen `c4a2787` (32 reviews). Fixed CPU retries
+  and cancelled writes/close ownership; preset vignette/hue round trips; lost-input unlock
+  safety; full review duration; About/metadata ownership; accepted print settings; immutable
+  Sync originals and legacy detachment; transactional index publication; early FTP shutdown
+  admission/all-resource cleanup; authenticated fresh BlueZ snapshot/watch state, exact bond
+  deletion guards/results, recovery logs; manager off-loop collection and GPIO backlight close.
+- Four fresh fix reviews clear after corrections. Normal hooks: 2,269 Bridge tests, 27 existing
+  warnings, Ruff, full formatting (152 files) and mypy (67 sources); strict docs passed.
+- No film used. Eleven GPIO kernel-mockup/controller/physical LCD cases passed, including held,
+  mixed/rapid triple presses and 10-second abandonment; switch contacts not actuated. All 18
+  benchmark frames have identical RGB565 bytes; median 7.63 → 7.70 ms (no speedup claim).
+  Real governor failure recovered in 0.337 s; cancelled post-write boost restored locked 600 MHz.
+  Isolated installed filesystem/index-failure and concurrent manager HTTP checks passed.
+- Normal runtime offline idle: 0.37 CPU seconds / 30.029 seconds, 1.23% of one core at 600 MHz;
+  initial same-round sample 1.53%. These short process-only samples are not energy/runtime data.
+- Restored normal services, PIDs 45900/45198 active / NRestarts 0, powersave/600 MHz, throttle0x0,
+  FTP220/200 on Pi hotspot address, no normal warnings/errors or input fallback. Removed owned
+  observer/drop-in/socket/mockup/helpers. Final retained service/kernel logs classified in
+  plan089; old driver findings plus ten vendor-IE reconfiguration errors remain maintenance
+  limits. Raw journals private; sanitized evidence under `docs/assets/bridge-audit-089/`.
+- Printer INSTAX-52006924 unavailable/not advertising; power-on requested. Installed live
+  status-only disconnect/reconnect is pending, not claimed passed. Host/source reconnect,
+  ownership and freshness regressions passed. No camera airtime or developed-film verification.

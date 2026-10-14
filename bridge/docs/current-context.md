@@ -1781,3 +1781,31 @@ no extra JPEG library is required on the Pi.
   No global warning-free claim. Independent evidence review accepted; no film used. Device/OS same.
 - Evidence plan097 and assets/bridge-audit-097. Benchmark staging metadata corrected and overlapping
   timing attempts rejected before accepted sequential runs. Owned remote probe files removed.
+
+
+### Plan 098 — systemd audit; original ordering retained
+
+- Three subagents audited/implemented/independently reviewed. Tested80c2c8d After+Wants dbus.socket
+  to overlap daemon startup with Python imports. Actual launch9.398s < daemonREADY9.866s, but
+  baseline→candidate UI13.606→13.595s/FTP13.582→13.594s/core13.616→13.610s: no meaningful gain
+  demonstrated. Both offline; no connected-time claim. Candidate loses reverse daemon shutdown
+  ordering; successful6.728s stop had2warnings and daemon exited before Bridge. Prior accepted
+  control6.176s/no warnings had Bridge first; worker/radio phases differ, not causal warning proof.
+- Rejected shortcut; exacta815fb1unit restored in clean1a3a61d. New policy tests preserve daemon
+  lifetime and independent manager rescue; no runtime optimization/code/ABI/CPU/config/driver change
+  retained. Full2529tests/eight expected Mac GPIO warnings, Ruff/format165/mypy70/strict docs pass.
+- Restored normal boot no buttons: UI14.003s/FTP13.982s/core14.016s/agent13.595s/status19.476s,
+  film10→10. Actual148RGB565values/115200bytes/1GHz/backlight high, later normal600MHz/powersave/
+  GPIO24low/cleared framebuffer. No physical panel/contact observation or speedup claim.
+- Connected restored fullreboot stop6.320s, Bridge beforedaemon; one disconnect_failed code=-3
+  warning as BlueZ stops independently. No forced kill/worker grace expiry/resource failure.
+  External Disconnect→fresh automatic status11.004s,21samples PID501/600MHz/powersave/GPIOlow/
+  FTP220+200, film10→10; first1.834s after dispatch. One initial absent scan/INFO promptly retried,
+  no manual Reconnect or warning. Normal screen-off idle, no internal lock flag introspection.
+- Installed isolated production FTP JPEG STOR→queue exact/226/200; no consumer/backend/Printer.
+  Bridge501/manager active0restarts, connected/fresh, throttle0x0/services/backup active, reviewed
+  source/unit/unchanged native hashes. Full currentbootBridge97records/zero warnings-errors;
+  five-service128records keeps3known broader notices. No global warning-free claim. Private raw
+  journal reviewed/remote copy removed. Final independent evidence review accepted; no film.
+- Evidence plan098/assets/bridge-audit-098. Initial unavailable-Printer observer timed out; core
+  capture valid. Journal observer corrected UUID spelling without device changes. Device/OS same.

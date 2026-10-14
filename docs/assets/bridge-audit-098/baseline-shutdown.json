@@ -1,0 +1,261 @@
+{
+  "scope": "Previous boot full system reboot shutdown, selected final Bridge stop after source deployment. Actual unit reload provenance is in before-candidate-reboot.json. No Printer/image/print/actuator commands.",
+  "records": 41,
+  "events": [
+    {
+      "uptime_s": 1493.30217,
+      "unit": "bluetooth.service",
+      "priority": 6,
+      "message": "Terminating"
+    },
+    {
+      "uptime_s": 1493.306588,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopping bluetooth.service - Bluetooth service..."
+    },
+    {
+      "uptime_s": 1493.334309,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopping instantlink-bridge-manager.service - InstantLink Bridge management API..."
+    },
+    {
+      "uptime_s": 1493.33483,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopping instantlink-bridge.service - InstantLink Bridge FTP receive service..."
+    },
+    {
+      "uptime_s": 1493.5471,
+      "unit": "bluetooth.service",
+      "priority": 6,
+      "message": "Battery Provider Manager destroyed"
+    },
+    {
+      "uptime_s": 1493.547983,
+      "unit": "bluetooth.service",
+      "priority": 6,
+      "message": "Stopping SDP server"
+    },
+    {
+      "uptime_s": 1493.548783,
+      "unit": "bluetooth.service",
+      "priority": 6,
+      "message": "Exit"
+    },
+    {
+      "uptime_s": 1493.553932,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "2026-10-14 18:49:29,068 INFO instantlink_bridge.ble.agent bluetooth.agent_released"
+    },
+    {
+      "uptime_s": 1493.581806,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "2026-10-14 18:49:29,098 INFO instantlink_bridge.ble.agent bluetooth.agent_owner_lost"
+    },
+    {
+      "uptime_s": 1493.601338,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "bluetooth.service: Deactivated successfully."
+    },
+    {
+      "uptime_s": 1493.610093,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "2026-10-14 18:49:29,124 INFO instantlink_bridge.app sync.service_stop reason=shutdown"
+    },
+    {
+      "uptime_s": 1493.610093,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "2026-10-14 18:49:29,125 INFO instantlink_bridge.ui.controller ui.sync_service_state listening=False state=unavailable"
+    },
+    {
+      "uptime_s": 1493.613008,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopped bluetooth.service - Bluetooth service."
+    },
+    {
+      "uptime_s": 1493.61618,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "bluetooth.service: Consumed 9.027s CPU time."
+    },
+    {
+      "uptime_s": 1493.727083,
+      "unit": "instantlink-bridge.service",
+      "priority": 5,
+      "message": "      ib : PWD=/opt/InstantLinkBridge ; USER=root ; COMMAND=/usr/local/sbin/instantlink-bridge-cpu-mode ondemand"
+    },
+    {
+      "uptime_s": 1493.731922,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "pam_unix(sudo:session): session opened for user root(uid=0) by (uid=996)"
+    },
+    {
+      "uptime_s": 1493.766624,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "pam_unix(sudo:session): session closed for user root"
+    },
+    {
+      "uptime_s": 1493.775608,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "2026-10-14 18:49:29,290 INFO instantlink_bridge.power.performance power.cpu_mode governor=ondemand photo_jobs=0"
+    },
+    {
+      "uptime_s": 1494.143881,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "instantlink-bridge-manager.service: Deactivated successfully."
+    },
+    {
+      "uptime_s": 1494.145728,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopped instantlink-bridge-manager.service - InstantLink Bridge management API."
+    },
+    {
+      "uptime_s": 1494.148122,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "instantlink-bridge-manager.service: Consumed 3.497s CPU time."
+    },
+    {
+      "uptime_s": 1494.188403,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activating via systemd: service name='org.freedesktop.nm_dispatcher' unit='dbus-org.freedesktop.nm-dispatcher.service' requested by ':1.8' (uid=0 pid=481 comm=\"/usr/sbin/NetworkManager --no-daemon\")"
+    },
+    {
+      "uptime_s": 1494.198478,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down."
+    },
+    {
+      "uptime_s": 1494.206258,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activating via systemd: service name='org.freedesktop.nm_dispatcher' unit='dbus-org.freedesktop.nm-dispatcher.service' requested by ':1.8' (uid=0 pid=481 comm=\"/usr/sbin/NetworkManager --no-daemon\")"
+    },
+    {
+      "uptime_s": 1494.209302,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down."
+    },
+    {
+      "uptime_s": 1495.719632,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activating via systemd: service name='org.freedesktop.nm_dispatcher' unit='dbus-org.freedesktop.nm-dispatcher.service' requested by ':1.8' (uid=0 pid=481 comm=\"/usr/sbin/NetworkManager --no-daemon\")"
+    },
+    {
+      "uptime_s": 1495.723844,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down."
+    },
+    {
+      "uptime_s": 1495.726425,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activating via systemd: service name='org.freedesktop.nm_dispatcher' unit='dbus-org.freedesktop.nm-dispatcher.service' requested by ':1.8' (uid=0 pid=481 comm=\"/usr/sbin/NetworkManager --no-daemon\")"
+    },
+    {
+      "uptime_s": 1495.727903,
+      "unit": "dbus.service",
+      "priority": 6,
+      "message": "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down."
+    },
+    {
+      "uptime_s": 1499.489856,
+      "unit": "instantlink-bridge.service",
+      "priority": 5,
+      "message": "      ib : PWD=/opt/InstantLinkBridge ; USER=root ; COMMAND=/usr/local/sbin/instantlink-bridge-cpu-mode ondemand"
+    },
+    {
+      "uptime_s": 1499.491245,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "pam_unix(sudo:session): session opened for user root(uid=0) by (uid=996)"
+    },
+    {
+      "uptime_s": 1499.501687,
+      "unit": "instantlink-bridge.service",
+      "priority": 6,
+      "message": "pam_unix(sudo:session): session closed for user root"
+    },
+    {
+      "uptime_s": 1499.509146,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "instantlink-bridge.service: Deactivated successfully."
+    },
+    {
+      "uptime_s": 1499.510541,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopped instantlink-bridge.service - InstantLink Bridge FTP receive service."
+    },
+    {
+      "uptime_s": 1499.510851,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "instantlink-bridge.service: Consumed 23.855s CPU time."
+    },
+    {
+      "uptime_s": 1499.519194,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopping dbus.service - D-Bus System Message Bus..."
+    },
+    {
+      "uptime_s": 1499.531533,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "dbus.service: Deactivated successfully."
+    },
+    {
+      "uptime_s": 1499.53251,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Stopped dbus.service - D-Bus System Message Bus."
+    },
+    {
+      "uptime_s": 1499.532895,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "dbus.service: Consumed 15.940s CPU time."
+    },
+    {
+      "uptime_s": 1499.53892,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "dbus.socket: Deactivated successfully."
+    },
+    {
+      "uptime_s": 1499.539168,
+      "unit": "init.scope",
+      "priority": 6,
+      "message": "Closed dbus.socket - D-Bus System Message Bus Socket."
+    }
+  ],
+  "warning_error_messages": [],
+  "bridge_stop_s": 6.175711,
+  "bridge_success": true,
+  "forced_failure_matches": [
+    "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down.",
+    "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down.",
+    "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down.",
+    "[system] Activation via systemd failed for unit 'dbus-org.freedesktop.nm-dispatcher.service': Refusing activation, D-Bus is shutting down."
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "pid": 478,
+  "commit": "a815fb1b5c7280625a3fa27a3a09e3c914bd9fe5",
+  "dirty": false,
+  "boot_to_ui_s": 13.605683,
+  "boot_to_ftp_s": 13.582428,
+  "boot_to_core_s": 13.616155,
+  "boot_to_agent_s": 13.229773,
+  "boot_to_status_s": null,
+  "boot_marker_s": 12.899792,
+  "printer_connected_at_capture": false,
+  "input_messages": [],
+  "warning_error_messages": [],
+  "film_used": 0,
+  "units": {
+    "dbus.socket": {
+      "Result": "success",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "9067309"
+    },
+    "dbus.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9128537",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "9638765"
+    },
+    "instantlink-bridge.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9661035",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "14726680"
+    },
+    "instantlink-bridge-manager.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "15122015",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "15124751"
+    },
+    "instantlink-bridge-boot-splash.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9348414",
+      "ExecMainExitTimestampMonotonic": "9565355",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "9566214"
+    },
+    "NetworkManager.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9656236",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "15104997"
+    },
+    "dnsmasq.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "15720001",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "15853262"
+    }
+  },
+  "bridge_unit_sha256": "b3f8672c9e792fec1bf12806b796d6a30ebf39aa04bb95407255ea2cbbf079ff",
+  "scope": "Normal installed current boot; kernel monotonic timings exclude firmware startup. Read-only capture with no Bridge button, image or Printer commands. A missing status/false connection is not a passing Printer check.",
+  "manager_milestones": [
+    {
+      "uptime_s": 18.892849,
+      "message": "2026-10-14 18:49:51,263 INFO instantlink_bridge.manager.cli manager.listening host=192.168.7.1 port=8742"
+    },
+    {
+      "uptime_s": 18.896265,
+      "message": "2026-10-14 18:49:51,267 WARNING instantlink_bridge.manager.cli manager.bind_pending host=192.168.8.1 port=8742 errno=None"
+    },
+    {
+      "uptime_s": 19.899536,
+      "message": "2026-10-14 18:49:52,270 INFO instantlink_bridge.manager.cli manager.listening host=192.168.8.1 port=8742"
+    }
+  ],
+  "network_milestones": [
+    {
+      "uptime_s": 13.716826,
+      "message": "2026-10-14 18:49:46,088 INFO instantlink_bridge.ui.controller ui.network_status home_wifi_host=none hotspot_host=none usb_carrier=True usb_configured=True camera_lease=192.168.7.10 ftp_recent=False recent_source_ready=False receive_ready=False preferred_wifi_host=none wifi_preferred=True"
+    },
+    {
+      "uptime_s": 19.740954,
+      "message": "2026-10-14 18:49:52,112 INFO instantlink_bridge.ui.controller ui.network_status home_wifi_host=none hotspot_host=192.168.8.1 usb_carrier=True usb_configured=True camera_lease=192.168.7.10 ftp_recent=False recent_source_ready=False receive_ready=True preferred_wifi_host=none wifi_preferred=True"
+    }
+  ],
+  "agent_messages": [
+    {
+      "uptime_s": 13.229773,
+      "message": "2026-10-14 18:49:45,593 INFO instantlink_bridge.ble.agent bluetooth.agent_registered path=/com/instantlink_bridge/agent adapter=/org/bluez/hci0 owner=:1.4"
+    }
+  ]
+}

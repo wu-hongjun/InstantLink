@@ -1,5 +1,39 @@
 # Current Bridge Context
 
+## LCD rendering deployed, 2026-10-13
+
+Plan086: clean Python **cac3318** installed; native b2b6c8c unchanged (FFI SHA256
+`9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031`).
+
+- Existing Pillow native band operations replace the Python RGB565 pixel loop. No dependency,
+  asynchronous frames, controller/config/C ABI changes. Exact quantization and byte order;
+  synchronous render, deduplication, dark blanking and pixels-before-backlight preserved.
+- Pi actual `/dev/fb1`, 18 equivalent frames per variant at 1000 MHz: median total rendering
+  **267.376 → 45.810 candidate / 41.830 ms installed**; packing 234.782 → 10.132 / 9.350 ms.
+  Rendering thread CPU 266.528 → 43.397 / 41.154 ms (84.6% lower installed). All frame hashes
+  identical. This is changed-frame work, not whole-board idle CPU, energy or panel scanout.
+- Exhaustive independent RGB oracle (16,777,216 colours), 17 modes, six layouts and 40 UI
+  frames pass; 64 checks and 456 independent affected tests. Normal gates 1825 Bridge tests,
+  27 existing warnings, Ruff, strict mypy 67 modules, formatting and strict docs pass.
+- All 11 kernel GPIO mockup cases pass in baseline/candidate/installed through production
+  input/controller and actual LCD. Same-button triple unlock, mixed-button reset, held/bounce
+  filtering, rapid 75ms presses, 10s abandonment, awake 1000/dark 600 MHz and nonblank wake
+  preserved. Physical contacts not actuated; queue-to-done is not contact-to-photon latency.
+- Candidate/installed startup status 3.492/3.815s, later polls fresh; automatic recovery
+  12.135/6.466s. All 31/15 recovery observations locked 600 MHz and camera-ready, final fresh
+  status/connected Printer. Advertisement/setup variation means no LCD reconnect-speed claim.
+- Final normal 20:57:05 EDT PID38577/manager active, zero restarts, connected, 600 MHz
+  powersave, 51.540°C/throttle0x0/GPIO24low/GPIOv2/hotspot/USB/FTP220/200 healthy, exact clean
+  source/native hashes. Owned fixtures removed; no film/image/print commands.
+- Full boot logs: 11667 records, 136 matched messages (135 earlier, including two older panic
+  episodes and a CRITICAL worker-stuck restart omitted by the prior filter; one baseline
+  shutdown status-worker cancellation warning retained). No matched
+  errors/warnings/render/input faults/panics in candidate/installed/final normal logs.
+  Independent source, candidate, installed and final-health reviews accepted; evidence in
+  docs/plans/086-bridge-lcd-rendering.md and assets/bridge-audit-086.
+- Next LCD cost: layout/text drawing (~31 ms); fonts/QR already cached. Measurements end at
+  kernel writes, and heartbeat includes concurrent work. No battery-runtime claim.
+
 ## Initial disconnect-watch registration deployed, 2026-10-13
 
 Plan085: clean Python **57e7db9** installed. Native b2b6c8c is unchanged (FFI SHA256

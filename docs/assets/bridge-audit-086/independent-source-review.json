@@ -1,0 +1,392 @@
+{
+  "baseline": "b231b8a",
+  "candidate_sha256": "ef6e7fd51003578d40117f5f758bdbe435972bc695fd23ad2955b9b20165b5a1",
+  "pillow_version": "11.3.0",
+  "duration_seconds": 3.141992749995552,
+  "checks": [
+    {
+      "label": "all_16777216_rgb_values",
+      "bytes": 33554432,
+      "error": null,
+      "sha256": "67320994e853fd614d1f25e7bdc096bb0c1f9b769b7b51b4e27aaa940a13e24c"
+    },
+    {
+      "label": "mode_1",
+      "bytes": 182,
+      "error": null,
+      "sha256": "27e35ec7efc3f099f0a1dbbf5a063fcae8aa09cb63ddee9bc8c00208ddcd31fd"
+    },
+    {
+      "label": "mode_L",
+      "bytes": 182,
+      "error": null,
+      "sha256": "4597519f228d9e6adbe9730ffbea9f1178731a1bc1fd06fee498aef67329b225"
+    },
+    {
+      "label": "mode_P",
+      "bytes": 182,
+      "error": null,
+      "sha256": "c081a65947783cb537f1ded197c457890eac9a29d9377d7e0c1987e4128dd52f"
+    },
+    {
+      "label": "mode_RGB",
+      "bytes": 182,
+      "error": null,
+      "sha256": "737e8b0fdd3ba10fc5c834152ccccf9ca0e10e619fe362353ce54b7463d75aa7"
+    },
+    {
+      "label": "mode_RGBA",
+      "bytes": 182,
+      "error": null,
+      "sha256": "f887dd30b5d0b25bbf9da055b920eda6040c245165492d6d6e2b923edb63c96f"
+    },
+    {
+      "label": "mode_RGBX",
+      "bytes": 182,
+      "error": null,
+      "sha256": "385b64b6f766849647417de2a3165949ffe79ba6485c05fef6df7d763df1648f"
+    },
+    {
+      "label": "mode_CMYK",
+      "bytes": 182,
+      "error": null,
+      "sha256": "fd1d782c5788ed341d8dff3716884fb9e741061bcff5993c23a4e6abf185dc90"
+    },
+    {
+      "label": "mode_YCbCr",
+      "bytes": 182,
+      "error": null,
+      "sha256": "d7ebaf9dc1994c6dac877e31e26ef6b3c748a534660a213409457e262363accb"
+    },
+    {
+      "label": "mode_I",
+      "bytes": 182,
+      "error": null,
+      "sha256": "aa0be6df92d0935aad3704183326881d662283db064c8b543a38c5a54321c982"
+    },
+    {
+      "label": "mode_F",
+      "bytes": 182,
+      "error": null,
+      "sha256": "122b37a6f01fdb700acfce568c6ff2b4ab5a47a6f40336c178450e41856db271"
+    },
+    {
+      "label": "mode_LA",
+      "bytes": 182,
+      "error": null,
+      "sha256": "b67c7f392f06926a526d7e53ada2b15977a8a3a7c43084179aef136ad6b2530b"
+    },
+    {
+      "label": "mode_PA",
+      "bytes": 182,
+      "error": null,
+      "sha256": "cc5193fd99e62209f0d49f20df0d9ca3e538ae3ac5b845db7d08d07795eda4e0"
+    },
+    {
+      "label": "mode_HSV",
+      "bytes": 182,
+      "error": null,
+      "sha256": "3dc0897bef410e4d6e0a8de8df3cc21bd6cba3ca51f01f099e8866f1cfdd570e"
+    },
+    {
+      "label": "mode_LAB",
+      "bytes": 182,
+      "error": null,
+      "sha256": "46902fe7e8da49a82d9aa46564f8c9389ebd6746553d00b72e131a50e5a8f5b7"
+    },
+    {
+      "label": "mode_I;16",
+      "bytes": 182,
+      "error": null,
+      "sha256": "10b8becf5269ee5a20bde8b853caa6b8b635a87a6a2a0b235c95a56ffd6cbec4"
+    },
+    {
+      "label": "mode_I;16B",
+      "bytes": 182,
+      "error": null,
+      "sha256": "ea43f42a1f97f5611a5d6d6bd8c4438a4a6b634ee83c3e05efe3a98349f2062a"
+    },
+    {
+      "label": "mode_I;16L",
+      "bytes": 182,
+      "error": null,
+      "sha256": "dd263f7e1417d8d697145916206eba1b67b1a146b5317d327cfaafcb0ebc1306"
+    },
+    {
+      "label": "size_(0, 0)",
+      "bytes": 0,
+      "error": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "size_(0, 5)",
+      "bytes": 0,
+      "error": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "size_(5, 0)",
+      "bytes": 0,
+      "error": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "size_(1, 1)",
+      "bytes": 2,
+      "error": null,
+      "sha256": "f7728912271260498a7c316433db9685b3635eb28292f35681aa76fae7cdea00"
+    },
+    {
+      "label": "size_(3, 5)",
+      "bytes": 30,
+      "error": null,
+      "sha256": "ad7655a884a247987023b31d5fe3e5ce3caf9f6bf64924d888435e1ce3747f38"
+    },
+    {
+      "label": "size_(239, 241)",
+      "bytes": 115198,
+      "error": null,
+      "sha256": "16fb4179b8b152ec769ada44e79cf46e3f1672f8b64d5a787735ee33ab85ac17"
+    },
+    {
+      "label": "snapshot_light_booting",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "a0a219224b66c4105b2f78f4949154d6767f6822fc7cd2b84e38c74a19d666d4"
+    },
+    {
+      "label": "snapshot_light_unlocking",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "0a3e44413c3e0e0ac5c8dfa0498d72be97f9a2d92bfc96f91a27663a104aec9d"
+    },
+    {
+      "label": "snapshot_light_settings",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "e936dbef3ac7ae3db01529e66eeeede29ccc7e978ab1643a9e0f90a30a2ef2bb"
+    },
+    {
+      "label": "snapshot_light_adjustment_edit",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "5bee5daeba387ec3873ef2466c4106df9fddc45bbcee16648d6b5921d63865b4"
+    },
+    {
+      "label": "snapshot_light_needs_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "4c7d8c8f73eea0115237e9900a105ee7a3db38620727a781dc45d74fc6f952e7"
+    },
+    {
+      "label": "snapshot_light_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "50b868e589e4f6e57241505261bd6329709cddc42869957d4e4f245e1bd1d4d1"
+    },
+    {
+      "label": "snapshot_light_printer_searching",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "739f24d228da0c86a27aa7ae11d8977bc9d01c801d39e006ea368ea4bcab5c71"
+    },
+    {
+      "label": "snapshot_light_printer_offline",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "db7165f7b9ad161ed5c3cfa6d0ef4bc911b06950d21b03a4b60a70d7b3d6a89d"
+    },
+    {
+      "label": "snapshot_light_validation",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "73c06873a70c452256b08f9c30c283281f83769ebdc1f2e6454a2fc2183882f0"
+    },
+    {
+      "label": "snapshot_light_ready",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "67666ed7e7a6b4f99676906decf25b8a5182c10406ea3798de6ba95f10f49ff7"
+    },
+    {
+      "label": "snapshot_light_no_film",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "548c6a3989898910b4ce73a29acafa8571b2bd3a602489d19a8166558d9efc5d"
+    },
+    {
+      "label": "snapshot_light_image_received",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "03573d64b980531e9af13c1d1ca0ee1bc47e97a8ffd251860bcbb4fa3d1899f0"
+    },
+    {
+      "label": "snapshot_light_awaiting_confirm",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "960820805d6bc0c031802ae5247c577d1c4553ff77729731cefe2e47295f7836"
+    },
+    {
+      "label": "snapshot_light_printing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "36867effb930526b967c12f031bb5458ec72d8cc8c0fb251e44c75b65da6817b"
+    },
+    {
+      "label": "snapshot_light_print_complete",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "1c28748eb506de4ca9bf77ef42fc7cb0689252d5e3fdc80fd48b2a993a37364a"
+    },
+    {
+      "label": "snapshot_light_pair_failed",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "dfb65f50585f91e4612b558773f0cfa3e84b55876b4b79f9ea4e077951e99f4b"
+    },
+    {
+      "label": "snapshot_light_error",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "b77fd7ef985f6a83e46696d3ceee30eece5649258781fe1696af08adee2b1e2b"
+    },
+    {
+      "label": "snapshot_light_confirmation_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "a1df6b4a2d4f2a6f5b4b9f552f315aac33033c62c6f71e3461f662f92a64cfd0"
+    },
+    {
+      "label": "snapshot_light_help_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "e35a72be4d24e5da8170498a1b6ae82c6b3e9fc02e31b547bb20ad4d04c1e6e6"
+    },
+    {
+      "label": "snapshot_light_sync_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "c1e1e7b4a3addfb5794329ab4d46dcd3e9090dfcac03bc549e212438c60c3a25"
+    },
+    {
+      "label": "snapshot_dark_booting",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "1a40f857ae498953851d6bc5bc0a2dcc4699a0822db7009ed50f018ccd2401ed"
+    },
+    {
+      "label": "snapshot_dark_unlocking",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "66cd4a0f97ebb5d29817b2f1a73c04384786982536dd2df507aa5f04a834edc4"
+    },
+    {
+      "label": "snapshot_dark_settings",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "03c7df900a633f362ded92e260ac6ee7311f72ffed7bd14d536c733f0960ef90"
+    },
+    {
+      "label": "snapshot_dark_adjustment_edit",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "fb056b8b47dd10330f4aa9dbb320a4bfa28b941d79c6c8bbaf94702430a927d9"
+    },
+    {
+      "label": "snapshot_dark_needs_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "90d3b2bbc272b3b28d4e2a717e3251a8e1e15b9c53c876f634f4aa445c4ec1de"
+    },
+    {
+      "label": "snapshot_dark_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "ed27a5adfece2409638a74fe52b60b34abf1718c6171b7707908fc317407078b"
+    },
+    {
+      "label": "snapshot_dark_printer_searching",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "3355b4fe4865f2ee44ffe34d56bfc4e8daae78b584ef3027ad5d82a1ba36f670"
+    },
+    {
+      "label": "snapshot_dark_printer_offline",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "1453ea00457c8625a3b8b4c9aceaccf12bbe4e23f89a5a40af66b1917c1126f8"
+    },
+    {
+      "label": "snapshot_dark_validation",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "b339c01afec466d3fac67c924cdf51a1493ae4f80ff831d3c377ca28ed8b8aa6"
+    },
+    {
+      "label": "snapshot_dark_ready",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "490b03b03f897007e2b084338e9cb88d65d9dee9fdab06dab71b7bcd92207254"
+    },
+    {
+      "label": "snapshot_dark_no_film",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "e9008d08367aef15adad1ac611b9cb8441211c6aae1b6cb59f6ecf58b731f973"
+    },
+    {
+      "label": "snapshot_dark_image_received",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "9e8651873aaf0a7090b9b7713adcd0260678dda9032d28647688bf656285bf3e"
+    },
+    {
+      "label": "snapshot_dark_awaiting_confirm",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "3f80d7fefa2900e74ecfa3fb3af07ae8092bdf52253fcd11b4a17ab3e817c894"
+    },
+    {
+      "label": "snapshot_dark_printing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "cecedfca25468d85251842f553330b38de7a1e8faf3937a02b842422c1b199e9"
+    },
+    {
+      "label": "snapshot_dark_print_complete",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "00333ff3a21f5c0d1fd44e8e4a8892a80e958b95d7e8d8e9740ff26abdce5e68"
+    },
+    {
+      "label": "snapshot_dark_pair_failed",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "fd50f3a0dbe577c8ed9bbfba412fd100114b5bf7eaa90ee68c299fed8480394b"
+    },
+    {
+      "label": "snapshot_dark_error",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "51803364a419516fa49e55f1d1ff98b009421782b1b3289e28f4c3432d40749f"
+    },
+    {
+      "label": "snapshot_dark_confirmation_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "8dbb2fdb7bd5add49f9eebad256b1873d10910c151cbddbcfb73b6cc835d6344"
+    },
+    {
+      "label": "snapshot_dark_help_dialog",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "346abd9e918be38b9fb64a410925d80026d1132ad1f2f6563dcfa8d7b574e9bc"
+    },
+    {
+      "label": "snapshot_dark_sync_pairing",
+      "bytes": 115200,
+      "error": null,
+      "sha256": "59d7de0cdf7977a78b5a6e1f18d59cdb880f89dfbbc828b48e2171b7a80df4f4"
+    }
+  ]
+}

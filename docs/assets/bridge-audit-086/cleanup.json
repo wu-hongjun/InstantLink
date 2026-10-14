@@ -1,0 +1,20 @@
+{
+  "removed": [
+    "/run/systemd/system/instantlink-bridge.service.d/086-lcd-audit.conf",
+    "/var/tmp/instantlink-lcd-source-086",
+    "/var/tmp/instantlink-lcd-source-086.tar.gz",
+    "/tmp/instantlink-lcd-runtime-observer-086.py",
+    "/tmp/instantlink-lcd-client-086.py",
+    "/tmp/instantlink-lcd-startup-086.py",
+    "/tmp/instantlink-lcd-reconnect-086.py",
+    "/tmp/instantlink-lcd-ui-smoke-086.py",
+    "/tmp/instantlink-lcd-gpio-smoke-086.py",
+    "/tmp/instantlink-lcd-frame-benchmark-086.py",
+    "/tmp/instantlink-lcd-health-086.py",
+    "/tmp/instantlink-lcd-cleanup-086.py"
+  ],
+  "mockup_module_loaded": false,
+  "audit_socket_present": false,
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Tue 2026-10-13 20:55:58 EDT] ; stop_time=[n/a] ; pid=38577 ; code=(null) ; status=0/0 }",
+  "health_and_cleanup_scripts_removed_after_capture": true
+}

@@ -1475,19 +1475,44 @@ no extra JPEG library is required on the Pi.
 - Healthy repeated hotspot setup now retains the verified activation; median 3.742 → 2.187 s,
   FTP greeting/NOOP failures 9 → 0 during four isolated 8 MiB checksum-verified receives.
   Same-Pi hotspot IP path only; no wireless airtime/physical camera throughput claim.
-  Candidate trial retained connected Link Square, lock/600 MHz, fresh status in all45 samples.
+  Candidate trial retained connected Link Square, lock/600 MHz, fresh status in all 45 samples.
 - WPS enrollment disabled while retaining SSID/PIN/WPA2-PSK/RSN/CCMP. After radio cycling, one
   residual cleanup error persisted. Scalar probes identified wrong probe-request AP cleanup;
   disabling P2P did not fix it and was removed by restarting the supplicant.
 - Exact upstream `aba23b0` backported to Raspberry Pi source `359f37f0` for running
-  `6.12.47+rpt-rpi-v8`. Native unchanged rebuild matches packaged stock source identity; all254
-  imported CRCs and all11 exports/types/namespaces match stock. Candidate module SHA
+  `6.12.47+rpt-rpi-v8`. Native unchanged rebuild matches packaged stock source identity; all 254
+  imported CRCs and all 11 exports/types/namespaces match stock. Candidate module SHA
   `a2b930a1…a02c7`, srcversion `2254D80EF43499080344466`. Stock module remains unchanged.
 - Reversible exact-kernel override installed under `updates/instantlink/brcmfmac.ko`; private
   manifest/stock backup under `/var/lib/InstantLinkBridgeKernelBackports/6.12.47+rpt-rpi-v8`.
   Build/install/rollback/verify instructions in `bridge/patches/README.md`. This separate kernel
   override is not automatically installed by application firmware updates or rebuilt for new kernels.
 - Install/rollback/reinstall passed on Pi. Loaded AP cleanup now uses association-response IE
-  `0x4`/return0; station probe-request scan handling retained. Wi-Fi-only reload retained USB,
-  Bridge PID, locked600/camera readiness; Printer was offline. Out-of-tree taint expected; no
+  `0x4`/return 0; station probe-request scan handling retained. Wi-Fi-only reload retained USB,
+  Bridge PID, locked at 600 MHz/camera readiness; Printer was offline. Out-of-tree taint expected; no
   kernel/firmware/initramfs change. Final connected recovery/reboot acceptance follows below.
+
+
+### Plan090 final acceptance
+
+- Installed clean source `a745c9136882283dc7071fabd1f721e2d6b0b186`; all 67 hashes, reviewed
+  privileged helper/tool and unchanged native artifacts match. 2,370 Bridge tests/27 existing
+  warnings, Ruff, strict mypy, script compilation, targeted formatting and strict docs pass.
+  Independent tool review:31 tests plus4 actual filesystem failure/rollback transactions clear.
+- Automatic AP loss recovery **32.693s** retained PrinterConnected/locked at 600 MHz/same PID/fresh
+  status with0 vendor-IE errors. Administrative radio-off remained off by the accepted plan064
+  policy;187 samples retained connected/fresh/locked at 600 MHz, then explicit restoration succeeded
+  with0 errors. An incorrect fixture expectation of automatic radio re-enable is retained as
+  a failed test expectation, not an application bug; guard unchanged.
+- Real reboot preserved the patched loaded module and healthy normal services/FTP. Post-boot
+  external BluetoothDisconnect→newfresh status passed **7.170s**, all samples locked at 600 MHz,
+  camera ready/same PID; final watch 1 / retired tasks 0. Triple unlock/nonblank1000→relock600 and
+  pause/resume/watch rearm passed. GPIO contacts not actuated; no film/image/actuator commands.
+- Host-private0600 observer scripts caused21 test-only failed startups; fixed root:ib0640,
+  finished validation and removed observer/drop-in/socket again. Final normal PID1542, active
+  services/0 automatic restarts, powersave at 600 MHz, 45.084°C/throttle0x0, GPIOv2/no fallback, FTP220/200.
+  Printer offline at final normal capture after idle; successful connected checks recorded.
+- Fresh boot kernel 397 records / 21 existing or expected warnings, **0 vendor-IE errors**. Normal
+  application faults 0; existing GPU/media/VCHI/LCD/regulator notes remain. Complete logs private,
+  classified evidence in plan090. Owned build/test artifacts removed; Wi-Fi stamp and per-kernel
+  override/provenance/stock rollback backup retained. Future kernel changes need new assessment.

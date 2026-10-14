@@ -6,9 +6,14 @@
   "ruff_check": "pass",
   "touched_format": "pass",
   "strict_mypy": "67 sources pass",
-  "strict_docs": "pass",
+  "strict_docs": "passed",
   "normal_commit_hooks": "pass",
   "independent_adversarial_review": "clear after recorded cancellation corrections",
   "native_artifacts": "unchanged",
-  "film_used": 0
+  "film_used": 0,
+  "backport_tool_targeted_tests": 31,
+  "source_commit_normal_hook_tests": 2370,
+  "source_commit_normal_hook_existing_warnings": 27,
+  "normal_hooks": "passed including whitespace check using file-scoped upstream patch context attribute, py_compile, Ruff, strict mypy and full Bridge pytest",
+  "backport_tool_ruff_format_check": "passed"
 }

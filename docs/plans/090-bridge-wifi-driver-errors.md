@@ -172,3 +172,73 @@ IEs) retained. Every captured management-IE return was 0 across radio-off/on and
 transitions. Probe definitions and tracing instance were removed in `finally`; no payloads or
 keys captured. Evidence preserves old and new traces; this establishes the changed driver
 behavior, not merely absence of a log message.
+
+
+## Installed connected recovery and policy checks
+
+Clean source `a745c9136882283dc7071fabd1f721e2d6b0b186` is installed; all 67 Python source
+hashes match committed files, privileged helper matches the reviewed hash, backport tool
+`7a1c34ed…966cc` matches independent clearance, and native Printer artifacts remain unchanged.
+The full normal commit gates passed 2,370 Bridge tests (27 existing warnings), Ruff, strict mypy
+and operational-script compilation; strict docs and targeted tool formatting passed.
+The unmodified upstream patch's required context whitespace has a file-specific Git attribute,
+so its primary-source digest is preserved while source whitespace checking stays enabled.
+
+With INSTAX-52006924 powered on, the installed Bridge automatically obtained fresh Link Square
+status, film 0, at locked at 600 MHz without a manual Reconnect action. External AP connection-down
+recovered automatically in **32.693 s**; all samples retained the connected Printer, locked at 600 MHz,
+same PID and finalfresh status/watch1/no retired tasks, with **zero vendor-IE errors**.
+
+A radio-off fixture initially expected automatic re-enabling and timed out after80.38 s.
+That expectation contradicts the deliberate-administrative-off policy in plan064 and its
+existing unit test. Independent review confirmed this is a fixture error, not a software
+finding; the raw failed report is preserved. All 187 observations kept PrinterConnected,
+fresh status, locked at 600 MHz, same PID, watch 1 / retired tasks 0/film 0 while radio remained disabled.
+Explicit helper restoration succeeded with **zero vendor-IE errors**. This is not automatic
+radio recovery. The accepted policy and guard remain unchanged.
+
+The Printer shut off before the additional external Bluetooth-disconnect check, which timed
+out before mutation; that availability failure is retained. Automatic reconnection when it
+was powered on and connected retention above are verified; a new external-disconnect result
+is not claimed. An offline UI smoke check passed same-button triple unlock, nonblank LCD and
+1000 MHz boost, then relock600 through the shared production queue/physical LCD; GPIO contacts
+were not actuated. Normal service was restored and its observer/drop-in/socket removed before
+reboot. Final boot persistence and normal-running log evidence follow below.
+
+
+## Final reboot and connected follow-up
+
+A real reboot loaded the selected override with exact `2254D80EF43499080344466` srcversion;
+stock hash and native artifacts remain unchanged. Normal services started, FTP220/200 and
+hotspot/USB were available, automatic idle returned to powersave at 600 MHz. When the user powered
+on INSTAX-52006924 again, normal startup obtained fresh Link Square status automatically.
+
+A short post-boot observer validation repeated external `Device1.Disconnect`: automatic fresh
+status recovery passed in **7.170 s**, with all samples locked at 600 MHz/camera ready/same PID,
+immediate stale publication and final watch 1 / retired tasks 0. Uncontrolled advertising timing precludes
+a transport speedup claim. The earlier Printer-unavailable attempt remains a failed
+availability fixture; this follow-up resolves the connected disconnect gate. Same-button
+triple unlock restored nonblank LCD/1000 MHz, relock600 and status pause/resume/watch rearm passed.
+No image, print, LED/reset or other actuator Printer commands; zero film consumed.
+
+The observer initially inherited host-private0600 scripts during transfer, causing21 failed
+startup attempts before permissions were corrected to root:ib0640. This audit setup fault and
+its systemd records are retained/classified separately from production application behavior.
+The observer was removed again; normal Bridge/manager services are active with0 automatic
+restarts. Final normal Bridge PID1542 had no warnings/errors, GPIOv2 input/no fallback,
+FTP220/200, powersave at 600 MHz, 45.084°C/throttle0x0 and no working cache or audit socket/drop-in.
+The Printer was offline again at final normal capture after its idle period; no current
+connected-state claim is made. Its reconnect and connected recovery checks above passed.
+
+Fresh boot journals:504 service records / 48 flags, including42 systemd records for the
+21 fixture start failures, three expected BlueZ disconnect-cleanup notes and existing
+configuration/registration/offline-DNS notes. Kernel 397 records / 21 warnings, **zero vendor-IE
+errors**. Existing regulator/staging GPU/media/LCD and VCHI initialization findings remain;
+expected local-module taint is retained. No additional application finding or new HCI fault.
+Complete raw logs stay private; sanitized evidence is under `docs/assets/bridge-audit-090/`.
+Owned build/benchmark/observer artifacts were removed; production per-boot Wi-Fi stamps,
+installed driver override, its private provenance and stock rollback backup remain.
+
+Boundaries: FTP fixtures used same-Pi hotspot addressing with synthetic files, not wireless
+airtime or a physical camera. Shared input queue/actual LCD used, not physical button contacts.
+The kernel override is specific to this kernel and must be reviewed again on kernel changes.

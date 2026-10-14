@@ -1,0 +1,224 @@
+{
+  "passed": true,
+  "rows": [
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 590.764963003,
+        "locked": true,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 600000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 1,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": null,
+        "governor": "powersave"
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 591.080315399,
+        "locked": true,
+        "unlocking": true,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 1000000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 1,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 1,
+        "frame_nonblank": true,
+        "governor": "performance"
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 591.526079722,
+        "locked": true,
+        "unlocking": true,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 1000000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 1,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 2,
+        "frame_nonblank": null,
+        "governor": "performance"
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 591.69864394,
+        "locked": false,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 1000000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 1,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": true,
+        "governor": "performance"
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 592.129758628,
+        "locked": true,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 600000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 1,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": null,
+        "governor": "powersave"
+      }
+    },
+    {
+      "command": {
+        "command": "pause_status"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 592.143460294,
+        "locked": true,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 600000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 1,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": null,
+        "governor": "powersave"
+      }
+    },
+    {
+      "command": {
+        "command": "resume_status"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 592.157171492,
+        "locked": true,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 600000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": null,
+        "governor": "powersave"
+      }
+    },
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 592.172180867,
+        "locked": true,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 600000,
+        "camera_ready": true,
+        "last_status_ok": 586.750600349,
+        "disconnect_watch_count": 0,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": null,
+        "governor": "powersave"
+      }
+    },
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 1260,
+        "monotonic": 592.436332378,
+        "locked": true,
+        "unlocking": false,
+        "fresh": true,
+        "film": 0,
+        "cpu_khz": 600000,
+        "camera_ready": true,
+        "last_status_ok": 592.285598315,
+        "disconnect_watch_count": 1,
+        "retired_status_tasks": 0,
+        "bluez_connected": null,
+        "elapsed_s": null,
+        "presses": 0,
+        "frame_nonblank": null,
+        "governor": "powersave"
+      }
+    }
+  ],
+  "boundary": "Same abstract actions as GPIO through actual productioncontroller/physicalLCD/CPU; buttoncontacts notactuated. Pause/resume withoutimagecommands/film.",
+  "film_used": 0
+}

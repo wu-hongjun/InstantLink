@@ -49,7 +49,6 @@ from instantlink_bridge.ui.controller import (
     OFFLINE_MESSAGE_AFTER_MISSES,
     PRINTER_RECOVERY_RETRY_COUNT,
     RENDER_TICK_S,
-    RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
     SYNC_CLIENT_RECENT_TTL_S,
     BridgeUi,
@@ -976,7 +975,7 @@ async def test_repeated_absent_printer_status_keeps_auto_searching() -> None:
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "No printer signal"
     # No backoff: the offline retry stays at the configured search period even past the threshold.
-    assert ui._printer_status_retry_delay(False) == ui._config.printer.search_interval_s
+    assert ui._printer_status_retry_delay(False) == 1.0
 
     # Even far past the threshold an absent (non-stale) printer keeps auto-searching.
     for _ in range(20):
@@ -1168,6 +1167,8 @@ def test_offline_status_retry_delay_uses_configured_search_period_without_backof
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
+    ui._idle_stage = IdleStage.SCREEN_OFF
+
     # The retry delay is the total cadence PERIOD (the poll loop subtracts each attempt's elapsed
     # time). It equals the configured search interval with no backoff, regardless of miss count.
     for misses in (0, OFFLINE_MESSAGE_AFTER_MISSES, OFFLINE_MESSAGE_AFTER_MISSES + 50):
@@ -1198,7 +1199,7 @@ def test_retry_delay_is_immediate_right_after_a_connected_drop() -> None:
 
     # Once searching (no longer "was online"), fall back to the configured search period.
     ui._printer_was_online = False
-    assert ui._printer_status_retry_delay(False) == 30.0
+    assert ui._printer_status_retry_delay(False) == 1.0
 
 
 @pytest.mark.asyncio
@@ -1278,6 +1279,7 @@ async def test_poll_recovery_retries_are_bounded_and_restore_normal_cadence(
     monkeypatch.setattr(asyncio, "sleep", sleep)
     monkeypatch.setattr(asyncio, "wait_for", wait_for)
 
+    ui._idle_stage = IdleStage.SCREEN_OFF
     with pytest.raises(asyncio.CancelledError):
         await ui._poll_printer_status(printer, ui._status_generation)
 
@@ -1474,6 +1476,7 @@ async def test_disconnect_event_poll_preserves_bounded_retries_with_fake_clock(
 
     provider = Provider()
     ui = _disconnect_test_ui(provider, watcher)
+    ui._idle_stage = IdleStage.SCREEN_OFF
 
     async def sleep(delay: float) -> None:
         clock[0] += delay
@@ -1481,8 +1484,8 @@ async def test_disconnect_event_poll_preserves_bounded_retries_with_fake_clock(
     async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
         nonlocal kicked
         waiter.close()
-        if not kicked and (kick_during_gap or duration_s > MIN_OFFLINE_SEARCH_GAP_S):
-            clock[0] += 0.1
+        if not kicked:
+            clock[0] += 0.1 if kick_during_gap else 2.1
             watcher.callbacks[0]()
             kicked = True
             return True
@@ -1925,7 +1928,7 @@ def test_offline_status_retry_delay_preserves_restart_special_case() -> None:
     ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + 20
 
     # Restart-printer recovery copy keeps its dedicated cadence regardless of miss count.
-    assert ui._printer_status_retry_delay(False) == RESTART_PRINTER_RETRY_S
+    assert ui._printer_status_retry_delay(False) == 1.0
 
 
 def test_min_offline_search_gap_guarantees_event_loop_breathing_room() -> None:
@@ -1999,7 +2002,7 @@ async def test_repeated_visible_printer_connect_failures_ask_for_restart() -> No
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "Restart printer"
-    assert ui._printer_status_retry_delay(False) == 5.0
+    assert ui._printer_status_retry_delay(False) == 1.0
 
 
 def test_printer_search_retry_keeps_specific_diagnostic_message() -> None:
@@ -2138,17 +2141,10 @@ async def test_upload_ftp_help_describes_sender_wifi() -> None:
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-    # NETWORK row 0 = Wi-Fi Mode; row 1 = SSID ("Bridge Wi-Fi name to join from camera").
-    # 1 DOWN moves to SSID before pressing HELP.
-    await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.NETWORK_HOTSPOT_SSID_INFO)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "Wi-Fi"
     assert display.snapshots[-1].help_dialog_body == "Bridge Wi-Fi name to join from camera"
 
 
@@ -2190,7 +2186,8 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
     #   4 FTP user  5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP
     #   9 Reset sync token  10 Reset credentials.
     # Camera link is at row 0; RIGHT opens the picker immediately.
-    await ui._handle_action(UiAction.RIGHT)
+    await ui._handle_action(UiAction.RIGHT)  # Network → FTP
+    await ui._handle_action(UiAction.RIGHT)  # FTP → Camera link
 
     assert calls == []
     assert _ftp_mode(ui) is FtpReceiveMode.WIRED
@@ -2206,13 +2203,13 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     assert calls == [WifiMode.HOTSPOT]
     assert _ftp_mode(ui) is FtpReceiveMode.HOTSPOT
-    assert display.snapshots[-1].settings_title == "Network"
-    assert display.snapshots[-1].settings_rows[1].label == "SSID"
-    assert display.snapshots[-1].settings_rows[3].label == "FTP host"
-    assert display.snapshots[-1].settings_rows[3].value == "192.168.8.1"
-    assert display.snapshots[-1].settings_rows[4].label == "FTP user"
-    assert display.snapshots[-1].settings_rows[5].label == "FTP PIN"
-    assert display.snapshots[-1].settings_rows[0].label == "Camera link"
+    assert display.snapshots[-1].settings_title == "FTP"
+    rows = display.snapshots[-1].settings_rows
+    assert rows[0].label == "Camera link"
+    assert rows[1].label == "FTP host"
+    assert rows[1].value == "192.168.8.1"
+    assert rows[2].label == "FTP user"
+    assert rows[3].label == "FTP PIN"
     # The "Bridge Wi-Fi ready" status string lives in the runtime-health
     # transport-message channel and is intentionally NOT renamed alongside
     # the picker/row labels — it describes a network state, not the menu.
@@ -2408,18 +2405,12 @@ async def test_settings_menu_shows_ftp_credentials() -> None:
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN ...
+    await _walk_to_network_row(ui, SettingKey.FTP_USERNAME_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[4].label == "FTP user"
-    assert rows[4].value == "ib"
-    assert rows[5].label == "FTP PIN"
-    assert rows[5].value == "12345678"
+    assert rows[2].label == "FTP user"
+    assert rows[2].value == "ib"
+    assert rows[3].label == "FTP PIN"
+    assert rows[3].value == "12345678"
 
 
 @pytest.mark.asyncio
@@ -2443,20 +2434,12 @@ async def test_settings_menu_shows_hotspot_pin(
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host ...
+    await _walk_to_network_row(ui, SettingKey.NETWORK_HOTSPOT_SSID_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[1].label == "SSID"
-    assert rows[1].value == "InstantLink-T123"
-    assert rows[2].label == "Wi-Fi PIN"
-    assert rows[2].value == "12345678"
-    assert rows[3].label == "FTP host"
-    assert rows[3].value == "192.168.8.1"
+    assert rows[0].label == "SSID"
+    assert rows[0].value == "InstantLink-T123"
+    assert rows[1].label == "Wi-Fi PIN"
+    assert rows[1].value == "12345678"
 
 
 @pytest.mark.asyncio
@@ -2513,27 +2496,14 @@ async def test_settings_network_page_shows_connection_info() -> None:
         film_remaining=3,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
-    #   5 FTP PIN  6 iPhone pairing  7 Diagnostics  8 Bluetooth
-    #   9 Same Wi-Fi adv  10 USB IP  11 Reset sync token  12 Reset
-    # credentials. The Diagnostics
-    # divider separates the camera-setup credentials block from the
-    # read-only status rows (plan 034 item 9); iPhone pairing (plan 050)
-    # sits with the setup block just above it.
+    await _walk_to_network_row(ui, SettingKey.NETWORK_BLUETOOTH_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[6].label == "iPhone pairing"
-    assert rows[8].label == "Bluetooth"
-    assert rows[8].value == "connected"
-    assert rows[9].label == "Same Wi-Fi adv"
-    assert rows[9].value == "192.168.5.149"
-    assert rows[10].label == "USB IP"
-    assert rows[10].value == "192.168.7.1"
+    assert rows[0].label == "Bluetooth"
+    assert rows[0].value == "connected"
+    assert rows[1].label == "USB IP"
+    assert rows[1].value == "192.168.7.1"
+    await _walk_to_network_row(ui, SettingKey.NETWORK_WIFI_INFO)
+    assert ui.snapshot.settings_rows[2].value == "192.168.5.149"
 
 
 @pytest.mark.asyncio
@@ -2549,19 +2519,10 @@ async def test_settings_network_page_reports_admin_usb_without_camera_wording() 
     ui._usb_connected = True
     ui._camera_transport_message = "USB IP missing"
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
-    #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
-    #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
-    #   10 USB IP  11 Reset sync token  12 Reset credentials.
+    await _walk_to_network_row(ui, SettingKey.NETWORK_ETHERNET_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[10].label == "USB IP"
-    assert rows[10].value == "no IP"
+    assert rows[1].label == "USB IP"
+    assert rows[1].value == "no IP"
 
 
 @pytest.mark.asyncio
@@ -3158,14 +3119,14 @@ async def test_bluetooth_settings_do_not_claim_connected_while_searching() -> No
         printer_status_message="No printer signal",
     )
 
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.CONNECTIONS)
 
     # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
     #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
     #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
     #   10 USB IP  11 Reset sync token  12 Reset credentials.
-    assert display.snapshots[-1].settings_rows[8].label == "Bluetooth"
-    assert display.snapshots[-1].settings_rows[8].value == "searching"
+    assert display.snapshots[-1].settings_rows[0].label == "Bluetooth"
+    assert display.snapshots[-1].settings_rows[0].value == "searching"
 
 
 @pytest.mark.asyncio
@@ -3300,7 +3261,7 @@ async def test_first_printer_pairing_opens_upload_ftp_credentials() -> None:
     await ui._pair_in_background(previous_printer=None)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "FTP"
     assert display.snapshots[-1].settings_message == "Enter these on sender"
     await ui._cancel_status_refresh()
 
@@ -4318,25 +4279,7 @@ async def test_reset_credentials_requires_confirmation(
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
-    # Navigate to Upload FTP page and select the Reset credentials row (last row)
-    await ui._handle_action(UiAction.SELECT)  # open settings
-    await ui._handle_action(UiAction.DOWN)  # move to Upload FTP
-    await ui._handle_action(UiAction.SELECT)  # open Upload FTP page
-
-    # Scroll to the last row (Reset credentials)
-    from instantlink_bridge.ui.settings import (
-        SECTION_HEADER_KEYS,
-        SETTINGS_BY_PAGE,
-        SettingsPage,
-    )
-
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
-    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
-    # press shorter per header that sits between the start and the end.
-    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
-    for _ in range(len(camera_keys) - 1 - header_count):
-        await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.RESET_CREDENTIALS)
 
     # First SELECT opens the confirmation dialog overlay (plan 040), not execute.
     await ui._handle_action(UiAction.SELECT)
@@ -4383,24 +4326,7 @@ async def test_reset_credentials_second_select_executes(
     )
     monkeypatch.setattr(ui, "_restart_hotspot_for_credentials", fake_hotspot_restart)
 
-    # Navigate to Upload FTP page and go to Reset credentials row
-    await ui._handle_action(UiAction.SELECT)  # open settings
-    await ui._handle_action(UiAction.DOWN)  # Upload FTP
-    await ui._handle_action(UiAction.SELECT)  # open page
-
-    from instantlink_bridge.ui.settings import (
-        SECTION_HEADER_KEYS,
-        SETTINGS_BY_PAGE,
-        SettingsPage,
-    )
-
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
-    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
-    # press shorter per header that sits between the start and the end.
-    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
-    for _ in range(len(camera_keys) - 1 - header_count):
-        await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.RESET_CREDENTIALS)
 
     # First SELECT opens the confirmation dialog (plan 040).
     await ui._handle_action(UiAction.SELECT)
@@ -4447,24 +4373,7 @@ async def test_reset_credentials_other_key_cancels(
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    # Navigate to Upload FTP page and Reset credentials row
-    await ui._handle_action(UiAction.SELECT)  # open settings
-    await ui._handle_action(UiAction.DOWN)  # Upload FTP
-    await ui._handle_action(UiAction.SELECT)  # open page
-
-    from instantlink_bridge.ui.settings import (
-        SECTION_HEADER_KEYS,
-        SETTINGS_BY_PAGE,
-        SettingsPage,
-    )
-
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
-    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
-    # press shorter per header that sits between the start and the end.
-    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
-    for _ in range(len(camera_keys) - 1 - header_count):
-        await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.RESET_CREDENTIALS)
 
     # First SELECT opens the confirmation dialog (plan 040).
     await ui._handle_action(UiAction.SELECT)
@@ -5691,18 +5600,18 @@ async def test_nav_skips_section_header_forward() -> None:
 
     ui, _display = _make_settings_ui(BridgeConfig())
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.PRINT)
     # NETWORK rows: 6 = SYNC_PAIRING, 7 = NETWORK_DIAGNOSTICS_HEADER,
     # 8 = NETWORK_BLUETOOTH_INFO. Position the cursor at 6 and press DOWN.
-    ui._settings_indices[SettingsPage.NETWORK] = 6
-    ui._snapshot = replace(ui._snapshot, selected_index=6)
+    ui._settings_indices[SettingsPage.PRINT] = 3
+    ui._snapshot = replace(ui._snapshot, selected_index=3)
 
     await ui._handle_settings_action(UiAction.DOWN)
 
-    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    keys = ui._visible_keys_for_page(SettingsPage.PRINT)
     new_index = ui._snapshot.selected_index
-    assert keys[new_index] is SettingKey.NETWORK_BLUETOOTH_INFO
-    assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
+    assert keys[new_index] is SettingKey.OPEN_TRANSFORM
+    assert keys[new_index] is not SettingKey.PRINT_ADVANCED_HEADER
 
 
 @pytest.mark.asyncio
@@ -5710,17 +5619,17 @@ async def test_nav_skips_section_header_backward() -> None:
     """Plan 037 #3 + #4: UP over a header lands on the row before it."""
 
     ui, _ = _make_settings_ui(BridgeConfig())
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.PRINT)
     # Start on the row after the divider (NETWORK_BLUETOOTH_INFO, index 8).
-    ui._settings_indices[SettingsPage.NETWORK] = 8
-    ui._snapshot = replace(ui._snapshot, selected_index=8)
+    ui._settings_indices[SettingsPage.PRINT] = 5
+    ui._snapshot = replace(ui._snapshot, selected_index=5)
 
     await ui._handle_settings_action(UiAction.UP)
 
-    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    keys = ui._visible_keys_for_page(SettingsPage.PRINT)
     new_index = ui._snapshot.selected_index
-    assert keys[new_index] is SettingKey.SYNC_PAIRING
-    assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
+    assert keys[new_index] is SettingKey.OPEN_PRINTER
+    assert keys[new_index] is not SettingKey.PRINT_ADVANCED_HEADER
 
 
 @pytest.mark.asyncio
@@ -5743,16 +5652,16 @@ async def test_initial_selection_skips_persisted_header() -> None:
     """Plan 037 #3 + #4: persisted header index advances to the next non-header."""
 
     ui, _display = _make_settings_ui(BridgeConfig())
-    network_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    header_index = network_keys.index(SettingKey.NETWORK_DIAGNOSTICS_HEADER)
-    ui._settings_indices[SettingsPage.NETWORK] = header_index
+    network_keys = SETTINGS_BY_PAGE[SettingsPage.PRINT]
+    header_index = network_keys.index(SettingKey.PRINT_ADVANCED_HEADER)
+    ui._settings_indices[SettingsPage.PRINT] = header_index
 
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.PRINT)
 
     landed_key = network_keys[ui._snapshot.selected_index]
     assert landed_key not in SECTION_HEADER_KEYS
     # Forward-only advance: should land on the row immediately after.
-    assert landed_key is SettingKey.NETWORK_BLUETOOTH_INFO
+    assert landed_key is SettingKey.OPEN_TRANSFORM
 
 
 # -----------------------------------------------------------------------------
@@ -6399,7 +6308,7 @@ async def test_iphone_pairing_row_enters_qr_mode_with_payload(tmp_path: Path) ->
     # and omit the hotspot join credentials.
     ui._wifi_host = "192.168.5.149"
     ui._hotspot_host = None
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -6444,7 +6353,7 @@ async def test_iphone_pairing_payload_carries_urlencoded_hotspot_credentials(
     await ui.sync_service_state_changed(True)
     ui._hotspot_host = "192.168.8.1"
     ui._wifi_host = "192.168.5.149"
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -6474,7 +6383,7 @@ async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> 
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
 
@@ -6485,7 +6394,7 @@ async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> 
     await ui._handle_action(UiAction.BACK)
 
     assert ui._snapshot.mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "iPhone"
     assert ui._snapshot.sync_qr_payload is None
 
 
@@ -6504,7 +6413,7 @@ async def test_sync_pairing_token_failure_shows_settings_toast(tmp_path: Path) -
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -6639,7 +6548,7 @@ async def test_image_received_does_not_clobber_sync_pairing_qr(tmp_path: Path) -
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
 
@@ -6682,7 +6591,7 @@ async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     await ui.image_received(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.20"))
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
@@ -6690,7 +6599,7 @@ async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
     await ui._handle_action(UiAction.BACK)
 
     assert ui._snapshot.mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "iPhone"
     assert ui._snapshot.sync_qr_payload is None
     assert ui._image_reset_task is None
 
@@ -6741,7 +6650,7 @@ async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
     activity_calls["n"] = 0
@@ -6774,7 +6683,7 @@ async def test_leaving_sync_pairing_restores_normal_idle_behavior(tmp_path: Path
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     await ui.apply_power_event(_idle_event(IdleStage.DIM, 30.0))
     assert display.idle_stages == []
@@ -6855,7 +6764,7 @@ async def test_destination_change_resets_sync_service_state_to_starting() -> Non
 async def test_sync_pairing_row_blocked_when_destination_print(tmp_path: Path) -> None:
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.PRINT, token_path=tmp_path / "sync.token")
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -6869,7 +6778,7 @@ async def test_sync_pairing_row_blocked_while_service_unavailable(tmp_path: Path
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
     await ui.sync_service_state_changed(False)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -6882,7 +6791,7 @@ async def test_sync_pairing_row_blocked_while_service_unavailable(tmp_path: Path
 async def test_sync_pairing_row_blocked_while_service_starting(tmp_path: Path) -> None:
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -7026,7 +6935,7 @@ async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
 
@@ -7053,7 +6962,7 @@ async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
 def test_sync_settings_rows_cross_reference_each_other() -> None:
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_DESTINATION]
-        == "Print or sync received photos · Pair iPhone: Network page"
+        == "Print or sync received photos · Pair iPhone: Network > iPhone"
     )
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_PAIRING]
@@ -7081,7 +6990,7 @@ async def test_sync_client_seen_sets_ever_seen_bit() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Plan 051 P3.11 — sync-token rotation. "Reset sync token" is an action row
+# Plan 051 P3.11 — sync-token rotation. "Unpair iPhones" is an action row
 # on Settings ▸ Network mirroring the Reset-credentials pattern: destructive
 # confirmation dialog, file rotation, then an app-side service restart so
 # the running SyncService re-reads the token ("starting" → "listening").
@@ -7114,11 +7023,19 @@ def _sync_token_ui(
 
 
 async def _walk_to_network_row(ui: BridgeUi, key: SettingKey) -> None:
-    """Enter Settings ▸ Network and move the selection onto ``key``."""
+    """Navigate the real Network submenu path to a settings row."""
+    from instantlink_bridge.ui.settings import PAGE_FOR_OPEN_KEY, SETTINGS_PARENT_PAGE
 
     ui._show_settings(page=SettingsPage.NETWORK)
-    selectable = [k for k in SETTINGS_BY_PAGE[SettingsPage.NETWORK] if k not in SECTION_HEADER_KEYS]
-    for _ in range(selectable.index(key)):
+    page = next(page for page, keys in SETTINGS_BY_PAGE.items() if key in keys)
+    assert SETTINGS_PARENT_PAGE[page] is SettingsPage.NETWORK
+    opener = next(k for k, target in PAGE_FOR_OPEN_KEY.items() if target is page)
+    keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
+    for _ in range((keys.index(opener) - ui.snapshot.selected_index) % len(keys)):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+    keys = SETTINGS_BY_PAGE[page]
+    for _ in range((keys.index(key) - ui.snapshot.selected_index) % len(keys)):
         await ui._handle_action(UiAction.DOWN)
 
 
@@ -7129,14 +7046,14 @@ async def test_reset_sync_token_row_requires_confirmation(tmp_path: Path) -> Non
 
     await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
     rows = display.snapshots[-1].settings_rows
-    assert rows[display.snapshots[-1].selected_index].label == "Reset sync token"
+    assert rows[display.snapshots[-1].selected_index].label == "Unpair iPhones"
 
     # First SELECT opens the destructive confirmation dialog, not execute.
     await ui._handle_action(UiAction.SELECT)
 
     assert display.snapshots[-1].mode is UiMode.CONFIRMATION_DIALOG
-    assert display.snapshots[-1].confirmation_title == "Reset sync token?"
-    assert display.snapshots[-1].confirmation_confirm_label == "Reset"
+    assert display.snapshots[-1].confirmation_title == "Unpair iPhones?"
+    assert display.snapshots[-1].confirmation_confirm_label == "Unpair"
     assert display.snapshots[-1].confirmation_destructive is True
     assert display.snapshots[-1].confirmation_focus == "cancel"
     assert ui._snapshot.confirmation_action_key == "reset_sync_token"
@@ -7171,7 +7088,7 @@ async def test_reset_sync_token_confirm_rotates_file_and_requests_restart(
     # concludes) instead of a stale "listening" claim with the old token.
     assert ui._snapshot.sync_service_state == "starting"
     assert ui._snapshot.mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_message == "Sync token reset"
+    assert display.snapshots[-1].settings_message == "iPhones unpaired"
 
 
 @pytest.mark.asyncio
@@ -7207,7 +7124,7 @@ async def test_reset_sync_token_failure_shows_toast_and_skips_restart(
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.SELECT)
 
-    assert display.snapshots[-1].settings_message == "Token reset failed"
+    assert display.snapshots[-1].settings_message == "Unpair failed"
     assert rotations == []
     # No restart requested — the state must not drop to "starting".
     assert ui._snapshot.sync_service_state == "listening"
@@ -7240,7 +7157,7 @@ async def test_reset_sync_token_while_sync_disabled_rotates_without_starting_cla
     # No restart window is claimed: nothing is about to start while sync
     # stays disabled, so the state is left untouched.
     assert ui._snapshot.sync_service_state == "unavailable"
-    assert display.snapshots[-1].settings_message == "Sync token reset"
+    assert display.snapshots[-1].settings_message == "iPhones unpaired"
 
 
 @pytest.mark.asyncio
@@ -7250,7 +7167,9 @@ async def test_reset_sync_token_key3_help(tmp_path: Path) -> None:
     await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].help_dialog_body == ("New pairing token; unpairs all iPhones")
+    assert display.snapshots[-1].help_dialog_body == (
+        "Paired iPhones will need to scan a new QR code."
+    )
 
 
 @pytest.mark.asyncio
@@ -7265,7 +7184,7 @@ async def test_sync_pairing_qr_payload_reflects_rotated_token(tmp_path: Path) ->
     await ui.sync_service_state_changed(True)
     ui._wifi_host = "192.168.5.149"
 
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     payload = ui._snapshot.sync_qr_payload
     assert payload is not None and f"&token={old_token}" in payload

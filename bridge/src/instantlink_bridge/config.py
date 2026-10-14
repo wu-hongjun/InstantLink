@@ -305,10 +305,8 @@ class PrinterConfig:
     print_option: int = 0
     device_name: str | None = None
     keepalive_interval_s: float = 10.0
-    # Total scan period while the selected Printer is offline. The 5-second
-    # scan still runs automatically, but a 30-second period leaves the BLE
-    # radio and CPU idle between scans on a battery-powered Bridge. Settings
-    # offers faster and slower choices when latency matters more or less.
+    # Total offline search period while the screen is dark. Awake discovery uses
+    # one-second scans/retries; the default dark period saves radio/CPU time.
     search_interval_s: float = 30.0
 
 

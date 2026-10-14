@@ -136,10 +136,9 @@ from instantlink_bridge.ui.status_indicator import (
 )
 
 LOGGER = logging.getLogger(__name__)
-# Retry delay used for the "Restart printer" wedge state. The normal offline search cadence is
-# user-configurable (config.printer.search_interval_s, Settings > Printer > Search rate) with no
-# exponential backoff, so a powered-off printer keeps being searched at the chosen rate.
-RESTART_PRINTER_RETRY_S = 5.0
+# Offline discovery follows the visible screen; the saved interval applies while dark.
+AWAKE_PRINTER_SEARCH_INTERVAL_S = 1.0
+MIN_AWAKE_SEARCH_GAP_S = 0.05
 PRINTER_STATUS_WARNING_INTERVAL_S = 30.0
 PRINTER_STATUS_LOG_HEARTBEAT_S = 300.0
 OFFLINE_MESSAGE_AFTER_MISSES = 3
@@ -514,6 +513,9 @@ class BridgeUi:
         self._printer_disconnect_watcher = printer_disconnect_watcher
         self._printer_disconnect_unsubscribe: Callable[[], None] | None = None
         self._printer_disconnect_pending = False
+        self._printer_search_policy_revision = 0
+        self._printer_search_screen_dark = False
+        self._last_printer_discovery_policy: tuple[bool, int, float] | None = None
         self._printer_disconnect_watch_token: object | None = None
         self._auto_rebond_signature_streak = 0
         self._last_auto_rebond_at: dict[str, float] = {}
@@ -2228,10 +2230,8 @@ class BridgeUi:
             if self._settings_page is SettingsPage.MAIN:
                 self._show_cached_home_status()
             else:
-                # Multi-level nesting: ABOUT lives under SYSTEM, so BACK from
-                # ABOUT returns to SYSTEM rather than jumping all the way to
-                # MAIN. Every other sub-page is one level deep and returns to
-                # MAIN as before.
+                # Return to the owning category and its remembered cursor, including nested
+                # Network, Screen, Post and About pages.
                 parent = SETTINGS_PARENT_PAGE.get(self._settings_page, SettingsPage.MAIN)
                 self._show_settings(page=parent)
             return
@@ -3373,11 +3373,9 @@ class BridgeUi:
         """
 
         self._show_confirmation_dialog(
-            title="Reset sync token?",
-            message=(
-                "A new pairing token will be generated. All paired iPhones must scan the new QR."
-            ),
-            confirm_label="Reset",
+            title="Unpair iPhones?",
+            message="Paired iPhones will need to scan a new QR code.",
+            confirm_label="Unpair",
             destructive=True,
             action_key="reset_sync_token",
         )
@@ -3400,14 +3398,14 @@ class BridgeUi:
             await asyncio.to_thread(rotate_sync_token, token_path)
         except Exception:
             LOGGER.exception("ui.sync_token_rotation_failed path=%s", token_path)
-            self._show_settings("Token reset failed")
+            self._show_settings("Unpair failed")
             return
         LOGGER.info("ui.sync_token_rotated path=%s", token_path)
         if self._config.sync.sync_enabled:
             self._sync_service_state = "starting"
             self._snapshot = replace(self._snapshot, sync_service_state="starting")
         self._notify_sync_token_rotated()
-        self._show_settings("Sync token reset")
+        self._show_settings("iPhones unpaired")
 
     def _notify_sync_token_rotated(self) -> None:
         if self._sync_token_rotated_callback is None:
@@ -3641,14 +3639,24 @@ class BridgeUi:
     def _settings_row_for_key(self, key: SettingKey, printer_name: str) -> SettingsRow:
         if key is SettingKey.UNLOCK_THREE_PRESSES:
             return SettingsRow(
-                "Unlock: 3 presses", bool_label(self._config.ui.unlock_requires_three_presses)
+                "Unlock guard", bool_label(self._config.ui.unlock_requires_three_presses)
             )
         if key is SettingKey.OPEN_PRINT:
             return SettingsRow("Print", "")
         if key is SettingKey.OPEN_NETWORK:
             return SettingsRow("Network", "")
+        if key is SettingKey.OPEN_FTP:
+            return SettingsRow("FTP", "")
+        if key is SettingKey.OPEN_WIFI:
+            return SettingsRow("Wi-Fi", "")
+        if key is SettingKey.OPEN_IPHONE:
+            return SettingsRow("iPhone", "")
+        if key is SettingKey.OPEN_CONNECTIONS:
+            return SettingsRow("Connections", "")
         if key is SettingKey.OPEN_SYSTEM:
             return SettingsRow("System", "")
+        if key is SettingKey.OPEN_SCREEN:
+            return SettingsRow("Screen", "")
         if key is SettingKey.OPEN_ABOUT:
             return SettingsRow("About", "")
         # Print hub → sub-page opener rows (plan 035 phase 1).
@@ -3771,7 +3779,7 @@ class BridgeUi:
             )
         if key is SettingKey.SEARCH_INTERVAL:
             return SettingsRow(
-                "Search rate",
+                "Screen-off search",
                 seconds_label(self._config.printer.search_interval_s),
             )
         if key is SettingKey.FTP_RECEIVE_MODE:
@@ -3807,7 +3815,7 @@ class BridgeUi:
         if key is SettingKey.NETWORK_ETHERNET_INFO:
             return SettingsRow("USB IP", self._ethernet_network_value())
         if key is SettingKey.NETWORK_WIFI_INFO:
-            return SettingsRow("Same Wi-Fi adv", self._wifi_network_value())
+            return SettingsRow("Joined Wi-Fi", self._wifi_network_value())
         if key is SettingKey.NETWORK_HOTSPOT_INFO:
             return SettingsRow("Bridge FTP", self._hotspot_network_value())
         if key is SettingKey.NETWORK_HOTSPOT_SSID_INFO:
@@ -3880,7 +3888,7 @@ class BridgeUi:
         if key is SettingKey.RESET_SYNC_TOKEN:
             # Destructive action row (plan 051 P3.11); empty value like
             # Reset credentials — the two-press confirm carries the story.
-            return SettingsRow("Reset sync token", "")
+            return SettingsRow("Unpair iPhones", "")
         if key is SettingKey.NETWORK_DIAGNOSTICS_HEADER:
             # Info-only section divider — no value, no action.
             return SettingsRow("Diagnostics", "", is_header=True)
@@ -3921,7 +3929,10 @@ class BridgeUi:
         if key is SettingKey.KEEPALIVE:
             return f"Polls printer every {int(config.printer.keepalive_interval_s)}s while idle"
         if key is SettingKey.SEARCH_INTERVAL:
-            return f"Scans every {int(config.printer.search_interval_s)}s when printer offline"
+            return (
+                f"Searches every 1s with screen on; every {int(config.printer.search_interval_s)}s "
+                "with screen off"
+            )
         if key is SettingKey.SYSTEM_IDLE_POWEROFF:
             if config.power.idle_poweroff_enabled:
                 duration = idle_shutdown_duration(config.power.idle_poweroff_after_s)
@@ -4396,7 +4407,7 @@ class BridgeUi:
             self._sync_pairing_return_page = None
             self._show_cached_home_status()
             return
-        page = self._sync_pairing_return_page or SettingsPage.NETWORK
+        page = self._sync_pairing_return_page or SettingsPage.IPHONE
         self._sync_pairing_return_page = None
         self._show_settings(page=page)
 
@@ -4560,7 +4571,7 @@ class BridgeUi:
             )
             await self._schedule_printer_status_refresh()
             if first_pairing:
-                self._show_settings("Enter these on sender", page=SettingsPage.NETWORK)
+                self._show_settings("Enter these on sender", page=SettingsPage.FTP)
         finally:
             if self._pairing_task is asyncio.current_task():
                 self._pairing_task = None
@@ -4739,6 +4750,28 @@ class BridgeUi:
                 # body line stays stable across retries. Flipping copy mid-poll reads as a state
                 # change to the user when nothing has actually changed.
                 self._show_printer_searching_if_retrying(printer, "Searching Printer")
+                configure_discovery = getattr(self._status_provider, "configure_discovery", None)
+                if configure_discovery is not None:
+                    dark = self._screen_is_dark()
+                    scan_duration = 5 if dark else 1
+                    retry_interval = (
+                        self._config.printer.search_interval_s
+                        if dark
+                        else AWAKE_PRINTER_SEARCH_INTERVAL_S
+                    )
+                    configure_discovery(
+                        scan_duration_s=scan_duration,
+                        retry_interval_s=retry_interval,
+                    )
+                    policy = (dark, scan_duration, retry_interval)
+                    if policy != self._last_printer_discovery_policy:
+                        LOGGER.info(
+                            "ui.printer_discovery_policy screen=%s scan_window_s=%s interval_s=%s",
+                            "off" if dark else "on",
+                            scan_duration,
+                            retry_interval,
+                        )
+                        self._last_printer_discovery_policy = policy
                 attempt_start = self._monotonic()
                 was_online = self._printer_was_online
                 online = await self._refresh_printer_status_in_background(printer, generation)
@@ -4790,8 +4823,8 @@ class BridgeUi:
                 # measured from the start of each attempt. Subtract the time the attempt already
                 # consumed (its scan/connect) so the period holds whether the scan exited early on a
                 # match or ran the full window — and so a fast-failing connect does not hammer.
-                # Keep the two-second gap for ordinary offline scans, including the 5s setting.
-                # The bounded recovery burst has a shorter gap to retry a recently live Printer.
+                # Awake discovery uses a short yield and a one-second period. Dark offline
+                # scans retain their two-second floor; confirmed drops keep bounded retries.
                 period = self._printer_status_retry_delay(
                     online, recovery_retries_remaining=recovery_retries_remaining
                 )
@@ -4801,21 +4834,9 @@ class BridgeUi:
                 elif recovering:
                     recovery_retries_remaining -= 1
                 self._printer_was_online = online
-                elapsed = self._monotonic() - attempt_start
-                gap = MIN_PRINTER_RECOVERY_GAP_S if recovering else MIN_OFFLINE_SEARCH_GAP_S
-                if online and self._printer_disconnect_watcher is not None:
-                    # Connected waits can be interrupted even during the ordinary
-                    # two-second gap. Offline attempts retain their bounded cadence.
-                    with suppress(TimeoutError):
-                        await asyncio.wait_for(self._printer_check_requested.wait(), gap)
-                else:
-                    await asyncio.sleep(gap)
-                if self._printer_disconnect_pending:
-                    continue
-                remaining = period - elapsed - gap
-                if remaining > 0:
-                    with suppress(TimeoutError):
-                        await asyncio.wait_for(self._printer_check_requested.wait(), remaining)
+                await self._wait_for_printer_poll(
+                    attempt_start, online=online, recovering=recovering
+                )
         finally:
             if self._status_generation_is_current(generation):
                 self._disarm_printer_disconnect_watch()
@@ -4827,6 +4848,38 @@ class BridgeUi:
         self._printer_disconnect_unsubscribe = None
         if unsubscribe is not None:
             unsubscribe()
+
+    async def _wait_for_printer_poll(
+        self, attempt_start: float, *, online: bool, recovering: bool
+    ) -> None:
+        """Recompute waits on screen changes, retaining the minimum gap on manual requests."""
+
+        finished_at = self._monotonic()
+        revision = self._printer_search_policy_revision
+        requested = False
+        while not self._printer_disconnect_pending:
+            dark = self._screen_is_dark()
+            gap = (
+                MIN_PRINTER_RECOVERY_GAP_S
+                if recovering
+                else MIN_OFFLINE_SEARCH_GAP_S
+                if dark
+                else MIN_AWAKE_SEARCH_GAP_S
+            )
+            period = 0.0 if recovering or requested else self._printer_status_retry_delay(online)
+            remaining = max(attempt_start + period, finished_at + gap) - self._monotonic()
+            if remaining <= 0:
+                return
+            try:
+                await asyncio.wait_for(self._printer_check_requested.wait(), remaining)
+            except TimeoutError:
+                return
+            self._printer_check_requested.clear()
+            changed = revision != self._printer_search_policy_revision
+            revision = self._printer_search_policy_revision
+            # Locking reschedules the next offline scan to the dark cadence; waking requests
+            # fresh status promptly, including while the three-press prompt is still visible.
+            requested = not self._screen_is_dark() if changed else True
 
     async def _arm_printer_disconnect_watch(self, printer: PairedPrinter, generation: int) -> None:
         watcher = self._printer_disconnect_watcher
@@ -5063,18 +5116,18 @@ class BridgeUi:
     ) -> float:
         if online:
             return self._printer_keepalive_interval_s
-        if self._snapshot.printer_status_message == "Restart printer":
-            return RESTART_PRINTER_RETRY_S
         if self._printer_was_online or recovery_retries_remaining > 0:
             # The printer just dropped (was connected, now failing): re-search immediately rather
             # than waiting a full search period, so a power-cycle reconnects as soon as it
             # re-advertises instead of idling out the cadence.
             return 0.0
-        # The configured search interval is the total cadence PERIOD between attempt starts; the
-        # poll loop subtracts the time each attempt consumed. The minimum 5s option equals the scan
-        # window, so attempts run with only the minimum gap. No exponential backoff, so a
-        # powered-off printer keeps being searched at the chosen period (Settings > Search rate).
-        return self._config.printer.search_interval_s
+        # The target period is measured between attempt starts. Dark discovery uses the saved
+        # interval; visible screens keep looking promptly without overlapping native work.
+        return (
+            self._config.printer.search_interval_s
+            if self._screen_is_dark()
+            else AWAKE_PRINTER_SEARCH_INTERVAL_S
+        )
 
     def _maybe_auto_rebond(
         self,
@@ -5785,6 +5838,11 @@ class BridgeUi:
             LOGGER.exception("ui.render_failed mode=%s", self._snapshot.mode)
 
     def _set_display_idle_stage(self, stage: IdleStage) -> None:
+        dark = stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}
+        if dark != self._printer_search_screen_dark:
+            self._printer_search_screen_dark = dark
+            self._printer_search_policy_revision += 1
+            self._printer_check_requested.set()
         self._render_tick_reschedule.set()
         if stage in {IdleStage.SCREEN_OFF, IdleStage.DEEP_IDLE, IdleStage.POWEROFF}:
             self._last_rendered_snapshot = None

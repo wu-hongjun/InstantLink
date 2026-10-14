@@ -1456,8 +1456,14 @@ def _no_film(
     _center_lines(draw, [t("No film", snapshot.language)], 75, fonts["large"], theme.label_primary)
     _center_lines(
         draw,
-        [t("No-film test is in Settings", snapshot.language)],
-        128,
+        _wrap_lines(
+            draw,
+            t("No film is left in the Printer.", snapshot.language),
+            fonts["small"],
+            204,
+            max_lines=3,
+        ),
+        114,
         fonts["small"],
         theme.label_secondary,
     )
@@ -2584,11 +2590,24 @@ def _error(
     theme: Theme,
 ) -> None:
     title, detail, hint = error_copy_for_message(snapshot.message)
-    _center_lines(draw, _wrap_words(title, 16)[:2], 50, fonts["large"], theme.label_primary)
-    for index, line in enumerate(_wrap_words(detail, 27)[:2]):
+    _center_lines(
+        draw,
+        _wrap_words(t(title, snapshot.language), 16)[:2],
+        50,
+        fonts["large"],
+        theme.label_primary,
+    )
+    for index, line in enumerate(_wrap_words(t(detail, snapshot.language), 27)[:2]):
         _text(draw, 18, 126 + index * 17, line, fonts["small"], theme.label_primary)
     if hint is not None:
-        _text(draw, 18, 165, _ellipsize(hint, 31), fonts["small"], theme.accent_yellow)
+        _text(
+            draw,
+            18,
+            165,
+            _ellipsize(t(hint, snapshot.language), 31),
+            fonts["small"],
+            theme.accent_yellow,
+        )
 
     hints = _mode_hints(snapshot)
     draw_hint_bar(draw, hints, fonts["hint"], theme)
@@ -3958,7 +3977,7 @@ def error_copy_for_message(message: str | None) -> tuple[str, str, str | None]:
     if "printer busy" in normalized or "printer is busy" in normalized:
         return "Printer busy", "Wait for Instax", "Retry in a moment"
     if "no film" in normalized:
-        return "No film left", "Replace film pack", "No-film test in Settings"
+        return "No film", "No film is left in the Printer.", "Load a new film pack."
     if "image too large" in normalized:
         return "Image too large", "Use smaller JPEG/HIF", "Try lower quality"
     if "image timed out" in normalized:

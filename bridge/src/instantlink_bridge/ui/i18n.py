@@ -259,7 +259,31 @@ _ZH_HANS: dict[str, str] = {
     "No printer found": "未找到打印机",
     "No printer signal": "无打印机信号",
     "No settings available": "暂无可用设置",
-    "No-film test is in Settings": "无相纸测试在设置中",
+    "No film is left in the Printer.": "打印机内已无相纸。",
+    "Load a new film pack.": "请装入新的相纸盒。",
+    "FTP": "FTP",
+    "Connections": "连接状态",
+    "Screen": "屏幕",
+    "Unlock guard": "解锁保护",
+    "Joined Wi-Fi": "已连接 Wi-Fi",
+    "Unpair iPhones": "取消 iPhone 配对",
+    "Unpair iPhones?": "取消 iPhone 配对？",
+    "Unpair": "取消配对",
+    "Paired iPhones will need to scan a new QR code.": "已配对的 iPhone 需要重新扫码。",
+    "iPhones unpaired": "iPhone 配对已取消",
+    "Unpair failed": "取消配对失败",
+    "Appearance, text and unlock settings": "外观、文字与解锁设置",
+    "Print or sync received photos · Pair iPhone: Network > iPhone": (
+        "打印或同步收到的照片 · 配对 iPhone：网络 > iPhone"
+    ),
+    "Camera uploads and FTP credentials": "相机上传与 FTP 凭据",
+    "Bridge Wi-Fi credentials and joined network": "桥接 Wi-Fi 凭据与已连接网络",
+    "Pair and manage iPhone access": "配对与管理 iPhone 访问",
+    "Bluetooth and USB status": "蓝牙与 USB 状态",
+    "Screen-off search": "熄屏搜索间隔",
+    "Searches every 1s with screen on; every {n}s with screen off": (
+        "亮屏时每秒搜索，熄屏时每 {n} 秒搜索"
+    ),
     "Next action": "下一步操作",
     "Opening Bluetooth session": "正在打开蓝牙会话",
     "Phone Bluetooth may grab it": "手机蓝牙可能占用",
@@ -722,6 +746,14 @@ def t(text: str, language: Language | str = Language.EN) -> str:
         return t("After {time}", language).format(time=text[6:])
     if text.startswith("Shuts down after ") and text.endswith(" idle"):
         return t("Shuts down after {time} idle", language).format(time=text[17:-5])
+    prefix = "Searches every 1s with screen on; every "
+    suffix = "s with screen off"
+    if text.startswith(prefix) and text.endswith(suffix):
+        interval = text[len(prefix) : -len(suffix)]
+        if interval.isdigit():
+            return t(
+                "Searches every 1s with screen on; every {n}s with screen off", language
+            ).format(n=interval)
     return _TRANSLATIONS.get(language, {}).get(text, text)
 
 

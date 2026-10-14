@@ -543,11 +543,11 @@ async def test_first_press_finishes_cpu_wake_before_third_queued_press() -> None
 @pytest.mark.asyncio
 async def test_system_unlock_toggle_changes_next_wake() -> None:
     ui = _ui(UiMode.PRINTER_SEARCHING, saved=True, three_presses=True)
-    ui._show_settings(page=SettingsPage.SYSTEM)
-    keys = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+    ui._show_settings(page=SettingsPage.SCREEN)
+    keys = ui._visible_keys_for_page(SettingsPage.SCREEN)
     for _ in range(keys.index(SettingKey.UNLOCK_THREE_PRESSES)):
         await ui._handle_action(UiAction.DOWN)
-    assert ui.snapshot.settings_rows[ui.snapshot.selected_index].label == "Unlock: 3 presses"
+    assert ui.snapshot.settings_rows[ui.snapshot.selected_index].label == "Unlock guard"
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)

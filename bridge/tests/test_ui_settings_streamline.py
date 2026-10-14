@@ -111,8 +111,8 @@ async def test_credential_details_show_every_character_and_return_to_same_row(
     password = "ABCDEFGH" * 8
     config = BridgeConfig(ftp=FtpConfig(password=password), ui=UiConfig(font_size=font_size))
     ui = _ui(tmp_path, config)
-    ui._show_settings(page=SettingsPage.NETWORK)
-    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.FTP)
+    keys = ui._visible_keys_for_page(SettingsPage.FTP)
     while keys[ui.snapshot.selected_index] is not SettingKey.FTP_PASSWORD_INFO:
         await ui._handle_action(UiAction.DOWN)
     selected = ui.snapshot.selected_index

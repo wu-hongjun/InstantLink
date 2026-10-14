@@ -23,7 +23,12 @@ class SettingKey(StrEnum):
 
     OPEN_PRINT = "open_print"
     OPEN_NETWORK = "open_network"
+    OPEN_FTP = "open_ftp"
+    OPEN_WIFI = "open_wifi"
+    OPEN_IPHONE = "open_iphone"
+    OPEN_CONNECTIONS = "open_connections"
     OPEN_SYSTEM = "open_system"
+    OPEN_SCREEN = "open_screen"
     # Print hub → sub-page openers (phase 1, plan 035).
     OPEN_PRINTER = "open_printer"
     OPEN_ADJUSTMENTS = "open_adjustments"
@@ -99,8 +104,7 @@ class SettingKey(StrEnum):
     # Delivery mode is a top-level Settings row; iPhone pairing is on Network.
     SYNC_DESTINATION = "sync_destination"
     SYNC_PAIRING = "sync_pairing"
-    # Sync-token rotation (plan 051 P3.11): destructive action row on the
-    # Network page, next to RESET_CREDENTIALS.
+    # Sync-token rotation lives in Network > iPhone; camera credentials live in FTP.
     RESET_SYNC_TOKEN = "reset_sync_token"
 
 
@@ -114,8 +118,13 @@ class SettingsPage(StrEnum):
 
     MAIN = "main"
     NETWORK = "network"
+    FTP = "ftp"
+    WIFI = "wifi"
+    IPHONE = "iphone"
+    CONNECTIONS = "connections"
     PRINT = "print"
     SYSTEM = "system"
+    SCREEN = "screen"
     ABOUT = "about"
     # Print sub-pages (plan 035 phase 1).
     PRINTER = "printer"
@@ -203,49 +212,45 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
     ),
-    # NETWORK subsumes the old Connect (camera FTP) page. Camera-setup block
-    # (Wi-Fi Mode → FTP PIN) comes first — these are the values the user
-    # literally types into the Sony a7C II FTP settings. The
-    # NETWORK_DIAGNOSTICS_HEADER row acts as a visual separator before the
-    # read-only diagnostic rows (Bluetooth, Same Wi-Fi adv, USB IP) so they
-    # read as status info, not credentials to enter (plan 034 item 9).
-    # The two destructive escape hatches close the page in escalation
-    # order: RESET_SYNC_TOKEN (unpairs iPhones) then RESET_CREDENTIALS
-    # (regenerates Wi-Fi + FTP credentials) last.
     SettingsPage.NETWORK: (
+        SettingKey.OPEN_FTP,
+        SettingKey.OPEN_WIFI,
+        SettingKey.OPEN_IPHONE,
+        SettingKey.OPEN_CONNECTIONS,
+    ),
+    SettingsPage.FTP: (
         SettingKey.FTP_RECEIVE_MODE,
-        SettingKey.NETWORK_HOTSPOT_SSID_INFO,
-        SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
         SettingKey.FTP_HOST_INFO,
         SettingKey.FTP_USERNAME_INFO,
         SettingKey.FTP_PASSWORD_INFO,
-        # iPhone pairing QR (plan 050) — an onboarding action, so it lives
-        # with the camera-setup block above the read-only diagnostics.
-        SettingKey.SYNC_PAIRING,
-        SettingKey.NETWORK_DIAGNOSTICS_HEADER,
-        SettingKey.NETWORK_BLUETOOTH_INFO,
-        SettingKey.NETWORK_WIFI_INFO,
-        SettingKey.NETWORK_ETHERNET_INFO,
-        # Sync-token rotation (plan 051 P3.11): revokes a photographed
-        # pairing QR without touching the Wi-Fi/FTP credentials.
-        SettingKey.RESET_SYNC_TOKEN,
         SettingKey.RESET_CREDENTIALS,
     ),
-    # SYSTEM holds operational rows AND personalisation knobs after the
-    # Accessibility page was folded in (3 rows on a standalone page was
-    # thin justification for its own MAIN slot). Order: device-state
-    # info → power toggles → manual refresh → personalisation →
-    # versions/about behind a final chevron.
+    SettingsPage.WIFI: (
+        SettingKey.NETWORK_HOTSPOT_SSID_INFO,
+        SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
+        SettingKey.NETWORK_WIFI_INFO,
+    ),
+    SettingsPage.IPHONE: (
+        SettingKey.SYNC_PAIRING,
+        SettingKey.RESET_SYNC_TOKEN,
+    ),
+    SettingsPage.CONNECTIONS: (
+        SettingKey.NETWORK_BLUETOOTH_INFO,
+        SettingKey.NETWORK_ETHERNET_INFO,
+    ),
+    # System keeps power, refresh and About direct; Screen groups personalisation and unlock.
     SettingsPage.SYSTEM: (
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
-        SettingKey.UNLOCK_THREE_PRESSES,
+        SettingKey.OPEN_SCREEN,
         SettingKey.REFRESH_STATUS,
-        SettingKey.SYSTEM_PERSONALISATION_HEADER,
+        SettingKey.OPEN_ABOUT,
+    ),
+    SettingsPage.SCREEN: (
+        SettingKey.UNLOCK_THREE_PRESSES,
         SettingKey.APPEARANCE,
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
-        SettingKey.OPEN_ABOUT,
     ),
     # Live system stats (CPU/RAM/Storage/SoC temp) are sandwiched between the
     # identity rows and the static version block so the user sees "what is this
@@ -266,8 +271,13 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
 PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.MAIN: "Settings",
     SettingsPage.NETWORK: "Network",
+    SettingsPage.FTP: "FTP",
+    SettingsPage.WIFI: "Wi-Fi",
+    SettingsPage.IPHONE: "iPhone",
+    SettingsPage.CONNECTIONS: "Connections",
     SettingsPage.PRINT: "Print",
     SettingsPage.SYSTEM: "System",
+    SettingsPage.SCREEN: "Screen",
     SettingsPage.ABOUT: "About",
     # Print sub-page titles (plan 035 phase 1).
     SettingsPage.PRINTER: "Printer",
@@ -280,8 +290,13 @@ PAGE_TITLES: dict[SettingsPage, str] = {
 
 PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
     SettingKey.OPEN_NETWORK: SettingsPage.NETWORK,
+    SettingKey.OPEN_FTP: SettingsPage.FTP,
+    SettingKey.OPEN_WIFI: SettingsPage.WIFI,
+    SettingKey.OPEN_IPHONE: SettingsPage.IPHONE,
+    SettingKey.OPEN_CONNECTIONS: SettingsPage.CONNECTIONS,
     SettingKey.OPEN_PRINT: SettingsPage.PRINT,
     SettingKey.OPEN_SYSTEM: SettingsPage.SYSTEM,
+    SettingKey.OPEN_SCREEN: SettingsPage.SCREEN,
     SettingKey.OPEN_ABOUT: SettingsPage.ABOUT,
     # Print hub → sub-page openers (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: SettingsPage.PRINTER,
@@ -296,7 +311,12 @@ PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
 # below a non-MAIN parent need an explicit entry; everything else defaults to
 # MAIN in the controller back-nav branch.
 SETTINGS_PARENT_PAGE: dict[SettingsPage, SettingsPage] = {
+    SettingsPage.FTP: SettingsPage.NETWORK,
+    SettingsPage.WIFI: SettingsPage.NETWORK,
+    SettingsPage.IPHONE: SettingsPage.NETWORK,
+    SettingsPage.CONNECTIONS: SettingsPage.NETWORK,
     SettingsPage.ABOUT: SettingsPage.SYSTEM,
+    SettingsPage.SCREEN: SettingsPage.SYSTEM,
     # Print sub-pages all return to the Print hub (plan 035 phase 1).
     SettingsPage.PRINTER: SettingsPage.PRINT,
     SettingsPage.ADJUSTMENTS: SettingsPage.POST,
@@ -470,8 +490,7 @@ APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
     UiAppearance.DARK,
     UiAppearance.AUTO,
 )
-# Total scan period options. The minimum (5s) equals the active-scan window, so it scans
-# continuously (0 gap); larger values insert an idle gap between scans to save power.
+# Dark-screen search periods. Awake discovery uses a fixed one-second scan/retry policy.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
 # Mutually exclusive delivery modes for received camera images (plan 055).
 SYNC_DESTINATION_OPTIONS: tuple[SyncDestination, ...] = (
@@ -524,8 +543,13 @@ def setting_action_hint(key: SettingKey) -> str:
 
 SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_NETWORK: "Wi-Fi, FTP credentials, Bluetooth, USB",
+    SettingKey.OPEN_FTP: "Camera uploads and FTP credentials",
+    SettingKey.OPEN_WIFI: "Bridge Wi-Fi credentials and joined network",
+    SettingKey.OPEN_IPHONE: "Pair and manage iPhone access",
+    SettingKey.OPEN_CONNECTIONS: "Bluetooth and USB status",
     SettingKey.OPEN_PRINT: "Pairing and photo/print options",
     SettingKey.OPEN_SYSTEM: "Screen, lock and shutdown settings",
+    SettingKey.OPEN_SCREEN: "Appearance, text and unlock settings",
     SettingKey.OPEN_ABOUT: "Versions and device identity",
     # Print hub → sub-page opener help strings (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: "Pairing and printer model",
@@ -616,11 +640,11 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     # iPhone sync (plans 050/055). The two rows live on different Settings pages
     # (Mode on the main page, iPhone pairing on Network), so each help text
     # cross-references the other (plan 051 P2.7).
-    SettingKey.SYNC_DESTINATION: "Print or sync received photos · Pair iPhone: Network page",
+    SettingKey.SYNC_DESTINATION: "Print or sync received photos · Pair iPhone: Network > iPhone",
     SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Mode: Settings page",
     # Token rotation (plan 051 P3.11) — honest about the blast radius: every
     # paired iPhone loses access until it scans the new QR.
-    SettingKey.RESET_SYNC_TOKEN: "New pairing token; unpairs all iPhones",
+    SettingKey.RESET_SYNC_TOKEN: "Paired iPhones will need to scan a new QR code.",
     # Separator rows — info-only, no interactive action.
     SettingKey.NETWORK_DIAGNOSTICS_HEADER: "Read-only connection diagnostics",
     SettingKey.PRINT_ADVANCED_HEADER: "Power-user polling intervals",

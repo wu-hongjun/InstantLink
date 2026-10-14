@@ -178,12 +178,19 @@ Printer polling checks the saved bond before its first fetch after startup. The 
 BlueZ guard removes only disconnected identities and preserves the saved selection; a live
 Printer keeps its bond. Polling waits for active rebond and silent-link recovery before connecting again.
 
+Offline Printer discovery uses one-second scan windows and a one-second target period while the
+LCD is visible. Long scan/connection work completes before another attempt; a 50 ms minimum
+yield prevents a tight retry loop. While the screen is dark, the saved `printer.search_interval_s`
+applies (30 seconds by default), with five-second scan windows. Locking reschedules the wait;
+the first unlock press interrupts it and requests a prompt check. The Screen-off search option
+controls the dark period; connected keepalive/status timing remains separate.
+
 After a previously responsive Printer stops responding, the Bridge permits two prompt
 status/reconnect retries with at least 250 ms between attempts. If they fail, it resumes
 the configured offline search period. An exact native setup disconnect also permits this
 bounded burst at startup, once until fresh status; repeated drops or intervening absent scans
-do not replenish it. Startup with an absent Printer keeps the ordinary cadence. The existing
-“Restart printer” retry interval still applies. Confirmed native
+do not replenish it. An absent Printer follows the screen-based cadence, including at startup.
+Confirmed native
 session closure retires a cached link immediately; uncertain status failures retain the
 existing two-failure tolerance.
 

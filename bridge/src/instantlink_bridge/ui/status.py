@@ -260,6 +260,16 @@ class BlePrinterStatusProvider:
 
         return self._last_scan_diagnostics
 
+    def configure_discovery(self, *, scan_duration_s: int, retry_interval_s: float) -> None:
+        """Apply the UI's discovery policy without starting or cancelling BLE work."""
+
+        if scan_duration_s < 1:
+            raise ValueError("scan_duration_s must be at least 1")
+        interval = _positive_interval(retry_interval_s, name="retry_interval_s")
+        self._scan_timeout_s = float(scan_duration_s)
+        self._unavailable_scan_interval_s = interval
+        self._stale_selected_scan_interval_s = interval
+
     async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
         """Fetch film and battery status from the printer."""
 
@@ -503,6 +513,14 @@ class InstantLinkPrinterStatusProvider:
         scan_duration_s: int = 5,
     ) -> None:
         self._backend = backend if backend is not None else default_instantlink_backend()
+        self._scan_duration_s = scan_duration_s
+
+    def configure_discovery(self, *, scan_duration_s: int, retry_interval_s: float) -> None:
+        """Change only the next native scan's budget; the controller owns retry pacing."""
+
+        if scan_duration_s < 1:
+            raise ValueError("scan_duration_s must be at least 1")
+        _positive_interval(retry_interval_s, name="retry_interval_s")
         self._scan_duration_s = scan_duration_s
 
     async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:

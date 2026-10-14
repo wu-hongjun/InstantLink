@@ -226,6 +226,25 @@ print_boot_config() {
   done
 }
 
+print_media_module_config() {
+  local config="${INSTANTLINK_BRIDGE_MEDIA_MODULE_CONFIG:-/etc/modprobe.d/instantlink-bridge-unused-media.conf}"
+  local module
+
+  printf '\nUnused VCHI media alias autoload checks (%s)\n' "${config}"
+  if [[ ! -f "${config}" ]]; then
+    echo "missing; install the tracked Bridge media module profile and reboot"
+    return
+  fi
+
+  for module in bcm2835_v4l2 bcm2835_codec bcm2835_isp vc_sm_cma snd_bcm2835; do
+    if grep -qxF "blacklist ${module}" "${config}"; then
+      printf 'present: blacklist %s\n' "${module}"
+    else
+      printf 'missing: blacklist %s\n' "${module}"
+    fi
+  done
+}
+
 assert_safe_apply_set() {
   local unit
   local protected
@@ -278,6 +297,7 @@ report() {
   fi
 
   print_boot_config
+  print_media_module_config
   print_app_milestones
 }
 

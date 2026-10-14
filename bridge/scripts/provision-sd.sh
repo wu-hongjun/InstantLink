@@ -162,6 +162,8 @@ echo "Installing InstantLink Bridge USB gadget config into ${ROOT}"
 ensure_runtime_identity
 disable_legacy_instantbridge_services
 install_file config/g_ether.conf /etc/modprobe.d/g_ether.conf
+install_file config/instantlink-bridge-unused-media.conf \
+  /etc/modprobe.d/instantlink-bridge-unused-media.conf
 install_file config/10-usb0.network /etc/systemd/network/10-usb0.network
 install_file config/dnsmasq-bridge.conf /etc/dnsmasq.d/instantlink-bridge.conf
 install_file config/99-networkmanager-unmanaged-usb0.conf \

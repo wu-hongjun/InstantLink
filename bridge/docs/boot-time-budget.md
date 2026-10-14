@@ -104,6 +104,23 @@ tracked boot config sets `camera_auto_detect=0`, `display_auto_detect=0`, `auto_
 `max_framebuffers=1`, and removes `dtoverlay=vc4-kms-v3d` / `dtoverlay=vc4-fkms-v3d` during
 provisioning.
 
+Provisioning also installs `config/instantlink-bridge-unused-media.conf` under
+`/etc/modprobe.d/`. It suppresses alias autoload for the unused legacy VCHI camera,
+codec, ISP, shared-memory and audio leaf drivers: `bcm2835_v4l2`, `bcm2835_codec`,
+`bcm2835_isp`, `vc_sm_cma` and `snd_bcm2835`. VCHI bus devices can advertise media
+and audio drivers even with camera autodetection and firmware audio disabled; the
+media drivers also pull in the shared-memory driver as a dependency. The Bridge
+receives camera uploads over FTP and decodes JPEG/HIF with CPU libraries; its SPI
+ST7789 framebuffer uses `fb_st7789v`/`fbtft`. Those paths retain their drivers.
+
+This is an ordinary `blacklist` profile: explicit diagnostic `modprobe` calls and
+dependencies can still load these modules. It does not unload an active driver.
+Apply it at boot and verify the effective loader configuration and loaded modules
+after reboot. `boot-diet.sh --report` reports the tracked file directives only.
+For rollback, restore the previous copy of this one file (or remove it if it did
+not exist before installation), then reboot. Existing users of local VCHI camera,
+video or audio hardware should omit this appliance-specific profile.
+
 ## `/boot/firmware/config.txt` Tuning
 
 ```ini

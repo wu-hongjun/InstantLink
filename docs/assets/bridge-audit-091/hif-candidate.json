@@ -1,0 +1,40 @@
+{
+  "source_name": "DSC02821.HIF",
+  "source_sha256": "6e9ec8dbe1c8b0b2df75036064ec338af039470d367d0644fcab9e7d7235a93f",
+  "source_identity_preserved": true,
+  "cpu_khz": 600000,
+  "models": [
+    {
+      "model": "mini",
+      "elapsed_s": 5.478569840999995,
+      "width": 600,
+      "height": 800,
+      "jpeg_sha256": "e24c33eda274a872eddaa5f0f6fdc469d7a46ca5fc83ff674a51fe76ea4ac81c",
+      "decoded_rgb_sha256": "f796a092cfcebfaedf9a648567ea1a4f0db46c02e483fc683b44c37c4f41e1bb",
+      "transport_flip_applied": false,
+      "quality": 94
+    },
+    {
+      "model": "square",
+      "elapsed_s": 5.27583260199998,
+      "width": 800,
+      "height": 800,
+      "jpeg_sha256": "0f49758ad3a144d9fd7801e4fafa196282dc06fcb61ee795373835c8fa763725",
+      "decoded_rgb_sha256": "d69b9c542bca3e3720767b97d7c7b341677e7b9ed01f4604e2d4420aeac15825",
+      "transport_flip_applied": false,
+      "quality": 92
+    },
+    {
+      "model": "wide",
+      "elapsed_s": 30.543086550999988,
+      "width": 1260,
+      "height": 840,
+      "jpeg_sha256": "c4664747f6e5390bdc70c6f7d33967362cbeee8b29582e1aceaa4e7f83ee9de3",
+      "decoded_rgb_sha256": "4ee859613f868970c58f0ac83e59c5a88021a355caba8d26c3fb0dc9d0b8ed1c",
+      "transport_flip_applied": false,
+      "quality": 94
+    }
+  ],
+  "film_used": 0,
+  "boundary": "Read-only retained camera HIF through installed CPU pipeline and all model-specific transport orientations; encoded/decode hashes, no BLE/image command or production queue."
+}

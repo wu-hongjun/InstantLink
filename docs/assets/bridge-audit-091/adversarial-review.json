@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent media_adversarial_review subagent",
+  "timestamp_utc": "2026-10-14T14:47:31.315658+00:00",
+  "source_paths_sha256": {
+    "bridge/config/instantlink-bridge-unused-media.conf": "7af5254ad22a53189caa21d38c5d0158c0e39cb93f3cec6aafa4446aea35172e",
+    "bridge/scripts/boot-diet.sh": "cde68568e605e0d0c07066999a37b80ed971d586178eee14dc54c97565d1945a",
+    "bridge/scripts/provision-sd.sh": "e88e4d9c03f26d13b27c69d36e35185fe6dbc3f07a7d73c43e5fe6e49d914298",
+    "bridge/tests/test_media_boot_profile.py": "63a1a4e44153d6ceb608e10fddeddbf54e312b7199f05145329a8b5b6cb04c31",
+    "bridge/docs/boot-time-budget.md": "cc902b9efda8c0193c357652ce59ea28c85bb1a57d83525da9b5962fb6a620e7"
+  },
+  "helper_paths_sha256": {
+    "/tmp/instantlink-media-091-loader.py": "a9a50ac2028a7b72535ad9954146355d960c1d3605499aab8bac27401e077467",
+    "/tmp/instantlink-media-091-snapshot.py": "45f0c13ed6d82c121ff7202741c953e2d14481f996dfc671536c9a82082fde4c",
+    "/tmp/instantlink-media-091-loader.json": "ab2de4076234c7c9229877f313227a163edd478605107021b5f57430fd85ad33"
+  },
+  "review_scope": [
+    "source/provisioning/report/rollback contract",
+    "effective kmod loader/dependency evidence",
+    "boot snapshot measurement semantics"
+  ],
+  "findings": [],
+  "resolved_findings": [
+    {
+      "issue": "New tests failed under normal macOS Bash3/BSD install (3failed,10passed)",
+      "resolution": "Actual GNU install resolved via ginstall; empty-systemctl mapfile fixture portable; independent rerun13passed"
+    }
+  ],
+  "independent_checks": {
+    "focused_tests_passed": 13,
+    "ruff_passed": true,
+    "bash_syntax_passed": true,
+    "diff_check_passed": true,
+    "blocked_leaf_names": 5,
+    "blocked_aliases": 5,
+    "essential_dependency_cases_identical": 10,
+    "explicit_leaf_dependency_cases_identical": 5
+  },
+  "loader_assessment": "All five leaf names with use-blacklist and all five registered aliases omit insertions. Explicit real module names without use-blacklist retain exact baseline dependencies. Essential SPI LCD, HCI, Wi-Fi, USB gadget, video/DRM shared paths are unchanged. show-depends does not load/unload modules.",
+  "snapshot_assessment": "Kernel monotonic timings exclude firmware latency; first normal runtime PID bounds boot markers and excludes later manual service restarts. Hotspot readiness requires address plus receive_ready=True; unavailable/late Printer status retained. Current service entry timestamps are separated from first journal boot entries. /proc/modules allocation is current loaded closure, not total RAM savings.",
+  "limitations": [
+    "Root owns live LCD/HIF/FTP/button/reconnect/rollback/reboot acceptance; this review performed no hardware mutation or film commands.",
+    "File-content boot report is descriptive, not effective loader enforcement.",
+    "Explicit loads and dependencies intentionally may override ordinary blacklist. Kernel builtin drivers or changed aliases/dependencies require re-audit."
+  ],
+  "film_used": 0,
+  "hardware_mutated": false,
+  "source_and_loader_review_passed": true
+}

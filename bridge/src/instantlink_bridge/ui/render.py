@@ -73,7 +73,7 @@ def _draw_preview_unavailable(
         p1 = (min(x1, x0 + offset + tile_h), min(y1, y0 - offset + tile_h))
         draw.line([p0, p1], fill=theme.label_secondary, width=1)
     # Centred label so the user reads what's wrong.
-    bbox = draw.textbbox((0, 0), label, font=font)
+    bbox = _text_bbox(draw, label, font)
     label_w = bbox[2] - bbox[0]
     label_h = bbox[3] - bbox[1]
     label_x = tile_x + (tile_w - label_w) // 2
@@ -85,7 +85,7 @@ def _draw_preview_unavailable(
         (label_x - pad, label_y - pad, label_x + label_w + pad, label_y + label_h + pad),
         fill=theme.bg,
     )
-    draw.text((label_x, label_y), label, font=font, fill=theme.label_secondary)
+    _draw_text(draw, (label_x, label_y), label, font=font, fill=theme.label_secondary)
 
 
 # SettingKey values whose ADJUSTMENT_EDIT mode renders Off/On pills instead of
@@ -279,12 +279,12 @@ def draw_pill(
     draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=fill)
 
     # Centre text within the pill
-    bbox = draw.textbbox((0, 0), text, font=font)
+    bbox = _text_bbox(draw, text, font)
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
     tx = x + (w - tw) // 2 - bbox[0]
     ty = y + (h - th) // 2 - bbox[1]
-    draw.text((tx, ty), text, fill=fg, font=font)
+    _draw_text(draw, (tx, ty), text, fill=fg, font=font)
 
 
 def draw_card(
@@ -700,7 +700,7 @@ def _draw_status_bar_pill(
 
     # Pill width: tighter for Latin (24 px horizontal padding), looser for
     # CJK glyphs which sit wider and look cramped at the Latin floor.
-    word_bbox = draw.textbbox((0, 0), word, font=font_body)
+    word_bbox = _text_bbox(draw, word, font_body)
     word_w = int(word_bbox[2] - word_bbox[0])
     if _has_cjk(word):
         pill_w = max(76, word_w + 32)
@@ -740,7 +740,7 @@ def _draw_status_bar_settings(
     title = _fit_text_to_width(
         draw, t(status_bar_word(snapshot), snapshot.language), font_body, title_max_w
     )
-    title_bbox = draw.textbbox((0, 0), title, font=font_body)
+    title_bbox = _text_bbox(draw, title, font_body)
     title_h = int(title_bbox[3] - title_bbox[1])
     title_y = (STATUS_BAR_H - title_h) // 2 - int(title_bbox[1]) + 1
     _text(draw, 12, title_y, title, font_body, theme.label_primary)
@@ -752,7 +752,7 @@ def _draw_status_bar_settings(
         fill=_rgb_to_hex(dot_rgb),
     )
     if counter:
-        bbox = draw.textbbox((0, 0), counter, font=font_small)
+        bbox = _text_bbox(draw, counter, font_small)
         y = (STATUS_BAR_H - int(bbox[3] - bbox[1])) // 2 - int(bbox[1])
         _text(draw, counter_x, y, counter, font_small, theme.label_secondary)
 
@@ -998,7 +998,7 @@ def draw_hint_bar(
         tw1 = _text_width(draw, fitted1, font)
         tw2 = _text_width(draw, fitted2, font)
 
-        bbox1 = draw.textbbox((0, 0), fitted1, font=font)
+        bbox1 = _text_bbox(draw, fitted1, font)
         line_h = bbox1[3] - bbox1[1]
         if fitted2:
             gap = 4
@@ -1006,16 +1006,16 @@ def draw_hint_bar(
             line1_y = pill_y + (pill_h - total_h) // 2 - bbox1[1]
             line2_y = line1_y + line_h + gap
             tx1 = cx - tw1 // 2 - bbox1[0]
-            tx2 = cx - tw2 // 2 - draw.textbbox((0, 0), fitted2, font=font)[0]
+            tx2 = cx - tw2 // 2 - _text_bbox(draw, fitted2, font)[0]
             # Line 1 = key label (KEY1/KEY2/KEY3): promote to label_primary so
             # the eye can scan key → action at arm's length (plan 034 item 11).
             # Line 2 = action word: stays in hint_fg (muted).
-            draw.text((tx1, line1_y), fitted1, fill=theme.label_primary, font=font)
-            draw.text((tx2, line2_y), fitted2, fill=theme.hint_fg, font=font)
+            _draw_text(draw, (tx1, line1_y), fitted1, fill=theme.label_primary, font=font)
+            _draw_text(draw, (tx2, line2_y), fitted2, fill=theme.hint_fg, font=font)
         else:
             line1_y = pill_y + (pill_h - line_h) // 2 - bbox1[1]
             tx1 = cx - tw1 // 2 - bbox1[0]
-            draw.text((tx1, line1_y), fitted1, fill=theme.hint_fg, font=font)
+            _draw_text(draw, (tx1, line1_y), fitted1, fill=theme.hint_fg, font=font)
 
 
 # Destructive run-action row labels (English source). Render layer tints
@@ -1155,7 +1155,8 @@ def draw_settings_row(
         # it 2-3 px below the row centre.
         row_cy = y + row_height // 2
         marker_width = _text_width(draw, marker, marker_font)
-        draw.text(
+        _draw_text(
+            draw,
             (218, row_cy),
             marker,
             font=marker_font,
@@ -2746,7 +2747,8 @@ def _confirmation_dialog(
 
     cancel_text = t("Cancel", lang)
     cancel_font = button_cjk if button_cjk is not None and _has_cjk(cancel_text) else button_font
-    draw.text(
+    _draw_text(
+        draw,
         (cancel_center_x, button_center_y),
         cancel_text,
         font=cancel_font,
@@ -2756,7 +2758,8 @@ def _confirmation_dialog(
 
     confirm_text = t(confirm_label, lang)
     confirm_font = button_cjk if button_cjk is not None and _has_cjk(confirm_text) else button_font
-    draw.text(
+    _draw_text(
+        draw,
         (confirm_center_x, button_center_y),
         confirm_text,
         font=confirm_font,
@@ -3150,6 +3153,88 @@ def _cjk_font_for(font: Font) -> Font | None:
     return _CJK_SIBLING_BY_ID.get(id(font))
 
 
+# Cache glyph work, not frames: every frame still resolves live state, theme,
+# clipping, coordinates and the breath clock. Retained grayscale masks are
+# private and only read by bitmap(), so physical and virtual LCD renderers can
+# share them without sharing mutable output images. Entry and per-mask limits
+# cap pixel storage at 256 * 240 * 48 bytes (under 3 MiB).
+_TEXT_CACHE_MAX_CHARS = 256
+_TEXT_MASK_MAX_SIZE = (240, 48)
+
+
+@lru_cache(maxsize=32)
+def _has_font_variations(font: ImageFont.FreeTypeFont, _core: object) -> bool:
+    """Variable fonts remain uncached because their axes can mutate in place."""
+    try:
+        font.get_variation_axes()
+    except OSError:
+        return False
+    return True
+
+
+def _cacheable_text_font(text: str, font: Font) -> bool:
+    return (
+        isinstance(font, ImageFont.FreeTypeFont)
+        and len(text) <= _TEXT_CACHE_MAX_CHARS
+        and "\n" not in text
+        and not _has_font_variations(font, font.font)
+    )
+
+
+@lru_cache(maxsize=512)
+def _cached_text_bbox(
+    text: str, font: ImageFont.FreeTypeFont, _core: object
+) -> tuple[int, int, int, int]:
+    left, top, right, bottom = font.getbbox(text, "L")
+    return int(left), int(top), int(right), int(bottom)
+
+
+def _text_bbox(draw: ImageDraw.ImageDraw, text: str, font: Font) -> tuple[int, int, int, int]:
+    # Preserve each call site's choice of font. In particular, direct pill/hint
+    # text historically does not use the CJK fallback in _text/_text_width.
+    if draw.fontmode == "L" and _cacheable_text_font(text, font):
+        assert isinstance(font, ImageFont.FreeTypeFont)
+        return _cached_text_bbox(text, font, font.font)
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    return int(left), int(top), int(right), int(bottom)
+
+
+@lru_cache(maxsize=256)
+def _cached_text_mask(
+    text: str, font: ImageFont.FreeTypeFont, _core: object, anchor: str | None
+) -> tuple[Image.Image, tuple[int, int]] | None:
+    mask, offset = font.getmask2(text, "L", anchor=anchor, start=(0, 0), stroke_filled=True)
+    width, height = mask.size
+    if width > _TEXT_MASK_MAX_SIZE[0] or height > _TEXT_MASK_MAX_SIZE[1]:
+        return None
+    # L masks follow the same draw_bitmap path as Pillow's default text().
+    # RGBA stamps/paste would change antialiasing roundoff on coloured pixels.
+    return Image.frombytes("L", mask.size, bytes(mask)), offset
+
+
+def _draw_text(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    fill: str | tuple[int, int, int],
+    font: Font,
+    anchor: str | None = None,
+) -> None:
+    if (
+        draw.mode == "RGB"
+        and draw.fontmode == "L"
+        and all(isinstance(value, int) for value in xy)
+        and _cacheable_text_font(text, font)
+    ):
+        assert isinstance(font, ImageFont.FreeTypeFont)
+        cached = _cached_text_mask(text, font, font.font, anchor)
+        if cached is not None:
+            mask, (offset_x, offset_y) = cached
+            draw.bitmap((xy[0] + offset_x, xy[1] + offset_y), mask, fill=fill)
+            return
+    draw.text(xy, text, fill=fill, font=font, anchor=anchor)
+
+
 def _text(
     draw: ImageDraw.ImageDraw,
     x: int,
@@ -3169,13 +3254,13 @@ def _text(
     if _has_cjk(text):
         cjk_font = _cjk_font_for(font)
         if cjk_font is not None:
-            draw.text((x, y), text, fill=fill, font=cjk_font)
+            _draw_text(draw, (x, y), text, fill=fill, font=cjk_font)
             return
-    draw.text((x, y), text, fill=fill, font=font)
+    _draw_text(draw, (x, y), text, fill=fill, font=font)
 
 
 def _font_height(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
-    bbox = draw.textbbox((0, 0), text, font=font)
+    bbox = _text_bbox(draw, text, font)
     return int(bbox[3] - bbox[1])
 
 
@@ -3241,7 +3326,7 @@ def _text_width(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
         cjk_font = _cjk_font_for(font)
         if cjk_font is not None:
             font = cjk_font
-    left, _top, right, _bottom = draw.textbbox((0, 0), text, font=font)
+    left, _top, right, _bottom = _text_bbox(draw, text, font)
     return int(right - left)
 
 

@@ -1669,3 +1669,26 @@ no extra JPEG library is required on the Pi.
   speedup, physical-button contact, internal manual-lock flag or Printer power-cycle claim.
 - Independent final evidence review accepted both trials and loaded hashes; both owned remote
   helper files removed afterward. Bridge, manager and production backup socket remain active.
+
+### Plan 095 — screen-based discovery and grouped Settings
+
+- Physical boot evidence: UI ready at uptime14.854s, first scan absent, KEY3 woke the 30s wait
+  at39.529s and fresh status followed43.443s. Visible discovery now targets one second with a
+  one-second native window; dark discovery uses saved period30s by default/window5s. Screen
+  transitions interrupt/reschedule waits; first unlock press warms and checks before final unlock.
+  In-flight work stays serialized; confirmed-drop recovery and connected keepalive remain separate.
+- Empty-film copy now says “No film is left in the Printer.” Network is FTP/Wi-Fi/iPhone/
+  Connections; System groups personalisation/unlock under Screen. Full credentials, destructive
+  confirmations and parent cursor restoration preserved. Short labels: Unlock guard, Joined
+  Wi-Fi, Unpair iPhones. Physical/virtual UI path and English/Chinese copy share the same source.
+- Clean runtime92c57e4 installed; **2,481 tests**, eight expected Mac GPIO warnings, 602 focused,
+  Ruff/format159files/mypy68/MkDocs passed. Baseline App localization omissions found during
+  read-only contract review were not changed or included in this Bridge gate.
+- Controlled native Pi probe (synthetic unmatched Printer/NullDisplay) measured awake1.378–1.392s,
+  dark30.002s/window5/600MHz, first-press→nextscan40.8ms and CPU1000MHz by press return; triple
+  unlock completed. Bridge stopped for probe and restored by EXIT trap. No actual Printer
+  connection, physical contacts, key changes, image/film commands or physical LCD observation.
+- Normal Bridge1293 active/zero automatic restarts; logged on1s/off30s policies, FTP220/200,
+  600MHz/powersave/GPIO24low, no warnings, reviewed source hashes and unchanged FFI b91cf3f...
+  Actual Printer unavailable; **normal installed boot-to-connected check pending availability**.
+  Device/OS unchanged. Evidence in plan095 and `docs/assets/bridge-audit-095/`.

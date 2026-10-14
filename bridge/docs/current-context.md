@@ -1707,3 +1707,29 @@ no extra JPEG library is required on the Pi.
   notices and22system warning-priority boot records. No whole-system warning-free claim.
 - Earlier availability checkpoint completed. No image/print/actuator commands or film used.
   Source review was performed by the primary agent; no independent subagent review for plan095.
+
+### Plan 096 — faster startup saved-Printer lookup
+
+- Three subagents investigated/implemented/independently reviewed. Final production changes use
+  fresh agent-owned D-Bus trust state to skip redundant CLI inventory/trust work, with conservative
+  fallback. Primary review caught a trust-signal snapshot race; independent review confirmed and
+  accepted its correction. Changed/invalidated Trusted now supersedes older pending replies.
+- Extra CPU pre-start hook was tested and rejected after mixed/slower full-boot results. Final
+  service unit equals0d79921; startup order, LCD/FTP, runtime tiers and native artifacts unchanged.
+  Final clean4049bcd installed; **2,495 tests**, eight expected Mac GPIO warnings, Ruff/format160/
+  mypy68/strict docs passed. Independent final review found no blocking issue.
+- Baseline→final boot: UI14.045→13.742s, FTP14.036→13.728s, core14.059→13.756s,
+  hotspot receive-ready20.178→19.995s. First discovery15.013→14.035s; FFI-loaded→discovery setup
+  0.722→0.072s. Single reboots, firmware latency excluded, no input/advertising Printer: no full
+  connected-time improvement claim.
+- Bridge475/manager639 active/zero automatic restarts; awake framebuffer156distinctRGB565/1GHz/
+  backlight high then normal idle600MHz/powersave/GPIO24low/cleared framebuffer. FTP220/200,
+  network/Bluetooth/backup socket active, throttle0x0, reviewed source and unchanged FFI hashes.
+  Full current-boot Bridge PID log26records/zero warning-error matches; no physical LCD/contact test.
+- Isolated production FTP STOR→ReceivedImage queue passed JPEG SHA equality/226/NOOP200 using
+  temporary directory/credentials/highport and no consumer/backend. No film/camera/Printer actuation.
+  Fixture cwd corrected to deployed WorkingDirectory; no production FTP defect/change. Resources
+  cleaned; owned remote import-time file removed. Device/OS unchanged from plan095.
+- **Live automatic boot-to-Printer and disconnect/reconnect pending Printer availability.** Printer
+  not advertising/connected at handoff. Earlier readiness observers obtained no fresh status and
+  issued no Disconnect. Scope and rejected CPU experiments in plan096/assets/bridge-audit-096.

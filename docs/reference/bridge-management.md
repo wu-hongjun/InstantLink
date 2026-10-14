@@ -142,6 +142,14 @@ and animation state; unsupported drawing/font cases keep the original Pillow pat
 The physical and virtual LCDs share this behavior and the existing abstract input API. This
 input guard prevents accidental button actions; it is not an authentication mechanism.
 
+### Service startup
+
+The Bridge starts after the system D-Bus socket is listening; Python imports can overlap the
+socket-activated bus daemon's startup. Default systemd initialization and filesystem dependencies
+remain enabled. Network, DHCP and Bluetooth start independently; LCD and FTP do not wait for
+network-online. Printer requests still wait for the application pairing-agent readiness gate.
+The manager retains independent startup/recovery and its exact USB/hotspot listener bindings.
+
 ### Python startup imports
 
 The native Bridge startup loads LCD, input, camera receive and reconnect infrastructure while

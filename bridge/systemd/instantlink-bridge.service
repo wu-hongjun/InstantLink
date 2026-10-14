@@ -1,10 +1,10 @@
 [Unit]
 Description=InstantLink Bridge FTP receive service
-# Start the LCD/UI as soon as the system bus is available. Network, DHCP, and
-# Bluetooth are wanted but intentionally not ordered before this unit; the app
-# reports those subsystems as they come online.
-After=dbus.service
-Wants=bluetooth.service systemd-networkd.service dnsmasq.service NetworkManager.service
+# Start Python imports once the system bus socket is listening. Socket activation
+# starts the bus daemon when needed; its initialization can overlap those imports.
+# Network, DHCP, and Bluetooth remain independent so they cannot delay LCD/FTP.
+After=dbus.socket
+Wants=dbus.socket bluetooth.service systemd-networkd.service dnsmasq.service NetworkManager.service
 
 [Service]
 Type=notify

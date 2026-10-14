@@ -1629,3 +1629,23 @@ no extra JPEG library is required on the Pi.
   Four owned helpers removed, production socket/backups retained, current backup saved after tests.
   Hardware/OS unchanged: Pi Zero 2 W Rev 1.0/ST7789, Debian 13.2/kernel 6.12.47/BlueZ 5.82,
   Link Square INSTAX-52006924. No film or Printer actuators used.
+
+### Plan 094 — transient Bluetooth diagnostics and bounded recovery
+
+- Clean runtime `aa852e1` installed. Exact native setup disconnects retain stage/detail, log at
+  INFO for two unresolved drops then WARNING, and no longer generate duplicate UI warnings.
+  Same-target absence/unknown faults do not replenish the allowance; authentication and unknown
+  failures remain warnings. Setup failures no longer invent empty scanner diagnostics.
+- Startup setup drops receive at most two prompt retries before normal offline cadence resumes.
+  A pending disconnect event retains recovery ownership. No native/protocol/image/ABI/config change.
+- Three subagents investigated, implemented and independently reviewed; misplaced failure-reason
+  reset, test fixture and intervening-absence allowance reset were corrected with regressions.
+  2,450 full Bridge tests passed; eight expected Mac GPIO warnings, Ruff/format/mypy/MkDocs passed.
+- Installed hashes match review. Bridge PID 11373/manager 11371 active, zero automatic restarts,
+  FTP 220/200, backup socket active, startup 1,000 MHz and automatic screen-off 600 MHz/powersave/
+  GPIO 24 low. Full installed-PID journal: 24 records, zero warning/error matches while offline.
+- Baseline and installed readiness probes timed out before any Disconnect because the Printer
+  was unavailable. **Live installed reconnect remains pending Printer availability.** No film,
+  Printer actuator or image commands; no physical button contact or reconnect speed claim.
+- FFI unchanged `b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175`.
+  Hardware/OS unchanged from plan 093. Details/evidence: plan 094 and `docs/assets/bridge-audit-094/`.

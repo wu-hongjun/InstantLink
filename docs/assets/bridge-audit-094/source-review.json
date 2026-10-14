@@ -1,0 +1,59 @@
+{
+  "task": 94,
+  "review_type": "Independent adversarial source and affected behavior review",
+  "passed": true,
+  "blocking_findings": [],
+  "resolved_findings": [
+    {
+      "issue": "Failure reason reset accidentally inserted in preview model detection, allowing old LINK_DROPPED reason to survive later results",
+      "resolution": "Moved reset to background refresh after generation guard and before fetch; regression verifies success and unclassified timeout/runtime failure clear reason."
+    },
+    {
+      "issue": "New log escalation mock omitted native closed probe, yielding alternating keep/disconnect signatures inconsistent with two-record expectation",
+      "resolution": "Mock now explicitly returns closed native state; production preserves teardown flag in dedup signature."
+    },
+    {
+      "issue": "Root identified exact setup-drop budget could reset after same-target absent or unknown error, leaving intermittent unresolved drop episodes at INFO indefinitely",
+      "resolution": "Target key now case-folded and retained across every same-target error; only fresh successful status or another target resets drop counter. Added alternating drop/absence/case variant/unknown/third-drop warning regression."
+    }
+  ],
+  "checks": {
+    "exact_setup_drop_classification": "Only InstantLinkBleError code ERROR_BLE with complete exact canonical native detail qualifies. Suffix, auth-containing, foreign, unresolved readiness and missing detail remain warnings.",
+    "warning_preservation": "Third same-target exact setup drop within an unresolved episode escalates to WARNING, even across intervening absence, unknown faults, session teardown and case-variant aliases. Unknown/auth/protocol faults remain WARNING themselves. Dedup severity, detail, stage, target and teardown state prevent distinct failures colliding; fresh status or genuinely changed target resets episode.",
+    "log_ownership": "Per-exception backend reported/coalesced flag explicitly permits UI DEBUG mirror. Providers without flag retain UI WARNING; generic errors do not silently inherit ownership.",
+    "native_error_evidence": "Connect terminal detail and current phase retained across backend/provider/controller; BLE failure no longer fabricates absent-scan diagnostics.",
+    "retry_bound": "Fake clock verifies setup-drop four-failure cadence 0,1.25,2.5,32.5,62.5 seconds and alternating drop/absence does not renew budget; ordinary absent startup unchanged.",
+    "freshness": "No ready metadata bypass; late success with pending disconnect does not publish fresh state. Generation checks and watch token rejection retained.",
+    "recovery_serialization": "Pending disconnect event owns cleanup before failure-driven bond/silent-link tasks can overlap. Cached session close, failed status lease release, active-link bond gates retained.",
+    "cancellation": "Shielded native worker ownership, repeated cancellation deadline, initial-status fresh ownership, delayed watch and generation retirement tests passed.",
+    "native_transport_and_ffi": "No Rust core/FFI edits; physical teardown verification, cancellation poisoning, no replay, protocol/image paths unchanged."
+  },
+  "validation": [
+    {
+      "command": "python -m pytest -q tests/test_ui_status.py tests/test_instantlink_initial_status.py tests/test_ui_controller.py tests/test_controller_concurrency.py tests/test_ffi_cancel_concurrency.py",
+      "result": "368 passed in 8.02s"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    },
+    {
+      "command": "python -m pytest -q tests/test_ui_status.py",
+      "result": "65 passed in 0.13s after final amended unresolved-episode escalation"
+    }
+  ],
+  "source_sha256": {
+    "bridge/src/instantlink_bridge/ble/instantlink.py": "c63e54d6e1deff8b13fe2d9ee851c003452a3ce36a59285ebf0c2e63ff902673",
+    "bridge/src/instantlink_bridge/ui/status.py": "d63f565057c4002f893040e750501b4e0947155e19d0d72a0af7c7b624c58876",
+    "bridge/src/instantlink_bridge/ui/controller.py": "7e9a6ad13e8face690ca248856dfe1ecfe3699d9c6db0a4e07ba7235b8ff25cf",
+    "bridge/tests/test_ui_status.py": "04133f676afbf5d9f3e1c801e5cb49120e59ef5cfe8439fbebe01f51cb20f1ae",
+    "bridge/tests/test_ui_controller.py": "f4bb28f8c070811d19ea3c57edc20b42ab700c8f6bc94dbc90680b3bf60a6614"
+  },
+  "boundaries": [
+    "Source review and local mocked tests only; root owns live installed no-film validation.",
+    "Narrow setup-drop INFO classification and bounded recovery do not assert elimination of Bluetooth radio failures or improvement on controlled hardware timings.",
+    "Unknown/auth/protocol failures intentionally remain warnings; native terminal details are absent for some established status errors and those remain warnings.",
+    "Per-generation recovery budget resets only at a new poll or fresh status; external generation replacement keeps existing lifecycle semantics."
+  ],
+  "film_used": 0
+}

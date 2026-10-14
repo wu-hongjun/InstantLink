@@ -87,15 +87,11 @@ CONNECT_STAGE_NAMES = {
 }
 # Named connect milestone: the encrypted notify subscription succeeded.
 CONNECT_STAGE_NOTIFICATION_SUBSCRIBE = 6
-# Lowest connect stage that proves GATT came up far enough that the encrypted characteristics
-# should resolve. Reaching characteristic_lookup (stage 5) means service_discovery (stage 4) already
-# succeeded, so the link is up. A connect that reaches this stage (or later) and then fails with a
-# BLE/write error is the stale-bond signature: the printer cleared its pairing after a power cycle,
-# so either the encrypted characteristics never resolve ("write characteristic not found" at
-# characteristic_lookup) or the first encrypted write fails (notification_subscribe). Both are the
-# same fingerprint, so the boundary is characteristic_lookup, not notification_subscribe — a
-# power-cycled printer can fail at either depending on how far BlueZ gets exporting the encrypted
-# GATT table.
+# Earliest phase used by the stale-key recovery heuristic. Modern native builds distinguish
+# confirmed resolved-table characteristic absence from uncertain readiness and dropped links;
+# terminal detail excludes the latter before this phase gate. Legacy builds retain phase-based
+# behavior. Confirmed missing encrypted characteristics or encrypted subscription/write failures
+# still qualify for the existing bounded bond recovery.
 CONNECT_STAGE_STALE_BOND_MIN = 5
 # Consecutive status failures that mean the cached BLE link is dead (not a one-off hiccup),
 # after which the connection is torn down so the next poll does a fresh connect (which can
@@ -127,6 +123,9 @@ class InstantLinkError(RuntimeError):
         # produced this error, when known. ``None`` means the error did not originate from a
         # connect attempt (e.g. a status read on an already-established link).
         self.connect_failure_stage: int | None = None
+        # Native terminal progress carries the actual setup error; the C ABI return code alone
+        # cannot distinguish unresolved GATT from a confirmed encrypted-characteristic failure.
+        self.connect_failure_detail: str | None = None
 
 
 class InstantLinkLibraryUnavailableError(InstantLinkError):
@@ -807,9 +806,10 @@ class InstantLinkBackend:
             try:
                 _raise_for_code(rc, "connect failed")
             except InstantLinkError as exc:
-                # Carry the highest connect stage observed so the status/UI layer can classify a
-                # late-stage write/comms failure as the stale-bond signature.
+                # Carry the current attempt's phase and terminal detail so readiness uncertainty
+                # cannot masquerade as a confirmed encrypted-characteristic failure.
                 exc.connect_failure_stage = stage_tracker.max_stage
+                exc.connect_failure_detail = stage_tracker.failure_detail
                 raise
         # The new session must not inherit a transient failure streak from the previous link.
         self._consecutive_status_failures = 0
@@ -1145,18 +1145,23 @@ def _has_platform_suffix(name: str) -> bool:
 
 
 class _ConnectStageTracker:
-    """Capture the highest connect-progress stage seen during one connect attempt."""
+    """Capture the current attempt's real phase and terminal native error."""
 
     def __init__(self) -> None:
         self.max_stage: int | None = None
+        self.failure_detail: str | None = None
 
-    def observe(self, stage: int) -> None:
+    def observe(self, stage: int, detail: str = "") -> None:
         if stage == _CONNECT_STAGE_FAILED:
-            # The terminal "failed" sentinel is not a real progress milestone; ignore it so the
-            # recorded max reflects how far the connection actually advanced.
+            self.failure_detail = detail or None
             return
-        if self.max_stage is None or stage > self.max_stage:
-            self.max_stage = stage
+        if stage not in CONNECT_STAGE_NAMES:
+            return
+        # Native callbacks are synchronous. A phase regression starts a setup retry, including
+        # reused-link fallbacks that begin at service_discovery without ble_connecting.
+        if self.max_stage is None or stage < self.max_stage:
+            self.failure_detail = None
+        self.max_stage = stage
 
 
 _CONNECT_STAGE_FAILED = 10
@@ -1167,10 +1172,10 @@ def _connect_progress_logger(
     stage_tracker: _ConnectStageTracker | None = None,
 ) -> Callable[[int, bytes | None], None]:
     def emit(stage: int, detail: bytes | None) -> None:
-        if stage_tracker is not None:
-            stage_tracker.observe(stage)
-        stage_name = CONNECT_STAGE_NAMES.get(stage, "unknown")
         detail_text = detail.decode("utf-8", errors="replace") if detail else ""
+        if stage_tracker is not None:
+            stage_tracker.observe(stage, detail_text)
+        stage_name = CONNECT_STAGE_NAMES.get(stage, "unknown")
         routine_scan = stage in {0, 1} or (
             stage == _CONNECT_STAGE_FAILED
             and stage_tracker is not None

@@ -308,9 +308,12 @@ async def test_instantlink_status_disconnects_when_printer_is_gone() -> None:
 class _FakeInstantLinkConnectLibrary:
     """Fake library whose connect runs the progress callback then fails with a chosen rc."""
 
-    def __init__(self, *, stages: list[int], connect_rc: int) -> None:
+    def __init__(
+        self, *, stages: list[int], connect_rc: int, failure_detail: bytes | None = None
+    ) -> None:
         self._stages = stages
         self._connect_rc = connect_rc
+        self._failure_detail = failure_detail
         self.disconnect_calls = 0
 
     def instantlink_connect_named_with_progress(
@@ -321,7 +324,7 @@ class _FakeInstantLinkConnectLibrary:
     ) -> int:
         emit = cast(Any, callback)
         for stage in self._stages:
-            emit(stage, None)
+            emit(stage, self._failure_detail if stage == 10 else None)
         return self._connect_rc
 
     def instantlink_device_name(self, _out: object, _out_len: int) -> int:
@@ -399,6 +402,68 @@ async def test_status_provider_does_not_flag_early_stage_failure_as_stale_bond()
         await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
 
     assert excinfo.value.stale_bond_suspected is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "detail",
+    [
+        b"BLE error: GATT readiness not confirmed before setup deadline",
+        b"BLE error: BLE link disconnected during GATT setup",
+        b"BLE error: GATT readiness not confirmed before setup deadline; last discovery error: "
+        b"BLE error: transient D-Bus failure",
+    ],
+)
+async def test_unconfirmed_gatt_never_requests_bond_removal(detail: bytes) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 3, 4, 5, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    with pytest.raises(InstantLinkBleError) as native_error:
+        await backend.status("INSTAX-1N034655")
+    assert native_error.value.connect_failure_detail == detail.decode()
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert not captured.value.stale_bond_suspected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stages", [[0, 3, 4, 5, 6, 3, 4, 10], [0, 3, 4, 5, 6, 4, 10]])
+async def test_fallback_does_not_inherit_prior_attempt_stale_bond_phase(stages: list[int]) -> None:
+    library = _FakeInstantLinkConnectLibrary(stages=stages, connect_rc=ERROR_BLE)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert not captured.value.stale_bond_suspected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "detail",
+    [
+        b"BLE error: write characteristic not found",
+        b"BLE error: subscription denied: org.bluez.Error.AuthenticationFailed",
+        b"BLE error: GATT readiness not confirmed before setup deadline; last discovery error: "
+        b"BLE error: org.bluez.Error.AuthenticationFailed",
+        b"BLE error: encrypted write failed with diagnostic: GATT readiness not confirmed",
+    ],
+)
+async def test_confirmed_gatt_or_authentication_failure_preserves_bond_recovery(
+    detail: bytes,
+) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 3, 4, 5, 6, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert captured.value.stale_bond_suspected
 
 
 @pytest.mark.asyncio

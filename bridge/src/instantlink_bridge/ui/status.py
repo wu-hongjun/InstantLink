@@ -589,15 +589,26 @@ async def scan_bluez_instax_printers(timeout_s: float = 8.0) -> list[PairedPrint
 def _is_stale_bond_signature(exc: InstantLinkBleError | TimeoutError) -> bool:
     """Return true when a status BLE error matches the stale-bond write-failure signature.
 
-    The signature is: a connect attempt that advanced to at least the characteristic-lookup
-    stage (service discovery succeeded, so GATT was up) but then failed with a BLE error — either
-    the encrypted characteristics never resolved ("write characteristic not found") or the first
-    encrypted write/subscribe failed. A timeout, or a BLE error from an earlier connect stage
-    (scan/connect/service-discovery), is treated as an ordinary transient miss.
+    Confirmed resolved-table characteristic absence or encrypted subscribe/write failures retain
+    the existing phase heuristic. Native uncertain-readiness and dropped-link details are excluded;
+    explicit BlueZ authentication failure remains actionable. Timeouts and earlier setup failures
+    remain ordinary transient misses. Legacy builds without terminal detail retain phase behavior.
     """
 
     if not isinstance(exc, InstantLinkBleError):
         return False
+    detail = exc.connect_failure_detail or ""
+    if detail.startswith(
+        (
+            "BLE error: GATT readiness not confirmed",
+            "BLE error: BLE link disconnected during GATT setup",
+        )
+    ):
+        # A connected flag/empty incremental table or failed state RPC is not evidence of bad
+        # pairing keys. Keep these native readiness failures on ordinary reconnect recovery.
+        # Preserve explicit BlueZ authentication failure returned by actual rediscovery.
+        _, marker, discovery_error = detail.partition("; last discovery error: ")
+        return bool(marker and "org.bluez.Error.AuthenticationFailed" in discovery_error)
     stage = exc.connect_failure_stage
     return stage is not None and stage >= CONNECT_STAGE_STALE_BOND_MIN
 

@@ -1,0 +1,82 @@
+{
+  "reviewer": "gatt_readiness_adversarial",
+  "task": "092 Bluetooth GATT readiness after service restart",
+  "scope": "Independent source review and local tests; no repository edits or hardware mutations",
+  "result": "Source review passed; Linux execution and live acceptance pending",
+  "source_sha256": {
+    "crates/instantlink-core/src/transport.rs": "a5cee24ce4ca24d01e65b96bf9c5d8c5b59ed91c9f378ed13255d54f9ce50ba7",
+    "bridge/src/instantlink_bridge/ble/instantlink.py": "4813bf2b36ad7fd842b7a6ff6a1950703953a8fa3a6065bf27f9869171b61e4e",
+    "bridge/src/instantlink_bridge/ui/status.py": "a635595e7e3d2c1740bc827a764eedc69d5859546a71606365f8b5f25d2e0c85",
+    "bridge/tests/test_ui_status.py": "7e839558b76866e8c5729962134ce0e29c48bb3a0dba72f3a3adb4f838670b1f"
+  },
+  "checks": [
+    {
+      "area": "GATT metadata readiness",
+      "result": "pass",
+      "detail": "Exact-device typed Connected/ServicesResolved lookup; unresolved state waits; unknown state preserves discovery fallback; complete first discovery adds no new readiness queries."
+    },
+    {
+      "area": "Deadline and cancellation",
+      "result": "pass",
+      "detail": "State query, rediscovery and sleep share one absolute deadline. Paused-time tests verify pending futures drop, no zero-budget I/O, early confirmed disconnect and no fixed delay after ready metadata."
+    },
+    {
+      "area": "Persistent incomplete GATT table",
+      "result": "pass",
+      "detail": "Legacy missing-characteristic recovery requires a successful fresh incomplete discovery near deadline with Ready before and after; unconfirmed state uses distinct error detail."
+    },
+    {
+      "area": "Python failure classification",
+      "result": "pass",
+      "detail": "Anchored transient readiness/disconnected prefixes avoid stale-bond classification; explicit org.bluez.Error.AuthenticationFailed detail preserves genuine authentication recovery; generic confirmed encrypted failures retain compatibility."
+    },
+    {
+      "area": "Retry progress ownership",
+      "result": "pass",
+      "detail": "Real phase regression resets current attempt phase, including reused-link fallback beginning at service discovery. Terminal failure detail is captured separately; failed sentinel is not a real stage."
+    },
+    {
+      "area": "Image/status/native ownership boundaries",
+      "result": "pass",
+      "detail": "No image, protocol, status freshness, FFI session ownership or disconnect-listener implementation changes in reviewed diff."
+    }
+  ],
+  "resolved_findings": [
+    {
+      "title": "Linux PeripheralId must be restored to absolute BlueZ path",
+      "found_by": "root agent during source review",
+      "detail": "Pinned btleplug PeripheralId delegates to DeviceId Display and yields hci0/dev_*; initial candidate used that relative identifier for absolute ObjectManager lookup, always returning Unknown. Corrected production wrapper restores /org/bluez/ prefix and Linux test covers the same wrapper with Ready/Pending/wrong-adapter cases. Independently rechecked call-site and pinned Display implementation."
+    }
+  ],
+  "independent_tests": [
+    {
+      "command": "cargo test -p instantlink-core --locked gatt_",
+      "platform": "arm64 macOS",
+      "passed": 10,
+      "failed": 0,
+      "boundary": "Before Linux-wrapper-only correction; Linux cfg test excluded."
+    },
+    {
+      "command": "cargo test -p instantlink-core --locked --lib",
+      "platform": "arm64 macOS",
+      "passed": 207,
+      "failed": 0,
+      "boundary": "Before Linux-wrapper-only correction; includes prepared-JPEG orientation and transport/reconnect regressions. Linux cfg code excluded."
+    },
+    {
+      "command": "python -m pytest -q tests/test_ui_status.py tests/test_instantlink_initial_status.py",
+      "platform": "host Python virtual environment",
+      "passed": 61,
+      "failed": 0,
+      "boundary": "Reviewed final Python candidate including transient/authentication classification and attempt regression tests."
+    }
+  ],
+  "outstanding_source_findings": [],
+  "pending_acceptance": [
+    "Linux-specific corrected lookup compilation/test execution",
+    "Live service restart and locked automatic reconnect with fresh status and unchanged film count",
+    "Final installed source/native hashes and running-log review"
+  ],
+  "hardware_mutations": false,
+  "film_used": false
+}

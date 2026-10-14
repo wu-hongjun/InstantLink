@@ -535,9 +535,8 @@ where
 /// Maximum time to wait for the Instax GATT characteristics to be exported by
 /// the OS BLE stack after service discovery. BlueZ exports characteristics
 /// incrementally, so they may not all be present immediately after connect.
-/// Kept short: this blocking connect holds the bridge's serialized BLE lock, so
-/// a long poll starves the single-threaded UI/render loop. The loop also breaks
-/// early when the link drops, so a missing characteristic resolves quickly.
+/// Keep setup bounded within the caller's connect budget. State queries and
+/// rediscovery share this deadline; a dropped link ends setup immediately.
 const CHARACTERISTIC_RESOLVE_TIMEOUT: Duration = Duration::from_secs(2);
 /// Interval between characteristic-resolution poll attempts.
 const CHARACTERISTIC_RESOLVE_POLL_INTERVAL: Duration = Duration::from_millis(300);
@@ -1066,30 +1065,24 @@ impl BleTransport {
                 "Instax characteristics missing after discovery; polling characteristic lookup. chars={}",
                 format_characteristic_uuids(&chars)
             );
-            let deadline = tokio::time::Instant::now() + CHARACTERISTIC_RESOLVE_TIMEOUT;
-            while tokio::time::Instant::now() < deadline {
-                // Bail out early if the link dropped — let the upper layer reconnect.
-                if !peripheral.is_connected().await.unwrap_or(false) {
-                    log::debug!("BLE link dropped during characteristic resolution");
-                    break;
+            chars = match resolve_instax_characteristics(
+                || gatt_readiness(&peripheral),
+                || async {
+                    peripheral.discover_services().await.map_err(|error| {
+                        PrinterError::Ble(format!("service discovery failed: {error}"))
+                    })?;
+                    Ok(peripheral.characteristics())
+                },
+                CHARACTERISTIC_RESOLVE_TIMEOUT,
+            )
+            .await
+            {
+                Ok(chars) => chars,
+                Err(error) => {
+                    Self::disconnect_quietly(&peripheral, None).await;
+                    return Err(error);
                 }
-
-                tokio::time::sleep(CHARACTERISTIC_RESOLVE_POLL_INTERVAL).await;
-
-                if let Err(error) = peripheral.discover_services().await {
-                    // A single transient discover error must not abort the loop;
-                    // BlueZ may still finish exporting on a later poll.
-                    log::debug!(
-                        "Characteristic lookup rediscovery failed (transient): {}",
-                        error
-                    );
-                }
-
-                chars = peripheral.characteristics();
-                if has_instax_characteristics(&chars) {
-                    break;
-                }
-            }
+            };
             log::debug!(
                 "Instax characteristic poll result. chars={}",
                 format_characteristic_uuids(&chars)
@@ -1440,6 +1433,137 @@ impl BleTransport {
             }
         }
     }
+}
+
+/// A connection bit alone does not prove that BlueZ has exported a GATT table.
+/// Unknown state keeps the discovery fallback available without asserting link loss.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum GattReadiness {
+    Ready,
+    Pending,
+    Disconnected,
+    Unknown,
+}
+
+#[cfg(target_os = "linux")]
+fn bluez_gatt_readiness(objects: &BluezObjects, device_path: &str) -> GattReadiness {
+    use dbus::arg::prop_cast;
+    let properties = dbus::Path::new(device_path)
+        .ok()
+        .and_then(|path| objects.get(&path))
+        .and_then(|interfaces| interfaces.get("org.bluez.Device1"));
+    let Some(properties) = properties else {
+        return GattReadiness::Unknown;
+    };
+    match prop_cast::<bool>(properties, "Connected") {
+        Some(false) => GattReadiness::Disconnected,
+        Some(true) => match prop_cast::<bool>(properties, "ServicesResolved") {
+            Some(true) => GattReadiness::Ready,
+            Some(false) => GattReadiness::Pending,
+            None => GattReadiness::Unknown,
+        },
+        None => GattReadiness::Unknown,
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn bluez_gatt_readiness_from_peripheral_id(
+    objects: &BluezObjects,
+    device_id: &str,
+) -> GattReadiness {
+    // btleplug's Linux PeripheralId delegates to DeviceId::Display, which
+    // strips /org/bluez/. Restore that prefix for ObjectManager lookup.
+    bluez_gatt_readiness(objects, &format!("/org/bluez/{device_id}"))
+}
+
+async fn gatt_readiness(peripheral: &Peripheral) -> GattReadiness {
+    #[cfg(target_os = "linux")]
+    if let Some(objects) = discovery::snapshot().await {
+        let state = bluez_gatt_readiness_from_peripheral_id(&objects, &peripheral.id().to_string());
+        if state != GattReadiness::Unknown {
+            return state;
+        }
+    }
+    match peripheral.is_connected().await {
+        Ok(false) => GattReadiness::Disconnected,
+        #[cfg(not(target_os = "linux"))]
+        Ok(true) => GattReadiness::Ready,
+        // btleplug does not expose ServicesResolved. An unavailable Linux
+        // snapshot is inconclusive, so retain the original discovery fallback.
+        _ => GattReadiness::Unknown,
+    }
+}
+
+/// Retry only the setup metadata when the first discovery sees incomplete exports.
+/// Both futures and every sleep share one real deadline. Dropping this future
+/// drops its in-flight query; no background worker or connection task is spawned.
+async fn resolve_instax_characteristics<Q, QF, D, DF>(
+    mut query: Q,
+    mut discover: D,
+    timeout: Duration,
+) -> Result<std::collections::BTreeSet<Characteristic>>
+where
+    Q: FnMut() -> QF,
+    QF: Future<Output = GattReadiness>,
+    D: FnMut() -> DF,
+    DF: Future<Output = Result<std::collections::BTreeSet<Characteristic>>>,
+{
+    let deadline = tokio::time::Instant::now() + timeout;
+    let mut last_error = None;
+    loop {
+        if tokio::time::Instant::now() >= deadline {
+            break;
+        }
+        let state = match tokio::time::timeout_at(deadline, query()).await {
+            Ok(state) => state,
+            Err(_) => break,
+        };
+        if state == GattReadiness::Disconnected {
+            return Err(PrinterError::Ble(
+                "BLE link disconnected during GATT setup".into(),
+            ));
+        }
+        if state != GattReadiness::Pending {
+            match tokio::time::timeout_at(deadline, discover()).await {
+                Ok(Ok(chars)) if has_instax_characteristics(&chars) => return Ok(chars),
+                Ok(Ok(chars)) => {
+                    // Only a resolved, freshly read table on a still-live link
+                    // may reach the legacy missing-characteristic classifier.
+                    // Reserve the final poll window for that confirmation;
+                    // timeout/unknown/pending are transient readiness failures.
+                    if state == GattReadiness::Ready
+                        && deadline.saturating_duration_since(tokio::time::Instant::now())
+                            <= CHARACTERISTIC_RESOLVE_POLL_INTERVAL
+                    {
+                        match tokio::time::timeout_at(deadline, query()).await {
+                            Ok(GattReadiness::Ready) => return Ok(chars),
+                            Ok(GattReadiness::Disconnected) => {
+                                return Err(PrinterError::Ble(
+                                    "BLE link disconnected during GATT setup".into(),
+                                ));
+                            }
+                            _ => break,
+                        }
+                    }
+                }
+                Ok(Err(error)) => {
+                    log::debug!("GATT setup rediscovery failed: {error}");
+                    last_error = Some(error);
+                }
+                Err(_) => break,
+            }
+        }
+        tokio::time::sleep_until(
+            deadline.min(tokio::time::Instant::now() + CHARACTERISTIC_RESOLVE_POLL_INTERVAL),
+        )
+        .await;
+    }
+    let detail = last_error
+        .map(|error| format!("; last discovery error: {error}"))
+        .unwrap_or_default();
+    Err(PrinterError::Ble(format!(
+        "GATT readiness not confirmed before setup deadline{detail}"
+    )))
 }
 
 fn has_instax_characteristics(chars: &std::collections::BTreeSet<Characteristic>) -> bool {
@@ -2393,6 +2517,310 @@ mod tests {
         both.insert(make_char(NOTIFY_CHAR_UUID));
         both.insert(make_char(DIS_MODEL_NUMBER_UUID));
         assert!(has_instax_characteristics(&both));
+    }
+
+    fn complete_instax_chars() -> std::collections::BTreeSet<Characteristic> {
+        [make_char(WRITE_CHAR_UUID), make_char(NOTIFY_CHAR_UUID)]
+            .into_iter()
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_ready_retry_has_no_fixed_delay() {
+        let started = tokio::time::Instant::now();
+        let chars = resolve_instax_characteristics(
+            || async { GattReadiness::Ready },
+            || async { Ok(complete_instax_chars()) },
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(has_instax_characteristics(&chars));
+        assert_eq!(started.elapsed(), Duration::ZERO);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_unresolved_link_waits_before_rediscovery() {
+        let queries = AtomicUsize::new(0);
+        let discoveries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let chars = resolve_instax_characteristics(
+            || async {
+                if queries.fetch_add(1, Ordering::Relaxed) < 2 {
+                    GattReadiness::Pending
+                } else {
+                    GattReadiness::Ready
+                }
+            },
+            || async {
+                discoveries.fetch_add(1, Ordering::Relaxed);
+                assert_eq!(started.elapsed(), Duration::from_millis(600));
+                Ok(complete_instax_chars())
+            },
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(has_instax_characteristics(&chars));
+        assert_eq!(discoveries.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_confirmed_disconnect_is_not_missing_characteristic() {
+        let error = resolve_instax_characteristics(
+            || async { GattReadiness::Disconnected },
+            || async { panic!("disconnected link cannot rediscover") },
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("BLE link disconnected during GATT setup")
+        );
+        assert!(!error.to_string().contains("characteristic not found"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_unknown_state_keeps_discovery_fallback() {
+        let chars = resolve_instax_characteristics(
+            || async { GattReadiness::Unknown },
+            || async { Ok(complete_instax_chars()) },
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(has_instax_characteristics(&chars));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_pending_and_unknown_deadlines_cannot_authorize_stale_bond_recovery() {
+        for state in [GattReadiness::Pending, GattReadiness::Unknown] {
+            let discoveries = AtomicUsize::new(0);
+            let started = tokio::time::Instant::now();
+            let error = resolve_instax_characteristics(
+                || async { state },
+                || async {
+                    discoveries.fetch_add(1, Ordering::Relaxed);
+                    Ok(std::collections::BTreeSet::new())
+                },
+                CHARACTERISTIC_RESOLVE_TIMEOUT,
+            )
+            .await
+            .unwrap_err();
+            assert!(error.to_string().contains("GATT readiness not confirmed"));
+            assert!(!error.to_string().contains("characteristic not found"));
+            assert_eq!(started.elapsed(), CHARACTERISTIC_RESOLVE_TIMEOUT);
+            assert_eq!(
+                discoveries.load(Ordering::Relaxed) == 0,
+                state == GattReadiness::Pending
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_resolved_incomplete_table_requires_final_live_confirmation() {
+        let queries = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        let chars = resolve_instax_characteristics(
+            || async {
+                queries.fetch_add(1, Ordering::Relaxed);
+                GattReadiness::Ready
+            },
+            || async { Ok([make_char(NOTIFY_CHAR_UUID)].into_iter().collect()) },
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap();
+        assert!(!has_instax_characteristics(&chars));
+        assert_eq!(started.elapsed(), Duration::from_millis(1800));
+        assert_eq!(queries.load(Ordering::Relaxed), 8);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_final_confirmation_loss_cannot_authorize_stale_bond_recovery() {
+        for final_state in [
+            GattReadiness::Pending,
+            GattReadiness::Unknown,
+            GattReadiness::Disconnected,
+        ] {
+            let queries = AtomicUsize::new(0);
+            let error = resolve_instax_characteristics(
+                || async {
+                    if queries.fetch_add(1, Ordering::Relaxed) == 7 {
+                        final_state
+                    } else {
+                        GattReadiness::Ready
+                    }
+                },
+                || async { Ok(std::collections::BTreeSet::new()) },
+                CHARACTERISTIC_RESOLVE_TIMEOUT,
+            )
+            .await
+            .unwrap_err();
+            assert!(!error.to_string().contains("characteristic not found"));
+            if final_state == GattReadiness::Disconnected {
+                assert!(
+                    error
+                        .to_string()
+                        .contains("BLE link disconnected during GATT setup")
+                );
+            } else {
+                assert!(error.to_string().contains("GATT readiness not confirmed"));
+            }
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_query_and_discovery_share_real_deadline_and_drop_pending_futures() {
+        struct Active<'a>(&'a AtomicUsize);
+        impl Drop for Active<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+        for hang_query in [true, false] {
+            let active = AtomicUsize::new(0);
+            let started = tokio::time::Instant::now();
+            let error = resolve_instax_characteristics(
+                || async {
+                    if hang_query {
+                        active.fetch_add(1, Ordering::SeqCst);
+                        let _guard = Active(&active);
+                        std::future::pending::<()>().await;
+                    } else {
+                        tokio::time::sleep(Duration::from_millis(1500)).await;
+                    }
+                    GattReadiness::Ready
+                },
+                || async {
+                    active.fetch_add(1, Ordering::SeqCst);
+                    let _guard = Active(&active);
+                    std::future::pending::<Result<std::collections::BTreeSet<Characteristic>>>()
+                        .await
+                },
+                CHARACTERISTIC_RESOLVE_TIMEOUT,
+            )
+            .await
+            .unwrap_err();
+            assert!(error.to_string().contains("GATT readiness not confirmed"));
+            assert_eq!(started.elapsed(), CHARACTERISTIC_RESOLVE_TIMEOUT);
+            assert_eq!(active.load(Ordering::SeqCst), 0);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_zero_budget_starts_no_io() {
+        let error = resolve_instax_characteristics(
+            || async { panic!("zero budget must not query") },
+            || async { panic!("zero budget must not discover") },
+            Duration::ZERO,
+        )
+        .await
+        .unwrap_err();
+        assert!(error.to_string().contains("GATT readiness not confirmed"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn gatt_retry_preserves_last_discovery_error_detail() {
+        let error = resolve_instax_characteristics(
+            || async { GattReadiness::Ready },
+            || async { Err(PrinterError::Ble("Authentication Failed".into())) },
+            CHARACTERISTIC_RESOLVE_TIMEOUT,
+        )
+        .await
+        .unwrap_err();
+        assert!(error.to_string().contains("Authentication Failed"));
+        assert!(error.to_string().contains("GATT readiness not confirmed"));
+    }
+
+    #[test]
+    fn has_instax_characteristics_rejects_matching_uuids_in_another_service() {
+        let mut wrong_notify = make_char(NOTIFY_CHAR_UUID);
+        wrong_notify.service_uuid = DIS_SERVICE_UUID;
+        let chars = [make_char(WRITE_CHAR_UUID), wrong_notify]
+            .into_iter()
+            .collect();
+        assert!(!has_instax_characteristics(&chars));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn gatt_snapshot_requires_typed_properties_on_exact_device() {
+        use dbus::arg::{PropMap, Variant};
+        let device = "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64";
+        let mut objects = BluezObjects::new();
+        assert_eq!(
+            bluez_gatt_readiness(&objects, device),
+            GattReadiness::Unknown
+        );
+        let properties = objects
+            .entry(dbus::Path::new(device).unwrap())
+            .or_default()
+            .entry("org.bluez.Device1".into())
+            .or_insert_with(PropMap::new);
+        properties.insert("Connected".into(), Variant(Box::new(true)));
+        properties.insert("ServicesResolved".into(), Variant(Box::new(true)));
+        assert_eq!(bluez_gatt_readiness(&objects, device), GattReadiness::Ready);
+        // The production caller gets this relative identity from btleplug,
+        // not the absolute BlueZ path used by the snapshot fixture above.
+        let peripheral_id = "hci0/dev_FA_AB_BC_C7_95_64";
+        assert_eq!(
+            bluez_gatt_readiness(&objects, peripheral_id),
+            GattReadiness::Unknown
+        );
+        assert_eq!(
+            bluez_gatt_readiness_from_peripheral_id(&objects, peripheral_id),
+            GattReadiness::Ready,
+        );
+        assert_eq!(
+            bluez_gatt_readiness_from_peripheral_id(&objects, "hci1/dev_FA_AB_BC_C7_95_64"),
+            GattReadiness::Unknown,
+        );
+
+        assert_eq!(
+            bluez_gatt_readiness(&objects, "/org/bluez/hci1/dev_FA_AB_BC_C7_95_64"),
+            GattReadiness::Unknown
+        );
+        let properties = objects
+            .get_mut(&dbus::Path::new(device).unwrap())
+            .unwrap()
+            .get_mut("org.bluez.Device1")
+            .unwrap();
+        properties.insert("ServicesResolved".into(), Variant(Box::new(false)));
+        assert_eq!(
+            bluez_gatt_readiness(&objects, device),
+            GattReadiness::Pending
+        );
+        assert_eq!(
+            bluez_gatt_readiness_from_peripheral_id(&objects, peripheral_id),
+            GattReadiness::Pending
+        );
+
+        let properties = objects
+            .get_mut(&dbus::Path::new(device).unwrap())
+            .unwrap()
+            .get_mut("org.bluez.Device1")
+            .unwrap();
+        properties.insert(
+            "ServicesResolved".into(),
+            Variant(Box::new("true".to_owned())),
+        );
+        assert_eq!(
+            bluez_gatt_readiness(&objects, device),
+            GattReadiness::Unknown
+        );
+        let properties = objects
+            .get_mut(&dbus::Path::new(device).unwrap())
+            .unwrap()
+            .get_mut("org.bluez.Device1")
+            .unwrap();
+        properties.insert("Connected".into(), Variant(Box::new(false)));
+        assert_eq!(
+            bluez_gatt_readiness(&objects, device),
+            GattReadiness::Disconnected
+        );
     }
 
     #[test]

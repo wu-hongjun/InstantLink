@@ -126,6 +126,8 @@ class InstantLinkError(RuntimeError):
         # Native terminal progress carries the actual setup error; the C ABI return code alone
         # cannot distinguish unresolved GATT from a confirmed encrypted-characteristic failure.
         self.connect_failure_detail: str | None = None
+        # Native status logging owns this failure, including rate-limited repeats.
+        self.status_failure_reported = False
 
 
 class InstantLinkLibraryUnavailableError(InstantLinkError):
@@ -260,7 +262,9 @@ class InstantLinkBackend:
         self._lib: ctypes.CDLL | None = None
         self._lock = asyncio.Lock()
         self._last_status_failure_log_at = -float("inf")
-        self._last_status_failure_signature: tuple[str, str, str, bool] | None = None
+        self._last_status_failure_signature: tuple[object, ...] | None = None
+        self._setup_drop_target: str | None = None
+        self._consecutive_setup_drops = 0
         self._consecutive_status_failures = 0
 
     def prepared_jpeg_available(self) -> bool:
@@ -460,20 +464,47 @@ class InstantLinkBackend:
     def _log_status_failure(self, name: str, exc: BaseException, *, disconnected: bool) -> None:
         normalized_name = normalize_printer_name(name)
         event = "status_failed_disconnect" if disconnected else "status_failed_keep_connection"
-        signature = (normalized_name, type(exc).__name__, str(exc), disconnected)
+        detail = exc.connect_failure_detail if isinstance(exc, InstantLinkError) else None
+        stage = exc.connect_failure_stage if isinstance(exc, InstantLinkError) else None
+        setup_drop = is_native_setup_disconnect(exc)
+        target_key = normalized_name.casefold()
+        if self._setup_drop_target != target_key:
+            self._consecutive_setup_drops = 0
+        self._setup_drop_target = target_key
+        if setup_drop:
+            # Absence between setup attempts does not prove recovery. Keep this episode's
+            # budget until fresh status succeeds or another selected Printer is queried.
+            self._consecutive_setup_drops += 1
         expected_absence = isinstance(exc, InstantLinkPrinterNotFoundError)
+        routine_drop = setup_drop and self._consecutive_setup_drops <= 2
+        level = logging.INFO if expected_absence or routine_drop else logging.WARNING
+        signature = (
+            normalized_name,
+            type(exc).__name__,
+            str(exc),
+            disconnected,
+            stage,
+            detail,
+            level,
+        )
+        if isinstance(exc, InstantLinkError):
+            exc.status_failure_reported = True
         now = time.monotonic()
         if signature != self._last_status_failure_signature or (
             not expected_absence
             and now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
         ):
             LOGGER.log(
-                logging.INFO if expected_absence else logging.WARNING,
-                "instantlink.%s name=%s error_type=%s error=%s",
+                level,
+                "instantlink.%s name=%s error_type=%s error=%s stage=%s detail=%s "
+                "setup_drop_streak=%s",
                 event,
                 normalized_name,
                 type(exc).__name__,
                 exc,
+                stage,
+                detail,
+                self._consecutive_setup_drops,
             )
             LOGGER.debug("instantlink.%s_trace", event, exc_info=True)
             self._last_status_failure_signature = signature
@@ -490,6 +521,8 @@ class InstantLinkBackend:
     def _clear_status_failure_log_state(self) -> None:
         self._last_status_failure_signature = None
         self._last_status_failure_log_at = -float("inf")
+        self._setup_drop_target = None
+        self._consecutive_setup_drops = 0
 
     def _status_blocking_connected(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
         initial_status = self._ensure_connected_blocking(
@@ -1057,6 +1090,16 @@ def _raise_for_code(code: int, context: str) -> None:
             raise PrintRejectedError("print rejected")
         raise InstantLinkBleError(f"{context}: unexpected printer response", code=code)
     raise InstantLinkError(f"{context}: InstantLink error {code}", code=code)
+
+
+def is_native_setup_disconnect(exc: BaseException) -> bool:
+    """Recognize only the native setup error that confirms an actual dropped link."""
+
+    return (
+        isinstance(exc, InstantLinkBleError)
+        and exc.code == ERROR_BLE
+        and exc.connect_failure_detail == "BLE error: BLE link disconnected during GATT setup"
+    )
 
 
 def _parse_instantlink_model(value: str) -> PrinterModel:

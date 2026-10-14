@@ -161,7 +161,12 @@ from accidentally unlocking. Startup logs identify the backend and any fallback.
 At the default INFO log level, successful Printer status is recorded on first observation,
 value/recovery changes and a five-minute heartbeat. Unchanged intermediate observations and
 routine scan progress are DEBUG. Expected Printer absence is recorded once at INFO until
-its state changes; genuine communication failures retain rate-limited warnings. Use the
+its state changes. An exact native GATT setup disconnect is INFO for the first two failures
+in an unresolved episode; the third and later failures retain rate-limited warnings. Fresh
+status or a different selected Printer resets that budget. Authentication and unknown failures
+remain warnings. Native stage/detail are retained, and the UI does not duplicate a failure
+already reported by the backend. BLE setup failures carry unconfirmed scan diagnostics rather
+than incorrectly claiming the Printer is absent. Use the
 Bridge executable's `--log-level DEBUG` option when detailed poll/scan records are needed.
 
 Cancelling a native operation retains serialization until its blocking worker has finished
@@ -175,8 +180,10 @@ Printer keeps its bond. Polling waits for active rebond and silent-link recovery
 
 After a previously responsive Printer stops responding, the Bridge permits two prompt
 status/reconnect retries with at least 250 ms between attempts. If they fail, it resumes
-the configured offline search period; startup with an absent Printer keeps that ordinary
-cadence. The existing “Restart printer” retry interval still applies. Confirmed native
+the configured offline search period. An exact native setup disconnect also permits this
+bounded burst at startup, once until fresh status; repeated drops or intervening absent scans
+do not replenish it. Startup with an absent Printer keeps the ordinary cadence. The existing
+“Restart printer” retry interval still applies. Confirmed native
 session closure retires a cached link immediately; uncertain status failures retain the
 existing two-failure tolerance.
 

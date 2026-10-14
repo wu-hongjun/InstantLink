@@ -1207,13 +1207,28 @@ def test_retry_delay_is_immediate_right_after_a_connected_drop() -> None:
     [
         ([True, False, False, False], 1.0, [0.0, 10.0, 11.25, 12.5, 42.5]),
         ([False, False], 1.0, [0.0, 30.0, 60.0]),
+        (
+            [PrinterStatusUnavailableReason.LINK_DROPPED] * 4,
+            1.0,
+            [0.0, 1.25, 2.5, 32.5, 62.5],
+        ),
+        (
+            [
+                PrinterStatusUnavailableReason.LINK_DROPPED,
+                False,
+                PrinterStatusUnavailableReason.LINK_DROPPED,
+                False,
+            ],
+            1.0,
+            [0.0, 1.25, 2.5, 32.5, 62.5],
+        ),
         ([True, False, True, False, False, False], 1.0, [0, 10, 11.25, 21.25, 22.5, 23.75, 53.75]),
         ([True, False, False, False], 10.0, [0, 12, 22.25, 32.5, 62.5]),
     ],
 )
 async def test_poll_recovery_retries_are_bounded_and_restore_normal_cadence(
     monkeypatch: pytest.MonkeyPatch,
-    outcomes: list[bool],
+    outcomes: list[bool | PrinterStatusUnavailableReason],
     attempt_s: float,
     expected_starts: list[float],
 ) -> None:
@@ -1230,8 +1245,13 @@ async def test_poll_recovery_retries_are_bounded_and_restore_normal_cadence(
             online = outcomes[self.fetch_calls]
             self.fetch_calls += 1
             clock[0] += attempt_s
-            if not online:
-                raise PrinterStatusUnavailableError("not advertising")
+            if not online or isinstance(online, PrinterStatusUnavailableReason):
+                raise PrinterStatusUnavailableError(
+                    "not advertising",
+                    reason=online
+                    if isinstance(online, PrinterStatusUnavailableReason)
+                    else PrinterStatusUnavailableReason.NOT_ADVERTISING,
+                )
             return PrinterStatusSnapshot(3, 90, False, PrinterModel.SQUARE)
 
     async def sleep(delay: float) -> None:
@@ -7321,3 +7341,77 @@ async def test_injected_actions_respect_startup_settle_window(
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+
+
+@pytest.mark.asyncio
+async def test_status_failure_reason_does_not_survive_success_or_unclassified_failure() -> None:
+    provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "setup dropped", reason=PrinterStatusUnavailableReason.LINK_DROPPED
+        ),
+        snapshot=PrinterStatusSnapshot(3, 90, False),
+    )
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    assert not await ui._refresh_printer_status_in_background(printer)
+    assert ui._last_printer_status_failure_reason is PrinterStatusUnavailableReason.LINK_DROPPED
+    provider._error = None
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui._last_printer_status_failure_reason is None
+    for error in (TimeoutError("late response"), RuntimeError("unexpected")):
+        ui._last_printer_status_failure_reason = PrinterStatusUnavailableReason.LINK_DROPPED
+        provider._error = error
+        assert not await ui._refresh_printer_status_in_background(printer)
+        assert ui._last_printer_status_failure_reason is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reported", [False, True])
+async def test_native_status_warning_has_one_explicit_owner(
+    reported: bool,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "printer status unavailable",
+            reason=PrinterStatusUnavailableReason.BLE_FAILURE,
+            native_stage=3,
+            native_detail="BLE error: org.bluez.Error.AuthenticationFailed",
+            failure_reported=reported,
+        )
+    )
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    caplog.set_level(logging.DEBUG, logger="instantlink_bridge.ui.controller")
+    assert not await ui._refresh_printer_status_in_background(printer)
+    records = [
+        r for r in caplog.records if r.getMessage().startswith("ui.printer_status_unavailable")
+    ]
+    assert len(records) == 1
+    assert records[0].levelno == (logging.DEBUG if reported else logging.WARNING)
+    assert "AuthenticationFailed" in records[0].getMessage()
+    assert "selected_visible=False" not in records[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_confirmed_disconnect_owns_failure_recovery_until_serialized_poll_cleanup() -> None:
+    provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "printer status unavailable",
+            stale_bond_suspected=True,
+            printer_not_found=True,
+        )
+    )
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    ui._printer_disconnect_pending = True
+    ui._last_printer_status_ok_at = float("-inf")
+    assert not await ui._refresh_printer_status_in_background(printer)
+    assert ui._printer_disconnect_pending
+    assert ui._auto_rebond_task is None
+    assert ui._silent_link_recovery_task is None
+    assert not ui.live_snapshot.printer_status_fresh
+    assert provider.close_cached_calls == 0

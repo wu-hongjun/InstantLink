@@ -125,6 +125,7 @@ from instantlink_bridge.ui.status import (
     PrinterStatusProvider,
     PrinterStatusSnapshot,
     PrinterStatusUnavailableError,
+    PrinterStatusUnavailableReason,
 )
 from instantlink_bridge.ui.status_indicator import (
     GpioStatusSink,
@@ -504,6 +505,7 @@ class BridgeUi:
         self._battery_estimator = BatteryLifeEstimator()
         self._battery_minutes_remaining: int | None = None
         self._printer_status_misses = 0
+        self._last_printer_status_failure_reason: PrinterStatusUnavailableReason | None = None
         # Tracks whether the previous status poll was connected. A connected->failed transition
         # means the printer just dropped, so we re-search immediately instead of waiting a full
         # search period (see _printer_status_retry_delay).
@@ -4680,6 +4682,7 @@ class BridgeUi:
             await self._wait_for_printer_backend()
             startup_bond_check = True
             recovery_retries_remaining = 0
+            setup_drop_burst_available = True
             while True:
                 bond_checked_before_fetch = False
                 if not self._status_generation_is_current(generation):
@@ -4747,6 +4750,7 @@ class BridgeUi:
                     self._last_printer_status_ok_at = float("-inf")
                     continue
                 if online:
+                    setup_drop_burst_available = True
                     self._printer_was_online = True
                     await self._arm_printer_disconnect_watch(printer, generation)
                     if not self._status_generation_is_current(generation):
@@ -4769,6 +4773,19 @@ class BridgeUi:
                         await self._maybe_reset_bond_on_drop(printer)
                         if not self._status_generation_is_current(generation):
                             return
+                if (
+                    not online
+                    and setup_drop_burst_available
+                    and self._last_printer_status_failure_reason
+                    is PrinterStatusUnavailableReason.LINK_DROPPED
+                ):
+                    # Discovery found the Printer before setup dropped. Offer the same short
+                    # recovery burst at startup, once per episode; neither another drop nor an
+                    # intervening absent scan replenishes it before fresh status.
+                    recovery_retries_remaining = max(
+                        recovery_retries_remaining, PRINTER_RECOVERY_RETRY_COUNT
+                    )
+                    setup_drop_burst_available = False
                 # The retry delay is the total cadence PERIOD (e.g. the configured search interval),
                 # measured from the start of each attempt. Subtract the time the attempt already
                 # consumed (its scan/connect) so the period holds whether the scan exited early on a
@@ -4888,6 +4905,7 @@ class BridgeUi:
     ) -> bool:
         if not self._status_generation_is_current(generation):
             return False
+        self._last_printer_status_failure_reason = None
         try:
             status = await self._status_provider.fetch(printer)
         except asyncio.CancelledError:
@@ -4896,27 +4914,40 @@ class BridgeUi:
             if not self._status_generation_is_current(generation):
                 return False
             self._last_printer_status_log_signature = None
+            self._last_printer_status_failure_reason = exc.reason
             diagnostics = scanner_diagnostics_summary(exc)
             if self._should_log_printer_status_warning(
                 "unavailable",
                 printer,
                 str(exc),
                 diagnostics,
+                exc.reason.value,
+                str(exc.native_stage),
+                exc.native_detail or "",
                 repeat_interval_s=None
                 if exc.printer_not_found
                 else PRINTER_STATUS_WARNING_INTERVAL_S,
             ):
                 LOGGER.log(
-                    logging.INFO if exc.printer_not_found else logging.WARNING,
-                    "ui.printer_status_unavailable address=%s name=%s error=%s diagnostics=%s",
+                    logging.DEBUG
+                    if exc.failure_reported
+                    else logging.INFO
+                    if exc.printer_not_found
+                    else logging.WARNING,
+                    "ui.printer_status_unavailable address=%s name=%s error=%s diagnostics=%s "
+                    "reason=%s stage=%s detail=%s",
                     printer.address,
                     printer.name,
                     exc,
                     diagnostics,
+                    exc.reason.value,
+                    exc.native_stage,
+                    exc.native_detail,
                 )
             self._printer_status_misses += 1
-            self._maybe_auto_rebond(printer, exc)
-            self._maybe_recover_silent_link(printer, exc)
+            if not self._printer_disconnect_pending:
+                self._maybe_auto_rebond(printer, exc)
+                self._maybe_recover_silent_link(printer, exc)
             self._apply_status_failure(printer, self._unavailable_message(exc), generation)
             return False
         except TimeoutError as exc:

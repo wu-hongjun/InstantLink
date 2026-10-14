@@ -28,6 +28,7 @@ from instantlink_bridge.ble.instantlink import (
     InstantLinkMultiplePrintersError,
     InstantLinkPrinterNotFoundError,
     default_instantlink_backend,
+    is_native_setup_disconnect,
 )
 from instantlink_bridge.ble.instax import PrinterStatus
 from instantlink_bridge.ble.models import PrinterModel, spec_for
@@ -79,6 +80,8 @@ class PrinterStatusUnavailableReason(StrEnum):
 
     NOT_ADVERTISING = "not_advertising"
     STALE_SELECTED = "stale_selected"
+    LINK_DROPPED = "link_dropped"
+    BLE_FAILURE = "ble_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +156,9 @@ class PrinterStatusUnavailableError(RuntimeError):
         status_message: str | None = None,
         stale_bond_suspected: bool = False,
         printer_not_found: bool = False,
+        native_detail: str | None = None,
+        native_stage: int | None = None,
+        failure_reported: bool = False,
     ) -> None:
         super().__init__(message)
         self.diagnostics = diagnostics
@@ -169,6 +175,9 @@ class PrinterStatusUnavailableError(RuntimeError):
         # holding a silent auto-reconnected link, so the printer is not advertising and the scan
         # can't see it" deadlock by dropping that BlueZ link so the printer re-advertises.
         self.printer_not_found = printer_not_found
+        self.native_detail = native_detail
+        self.native_stage = native_stage
+        self.failure_reported = failure_reported
 
     @property
     def stale_selected(self) -> bool:
@@ -525,10 +534,20 @@ class InstantLinkPrinterStatusProvider:
         except (InstantLinkBleError, TimeoutError) as exc:
             raise PrinterStatusUnavailableError(
                 "printer status unavailable",
-                diagnostics=scanner_diagnostics(printer, ()),
-                reason=PrinterStatusUnavailableReason.NOT_ADVERTISING,
+                reason=PrinterStatusUnavailableReason.LINK_DROPPED
+                if is_native_setup_disconnect(exc)
+                else PrinterStatusUnavailableReason.BLE_FAILURE,
                 status_message="Retrying printer",
                 stale_bond_suspected=_is_stale_bond_signature(exc),
+                native_detail=exc.connect_failure_detail
+                if isinstance(exc, InstantLinkBleError)
+                else None,
+                native_stage=exc.connect_failure_stage
+                if isinstance(exc, InstantLinkBleError)
+                else None,
+                failure_reported=exc.status_failure_reported
+                if isinstance(exc, InstantLinkBleError)
+                else False,
             ) from exc
 
         return PrinterStatusSnapshot(

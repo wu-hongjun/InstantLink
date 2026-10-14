@@ -115,3 +115,14 @@ Final review preserves canonical native org.bluez.Error.AuthenticationFailed rec
 connect-stage3: actual authentication can fail before lookup under the readiness barrier. Generic
 early BLE errors, near-match error names and generic Python exception text do not authorize
 rebond. This final classifier refinement changes no native/image/healthy-connect path.
+
+### Final classifier deployment
+
+Clean59ef504 installed after the full2388Bridge tests/27existingwarnings, Ruff/strictmypy67 and
+independent66focused tests. Native6d61384 artifacts remain unchanged. Normal service restarted
+with latest classifier, healthy FTP220/200/GPIOv2/no fallback,600MHz powersave,0automatic restarts
+and no current application warning/error records. Printer was offline after its idle shutoff;
+final power-on request remained unanswered at capture. The connected live comparisons above
+used6d61384 before this pure failure-classification refinement. Updated early-auth behavior is
+covered by native-progress/provider tests; no pairing-key corruption was forced on hardware.
+Post-refinement live connected confirmation remains pending Printer power-on. No film used.

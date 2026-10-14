@@ -1575,3 +1575,13 @@ no extra JPEG library is required on the Pi.
 - Three subagents/independent reviews passed; host2383Bridge/Ruff/strictmypy67, corrected212core/
   workspacefmt/clippy/tests/headerdrift; Linuxfull227beforeguard plusfinal16GATT cases pass.
   Final canonical-auth classifier refinement and its updated gate follow in plan092.
+
+### Plan092 final classifier state
+
+- Clean59ef504 installed/normal runtime restarted; native6d61384/B91/F1 unchanged.
+  Full2388Bridge tests/27existingwarnings, Ruff/strictmypy67 and independent66focused tests pass.
+- Canonical native AuthenticationFailed now permits pairing recovery at early stages; generic
+  error text and noncanonical namespaces/suffixes remain excluded. No healthy native path change.
+- Latest normal runtime active0restarts/600powersave/FTP220+200/GPIOv2/no fallback/no app faults.
+  Printer off after idle at capture; post-refinement connected confirmation awaits the requested
+  power-on. Prior6d61384 connected restart/reconnect/LCD/watch checks remain valid for native code.

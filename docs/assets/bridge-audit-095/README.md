@@ -38,3 +38,10 @@ The initial boot observer mistakenly classified GPIO initialization as button in
 the retained journal's actual `ui.input action=` events accepted the same reboot; no second reboot
 was needed. Production service stayed running. These checks verify normal automatic screen-off
 idle; internal manual-lock flags and physical button contacts were not inspected.
+
+`handoff-health.json` records the final docs-only deployment of clean `c1aa432`, preserving Bridge
+502/manager661 and zero automatic restarts. The Printer subsequently disconnected at 17:12:29,
+about five minutes after recovery, and the next scan found no advertisement. The Bridge received
+the disconnect event and resumed discovery with no warning/error records. Physical Printer
+power-off was not observed; the final connected state is false, distinct from the accepted live
+checks above. FTP, 600 MHz/powersave/backlight low, backup socket and throttle0x0 remained healthy.

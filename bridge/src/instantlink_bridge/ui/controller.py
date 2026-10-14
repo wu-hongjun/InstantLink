@@ -4838,6 +4838,11 @@ class BridgeUi:
             notified = True
             self._printer_disconnect_pending = True
             self._last_printer_status_ok_at = float("-inf")
+            # Invalidate the published state in the same turn as the signal.
+            # Dark screens may otherwise retain a fresh status until their
+            # next maintenance tick or the reconnect attempt finishes.
+            self._snapshot = replace(self._snapshot, printer_status_fresh=False)
+            self._render_tick_reschedule.set()
             self._printer_check_requested.set()
 
         try:

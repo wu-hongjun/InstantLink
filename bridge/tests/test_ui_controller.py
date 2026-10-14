@@ -1490,7 +1490,10 @@ async def test_disconnect_event_poll_preserves_bounded_retries_with_fake_clock(
 
 
 @pytest.mark.asyncio
-async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_status() -> None:
+@pytest.mark.parametrize("locked", [False, True])
+async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_status(
+    locked: bool,
+) -> None:
     watcher = _DisconnectWatcher()
     second_fetch = asyncio.Event()
     release = asyncio.Event()
@@ -1505,6 +1508,7 @@ async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_sta
 
     provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
     ui = _disconnect_test_ui(provider, watcher)
+    ui._screen_locked = locked
     assert ui.snapshot.paired_printer is not None
     poll = asyncio.create_task(
         ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
@@ -1512,10 +1516,19 @@ async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_sta
     try:
         await asyncio.wait_for(watcher.armed.wait(), 1)
         assert provider.fetch_calls == 1
+        assert ui.live_snapshot.printer_status_fresh
+        ui._render_tick_reschedule.clear()
         watcher.callbacks[0]()
         watcher.callbacks[0]()  # Duplicate signals cannot grow a retry budget or schedule work.
+        # Published state must change synchronously, even while rendering is
+        # dark and the serialized reconnect has not yet started.
+        assert not ui.live_snapshot.printer_status_fresh
+        assert ui._render_tick_reschedule.is_set()
+        assert ui._screen_locked is locked
+        assert provider.close_cached_calls == 0
         await asyncio.wait_for(second_fetch.wait(), 0.5)
         assert not ui._printer_status_is_fresh()
+        assert not ui.live_snapshot.printer_status_fresh
         assert watcher.disarmed == [0]
         assert watcher.names == ["INSTAX-12345678"]
     finally:
@@ -1635,6 +1648,7 @@ async def test_disconnect_during_status_fetch_preserves_event_and_serializes_cle
             if self.fetch_calls == 2:
                 assert self.close_cached_calls == 1
                 assert not ui._printer_status_is_fresh()
+                assert not ui.live_snapshot.printer_status_fresh
                 third_started.set()
                 await asyncio.Event().wait()
             return await super().fetch(printer)
@@ -1652,6 +1666,7 @@ async def test_disconnect_during_status_fetch_preserves_event_and_serializes_cle
         ui._printer_check_requested.set()
         await asyncio.wait_for(second_started.wait(), 0.5)
         watcher.callbacks[0]()
+        assert not ui.live_snapshot.printer_status_fresh
         await asyncio.sleep(0)
         assert provider.close_cached_calls == 0
         release.set()
@@ -1716,8 +1731,10 @@ async def test_disconnect_callback_cannot_poison_paused_replaced_or_stopped_poll
         )
     else:
         ui._stopping = True
+    published = ui.live_snapshot
     watcher.callbacks[0]()
     assert not ui._printer_disconnect_pending
+    assert ui.live_snapshot is published
     assert not ui._printer_check_requested.is_set()
     assert provider.close_cached_calls == 0
 
@@ -1860,6 +1877,7 @@ async def test_disconnect_while_arming_survives_first_success_and_uses_recovery_
     try:
         await asyncio.wait_for(failed.wait(), 0.5)
         assert not ui._printer_status_is_fresh()
+        assert not ui.live_snapshot.printer_status_fresh
     finally:
         poll.cancel()
         with suppress(asyncio.CancelledError):

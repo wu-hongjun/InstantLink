@@ -126,3 +126,24 @@ final power-on request remained unanswered at capture. The connected live compar
 used6d61384 before this pure failure-classification refinement. Updated early-auth behavior is
 covered by native-progress/provider tests; no pairing-key corruption was forced on hardware.
 Post-refinement live connected confirmation remains pending Printer power-on. No film used.
+
+### Post-refinement connected confirmation
+
+The user powered the Printer on again. Installed runtime `1f9dda2` (classifier `59ef504`, native
+`6d61384`) reached fresh film-count status with no setup warnings: restart dispatch to observed
+fresh status took 18.552 seconds; application boot-start marker to fresh status took 5.523 seconds.
+The dispatch interval includes stopping the
+previous runtime; it is not directly comparable with the earlier boot-marker metric.
+No film was used and no image or actuator commands were sent.
+
+Final normal runtime PID 6758 and manager PID 637 were connected with fresh status at 600 MHz,
+backlight GPIO 24 low, 45.622°C and throttle flags `0x0`. FTP returned 220/200, GPIO v2 was active,
+and both services had zero automatic restarts. External BlueZ Disconnect dispatch to fresh status
+took **12.171 seconds**; all 22 probes retained 600 MHz, powersave, backlight low, the same PID
+and FTP 220/200. The native disconnect event was recorded, with no warning/error messages.
+Internal lock/watch flags were not
+introspected in this normal-service check; their prior observer validation remains separate.
+This confirms final classifier deployment; the previously pending power-on acceptance is complete.
+No pairing-key corruption was forced. Read-only FTP probes used the same-Pi address.
+The independent [confirmation review](../assets/bridge-audit-092/confirmation-review.json) passed
+with no outstanding findings or pending acceptance checks.

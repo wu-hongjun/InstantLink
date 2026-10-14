@@ -1,0 +1,59 @@
+{
+  "reviewer": "gatt_readiness_adversarial",
+  "result": "pass",
+  "pending_acceptance": [],
+  "outstanding_findings": [],
+  "runtime_commit": "1f9dda25dc938fea0552b79065d727678c8dd373",
+  "reviewed_source_hashes_match_current_source_and_confirmed_commit": true,
+  "native_artifact_hashes_unchanged": true,
+  "normal_restoration": {
+    "pid": 6758,
+    "manager_pid": 637,
+    "fresh_film_remaining": 0,
+    "first_fresh_from_boot_marker_s": 5.523287,
+    "first_observed_fresh_from_restart_dispatch_s": 18.551861971999642,
+    "services_active_zero_restarts": true,
+    "connected": true,
+    "powersave_khz": 600000,
+    "ftp_220_200": true,
+    "no_current_warnings_or_fallback": true
+  },
+  "automatic_reconnect": {
+    "passed": true,
+    "external_disconnect_dispatch_to_fresh_s": 12.171401645000515,
+    "disconnect_event_seen": true,
+    "same_pid": true,
+    "probes": 22,
+    "all_probes_powersave_600mhz_backlight_low_ftp_220_200": true,
+    "fresh_film_remaining": 0,
+    "warning_error_messages": [],
+    "boundary": "This normal-service fixture does not introspect internal lock or disconnect-watch state. Earlier observer validation separately verifies internal lock/single-watch/retired-task semantics. recovered_s starts at external Disconnect dispatch, not the later runtime event message."
+  },
+  "captured_log_review": {
+    "services_records": 1128,
+    "historical_flagged": 6,
+    "current_runtime_flagged": 0,
+    "kernel_records": 380,
+    "expected_notices": 10,
+    "vchi_media_errors": 0,
+    "vendor_ie_errors": 0,
+    "boundary": "Independent review of captured final log classification summary; prior full raw journal was independently parsed in final-review report."
+  },
+  "cleanup": {
+    "additional_owned_confirmation_files_removed": 5,
+    "observer_dropin_socket_absent": true
+  },
+  "evidence_sha256": {
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/normal-confirmed.json": "33c7ad3d631805f0eac4ad6fadc50cf463872658395d8e58b2ea6e1940d5dab7",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/reconnect-confirmed.json": "81455827bd66ffe861f134a1b8a0645d841be5049ae16a793665bdd4535a7367",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/confirmed-health.json": "f74e63e700df2afcd3eed284401c486bf3f1c0d8dc7f5d63011bf5e34489f5b6",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/confirmed-logs.json": "435977177f0cfadd0fdf9ae9b6063abd72f4c42c5740feffe61c78559309b1b3",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/confirmation-cleanup.json": "bf51faf96fd693eff1b6bb193f8bdf005bb59ec0a76f79cb2cda853dd34e971f"
+  },
+  "film_used": 0,
+  "reviewer_hardware_mutations": false,
+  "limits": [
+    "No established speedup from small matched warm restart cohort; new normal confirmation timings are a separate acceptance check.",
+    "Camera readiness and FTP continuity preserved; no physical camera upload, wireless-airtime measurement or physical button-contact actuation in this round."
+  ]
+}

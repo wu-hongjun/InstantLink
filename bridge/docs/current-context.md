@@ -1585,3 +1585,16 @@ no extra JPEG library is required on the Pi.
 - Latest normal runtime active0restarts/600powersave/FTP220+200/GPIOv2/no fallback/no app faults.
   Printer off after idle at capture; post-refinement connected confirmation awaits the requested
   power-on. Prior6d61384 connected restart/reconnect/LCD/watch checks remain valid for native code.
+
+### Plan 092 connected confirmation completed
+
+- User powered the Printer on. Installed runtime `1f9dda2` (classifier `59ef504`, native `6d61384`)
+  reached fresh status after a normal restart: 18.552 seconds from restart dispatch, 5.523 seconds
+  from the application boot marker, with zero warnings. Dispatch includes the previous runtime stop.
+- Automatic external Disconnect dispatch to fresh status took 12.171 seconds. All 22 probes
+  retained 600 MHz, powersave, GPIO 24 low, PID 6758 and FTP 220/200. No observer was installed;
+  internal lock/watch flags were not introspected, and prior observer checks remain separate.
+- Final runtime PID 6758 and manager PID 637 were active with zero restarts. Printer connected at
+  50% battery; Bridge at 600 MHz, 45.622°C, throttle flags `0x0`, GPIO v2, no fallback and zero current
+  application warnings. No film, image or actuator commands. Independent confirmation review
+  passed; power-on acceptance is complete.

@@ -100,3 +100,14 @@ about1s later). No global warning-free claim. Private raw journal reviewed and r
 Final independent evidence review accepted the rejected experiment and restored live validation.
 [Measurements](../assets/bridge-audit-098/README.md). No Printer image/print/actuator commands
 or film used. No application code, native artifact, CPU tier, config or driver change retained.
+
+
+### Later handoff availability
+
+After the passing boot/reconnect checks, the Printer link dropped and a subsequent automatic
+scan reported `not advertising`. No physical power-state observation was made. The Bridge
+handled the disconnect without warning/error and remained PID501/600MHz/powersave, FTP220/200,
+manager659 active/zero automatic restarts, accepted source/unit hashes and clean manifestad72ada.
+The evidence handoff snapshot records this later snapshot; it does not replace or invalidate the earlier
+passing tests. Do not describe the Printer as connected at final handoff. No further Printer
+availability is needed to complete the already accepted unit audit; no film used.

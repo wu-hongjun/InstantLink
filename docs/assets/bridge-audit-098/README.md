@@ -69,3 +69,14 @@ Final independent review accepted the scope, rejection and restored installed va
 Printer image-transfer, print or actuator commands; film10→10. The final documentation deployment
 refreshes the clean manifest without restarting acceptedPID501. No runtime performance change
 or application/native/config/driver behavior change retained.
+
+
+### Later handoff availability
+
+After the passing boot/reconnect checks, the Printer link dropped and a subsequent automatic
+scan reported `not advertising`. No physical power-state observation was made. The Bridge
+handled the disconnect without warning/error and remained PID501/600MHz/powersave, FTP220/200,
+manager659 active/zero automatic restarts, accepted source/unit hashes and clean manifestad72ada.
+`handoff-health.json` records this later snapshot; it does not replace or invalidate the earlier
+passing tests. Do not describe the Printer as connected at final handoff. No further Printer
+availability is needed to complete the already accepted unit audit; no film used.

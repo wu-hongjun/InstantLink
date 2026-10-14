@@ -1809,3 +1809,9 @@ no extra JPEG library is required on the Pi.
   journal reviewed/remote copy removed. Final independent evidence review accepted; no film.
 - Evidence plan098/assets/bridge-audit-098. Initial unavailable-Printer observer timed out; core
   capture valid. Journal observer corrected UUID spelling without device changes. Device/OS same.
+
+- Later handoff after passing tests: Printer disconnected, automatic scan reports not advertising;
+  physical power state not observed. Bridge501/manager659 active0restarts,600MHz/powersave/FTP220200,
+  no Bridge warnings, reviewed hashes and cleanad72ada manifest. Earlier accepted tests stand;
+  **Printer offline at final handoff**, no pending validation/film requirement. Handoff snapshot
+  in assets/bridge-audit-098/handoff-health.json.

@@ -137,12 +137,16 @@ class FramebufferDisplay:
                 self._framebuffer_name,
             )
             self._backlight = _GpioBacklight.try_open()
+
+    def _schedule_packer(self) -> None:
+        if self._closed or self._packer_task is not None:
+            return
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            # The standalone boot splash has no event loop. Draw it immediately
-            # with Pillow rather than paying NumPy's cold import on that path.
-            pass
+            # The standalone boot splash has no event loop. Keep using Pillow
+            # rather than paying NumPy's cold import on that path.
+            return
         else:
             self._packer_task = loop.create_task(self._prepare_packer())
 
@@ -169,6 +173,9 @@ class FramebufferDisplay:
             self._turn_backlight_off()
         else:
             self._turn_backlight_on()
+        # Start dependency loading only after the first successful frame is
+        # visible, so the worker cannot compete with the first paint for CPU.
+        self._schedule_packer()
 
     def set_idle_stage(self, stage: str) -> None:
         if stage in BACKLIGHT_OFF_STAGES:

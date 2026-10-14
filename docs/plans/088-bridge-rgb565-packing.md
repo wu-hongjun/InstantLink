@@ -12,7 +12,7 @@ all RGB colours, Pillow modes/dimensions/concurrency/memory/fallback. Compare Pi
 candidate and installed equivalent actual framebuffer frames at 1000 MHz, and first-frame
 backend initialization. Existing NumPy supplied by RAW dependencies is optional; its import
 must not block first framebuffer paints or lock blanking. Retain the exact Pillow path while
-an owned background preload prepares the backend and in minimal/no-event-loop runtimes.
+an owned background preload, scheduled after the first successful paint, prepares the backend and in minimal/no-event-loop runtimes.
 
 Pi alternatives measured separately: Pillow 9.859 ms, byte-output 4.722 ms, word-expression
 4.222 ms and word-output 3.160 ms per 240×240 frame, identical bytes (100 rounds). Chosen

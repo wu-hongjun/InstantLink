@@ -95,9 +95,12 @@ unlock timer. Active preparation/printing remains boosted; background receive,
 Sync and Printer reconnect remain operational.
 
 When disabled, one input wakes and repaints the screen without executing its normal action.
-The Linux framebuffer packs pixels as little-endian RGB565 using native Pillow band operations,
-with the same channel quantization and pixel ordering. Changed frames are drawn and written
-synchronously; wake restores pixels before enabling the backlight. Text measurements and grayscale glyph masks use bounded in-memory
+The Linux framebuffer packs exact little-endian RGB565 with local NumPy vector buffers when
+available, keeping the same channel quantization and pixel ordering. The first frame uses
+Pillow and finishes painting before one background task loads the faster backend; unavailable
+NumPy or standalone boot-splash operation keeps the exact Pillow path. Closing the display
+prevents a delayed backend switch. Frames are drawn and written synchronously; wake restores
+pixels before enabling the backlight. Text measurements and grayscale glyph masks use bounded in-memory
 caches keyed by the resolved font and text. Each frame still resolves current layout, theme
 and animation state; unsupported drawing/font cases keep the original Pillow path.
 

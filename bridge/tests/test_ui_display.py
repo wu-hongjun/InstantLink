@@ -173,9 +173,14 @@ async def test_framebuffer_renders_and_handles_idle_while_backend_load_is_blocke
     sysfs_root, framebuffer, backlight = _fake_st7789_framebuffer(tmp_path)
     display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
     try:
-        assert await asyncio.wait_for(asyncio.to_thread(started.wait, 2), 3)
+        assert display._packer_task is None
+        await asyncio.sleep(0)
+        assert calls == 0
         snapshot = UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1")
         display.render(snapshot)
+        assert not started.is_set()
+        assert (backlight / "brightness").read_text(encoding="ascii") == "7\n"
+        assert await asyncio.wait_for(asyncio.to_thread(started.wait, 2), 3)
         original = framebuffer.read_bytes()
         expected = _reference_rgb565(display_module.render_snapshot(snapshot).resize((2, 1)))
         assert original == expected
@@ -197,6 +202,36 @@ async def test_framebuffer_renders_and_handles_idle_while_backend_load_is_blocke
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["write", "backlight"])
+async def test_framebuffer_failed_first_frame_does_not_start_loading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
+    display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+
+    def fail_write(path: Path, frame: bytes) -> int:
+        raise OSError("framebuffer write failed")
+
+    def fail_backlight() -> None:
+        raise FramebufferBacklightError("backlight failed")
+
+    if failure == "write":
+        monkeypatch.setattr(Path, "write_bytes", fail_write)
+    else:
+        monkeypatch.setattr(display, "_turn_backlight_on", fail_backlight)
+    try:
+        with pytest.raises((OSError, FramebufferBacklightError)):
+            display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
+        assert display._packer_task is None
+        await asyncio.sleep(0)
+        assert display._packer_task is None
+    finally:
+        display.close()
+
+
+@pytest.mark.asyncio
 async def test_framebuffer_close_cancels_loading_and_never_switches_closed_display(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -213,6 +248,7 @@ async def test_framebuffer_close_cancels_loading_and_never_switches_closed_displ
     sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
     display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
     try:
+        display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
         assert await asyncio.wait_for(asyncio.to_thread(started.wait, 2), 3)
         display.close()
         display.close()
@@ -240,6 +276,7 @@ async def test_framebuffer_close_before_loader_runs_does_not_start_worker(
     monkeypatch.setattr(display_module, "_rgb565_packer", unexpected_load)
     sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
     display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
+    display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
     display.close()
     assert display._packer_task is not None
     with pytest.raises(asyncio.CancelledError):
@@ -265,6 +302,7 @@ async def test_framebuffer_missing_numpy_loads_fallback_without_warnings_or_retr
     sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
     display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
     try:
+        display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
         assert display._packer_task is not None
         await display._packer_task
         display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
@@ -291,6 +329,7 @@ async def test_framebuffer_loader_failure_keeps_pillow_and_logs_once(
     sysfs_root, framebuffer, _ = _fake_st7789_framebuffer(tmp_path)
     display = FramebufferDisplay(framebuffer, sysfs_root=sysfs_root)
     try:
+        display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))
         assert display._packer_task is not None
         await display._packer_task
         display.render(UiSnapshot(mode=UiMode.BOOTING, ftp_host="192.168.7.1"))

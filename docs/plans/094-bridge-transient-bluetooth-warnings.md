@@ -74,3 +74,26 @@ The follow-up clears the status-log signature only on an accepted current discon
 the next accepted fresh status is INFO once, with unchanged later polls returning to DEBUG.
 Stale watches and replies arriving while a disconnect is pending cannot generate fresh status.
 This restores the documented recovery logging without adding polls or changing BLE operations.
+
+Clean `7c312ad` with that amendment passed **2,451 full Bridge tests**, eight expected Mac GPIO
+warnings, Ruff and strict mypy. Independent review passed 370 affected tests. Installed controller
+SHA `c045cf31684e38857ab54aba213c4bd2e7a29205a629256535db88fa9f803694` matches review;
+native FFI unchanged.
+
+Two installed status-only external Disconnect checks passed at **11.159 and 7.367 seconds**,
+measured from command dispatch to an accepted fresh controller status record. The first attempt
+encountered one absent scan; the second encountered an exact setup drop, preserved at INFO with
+stage 5/detail/streak 1 and recovered automatically. All **21 + 11 observations** retained PID
+13213, 600 MHz/powersave, GPIO 24 low, FTP greeting 220/NOOP 200 and film **0 → 0**. No manual
+Reconnect, image, print or actuator command. No matched baseline or universal speedup claim.
+
+Final accepted health: Bridge 13213/manager 13211 active, zero automatic restarts, connected
+Printer with fresh Square/50%/charging status, throttle `0x0`, backup socket active and all three
+reviewed Python hashes matching. The complete current-PID journal contained 132 records and
+**zero warning/error matches**, including the successful recovery of the actual setup drop.
+Initial offline probe timeouts and the rejected INFO-observer timeout remain recorded above;
+they are not counted as successful checks. These checks validate automatic dark-screen recovery;
+physical contacts, manual lock-state introspection and Printer power cycles were not exercised.
+Independent final evidence review passed. Both owned remote helpers were removed afterward;
+Bridge, manager and the production backup socket remained active. Final documentation-only
+deployment preserves the accepted runtime process; no additional Bluetooth restart is needed.

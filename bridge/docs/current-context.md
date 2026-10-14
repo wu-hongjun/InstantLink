@@ -1649,3 +1649,23 @@ no extra JPEG library is required on the Pi.
   Printer actuator or image commands; no physical button contact or reconnect speed claim.
 - FFI unchanged `b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175`.
   Hardware/OS unchanged from plan 093. Details/evidence: plan 094 and `docs/assets/bridge-audit-094/`.
+
+#### Plan 094 live follow-up — reconnect accepted
+
+- After Printer power-on, an actual canonical setup drop recovered through prompt retry with
+  one detailed INFO record and no duplicate warning. Initial external reconnect completed native
+  setup, but the INFO-only observer timed out on identical unchanged status. That rejected probe
+  exposed a logging gap: accepted disconnects now reset the status-log signature, so next fresh
+  status logs once at INFO; steady polls remain DEBUG. Pending/stale replies cannot report recovery.
+- Clean runtime `7c312ad` installed. Full suite **2,451 passed**, eight expected host GPIO warnings;
+  Ruff/mypy and 370 independent affected checks passed. Controller SHA
+  `c045cf31684e38857ab54aba213c4bd2e7a29205a629256535db88fa9f803694`; FFI unchanged.
+- Two automatic external Disconnect → accepted fresh-status checks passed **11.159/7.367 s**.
+  All 32 samples same PID 13213/600 MHz/powersave/GPIO 24 low/FTP 220+200; film **0→0**.
+  One absent scan and one real setup drop both recovered; no manual Reconnect or film used.
+- Accepted health: Bridge13213/manager13211 active/zero automatic restarts, connected and fresh,
+  600 MHz, throttle0x0, backup socket active; complete current-PID journal132records has zero
+  warning/error matches. Earlier offline/observer timeouts retained as rejected tests. No matched
+  speedup, physical-button contact, internal manual-lock flag or Printer power-cycle claim.
+- Independent final evidence review accepted both trials and loaded hashes; both owned remote
+  helper files removed afterward. Bridge, manager and production backup socket remain active.

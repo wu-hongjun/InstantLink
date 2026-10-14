@@ -1752,3 +1752,32 @@ no extra JPEG library is required on the Pi.
 - Independent evidence review accepted both trials. Availability gap completed; no film or Printer
   image/print/actuator commands. Evidence in assets/bridge-audit-096/boot-connected.json,
   reconnect.json, connected-health.json and live-log-review.json. Device/OS unchanged.
+
+
+### Plan 097 — Python startup and imports
+
+- Three subagents investigated/implemented/independently reviewed. Lightweight shared Printer
+  and imaging contracts preserve old aliases/pickle/error identity. Native startup omits diagnostic
+  Bleak and pixel-processing modules; lightweight worker still loads. First-use imports use existing
+  image processes/threads or off-loop editor preload. No new startup background work, algorithm,
+  ABI, CPU tier, config or service-order change. Cleanup import-lock and first-Post-render issues
+  found in review were fixed; queued buttons still await first editor activation.
+- Clean source079af5a installed. Full2527tests/eight expected Mac GPIO warnings, Ruff/format164,
+  mypy70/strict docs pass. At600MHz/powersave counterbalanced warm-cache fresh app imports median
+  2.108→2.026s (3samples each/ranges overlap). Actual Pi HIF/EXIF-JPEG worker outputs exact across
+  Square/Mini3/Wide;92offscreen mode/editor/theme/language frames exact. No physical film claim.
+- Baseline→installed normal boot: UI13.822→13.665s/core13.835→13.676s/status20.484→18.962s;
+  process launch→boot marker3.340→3.233s. No buttons before fresh connection, film10→10. Single
+  reboots/radio-bond variation; whole1.522s connected difference not attributed to imports.
+- External Disconnect→fresh automatic status12.543s,23samples PID482/600MHz/powersave/GPIO24low/
+  FTP220+200; first2.590s after dispatch. One initial absent scan/INFO, existing prompt retry passed.
+  Film10→10, no manual Reconnect. Normal screen-off idle observed, no physical contacts/internal
+  manual-lock flag introspection. Local full UI/lock/input regressions pass.
+- Installed isolated FTP JPEG STOR→queue exact/226/200, no consumer/backend/Printer commands.
+  Bridge482/manager640 active0restarts, connected/fresh, throttle0x0, services/backup active;
+  reviewed source/unit/unchanged FFI hashes. Awake148RGB565values/1GHz/backlight high then normal
+  dark600MHz/cleared framebuffer. Full Bridge PID101records/zero warning-error matches; broader
+  124records retains BlueZ directory-mode/disconnect notices and manager bind retry resolving1.006s.
+  No global warning-free claim. Independent evidence review accepted; no film used. Device/OS same.
+- Evidence plan097 and assets/bridge-audit-097. Benchmark staging metadata corrected and overlapping
+  timing attempts rejected before accepted sequential runs. Owned remote probe files removed.

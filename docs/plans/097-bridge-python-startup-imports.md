@@ -50,6 +50,36 @@ was rejected for timing and rerun sequentially. Neither changed production sourc
 
 ## Installed acceptance
 
-Deployment, normal boot, LCD, isolated FTP receive, automatic screen-off reconnect and current
-running-log acceptance will be recorded after hardware validation. All Printer probes use only
-status/discovery and a deliberate disconnect; no image-transfer, print or actuator commands.
+Clean source **079af5a** is installed. Baseline→installed kernel-monotonic reboot measurements:
+LCD13.822→13.665s, FTP13.810→13.652s, core13.835→13.676s, fresh Printer20.484→18.962s.
+No button action before connection; film10→10. Process launch→boot marker3.340→3.233s.
+Single reboots are observations, not a general connected-time speedup or proof that imports
+caused the entire1.522s difference. Advertising/bond paths differ: candidate retained guarded
+startup reset (~0.8s), while baseline discovered later. Firmware startup is excluded.
+
+Actual Pi offscreen rendering produced92 exact RGB matches covering all modes and3 Post editors,
+English/Chinese and light/dark. Live awake framebuffer115200bytes/148distinctRGB565 values,
+1GHz/performance/backlight high; later normal idle600MHz/powersave/backlight low/cleared frame.
+Physical panel quality and button contacts were not observed. Full local UI/input/lock regressions
+pass; this round changes no input or renderer algorithm.
+
+External BlueZ Disconnect→fresh automatic status passed **12.543s** while screen-off.
+All23samples retained PID482/600MHz/powersave/GPIO24low/FTP220+200; film10→10. Samples start
+2.590s after dispatch because Disconnect initially blocks. One absent first scan was logged at
+INFO; the existing prompt retry then connected successfully, with no manual Reconnect or warning.
+Normal screen-off idle is verified, not introspection of the internal manual-lock flag.
+
+An isolated installed production FTP service received a JPEG byte-for-byte into ReceivedImage
+queue, STOR226/NOOP200. Temporary directory/credentials/highport and no consumer/native backend
+prevent printing. Normal port21 retained; physical camera and normal print dispatch not tested.
+
+Bridge482/manager640 active, zero automatic restarts; Printer connected/fresh, throttle0x0,
+network/Bluetooth/backup socket active. All17 changed source hashes match the benchmark archive
+and079af5a; systemd unit and native FFI remain unchanged. Complete current-boot Bridge PID
+journal101records has no warning/error matches. Broader Bridge/manager/Bluetooth review124records
+retains BlueZ directory-mode and deliberate-disconnect notices, plus manager hotspot bind pending
+which resolves1.006s later. No whole-system warning-free claim. Temporary probe resources cleaned.
+
+Three subagents and final independent evidence review cover source, output equality and live
+acceptance. Evidence: [plan097 measurements](../assets/bridge-audit-097/README.md).
+No Printer image-transfer, print or actuator command; no film used.

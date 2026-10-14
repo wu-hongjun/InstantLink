@@ -17,8 +17,10 @@ if TYPE_CHECKING:
     from multiprocessing.connection import Connection
 
 from instantlink_bridge.ble.models import PrinterModel, spec_for
-from instantlink_bridge.imaging.pipeline import (
+from instantlink_bridge.imaging.models import (
     HEIF_SUFFIXES,
+    AdjustmentProfile,
+    CorrectionProfile,
     FitMode,
     ImagePipelineError,
     ImageTooLargeError,
@@ -28,20 +30,45 @@ from instantlink_bridge.imaging.pipeline import (
     UnsupportedImageError,
     WorkingImageCache,
     _working_size_for_model,
-    prepare_for_instantlink_backend,
     source_identity,
 )
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
+from instantlink_bridge.imaging.models import (
+    ImagePreparationTimeoutError as ImagePreparationTimeoutError,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 
+def prepare_for_instantlink_backend(
+    source_path: Path,
+    model: PrinterModel,
+    *,
+    fit: FitMode = FitMode.AUTO,
+    quality: int = 100,
+    edit: PrintEdit | None = None,
+    adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
+    apply_model_flip: bool = False,
+) -> PreparedImage:
+    """Load preparation code in the existing killable image child process."""
+    from instantlink_bridge.imaging.pipeline import prepare_for_instantlink_backend as prepare
+
+    return prepare(
+        source_path,
+        model,
+        fit=fit,
+        quality=quality,
+        edit=edit,
+        adjustments=adjustments,
+        correction=correction,
+        working_cache=working_cache,
+        apply_model_flip=apply_model_flip,
+    )
+
+
 class ImageWorkerError(ImagePipelineError):
     """Raised when the image worker process fails outside image decoding."""
-
-
-class ImagePreparationTimeoutError(ImagePipelineError):
-    """Raised when image preparation exceeds its deadline."""
 
 
 @dataclass(frozen=True, slots=True)

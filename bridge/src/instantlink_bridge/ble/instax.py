@@ -16,6 +16,30 @@ from typing import Protocol
 from instantlink_bridge.ble import commands
 from instantlink_bridge.ble.models import PrinterModel, detect_model, is_success_status, spec_for
 from instantlink_bridge.ble.protocol import Packet
+from instantlink_bridge.ble.types import (
+    CoverOpenError as CoverOpenError,
+)
+from instantlink_bridge.ble.types import (
+    LowPrinterBatteryError as LowPrinterBatteryError,
+)
+from instantlink_bridge.ble.types import (
+    NoFilmError as NoFilmError,
+)
+from instantlink_bridge.ble.types import (
+    PrinterBusyError as PrinterBusyError,
+)
+from instantlink_bridge.ble.types import (
+    PrinterError as PrinterError,
+)
+from instantlink_bridge.ble.types import (
+    PrinterStatus as PrinterStatus,
+)
+from instantlink_bridge.ble.types import (
+    PrintRejectedError as PrintRejectedError,
+)
+from instantlink_bridge.ble.types import (
+    UnexpectedResponseError as UnexpectedResponseError,
+)
 from instantlink_bridge.imaging.pipeline import PreparedImage, chunk_image_data
 
 DEFAULT_TIMEOUT_S = 10.0
@@ -23,34 +47,6 @@ DOWNLOAD_CANCEL_TIMEOUT_S = 3.0
 PRINT_START_LED = (248, 120, 67)
 LED_PATTERN_SOLID = 0
 LOGGER = logging.getLogger(__name__)
-
-
-class PrinterError(RuntimeError):
-    """Base printer protocol error."""
-
-
-class UnexpectedResponseError(PrinterError):
-    """Raised when a printer response does not match the command."""
-
-
-class PrintRejectedError(PrinterError):
-    """Raised when the printer rejects a print operation."""
-
-
-class NoFilmError(PrintRejectedError):
-    """Raised when no film remains."""
-
-
-class CoverOpenError(PrintRejectedError):
-    """Raised when the printer cover is open."""
-
-
-class PrinterBusyError(PrintRejectedError):
-    """Raised when the printer is busy."""
-
-
-class LowPrinterBatteryError(PrintRejectedError):
-    """Raised when the printer battery is too low."""
 
 
 class InstaxTransport(Protocol):
@@ -67,18 +63,6 @@ class InstaxTransport(Protocol):
 
     def model_number_hint(self) -> str | None:
         """Return optional DIS Model Number string."""
-
-
-@dataclass(frozen=True, slots=True)
-class PrinterStatus:
-    """Printer status summary."""
-
-    battery: int
-    is_charging: bool
-    film_remaining: int
-    print_count: int | None
-    model: PrinterModel
-    name: str
 
 
 @dataclass(frozen=True, slots=True)

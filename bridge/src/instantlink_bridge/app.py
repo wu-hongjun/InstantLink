@@ -8,21 +8,15 @@ import inspect
 import logging
 import os
 import signal
+import sys
 from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future as ThreadFuture
 from contextlib import AsyncExitStack, suppress
 from functools import partial
+from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
-from instantlink_bridge.ble.client import (
-    DiscoveredPrinter,
-    close_default_ble_session_manager,
-    scan_instax_printers,
-)
-from instantlink_bridge.ble.client import (
-    print_file_to_printer as print_file_to_printer_bleak,
-)
 from instantlink_bridge.ble.instantlink import (
     close_default_instantlink_backend,
     instantlink_backend_enabled,
@@ -30,32 +24,34 @@ from instantlink_bridge.ble.instantlink import (
 from instantlink_bridge.ble.instantlink import (
     print_file_to_printer as print_file_to_printer_instantlink,
 )
-from instantlink_bridge.ble.instax import (
+from instantlink_bridge.ble.models import PrinterModel
+from instantlink_bridge.ble.types import (
     CoverOpenError,
+    DiscoveredPrinter,
     LowPrinterBatteryError,
     NoFilmError,
     PrinterBusyError,
     PrintRejectedError,
 )
-from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.config import (
     DEFAULT_CONFIG_PATH,
     BridgeConfig,
+    DatestampFormat,
     FtpConfig,
     PowerBackend,
     SyncConfig,
     SyncDestination,
     load_config,
 )
-from instantlink_bridge.imaging.pipeline import (
+from instantlink_bridge.imaging.models import (
+    AdjustmentProfile,
+    CorrectionProfile,
+    FitMode,
     ImagePipelineError,
+    ImagePreparationTimeoutError,
     ImageTooLargeError,
     PreparedImage,
     PrintEdit,
-)
-from instantlink_bridge.imaging.worker import (
-    ImagePreparationTimeoutError,
-    close_default_image_preparation_worker,
 )
 from instantlink_bridge.net.health import FtpActivityTracker
 from instantlink_bridge.power.monitor import BatteryPolicy, IdlePolicy, PowerMonitor, PowerPolicy
@@ -81,6 +77,8 @@ from instantlink_bridge.watchdog import WatchdogNotifier, run_watchdog_heartbeat
 if TYPE_CHECKING:
     from PIL import Image
 
+    from instantlink_bridge.ble.client import ConnectedInstaxPrinter
+    from instantlink_bridge.ble.session import InstaxBleSessionManager
     from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
     from instantlink_bridge.sync.outbox import SyncOutbox
     from instantlink_bridge.sync.server import SyncService
@@ -180,6 +178,82 @@ class AsyncStartStopService(Protocol):
 
     async def stop(self) -> None:
         """Stop the helper."""
+
+
+async def scan_instax_printers(timeout_s: float = 5.0) -> list[DiscoveredPrinter]:
+    """Load the diagnostic scanner only when the fallback is requested."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import scan_instax_printers as scan
+
+    return await scan(timeout_s)
+
+
+async def close_default_ble_session_manager(*, forget_endpoint: bool = True) -> None:
+    """Close existing fallback state without importing an unused diagnostic backend."""
+    if "instantlink_bridge.ble.client" not in sys.modules:
+        return
+    # A cancelled first-use task may leave its import running in a worker. Join its
+    # module lock away from the event loop before accessing partially published state.
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import close_default_ble_session_manager as close
+
+    await close(forget_endpoint=forget_endpoint)
+
+
+async def close_default_image_preparation_worker() -> None:
+    """Close an existing photo worker without loading it on an idle native run."""
+    if "instantlink_bridge.imaging.worker" not in sys.modules:
+        return
+    await asyncio.to_thread(import_module, "instantlink_bridge.imaging.worker")
+    from instantlink_bridge.imaging.worker import close_default_image_preparation_worker as close
+
+    await close()
+
+
+async def print_file_to_printer_bleak(
+    address: str,
+    image_path: Path,
+    *,
+    name: str | None = None,
+    fit: FitMode = FitMode.AUTO,
+    quality: int = 100,
+    edit: PrintEdit | None = None,
+    print_option: int = 0,
+    model: PrinterModel | None = None,
+    progress: PrintProgressCallback | None = None,
+    adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    session_manager: object | None = None,
+) -> None:
+    """Import the diagnostic print path off the event loop before dispatching it."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import print_file_to_printer
+
+    await print_file_to_printer(
+        address,
+        image_path,
+        name=name,
+        fit=fit,
+        quality=quality,
+        edit=edit,
+        print_option=print_option,
+        model=model,
+        progress=progress,
+        adjustments=adjustments,
+        correction=correction,
+        session_manager=cast(
+            "InstaxBleSessionManager[ConnectedInstaxPrinter] | None", session_manager
+        ),
+    )
+
+
+def read_exif_datestamp_text(
+    source_path: Path, language: str = "en", *, fmt: DatestampFormat | None = None
+) -> str:
+    """Load EXIF helpers inside the existing metadata thread."""
+    from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text as read
+
+    return read(source_path, language, fmt=fmt)
 
 
 async def run_ftp_receive_slice(config_path: Path) -> None:
@@ -1255,7 +1329,7 @@ async def send_print_to_printer(
 
     from dataclasses import replace as _replace
 
-    from instantlink_bridge.imaging.postprocess import correction_profile, read_exif_datestamp_text
+    from instantlink_bridge.imaging.models import correction_profile
     from instantlink_bridge.imaging.presets import resolve_preset
 
     adjustments = resolve_preset(config.adjustments)

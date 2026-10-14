@@ -24,23 +24,53 @@ from functools import partial
 from pathlib import Path
 from typing import TypeVar
 
-from instantlink_bridge.ble.instax import (
+from instantlink_bridge.ble.models import PrinterModel, spec_for
+from instantlink_bridge.ble.types import (
     CoverOpenError,
     LowPrinterBatteryError,
     NoFilmError,
     PrinterBusyError,
     PrintRejectedError,
 )
-from instantlink_bridge.ble.models import PrinterModel, spec_for
-from instantlink_bridge.imaging.pipeline import (
+from instantlink_bridge.imaging.models import (
+    AdjustmentProfile,
+    CorrectionProfile,
     FitMode,
     ImagePipelineError,
     PreparedImage,
     PrintEdit,
-    prepare_for_instantlink_backend,
+    WorkingImageCache,
 )
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
+
+
+def prepare_for_instantlink_backend(
+    source_path: Path,
+    model: PrinterModel,
+    *,
+    fit: FitMode = FitMode.AUTO,
+    quality: int = 100,
+    edit: PrintEdit | None = None,
+    adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
+    apply_model_flip: bool = False,
+) -> PreparedImage:
+    """Import photo transforms on the existing native preparation worker thread."""
+    from instantlink_bridge.imaging.pipeline import prepare_for_instantlink_backend as prepare
+
+    return prepare(
+        source_path,
+        model,
+        fit=fit,
+        quality=quality,
+        edit=edit,
+        adjustments=adjustments,
+        correction=correction,
+        working_cache=working_cache,
+        apply_model_flip=apply_model_flip,
+    )
+
 
 LOGGER = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from enum import StrEnum
 from PIL import Image
 
 from instantlink_bridge.ble.models import PrinterModel
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+from instantlink_bridge.imaging.models import AdjustmentProfile
 
 
 class UiMode(StrEnum):

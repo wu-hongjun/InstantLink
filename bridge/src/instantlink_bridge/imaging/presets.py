@@ -26,7 +26,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+from instantlink_bridge.imaging.models import AdjustmentProfile
 
 if TYPE_CHECKING:
     from instantlink_bridge.config import AdjustmentsConfig  # pragma: no cover

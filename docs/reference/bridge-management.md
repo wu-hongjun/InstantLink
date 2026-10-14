@@ -142,6 +142,20 @@ and animation state; unsupported drawing/font cases keep the original Pillow pat
 The physical and virtual LCDs share this behavior and the existing abstract input API. This
 input guard prevents accidental button actions; it is not an authentication mechanism.
 
+### Python startup imports
+
+The native Bridge startup loads LCD, input, camera receive and reconnect infrastructure while
+keeping diagnostic Bleak protocol code and photo processing out of the eager import graph.
+Transport-neutral Printer records and image settings live in lightweight shared modules;
+their existing public import paths remain aliases. The image worker itself is lightweight and
+still loads during startup. No extra background prewarm runs beside Bluetooth connection.
+
+First-use processing imports run in existing image processes, native preparation/metadata
+threads or an awaited editor preload before its first frame. Cleanup joins any in-progress
+fallback import off the event loop. The Post editor may wait for this first import before
+consuming the next queued button action; normal network, power and render callbacks continue.
+Image algorithms, model orientation, CPU tiers and screen-dependent reconnect cadence are unchanged.
+
 ### Runtime maintenance and diagnostics
 
 When the screen is dark, display maintenance waits up to five seconds rather than polling

@@ -15,7 +15,7 @@ from instantlink_bridge.config import (
     UiAppearance,
     UiLanguage,
 )
-from instantlink_bridge.imaging.pipeline import FitMode
+from instantlink_bridge.imaging.models import FitMode
 
 
 class SettingKey(StrEnum):

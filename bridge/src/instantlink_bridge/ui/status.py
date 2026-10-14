@@ -11,15 +11,10 @@ from collections.abc import Awaitable, Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
+from importlib import import_module
 from typing import Protocol, cast
 from weakref import WeakKeyDictionary
 
-from instantlink_bridge.ble.client import (
-    DiscoveredPrinter,
-    connect_instax_printer,
-    default_ble_session_manager,
-    scan_instax_printers,
-)
 from instantlink_bridge.ble.instantlink import (
     CONNECT_STAGE_STALE_BOND_MIN,
     InstantLinkBackend,
@@ -30,13 +25,8 @@ from instantlink_bridge.ble.instantlink import (
     default_instantlink_backend,
     is_native_setup_disconnect,
 )
-from instantlink_bridge.ble.instax import PrinterStatus
 from instantlink_bridge.ble.models import PrinterModel, spec_for
-from instantlink_bridge.ble.session import (
-    InstaxBleSessionLease,
-    InstaxBleSessionManager,
-    PrinterEndpoint,
-)
+from instantlink_bridge.ble.types import DiscoveredPrinter, PrinterEndpoint, PrinterStatus
 from instantlink_bridge.ui.models import PairedPrinter
 from instantlink_bridge.ui.pairing import normalize_instax_name, parse_instax_devices
 
@@ -66,6 +56,65 @@ class ConnectedInstaxPrinter(Protocol):
 
     async def disconnect(self) -> None:
         """Disconnect from the printer."""
+
+
+class StatusSessionLease(Protocol):
+    """Status ownership needed from the optional diagnostic session manager."""
+
+    @property
+    def connected(self) -> ConnectedInstaxPrinter:
+        """Return the connected protocol client."""
+
+    async def release(self, *, failed: bool, keep_connected: bool | None = None) -> None:
+        """Release exclusive session ownership."""
+
+
+class StatusSessionManager(Protocol):
+    """Session operations used by the diagnostic status provider."""
+
+    def cached_endpoint_for(self, selected: PrinterEndpoint) -> PrinterEndpoint | None:
+        """Return a matching cached endpoint."""
+
+    async def acquire_status(
+        self,
+        endpoint: PrinterEndpoint,
+        *,
+        connect_timeout_s: float | None = None,
+        model_override: PrinterModel | None = None,
+    ) -> StatusSessionLease:
+        """Acquire exclusive status ownership."""
+
+    async def close(self, *, forget_endpoint: bool = True) -> None:
+        """Close the cached diagnostic connection."""
+
+
+async def scan_instax_printers(timeout_s: float = 5.0) -> list[DiscoveredPrinter]:
+    """Load the optional scanner away from the UI event loop."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import scan_instax_printers as scan
+
+    return await scan(timeout_s)
+
+
+async def connect_instax_printer(
+    address: str,
+    name: str | None = None,
+    *,
+    timeout_s: float = 10.0,
+    model_override: PrinterModel | None = None,
+) -> ConnectedInstaxPrinter:
+    """Load the optional connector away from the UI event loop."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import connect_instax_printer as connect
+
+    return await connect(address, name, timeout_s=timeout_s, model_override=model_override)
+
+
+def default_ble_session_manager() -> StatusSessionManager:
+    """Return fallback ownership only when a diagnostic provider is constructed."""
+    from instantlink_bridge.ble.client import default_ble_session_manager as default
+
+    return default()
 
 
 Scanner = Callable[[float], Awaitable[Sequence[DiscoveredPrinter]]]
@@ -202,7 +251,7 @@ class BlePrinterStatusProvider:
         scanner: Scanner | None = None,
         connector: Connector | None = None,
         bluez_scanner: BluezScanner | None = None,
-        session_manager: InstaxBleSessionManager[ConnectedInstaxPrinter] | None = None,
+        session_manager: StatusSessionManager | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: StatusSleep = asyncio.sleep,
     ) -> None:
@@ -235,15 +284,14 @@ class BlePrinterStatusProvider:
             if bluez_scanner is not None
             else cast(BluezScanner, scan_bluez_instax_printers)
         )
-        self._session_manager: InstaxBleSessionManager[ConnectedInstaxPrinter]
+        self._session_manager: StatusSessionManager
         if session_manager is not None:
             self._session_manager = session_manager
         elif connector is None:
-            self._session_manager = cast(
-                InstaxBleSessionManager[ConnectedInstaxPrinter],
-                default_ble_session_manager(),
-            )
+            self._session_manager = default_ble_session_manager()
         else:
+            from instantlink_bridge.ble.session import InstaxBleSessionManager
+
             self._session_manager = InstaxBleSessionManager[ConnectedInstaxPrinter](
                 self._connect_endpoint
             )
@@ -593,7 +641,7 @@ class InstantLinkPrinterStatusProvider:
 
 
 async def _release_status_lease(
-    lease: InstaxBleSessionLease[ConnectedInstaxPrinter],
+    lease: StatusSessionLease,
     *,
     failed: bool,
     keep_connected: bool | None,

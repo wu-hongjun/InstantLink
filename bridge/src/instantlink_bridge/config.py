@@ -15,7 +15,7 @@ from math import isfinite
 from pathlib import Path
 
 from instantlink_bridge.ble.models import PrinterModel, parse_printer_model
-from instantlink_bridge.imaging.pipeline import FitMode, parse_fit_mode
+from instantlink_bridge.imaging.models import FitMode, parse_fit_mode
 
 DEFAULT_CONFIG_PATH = Path("/etc/InstantLinkBridge/config.toml")
 FTP_SUBNET_PREFIX_LEN = 24

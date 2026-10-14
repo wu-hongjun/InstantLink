@@ -7,8 +7,6 @@ import os
 import shutil
 import subprocess
 import time
-from dataclasses import dataclass
-from enum import StrEnum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,6 +16,48 @@ from typing import Any, Protocol, cast
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from instantlink_bridge.ble.models import PrinterModel, spec_for
+from instantlink_bridge.imaging.models import (
+    DEFAULT_WORKING_EDGE as DEFAULT_WORKING_EDGE,
+)
+from instantlink_bridge.imaging.models import (
+    HEIF_SUFFIXES as HEIF_SUFFIXES,
+)
+from instantlink_bridge.imaging.models import (
+    MINI_WORKING_EDGE as MINI_WORKING_EDGE,
+)
+from instantlink_bridge.imaging.models import (
+    FitMode as FitMode,
+)
+from instantlink_bridge.imaging.models import (
+    ImagePipelineError as ImagePipelineError,
+)
+from instantlink_bridge.imaging.models import (
+    ImageTooLargeError as ImageTooLargeError,
+)
+from instantlink_bridge.imaging.models import (
+    PreparedImage as PreparedImage,
+)
+from instantlink_bridge.imaging.models import (
+    PrintEdit as PrintEdit,
+)
+from instantlink_bridge.imaging.models import (
+    SourceIdentity as SourceIdentity,
+)
+from instantlink_bridge.imaging.models import (
+    UnsupportedImageError as UnsupportedImageError,
+)
+from instantlink_bridge.imaging.models import (
+    WorkingImageCache as WorkingImageCache,
+)
+from instantlink_bridge.imaging.models import (
+    _working_size_for_model as _working_size_for_model,
+)
+from instantlink_bridge.imaging.models import (
+    parse_fit_mode as parse_fit_mode,
+)
+from instantlink_bridge.imaging.models import (
+    source_identity as source_identity,
+)
 from instantlink_bridge.imaging.postprocess import (
     AdjustmentProfile,
     CorrectionProfile,
@@ -27,51 +67,6 @@ from instantlink_bridge.imaging.postprocess import (
 )
 
 LOGGER = logging.getLogger(__name__)
-SourceIdentity = tuple[str, int, int, int, int, int]
-
-
-@dataclass(frozen=True, slots=True)
-class WorkingImageCache:
-    """One parent's ephemeral, lossless normalized source for repeated photo edits."""
-
-    path: Path
-    source_identity: SourceIdentity
-    model: PrinterModel
-
-
-def source_identity(path: Path) -> SourceIdentity:
-    """Include replacement and same-size edits, without hashing or decoding the source."""
-    resolved = path.resolve()
-    info = resolved.stat()
-    return (
-        str(resolved),
-        info.st_dev,
-        info.st_ino,
-        info.st_size,
-        info.st_mtime_ns,
-        info.st_ctime_ns,
-    )
-
-
-class ImagePipelineError(RuntimeError):
-    """Base image pipeline error."""
-
-
-class UnsupportedImageError(ImagePipelineError):
-    """Raised when the source is not a supported camera still image."""
-
-
-class ImageTooLargeError(ImagePipelineError):
-    """Raised when an image exceeds an encoded or decoded safety limit."""
-
-    def __init__(self, size: int, maximum: int, unit: str = "bytes") -> None:
-        super().__init__(f"image too large: {size} {unit} (max {maximum} {unit})")
-        self.size = size
-        self.maximum = maximum
-        self.unit = unit
-
-    def __reduce__(self) -> tuple[type[ImageTooLargeError], tuple[int, int, str]]:
-        return (self.__class__, (self.size, self.maximum, self.unit))
 
 
 IMAGE_DECODE_ERRORS = (
@@ -80,38 +75,6 @@ IMAGE_DECODE_ERRORS = (
     OSError,
     ValueError,
 )
-
-
-class FitMode(StrEnum):
-    """How to fit source pixels to the printer aspect ratio."""
-
-    AUTO = "auto"
-    CROP = "crop"
-    CONTAIN = "contain"
-    STRETCH = "stretch"
-
-
-@dataclass(frozen=True, slots=True)
-class PrintEdit:
-    """Per-photo preview edits chosen on the LCD before printing."""
-
-    rotate_degrees: int = 0
-    zoom: float = 1.0
-    offset_x: float = 0.0
-    offset_y: float = 0.0
-
-
-@dataclass(frozen=True, slots=True)
-class PreparedImage:
-    """Prepared JPEG for a specific Instax printer model."""
-
-    data: bytes
-    model: PrinterModel
-    width: int
-    height: int
-    quality: int
-    fit: FitMode
-    transport_flip_applied: bool = False
 
 
 class _RawThumbnail(Protocol):
@@ -134,17 +97,6 @@ class _RawThumbFormat(Protocol):
 
 class _RawPyModule(Protocol):
     ThumbFormat: _RawThumbFormat
-
-
-def parse_fit_mode(value: str) -> FitMode:
-    """Parse a user/config fit mode value."""
-
-    normalized = value.strip().lower()
-    try:
-        return FitMode(normalized)
-    except ValueError as error:
-        supported = ", ".join(mode.value for mode in FitMode)
-        raise ValueError(f"unsupported fit mode {value!r}; expected one of {supported}") from error
 
 
 def prepare_for_instax(
@@ -567,12 +519,6 @@ def _auto_orient_for_target(image: Image.Image, width: int, height: int) -> Imag
     return image.transpose(Image.Transpose.ROTATE_90)
 
 
-def _working_size_for_model(width: int, height: int) -> tuple[int, int]:
-    if (width, height) == (600, 800):
-        return (MINI_WORKING_EDGE, MINI_WORKING_EDGE)
-    return (max(width, DEFAULT_WORKING_EDGE), max(height, DEFAULT_WORKING_EDGE))
-
-
 def _encode_jpeg_with_size_limit(
     image: Image.Image,
     initial_quality: int,
@@ -611,14 +557,11 @@ def _encode_jpeg(image: Image.Image, quality: int) -> bytes:
     return output.getvalue()
 
 
-HEIF_SUFFIXES = {".hif", ".heif", ".heic"}
 RAW_SUFFIXES = {".arw", ".raw", ".dng"}
 # EXIF orientation tag. A missing tag, or a value of 1, means the pixels are
 # already upright and no transpose is required.
 _EXIF_ORIENTATION_TAG = 0x0112
 
-MINI_WORKING_EDGE = 1200
-DEFAULT_WORKING_EDGE = 1600
 MAX_FALLBACK_DECODE_PIXELS = 24_000_000
 MAX_FALLBACK_DECODE_EDGE = 8_000
 

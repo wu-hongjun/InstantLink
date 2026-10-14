@@ -23,6 +23,7 @@ from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.camera.ftp import ReceivedImage
 from instantlink_bridge.config import (
     BridgeConfig,
+    DatestampFormat,
     FtpConfig,
     FtpReceiveMode,
     FtpSourceKind,
@@ -33,13 +34,12 @@ from instantlink_bridge.config import (
     load_config,
     write_config,
 )
-from instantlink_bridge.imaging.pipeline import (
+from instantlink_bridge.imaging.models import (
+    AdjustmentProfile,
     ImagePipelineError,
     PreparedImage,
     PrintEdit,
-    create_preview_from_prepared,
 )
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 from instantlink_bridge.imaging.worker import prepare_for_instax_async
 from instantlink_bridge.net.health import (
     ConnectionHealth,
@@ -159,6 +159,36 @@ UNLOCK_TIMEOUT_S = 10.0
 HOTSPOT_RECOVERY_STARTUP_GRACE_S = 30.0
 HOTSPOT_RECOVERY_BACKOFF_S = (30.0, 60.0, 120.0, 300.0)
 UI_TASK_CANCEL_BUDGET_S = 6.0
+
+
+def create_preview_from_prepared(
+    prepared: PreparedImage,
+    *,
+    max_size: tuple[int, int] = (172, 112),
+) -> Image.Image:
+    """Load image preparation only within the preview's existing worker thread."""
+    from instantlink_bridge.imaging.pipeline import create_preview_from_prepared as create
+
+    return create(prepared, max_size=max_size)
+
+
+def read_exif_datestamp_text(
+    source_path: Path,
+    language: str,
+    *,
+    fmt: DatestampFormat,
+) -> str:
+    """Keep the first metadata import and decode inside the EXIF worker thread."""
+    from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text as read
+
+    return read(source_path, language, fmt=fmt)
+
+
+def _load_adjustment_renderer() -> None:
+    """Finish a cold postprocessing import away from input and network callbacks."""
+    from importlib import import_module
+
+    import_module("instantlink_bridge.imaging.postprocess")
 
 
 async def _join_ui_cleanup(future: asyncio.Future[Any], *, timeout_s: float | None = None) -> bool:
@@ -619,7 +649,7 @@ class BridgeUi:
         self._settings_indices: dict[SettingsPage, int] = {page: 0 for page in SETTINGS_BY_PAGE}
         # User-defined custom presets loaded from /etc/InstantLinkBridge/presets.toml.
         # Populated at startup; empty dict until then.
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AP
+        from instantlink_bridge.imaging.models import AdjustmentProfile as _AP
 
         self._user_presets: dict[str, _AP] = {}
         # Focused adjustment-edit mode state (plan 036 phase 4).
@@ -1148,10 +1178,7 @@ class BridgeUi:
         config = self._config
         from dataclasses import replace as _replace
 
-        from instantlink_bridge.imaging.postprocess import (
-            correction_profile,
-            read_exif_datestamp_text,
-        )
+        from instantlink_bridge.imaging.models import correction_profile
         from instantlink_bridge.imaging.presets import resolve_preset
 
         adjustments = resolve_preset(config.adjustments, self._user_presets)
@@ -2000,7 +2027,7 @@ class BridgeUi:
                 break
             selected_index = (selected_index + 1) % len(keys)
         self._settings_indices[self._settings_page] = selected_index
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
+        from instantlink_bridge.imaging.models import AdjustmentProfile as _AdjProf
 
         self._snapshot = replace(
             self._snapshot,
@@ -2331,6 +2358,23 @@ class BridgeUi:
         # mode so the user previews the rendered overlay before committing
         # (plan 037 phase 3).
         if key in _COLOUR_AXIS_KEYS or key in _OVERLAY_TOGGLE_KEYS:
+            page, index = self._settings_page, self._snapshot.selected_index
+            # The first editor frame imports postprocessing in the synchronous
+            # renderer. Finish that import before publishing its mode, including
+            # any wait for an import already owned by a metadata worker thread.
+            await asyncio.to_thread(_load_adjustment_renderer)
+            keys = self._visible_keys_for_page(page)
+            if (
+                self._stopping
+                or self._screen_is_dark()
+                or self._snapshot.mode is not UiMode.SETTINGS
+                or self._settings_page is not page
+                or self._snapshot.selected_index != index
+                or self._settings_picker_key is not None
+                or not 0 <= index < len(keys)
+                or keys[index] is not key
+            ):
+                return
             self._enter_adjustment_edit(key)
             return
         if key not in ADJUSTABLE_SETTING_KEYS:
@@ -3536,7 +3580,7 @@ class BridgeUi:
 
         from dataclasses import replace as _replace
 
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+        from instantlink_bridge.imaging.models import AdjustmentProfile
         from instantlink_bridge.imaging.presets import USER_PRESETS_PATH, save_user_presets
 
         adj = self._config.adjustments
@@ -4619,7 +4663,7 @@ class BridgeUi:
         settings_message: str | None = None,
         settings_title: str = "Settings",
     ) -> UiSnapshot:
-        from instantlink_bridge.imaging.postprocess import AdjustmentProfile as _AdjProf
+        from instantlink_bridge.imaging.models import AdjustmentProfile as _AdjProf
 
         adjustments_profile = _AdjProf.from_config(self._config.adjustments)
         return UiSnapshot(

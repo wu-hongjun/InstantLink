@@ -48,7 +48,7 @@ from instantlink_bridge.config import (
     parse_ui_appearance,
     parse_ui_language,
 )
-from instantlink_bridge.imaging.pipeline import FitMode, parse_fit_mode
+from instantlink_bridge.imaging.models import FitMode, parse_fit_mode
 
 # Sentinel returned in place of cleartext passwords on read. Round-trips on
 # PUT mean "no change" so the cleartext never leaves /etc/InstantLinkBridge.

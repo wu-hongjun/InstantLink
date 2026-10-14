@@ -1,0 +1,122 @@
+{
+  "film_used": 0,
+  "boundary": "Normal installed service, no observer. External BlueZ Disconnect and read-only journal/CPU/backlight/FTP probes. Internal lock flag not introspected; powersave600/backlight low verified. No image/print/actuator commands.",
+  "pid": 9806,
+  "before_gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "film_before": 0,
+  "disconnect_monotonic": 10908.435573647,
+  "recovered_s": 7.532550353000261,
+  "status_message": "2026-10-14 13:59:00,029 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "film_after": 0,
+  "passed": true,
+  "samples": [
+    {
+      "elapsed_s": 2.58626281099896,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.0574281760000304,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.53476510299879,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.019904112999939,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.483724841998992,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.994079632999274,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 5.466525518999333,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 5.940382705999582,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 6.4358644249987265,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 6.917502705999141,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 7.405849216000206,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 9806,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    }
+  ],
+  "warning_error_messages": [
+    "2026-10-14 13:58:56,781 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+    "2026-10-14 13:58:56,783 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none"
+  ],
+  "event_messages": [
+    "2026-10-14 13:58:55,082 INFO instantlink_bridge.ui.controller ui.printer_disconnect_event name=INSTAX-52006924"
+  ],
+  "runtime_commit": "9de0f1b46d21c369827b720a833753326e0de490",
+  "ffi_sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+}

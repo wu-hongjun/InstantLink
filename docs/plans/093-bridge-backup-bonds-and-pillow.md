@@ -95,3 +95,40 @@ services stop. Generic isolated-root archive restoration remains available for r
 
 The independent final source review passed 95 focused tests with deprecations treated as errors.
 The prior ownership live check predates this filter; final installed filtered-restore results follow.
+
+### Final installed acceptance
+
+Clean `9de0f1b` passed all 2,435 Bridge tests, eight expected host GPIO warnings, Ruff and strict
+mypy, and was installed. Production backup verified 29 files, including selected Printer BlueZ
+`info` with real cryptographic key sections. Restore applied 24 files, preserved active deployment
+metadata and all tracked contents, and retained private presets as readable `ib`-owned 0600.
+Create/restore dispatch-to-reply took 2.976/18.854 seconds. BlueZ and the Bridge were reloaded;
+the real archive and secrets remained root-only on the Pi. Synthetic LTK/adapter-identity roundtrip
+also passed exact bytes, private modes and exclusion of unrelated devices.
+
+The first reconnect fixture exited before mutation because the device object was not ready when
+CPU idle settled. The runtime later obtained status automatically. The completed external BlueZ
+Disconnect check restored fresh status in **7.533 seconds from dispatch**, with all 11 samples
+at 600 MHz, powersave, GPIO 24 low, the same PID 9806 and FTP 220/200. Film count remained zero.
+This is reliability acceptance, not an established transport speedup. Automatic screen-off idle
+was verified through frequency/backlight observations; internal manual-lock flags and physical
+button contacts were not inspected in this round. A health fixture initially expected a manual
+lock log during automatic idle; that fixture assumption was corrected without product changes.
+
+Final connected health: Bridge PID 9806 and manager PID 8053 active with zero automatic restarts,
+600 MHz/backlight low, throttle flags `0x0`, FTP responsive, presets loaded, private backup modes
+intact, manager `NoNewPrivileges=yes` and zero active backup workers. Trusted broker SHA
+`f7a8b6f988a0a14914358e67c0e8daf057f541991a2b9563bf4118894fe68382` matches the review;
+native FFI SHA remains `b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175`.
+
+All 93 available current-PID log records were reviewed. Six warning records across three
+transient Bluetooth episodes, including the forced disconnect, remain in the evidence. Recovery
+was automatic, with no flags after the latest fresh status and no preset-load failures. These logs
+are not described as warning-free. No film, image, reset or actuator commands were used.
+
+Four owned hardware helpers and isolated synthetic roots were removed; production socket and
+private backups were retained. A current verified backup was created after the reconnect check.
+Source, ownership, provenance and final live review reports are under
+`docs/assets/bridge-audit-093/`. The independent
+[final live review](../assets/bridge-audit-093/live-review.json) passed with no blocking findings
+or pending acceptance checks.

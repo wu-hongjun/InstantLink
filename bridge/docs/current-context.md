@@ -1598,3 +1598,34 @@ no extra JPEG library is required on the Pi.
   50% battery; Bridge at 600 MHz, 45.622°C, throttle flags `0x0`, GPIO v2, no fallback and zero current
   application warnings. No film, image or actuator commands. Independent confirmation review
   passed; power-on acceptance is complete.
+
+### Plan 093 — private pairing backups and Pillow cleanup
+
+- Clean `9de0f1b` deployed: Pillow infers RGB for the two three-channel `uint8` conversions.
+  Exact pixel equivalence passed on installed Pillow 11.3.0; 2,435 Bridge tests, Ruff, formatting,
+  strict mypy and independent adversarial reviews passed. Only eight expected host GPIO warnings.
+- The manager retains its `ib`/NoNewPrivileges/ProtectSystem sandbox. A socket-activated root
+  broker uses separate root-owned stdlib code and root-private backups under
+  `/var/lib/InstantLinkBridgeBackups`, with three-backup retention and no idle worker process.
+- Production manual/pre-update backups now use the actual filesystem. Selected Printer info and
+  conditional adapter identity are included; restore requires the same active adapter, protects
+  other bonds, reloads BlueZ when needed and preserves runtime configuration ownership. Live
+  testing found and fixed private-preset ownership; final review also preserves active deployment
+  fingerprints during configuration restore. Archived contextual metadata still verifies.
+- Installed live backup verified 29 files, including real selected Printer cryptographic key
+  sections; 24 files applied after contextual metadata filtering. Dispatch create/restore
+  2.976/18.854 seconds. Private presets remained readable `ib`/0600; contents and metadata unchanged.
+  Synthetic LTK/adapter identity exact-byte/private-mode roundtrip passed; no secrets exported.
+- External Disconnect to fresh status 7.533 seconds, all 11 samples at 600 MHz/powersave/GPIO 24
+  low/same PID 9806/FTP 220+200. Film zero unchanged. Current manual-lock flags/contact actuation
+  not tested; normal automatic screen-off idle observed. Initial unavailable-object fixture
+  dispatched no Disconnect; later retry passed without manual Reconnect.
+- Captured final Bridge 9806/manager 8053 active, zero automatic restarts, connected/fresh Printer,
+  600 MHz, throttle `0x0`, FTP responsive, no preset failures or active backup workers. Six current
+  runtime warning records from three transient Bluetooth episodes were retained; all recovered,
+  with no flags after latest fresh status. No warning-free full-runtime claim.
+- Trusted broker SHA `f7a8b6f988a0a14914358e67c0e8daf057f541991a2b9563bf4118894fe68382`;
+  FFI unchanged at `b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175`.
+  Four owned helpers removed, production socket/backups retained, current backup saved after tests.
+  Hardware/OS unchanged: Pi Zero 2 W Rev 1.0/ST7789, Debian 13.2/kernel 6.12.47/BlueZ 5.82,
+  Link Square INSTAX-52006924. No film or Printer actuators used.

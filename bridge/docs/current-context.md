@@ -1516,3 +1516,38 @@ no extra JPEG library is required on the Pi.
   application faults 0; existing GPU/media/VCHI/LCD/regulator notes remain. Complete logs private,
   classified evidence in plan090. Owned build/test artifacts removed; Wi-Fi stamp and per-kernel
   override/provenance/stock rollback backup retained. Future kernel changes need new assessment.
+
+
+## 2026-10-14 — Unused GPU/media boot autoload (plan 091)
+
+- Clean source `79880bd` deployed on Pi Zero2W/ST7789/X306, Debian13.2/kernel6.12.47/BlueZ5.82.
+  Five legacy media/audio leaf aliases blacklisted by owned root0644 modprobe fragment, SHA
+  `7af5254a…35172e`. GPU memory/overlays unchanged; Wi-Fi backport/native artifacts retained.
+- Two baseline/two candidate normal reboots: LCD median13.815→13.681s, FTP13.781→13.630s;
+  small overlapping ranges do not establish repeatable boot speedup. Installed normal boot
+  LCD13.742/FTP13.659/hotspot19.920s. Kernel-monotonic metrics exclude physical power-on latency.
+- Unused media/audio closure17modules/1,122,304mappedbytes→0; four VCHI and four NULL video
+  unregister messages→0. Not a total RAM/energy measurement. Essential ST7789 staging/SPI-ID
+  notices remain visible. Live owned-fragment removal/reboot restored baseline; reinstall passed.
+- Retained DSC02821.HIF Mini/Square/Wide JPEG+decodedRGB hashes/orientation/quality identical,
+  original unchanged. Exact LCD/nonblank triple unlock1000→relock600 and10s timeout passed
+  through production action queue; physical contacts not actuated. Two isolated8MiB FTP checksums
+  pass/production220+200 failures0; same-Pi address path, not wireless camera throughput.
+- Three subagents and independent adversarial source/loader/evidence review clear.2374Bridge
+  tests/27existingwarnings, Ruff/strictmypy67,13focusedtests, Bash/format/diff/strictdocs pass.
+- Initial Printer-off100s readiness wait expired before Disconnect. After user power-on,
+  installed locked600MHz automatic reconnect passed6.269s, samePID/camera-ready/finalfresh/watch1/
+  retired0; connected UI/10s timeout/pause-resume passed. No film/image/actuator commands.
+  Normal service restoration and final health captured separately in plan091 evidence.
+
+### Plan091 final normal state
+
+- Bridge2626/manager637 active0restarts, connected LinkSquare, powersave600MHz/GPIO24low,
+  FTP220/200/GPIOv2/no fallback/throttle0x0; native/source integrity retained.
+- Connected isolated FTP repeated: all17samples connected/fresh/locked600/camera-ready and
+  both8MiB checksums pass. Observer/drop-in/socket restoration validated.
+- Normal restart hit two missing-write-characteristic failures and existing auto-rebond;
+  automatic fresh-status recovery66.480s from start without intervention. GATT cache/service
+  readiness is a remaining follow-up, not fixed or attributed to the media alias profile.
+  Final logs preserve five associated Bluetooth warnings plus one expected AP listener wait;
+  GPU/media and vendor-IE errors0. Independent connected evidence review clear.

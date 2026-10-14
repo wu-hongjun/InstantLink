@@ -70,3 +70,68 @@ passed with no outstanding source findings.
 Retained DSC02821.HIF prepared for Mini, Square and Wide before/after: encoded JPEG and decoded
 RGB hashes, dimensions, selected quality and transport orientation flags were identical.
 Original identity/content preserved. This CPU fixture used no BLE/image commands or film.
+
+## Installed acceptance
+
+Clean source `79880bd` installed after full normal hooks: 2,374 Bridge tests passed with
+27 existing platform/Pillow warnings, Ruff and strict mypy (67 modules). Thirteen focused
+script/profile tests, Bash syntax, formatting, diff and strict MkDocs checks passed.
+
+Rollback removed only the initially absent owned profile, rebooted, and reproduced all 17
+media/audio modules and four VCHI/four NULL unregister messages while preserving LCD/FTP.
+Reinstall and normal clean-source reboot removed them again; LCD 13.742 s, FTP 13.659 s,
+hotspot receive readiness 19.920 s. Unchanged native hashes and exact-kernel Wi-Fi backport
+verified. The module profile is an OS provisioning change, separately installed on this Pi;
+ordinary source/firmware application updates alone do not activate it on older installations.
+
+Installed shared GPIO action queue/physical LCD checks passed: same-button triple unlock,
+nonblank framebuffer equal to the independent render reference, active 1000 MHz, relock
+600 MHz and 10-second partial-unlock timeout back to 600 MHz. Physical switch contacts were
+not actuated. Two isolated 8 MiB FTP receives completed with matching checksums and zero
+production FTP greeting/NOOP failures. This exercises installed receive code over the same-Pi
+hotspot address, not an actual camera or wireless airtime. No production upload/print queue used.
+
+### Connected Printer acceptance
+
+An initial 100-second readiness wait expired while the Printer was off; no Disconnect was
+dispatched. After the user powered on Link Square INSTAX-52006924, installed runtime PID2138
+recovered automatically in **6.269 seconds** after external BlueZ Device1.Disconnect. Every
+sample remained locked at 600 MHz, camera-ready and in the same PID. Invalidated timestamps
+published stale immediately; fresh status restored one disconnect watch and zero retired tasks.
+Radio advertising timing is uncontrolled, so this is reliability validation, not a speedup claim.
+Film remained zero; no image/print/actuator commands.
+
+Connected same-button triple unlock/exact nonblank pixels/1000 MHz, relock/600 MHz, 10-second
+partial-unlock abandonment, status pause/resume and fresh single-watch rearm all passed.
+
+Available installed-boot logs initially contained 203 Bridge/manager records and one
+`manager.bind_pending`: USB listener was already serving, hotspot listener succeeded one second
+later. Kernel had 376 records and ten expected regulator/read-only switch/backport taint/LCD
+staging/SPI-ID notices; no VCHI/media NULL unregister or Wi-Fi vendor-IE errors. Complete raw
+logs remain private. Offline Pi wall clock can reset on reboot; all boot comparisons use kernel
+monotonic time, independent of that clock. No film was used.
+
+Connected FTP continuity repeated: both isolated 8 MiB receives/checksums passed, zero production
+FTP failures; all 17 monitored samples retained connected/fresh Printer, locked 600 MHz and
+camera readiness. An early normal-health assertion ran 47 seconds after service start and
+expected idle too soon; active 1000 MHz was correct. Final capture waits for the actual idle
+policy transition rather than treating that fixture timing as an application bug.
+
+## Final normal service and log review
+
+Restored normal Bridge PID2626 / manager637, both active with zero automatic restarts,
+connected Printer, powersave600 MHz/GPIO24 low, FTP220/200, GPIOv2 and no input/network fallback,
+throttle0x0. Source/native hashes and clean manifest match.
+
+Full final installed-boot logs include five Bluetooth warning records after the observed-to-normal
+service restart: two missing-write-characteristic connection setup failures plus existing
+auto-rebond. Normal runtime recovered automatically after **66.480 seconds** from its boot-start
+marker, with fresh film0/battery50% status and connected final health. This remains an existing
+connection-setup follow-up (GATT service/cache readiness); the media profile changes no Bluetooth
+source/dependencies. Do not describe these logs as fault-free or conflate this restoration timing
+with the successful6.269s external-disconnect test. The expected manager listener wait remained
+the other flagged service record. No VCHI/media unregister or vendor-IE errors returned.
+
+Owned observer/drop-in/socket and 19 test/helper files removed; only the production root0644
+media fragment remains, matching reviewed SHA. User photos and Wi-Fi backport rollback
+provenance untouched. Clean source deployed with normal services; no firmware publication.

@@ -1,0 +1,226 @@
+{
+  "passed": true,
+  "rows": [
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 166.932608216,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": false,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "active",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 167.100525352,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 167.409221185,
+        "mode": "unlocking",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "button": "gpio:20",
+        "idle_stage": "active",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0,
+        "frame_nonblank": true,
+        "frame_matches": true,
+        "frame_sha256": "3baf064a9f149053cfdcdd1829048092302cf6bdc72d561c0df2d40b1a56d05c"
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 167.849937331,
+        "mode": "unlocking",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": true,
+        "presses": 2,
+        "button": "gpio:20",
+        "idle_stage": "active",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 168.021332279,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": false,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "active",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0,
+        "frame_nonblank": true,
+        "frame_matches": true,
+        "frame_sha256": "e5058e26adfb52400b3c80fca62ae1c5dd0f710ed4a0c967bab40a36555899bc"
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 168.452455872,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 168.719727903,
+        "mode": "unlocking",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "button": "gpio:20",
+        "idle_stage": "active",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 1513,
+        "monotonic": 179.428331649,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "retired_status_tasks": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "disconnect_watch_count": 0
+      }
+    }
+  ],
+  "boundary": "Shared production abstract GPIO action queue, actual LCD pixels/CPU policy; switch contacts not actuated. Same-button triple unlock, exact nonblank frames, relock, and 10s unlock abandonment. No film or image commands."
+}

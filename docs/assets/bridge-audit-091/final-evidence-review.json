@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent media_adversarial_review subagent",
+  "timestamp_utc": "2026-10-14T15:01:59.151253+00:00",
+  "evidence_sha256": {
+    "adversarial-review.json": "988bb09001d9ac21a5c7e8fdef67efa7a579829d41353cdc6f0f994884926036",
+    "baseline-1.json": "3f19243c8c46aeb692921aad05b472ca2d3a3f2458ca7fcb0f63f2e7739e57dd",
+    "baseline-2.json": "1bf8b808171861c2f4d652e29d99d803856fc7ee9ffe6164a9b691f054988494",
+    "candidate-1.json": "5809dff62f1982a9a454aaacb85e5d13f55490b7d4ae1c1459030310000f5bb8",
+    "candidate-2.json": "7c2c40c8d06dd5b3432cce4bc73403b9d54c275f5f634c0a71f2cbab3b403164",
+    "ftp.json": "861aeb911d911c1ae03973c74d0e981e44aa06ad6d0a9fdbfcabcf819a72f91c",
+    "hif-baseline.json": "95387a385479fb33c151f3dfd7791c6d0b0d334b6b40d842cc453ae36c0522ce",
+    "hif-candidate.json": "03e01b4fdb2eb8d24044d719d9e01469b36b3efbba64ed3bc41ad67274e62e14",
+    "installed.json": "8c6c96ec660027cfe54201e9932c3c69cf76a95f12bba1de7c7f51a0d360e79e",
+    "loader.json": "ab2de4076234c7c9229877f313227a163edd478605107021b5f57430fd85ad33",
+    "rollback.json": "abc783acf96a41de9adca312acde09c8b66b722f91d52a6b67b36d966ead4347",
+    "ui.json": "78ea1cd7201cdbe15dca78cf9bee3e90e948ab16641ee98708133005cda04205"
+  },
+  "findings": [],
+  "evidence_review_passed": true,
+  "task_acceptance_complete": false,
+  "pending": [
+    "Final live Printer reconnect/status-watch checks and normal-service cleanup; Printer was offline during installed boot, UI and FTP acceptance."
+  ],
+  "boot_observed_medians": {
+    "lcd_ui_ready_s": {
+      "baseline_median_s": 13.8149525,
+      "candidate_median_s": 13.680681
+    },
+    "ftp_ready_s": {
+      "baseline_median_s": 13.7813435,
+      "candidate_median_s": 13.6299695
+    },
+    "bridge_ready_s": {
+      "baseline_median_s": 13.828508,
+      "candidate_median_s": 13.692047500000001
+    },
+    "hotspot_receive_ready_s": {
+      "baseline_median_s": 20.005482999999998,
+      "candidate_median_s": 19.410998
+    }
+  },
+  "boot_claim_boundary": "Two boots per variant; small differences are ordinary run variation and do not demonstrate a material boot speedup. One baseline boot had a Printer status, all candidate boots had no Printer status; no connected boot speed comparison. Kernel-monotonic timings exclude firmware latency.",
+  "causal_rollback": "Removing owned profile restores17legacy media/dependency modules,1122304reportedmappedmodulebytes and4VCHI+4null-unregistermessages; reinstallation removes them again while preservingLCD/nativehashes/FTP. Do not equate modulebytes with totalRAMsaved.",
+  "hif_validation": "Three model preparations retain exactly identical encodedJPEG/decodedRGB/dimensions/quality/transportorientation; no speedupclaim from one locked600MHzsampleeach.",
+  "lcd_input_validation": "Shared abstract GPIO queue validates same-button tripleunlock, exact nonblank framebufferbytes, performance/powersave clocks and10sinactivityabandonment. Physical switchcontacts/panelvisualinspectionnotperformed.",
+  "ftp_validation": "Two8MiBreceipts checksumidentical, productionFTPprobeszerooutages; isolatedalternateport/samePihotspotIP. No physicalcameraairtimeorproductionprintqueue. Printeroffline so no simultaneousconnectedretentionclaim.",
+  "privacy_validation": "PublishedJSON files containno credentialkeys/assignments or photoimagebytes; source/hash/device/status metadata retained.",
+  "film_used": 0,
+  "hardware_mutated_by_reviewer": false
+}

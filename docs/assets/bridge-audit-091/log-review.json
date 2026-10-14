@@ -1,0 +1,47 @@
+{
+  "boundary": "Full available installed boot journals including normal and temporary observed runtime; raw records retained privately. No film.",
+  "service": {
+    "records": 478,
+    "flagged": 6,
+    "messages": [
+      "2026-10-14 10:50:35,002 WARNING instantlink_bridge.manager.cli manager.bind_pending host=192.168.8.1 port=8742 errno=None",
+      "2026-10-14 11:00:48,760 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+      "2026-10-14 11:00:48,766 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none",
+      "2026-10-14 11:00:48,772 WARNING instantlink_bridge.ui.controller instantlink.auto_rebond action=remove_bond address=FA:AB:BC:C7:95:64 reason=stale_bond_write_failed",
+      "2026-10-14 11:01:20,458 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+      "2026-10-14 11:01:20,459 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none"
+    ]
+  },
+  "kernel": {
+    "records": 376,
+    "flagged": 10,
+    "messages": [
+      "dwc2 3f980000.usb: supply vusb_d not found, using dummy regulator",
+      "dwc2 3f980000.usb: supply vusb_a not found, using dummy regulator",
+      "mmc0: host does not support reading read-only switch, assuming write-enable",
+      "brcmfmac: loading out-of-tree module taints kernel.",
+      "hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator",
+      "hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator",
+      "fbtft: module is from the staging directory, the quality is unknown, you have been warned.",
+      "fb_st7789v: module is from the staging directory, the quality is unknown, you have been warned.",
+      "SPI driver fb_st7789v has no spi_device_id for sitronix,st7789v",
+      "SPI driver fb_st7789v has no spi_device_id for fbtft,minipitft13"
+    ]
+  },
+  "classification": {
+    "manager_pending": "Expected late AP listener, resolved1second later",
+    "bluetooth_retries": "After observed-to-normal service restart, two missing-write-characteristic setup failures. Existing auto-rebond and retry recovered normal PID2626, new fresh status at kernelmonotonic timestamp below; no manual intervention. Follow-up candidate: service-ready/GATT cache handling.",
+    "gpu_media_errors": 0,
+    "wifi_vendor_ie_errors": 0
+  },
+  "normal_runtime_recovery_events": [
+    {
+      "kernel_monotonic_s": 630.361267,
+      "message": "2026-10-14 11:00:46,409 INFO instantlink_bridge.app bridge.boot.start"
+    },
+    {
+      "kernel_monotonic_s": 696.84147,
+      "message": "2026-10-14 11:01:52,890 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+    }
+  ]
+}

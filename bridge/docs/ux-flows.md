@@ -315,6 +315,10 @@ Virtual input uses the same controller: repeat the same `action` three consecuti
 different action resets progress to **1 / 3**. Remote actions have their own control identities
 and do not combine with physical-button presses, so switching input surfaces resets the count.
 
+Lost input also ends an incomplete unlock attempt. A full input queue, missing kernel events or
+input-backend recovery discards uncertain queued actions and leaves the screen locked. Start a
+new three-press sequence once input resumes.
+
 An incomplete sequence expires after **10 seconds without an accepted button press**. The timer
 restarts after every accepted press, including one that resets the count to a different button.
 FTP, status updates and screen polling do not extend it. On expiry the LCD becomes dark again

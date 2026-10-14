@@ -41,6 +41,10 @@ Missing/invalid token → `401 {"error": "unauthorized"}` with
 `OutboxItem` fields: `item_id` (hex), `file_name`, `size_bytes`, `sha256`,
 `received_at` (epoch seconds), `source_remote_ip`.
 
+Queued originals retain their own bytes and checksum when a camera reuses the same upload
+filename. New spool files use independent inodes; upgrades detach older shared files before
+they can be changed by a subsequent FTP write.
+
 Unknown id → `404 {"error": "unknown_item", "item_id": …}`.
 
 Typical pull loop: `GET /v1/queue` → for each item `GET /v1/photos/{id}`
@@ -87,6 +91,10 @@ snapshot/injector wired → `404 {"error": "remote_ui_unavailable"}`; bad
 action → `400 {"error": "invalid_action", "allowed": [...]}`; queue full →
 `400 {"error": "input_rejected"}`; render failure → `500`.
 
+A full shared input queue discards its uncertain buffered actions and resets an incomplete
+unlock attempt. Kernel event loss or input-backend recovery does the same. Subsequent accepted
+input starts a new sequence; no wire action or field is added.
+
 `/v1/screen` is CPU-guarded on the Pi Zero 2 W: frames are memoized by
 snapshot identity and re-rendered at most every ~0.3 s, so a fast-polling
 client cannot peg the CPU.
@@ -105,3 +113,8 @@ lookup or acknowledgements. Additions remain ordered; a new item becomes visible
 its checksum is complete and its metadata commit is protected by the index lock. Existing
 range/download and authentication contracts are unchanged. Cancellation of the receive task
 joins the filesystem transaction before runtime teardown (plan 068).
+
+Index publication precedes the visible queue update and deletion of evicted/acknowledged
+originals. If publication fails, the committed queue and its originals remain available;
+unpublished arrivals are cleaned up. Readers continue using the committed snapshot while
+publication runs.

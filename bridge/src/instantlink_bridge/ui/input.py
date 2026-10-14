@@ -13,7 +13,7 @@ from typing import Protocol, cast
 
 from instantlink_bridge.config import UiSurface
 from instantlink_bridge.ui import gpio_edges
-from instantlink_bridge.ui.models import UiAction, UiButtonPress
+from instantlink_bridge.ui.models import UiAction, UiButtonPress, UiInputEvent, UiInputGap
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,32 @@ ACTION_PINS = {
     KEY3: UiAction.HELP,
 }
 _EVENT_BATCH_SIZE = 128
+
+
+def reset_input_queue(queue: asyncio.Queue[UiInputEvent]) -> None:
+    """Discard uncertain buffered input and notify its consumer of the discontinuity.
+
+    Runs on the event loop, including GPIO callbacks marshalled onto it. The
+    gap precedes every subsequent accepted press, even when the queue was full.
+    Keep queue accounting balanced for discarded events and an in-flight consumer.
+    """
+    while True:
+        try:
+            queue.get_nowait()
+        except asyncio.QueueEmpty:
+            break
+        queue.task_done()
+    queue.put_nowait(UiInputGap())
+
+
+def enqueue_input(queue: asyncio.Queue[UiInputEvent], event: UiInputEvent) -> bool:
+    """Enqueue one event, resetting buffered input if its bounded queue overflows."""
+    try:
+        queue.put_nowait(event)
+    except asyncio.QueueFull:
+        reset_input_queue(queue)
+        return False
+    return True
 
 
 class _PinFactory(Protocol):
@@ -61,7 +87,7 @@ class NullInput:
 
     def start(
         self,
-        queue: asyncio.Queue[UiAction | UiButtonPress],
+        queue: asyncio.Queue[UiInputEvent],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         return
@@ -78,7 +104,7 @@ class GpioUiInput:
         self._owned_factory: _PinFactory | None = None
         self._edge_fd: int | None = None
         self._edge_loop: asyncio.AbstractEventLoop | None = None
-        self._queue: asyncio.Queue[UiAction | UiButtonPress] | None = None
+        self._queue: asyncio.Queue[UiInputEvent] | None = None
         self._pressed: set[int] = set()
         self._sequence = 0
         self._discard_events_until_ns = 0
@@ -86,7 +112,7 @@ class GpioUiInput:
 
     def start(
         self,
-        queue: asyncio.Queue[UiAction | UiButtonPress],
+        queue: asyncio.Queue[UiInputEvent],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         if self._edge_fd is not None or self._buttons:
@@ -99,7 +125,7 @@ class GpioUiInput:
 
     def _start_edges(
         self,
-        queue: asyncio.Queue[UiAction | UiButtonPress],
+        queue: asyncio.Queue[UiInputEvent],
         loop: asyncio.AbstractEventLoop,
         *,
         chip: Path | None = None,
@@ -139,6 +165,7 @@ class GpioUiInput:
                 if sequence != expected:
                     # Overflow can hide release edges. Resync and discard older
                     # queued edges instead of counting an uncertain unlock press.
+                    reset_input_queue(queue)
                     self._discard_events_until_ns = time.monotonic_ns()
                     levels = gpio_edges.read_levels(event_fd, len(ACTION_PINS))
                     self._pressed = {
@@ -155,12 +182,12 @@ class GpioUiInput:
                     edge == gpio_edges.GPIO_V2_LINE_EVENT_FALLING_EDGE and pin not in self._pressed
                 ):
                     self._pressed.add(pin)
-                    with suppress(asyncio.QueueFull):
-                        queue.put_nowait(UiButtonPress(ACTION_PINS[pin], f"gpio:{pin}"))
+                    enqueue_input(queue, UiButtonPress(ACTION_PINS[pin], f"gpio:{pin}"))
         except (BlockingIOError, InterruptedError):
             return
         except Exception:
             LOGGER.exception("ui.input_edges_failed")
+            reset_input_queue(queue)
             self._close_edges()
             try:
                 self._start_gpiozero(queue, loop)
@@ -169,7 +196,7 @@ class GpioUiInput:
 
     def _start_gpiozero(
         self,
-        queue: asyncio.Queue[UiAction | UiButtonPress],
+        queue: asyncio.Queue[UiInputEvent],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         from gpiozero import Button, Device
@@ -251,7 +278,7 @@ def create_input(surface: UiSurface | None = None) -> GpioUiInput | NullInput:
 
 
 def _enqueue(
-    queue: asyncio.Queue[UiAction | UiButtonPress],
+    queue: asyncio.Queue[UiInputEvent],
     loop: asyncio.AbstractEventLoop,
     action: UiAction,
     *,
@@ -264,8 +291,7 @@ def _enqueue(
         def put_action() -> None:
             if is_active is not None and not is_active():
                 return
-            with suppress(asyncio.QueueFull):
-                queue.put_nowait(UiButtonPress(action, button_id))
+            enqueue_input(queue, UiButtonPress(action, button_id))
 
         # A late native callback can race orderly event-loop shutdown.
         with suppress(RuntimeError):

@@ -151,3 +151,53 @@ def test_upload_reservation_released_on_every_aborted_setup(
     retry = make()
     assert retry.ftp_STOR(str(path)) == str(path)
     retry.on_disconnect()
+
+
+def test_legacy_shared_source_copy_failure_rejects_before_open_and_cleans_reservation(
+    handlers: Harness, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import os
+
+    from instantlink_bridge.camera import ftp
+
+    service, make, incoming, _, _ = handlers
+    path = incoming / "legacy.hif"
+    path.write_bytes(b"pending-original")
+    pending = incoming.parent / "spooled.hif"
+    os.link(path, pending)
+
+    def fail_copy(source: Path, destination: Path) -> None:
+        destination.write_bytes(b"partial")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(ftp.shutil, "copy2", fail_copy)
+    handler = make()
+    assert handler.ftp_STOR(str(path)) is None
+    assert handler.replies[-1].startswith("450")
+    assert not handler.calls
+    assert not service._upload_owners
+    assert path.read_bytes() == pending.read_bytes() == b"pending-original"
+    assert set(incoming.iterdir()) == {path}
+    assert "ftp.shared_source_detach_failed" in caplog.text
+
+
+@pytest.mark.parametrize("mode", ["w", "a"])
+def test_legacy_source_detach_preserves_original_and_append_bytes(
+    handlers: Harness, mode: str
+) -> None:
+    import os
+
+    service, make, incoming, _, _ = handlers
+    path = incoming / "legacy.hif"
+    path.write_bytes(b"pending-original")
+    pending = incoming.parent / "spooled.hif"
+    os.link(path, pending)
+    handler = make()
+    assert handler.ftp_STOR(str(path), mode) == str(path)
+    assert pending.read_bytes() == b"pending-original"
+    expected = b"new-upload" if mode == "w" else b"pending-originalnew-upload"
+    assert path.read_bytes() == expected
+    assert path.stat().st_ino != pending.stat().st_ino
+    assert set(incoming.iterdir()) == {path}
+    handler.on_disconnect()
+    assert not service._upload_owners

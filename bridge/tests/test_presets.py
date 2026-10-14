@@ -14,11 +14,60 @@ from instantlink_bridge.imaging.presets import (
     load_user_presets,
     resolve_preset,
     save_user_presets,
+    stamp_preset_into_config,
 )
 
 # ---------------------------------------------------------------------------
 # Built-in preset values
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("hue", range(-100, 101))
+def test_saved_look_preserves_edited_hue_and_vignette(hue: int, tmp_path: Path) -> None:
+    path = tmp_path / "presets.toml"
+    config = AdjustmentsConfig(hue=hue, vignette=53)
+    profile = resolve_preset(config)
+    for _ in range(3):
+        save_user_presets(path, {"Custom1": profile})
+        loaded = load_user_presets(path)
+        axes = stamp_preset_into_config("Custom1", loaded)
+        assert axes["hue"] == hue
+        assert axes["vignette"] == 53
+        profile = loaded["Custom1"]
+
+
+def test_saved_instax_film_preserves_all_look_axes(tmp_path: Path) -> None:
+    path = tmp_path / "presets.toml"
+    axes = stamp_preset_into_config("Instax Film")
+    config = AdjustmentsConfig(
+        saturation=axes["saturation"],
+        exposure=axes["exposure"],
+        sharpness=axes["sharpness"],
+        hue=axes["hue"],
+        vignette=axes["vignette"],
+    )
+    save_user_presets(path, {"Custom1": resolve_preset(config)})
+    assert stamp_preset_into_config("Custom1", load_user_presets(path)) == axes
+
+
+@pytest.mark.parametrize("vignette, expected", [(-10, 0), (73, 73), (120, 100)])
+def test_saved_vignette_is_clamped_on_write_and_load(
+    vignette: int, expected: int, tmp_path: Path
+) -> None:
+    path = tmp_path / "presets.toml"
+    save_user_presets(path, {"Custom1": AdjustmentProfile(vignette=vignette)})
+    assert f"vignette = {expected}\n" in path.read_text()
+    assert load_user_presets(path)["Custom1"].vignette == expected
+    path.write_text(f"[presets.Custom1]\nvignette = {vignette}\n")
+    assert load_user_presets(path)["Custom1"].vignette == expected
+
+
+def test_legacy_saved_look_defaults_to_no_vignette(tmp_path: Path) -> None:
+    path = tmp_path / "presets.toml"
+    path.write_text("[presets.Custom1]\nhue = 3\n")
+    axes = stamp_preset_into_config("Custom1", load_user_presets(path))
+    assert axes["hue"] == 3
+    assert axes["vignette"] == 0
 
 
 def test_default_preset_is_identity() -> None:
@@ -64,9 +113,7 @@ def test_instax_film_preset_has_vignette_50() -> None:
     assert instax.saturation == pytest.approx(0.9), (
         f"Expected saturation=0.9, got {instax.saturation}"
     )
-    assert instax.sharpness == pytest.approx(0.9), (
-        f"Expected sharpness=0.9, got {instax.sharpness}"
-    )
+    assert instax.sharpness == pytest.approx(0.9), f"Expected sharpness=0.9, got {instax.sharpness}"
     assert instax.exposure == pytest.approx(1.0)
     assert instax.hue == 0
 
@@ -327,8 +374,6 @@ def test_custom_sentinel_migrates_to_default(tmp_path: Path) -> None:
 
 def test_save_user_presets_fsync_invoked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """save_user_presets must call os.fsync before os.replace (durability gate)."""
-    import instantlink_bridge.imaging.presets as _pm
-
     fsync_calls: list[int] = []
     replace_calls: list[int] = []
     call_order: list[str] = []
@@ -346,17 +391,15 @@ def test_save_user_presets_fsync_invoked(tmp_path: Path, monkeypatch: pytest.Mon
         call_order.append("replace")
         orig_replace(src, dst)  # type: ignore[arg-type]
 
-    monkeypatch.setattr(_pm.os, "fsync", tracking_fsync)
-    monkeypatch.setattr(_pm.os, "replace", tracking_replace)
+    monkeypatch.setattr(os, "fsync", tracking_fsync)
+    monkeypatch.setattr(os, "replace", tracking_replace)
 
     path = tmp_path / "presets.toml"
     save_user_presets(path, {"Custom1": AdjustmentProfile(saturation=1.25)})
 
     assert len(fsync_calls) == 1, "os.fsync must be called exactly once"
     assert len(replace_calls) == 1, "os.replace must be called exactly once"
-    assert call_order == ["fsync", "replace"], (
-        f"fsync must precede replace; got {call_order}"
-    )
+    assert call_order == ["fsync", "replace"], f"fsync must precede replace; got {call_order}"
 
 
 def test_stamp_preset_into_config_builtin() -> None:
@@ -449,8 +492,13 @@ def test_is_preset_modified_ignores_datestamp_and_watermark() -> None:
     # Default: all axes = 0.
     cfg = AdjustmentsConfig(
         preset="Default",
-        saturation=0, exposure=0, sharpness=0, hue=0, vignette=0,
-        datestamp=True, watermark=True,
+        saturation=0,
+        exposure=0,
+        sharpness=0,
+        hue=0,
+        vignette=0,
+        datestamp=True,
+        watermark=True,
     )
     assert is_preset_modified(cfg) is False
 

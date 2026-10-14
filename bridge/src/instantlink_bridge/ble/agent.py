@@ -116,6 +116,7 @@ class _DisconnectWatch:
     active: bool = True
     fired: bool = False
     seeded: bool = False
+    overflowed: bool = False
 
 
 @dataclass
@@ -514,7 +515,7 @@ class BluezAgentService:
             ):
                 self._invalidate_device_cache()
                 return
-            relevant = {"Name", "Alias", "Connected"}
+            relevant = {"Name", "Alias", "Connected", "Address", "Adapter"}
             if not (relevant.intersection(changed) or relevant.intersection(invalidated)):
                 return
             self._device_revision += 1
@@ -544,6 +545,10 @@ class BluezAgentService:
                     self._invalidate_device_cache()
                 return
             if message.member == "InterfacesAdded" and message.signature == "oa{sa{sv}}":
+                if isinstance(interfaces, dict) and "org.bluez.Adapter1" in interfaces:
+                    # Adapter inventory also determines mutation callers' scope.
+                    self._invalidate_device_cache()
+                    return
                 if not self._device_path(path):
                     return
                 if not isinstance(interfaces, dict):
@@ -566,7 +571,7 @@ class BluezAgentService:
                     if self._device_path(path) or path == self.adapter_path:
                         self._invalidate_device_cache()
                     return
-                if path == self.adapter_path and "org.bluez.Adapter1" in interfaces:
+                if "org.bluez.Adapter1" in interfaces:
                     self._invalidate_device_cache()
                 elif self._device_path(path) and "org.bluez.Device1" in interfaces:
                     self._device_revision += 1
@@ -699,6 +704,14 @@ class BluezAgentService:
                 continue
             # Keep changes received while the initial tree is in flight. Its
             # older reply must never overwrite a newer disconnect/removal.
+            if path not in watch.changed and len(watch.changed) >= DEVICE_CACHE_LIMIT:
+                # Dropping a pending row could hide the selected session's loss.
+                # Abandon this registration and retain ordinary status polling.
+                watch.overflowed = True
+                watch.active = False
+                watch.changed.clear()
+                self._disconnect_watches.remove(watch)
+                continue
             if path not in watch.changed or watch.changed[path] is True:
                 watch.changed[path] = connected
             if path in watch.paths and connected is not True:
@@ -740,6 +753,8 @@ class BluezAgentService:
                 if candidates is None:
                     objects = await self.managed_objects_snapshot()
                     candidates = self._matching_devices(watch.name, objects)
+            if watch.overflowed:
+                raise RuntimeError("BlueZ disconnect watch pending changes exceeded limit")
             if not self._watch_current(watch):
                 disarm()
                 return disarm
@@ -773,36 +788,44 @@ class BluezAgentService:
         Callers impose their own bounded deadline. Cancelling this read must
         leave the shared pairing agent and other bus calls operational.
         """
-        if self._bus is None or not self._registered or not getattr(self._bus, "connected", True):
+        if self._bus is None or not self._registered or not self._owner or not self._bus.connected:
             raise RuntimeError("BlueZ pairing agent is not ready")
         bus = self._bus
         owner = self._owner
         generation = self._generation
-        revision = self._device_revision
-        reply = await bus.call(
-            Message(
-                destination=owner or BLUEZ_SERVICE,
-                path="/",
-                interface="org.freedesktop.DBus.ObjectManager",
-                member="GetManagedObjects",
+        for _attempt in range(2):
+            revision = self._device_revision
+            reply = await bus.call(
+                Message(
+                    destination=owner,
+                    path="/",
+                    interface="org.freedesktop.DBus.ObjectManager",
+                    member="GetManagedObjects",
+                )
             )
-        )
-        if not self._current(bus, owner, generation) or not self._registered:
-            raise RuntimeError("BlueZ pairing agent changed during snapshot")
-        if (
-            reply is None
-            or reply.message_type is not MessageType.METHOD_RETURN
-            or reply.signature != "a{oa{sa{sv}}}"
-            or len(reply.body) != 1
-        ):
-            raise ValueError("invalid BlueZ object snapshot reply")
-        # Only an authenticated reply from this unique owner may establish a
-        # reusable tree. Preserve the snapshot API's existing return semantics.
-        if owner and reply.sender == owner and getattr(bus, "connected", False):
+            if (
+                not self._current(bus, owner, generation)
+                or not self._registered
+                or not bus.connected
+            ):
+                raise RuntimeError("BlueZ pairing agent changed during snapshot")
+            if (
+                reply is None
+                or reply.message_type is not MessageType.METHOD_RETURN
+                or reply.signature != "a{oa{sa{sv}}}"
+                or len(reply.body) != 1
+            ):
+                raise ValueError("invalid BlueZ object snapshot reply")
+            if reply.sender != owner:
+                raise ValueError("BlueZ object snapshot reply has wrong owner")
+            # A reader can resolve the reply Future and process later signals
+            # before this coroutine resumes. Reject that tree for callers too,
+            # including consumers that need full Address/Adapter properties.
+            if revision != self._device_revision:
+                continue
             self._cache_device_tree(reply.body[0], revision)
-        else:
-            self._invalidate_device_cache()
-        return reply.body[0]
+            return reply.body[0]
+        raise RuntimeError("BlueZ device state changed during snapshot")
 
     async def stop(self) -> None:
         """Remove ownership watch, join registration, and close the owned bus."""

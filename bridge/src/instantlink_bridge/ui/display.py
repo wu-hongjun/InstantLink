@@ -193,9 +193,13 @@ class FramebufferDisplay:
         self._idle_stage = stage
 
     def close(self) -> None:
+        if self._closed:
+            return
         self._closed = True
         if self._packer_task is not None:
             self._packer_task.cancel()
+        if isinstance(self._backlight, _GpioBacklight):
+            self._backlight.close()
 
     def _turn_backlight_on(self) -> None:
         if self._backlight is None:

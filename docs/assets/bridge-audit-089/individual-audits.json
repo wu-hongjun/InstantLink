@@ -1,0 +1,1861 @@
+{
+  "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+  "individual_subagents": 32,
+  "reports": [
+    {
+      "number": "057",
+      "plan": "docs/plans/057-bridge-battery-day.md",
+      "optimization": "057 battery-day power and reconnect behavior",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/power/performance.py",
+          "line": 66,
+          "problem": "A transient CPU governor-helper failure is never retried while the requested tier remains unchanged. A locked Bridge can stay at the awake governor indefinitely until a new tier transition or photo boost.",
+          "evidence": "/tmp/instantlink-polish-audit-057-repro.json: one transient powersave setter failure followed by 50 set_power_saving(True) requests produces calls [performance,powersave], actual governor performance, desired powersave, no retry. _apply catches the error and exits; set_power_saving suppresses subsequent same-tier requests.",
+          "recommendation": "Schedule one bounded backoff reconciliation task after failures, with warning coalescing, and cancel/join it on close. Alternatively allow same-tier requests to reconcile an unapplied desired governor, but ensure an autonomous retry exists because stable locked state emits no new transition. Add transient failure recovery and close/cancellation tests."
+        }
+      ],
+      "checks": [
+        "Read AGENTS.md and plan057 plus current performance policy, app accepted-print boost scope, UI preview preparation boost and manual lock handling, network dark-screen cadence, CPU helper and X306 backend.",
+        "30 tests passed in 0.37s: tests/test_power_performance.py tests/test_power_monitor.py tests/test_power_pisugar.py tests/test_ui_unlock_render.py",
+        "Transient governor failure reproduction in /tmp/instantlink-polish-audit-057-repro.json",
+        "X306 backend unavailable=True semantics verified (available false, percentage None, voltage None); no fabricated state of charge."
+      ],
+      "limitations": [
+        "No Pi mutation, hardware measurement, discharge or film use. CPU frequency numerical limits depend on stock Pi cpufreq policy; source uses performance/powersave governors. Reconnect hardware validation owned by parent; later plans supersede historical plan057 wake behavior."
+      ]
+    },
+    {
+      "number": "058",
+      "plan": "docs/plans/058-bridge-awake-performance.md",
+      "optimization": "058 \u2014 awake/printing CPU tiers",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/power/performance.py",
+          "line": 99,
+          "problem": "Interrupted or partially successful governor changes leave the cached applied governor stale, allowing boost cleanup to skip restoring the locked minimum.",
+          "evidence": "/tmp/test_instantlink_cpu_audit_058.py::test_cancel_after_governor_write_restores_locked_minimum fails: setter writes performance, cancellation occurs before return, jobs reaches zero but actual=performance and _applied=powersave. The real subprocess helper can have written sysfs before cancellation or timeout; it has no transactional rollback.",
+          "recommendation": "Invalidate _applied before an external governor mutation (or on all unsuccessful exits including CancelledError), preserving cancellation propagation. Ensure boost cleanup reconciles the desired idle governor after interrupted entry. Add cancellation-after-write and timeout/partial-write regression tests."
+        },
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/power/performance.py",
+          "line": 66,
+          "problem": "A transient helper failure during lock can leave the Bridge indefinitely running at maximum frequency while locked.",
+          "evidence": "/tmp/test_instantlink_cpu_audit_058.py::test_transient_idle_failure_same_request_can_recover fails: first powersave attempt raises a transient OSError; a second identical request returns without retry because _power_saving is already True. _apply returns immediately after failure and schedules no later reconciliation.",
+          "recommendation": "Schedule bounded/backoff reconciliation after helper failures, coalescing subsequent requests and cancelling retry on shutdown. Alternatively allow identical policy requests when the applied state differs and ensure a bounded periodic retry exists. Preserve warning-once-per-failure-sequence semantics and avoid helper calls per render."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONPATH=bridge/src bridge/.venv/bin/python -m pytest -q bridge/tests/test_power_performance.py bridge/tests/test_ui_routing.py bridge/tests/test_preview_review.py bridge/tests/test_photo_job_concurrency.py bridge/tests/test_app.py",
+          "result": "125 passed in 3.24s",
+          "log": "/tmp/instantlink-polish-audit-058-checks.log"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src bridge/.venv/bin/python -m pytest -q /tmp/test_instantlink_cpu_audit_058.py",
+          "result": "2 failed expected-correctness regressions",
+          "log": "/tmp/instantlink-polish-audit-058-repro.log"
+        },
+        {
+          "command": "bash -n bridge/scripts/cpu-mode.sh bridge/scripts/provision-sd.sh",
+          "result": "passed"
+        },
+        {
+          "review": "Boot waits for CPU start before UI; awake/dim use performance; lock/dark use powersave; nested boosts hold performance until final exit; locked manual confirmation waits do not retain boost; preparation and accepted print do; same-button unlock warms tier on first press; 10s expiry restores idle unless job active; systemd stop hook resets ondemand; helper modifies governors only, not limits/voltage. Current later behavior deliberately supersedes plan058 blanket confirmation boost."
+        }
+      ],
+      "limitations": [
+        "Read-only local audit. No Pi commands, physical clock measurements, display/physical button actuation, Printer operations, or film consumption. Actual 600/1000 frequencies depend on deployed stock sysfs limits and thermal/undervoltage protection. No source edits."
+      ]
+    },
+    {
+      "number": "059",
+      "plan": "docs/plans/059-bridge-interface-ux-audit.md",
+      "optimization": "059 streamlined interface / key bindings",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P3",
+          "file": "bridge/src/instantlink_bridge/ui/render.py",
+          "line": 3044,
+          "problem": "Sync-mode ERROR advertises KEY3 Check, but the corresponding action opens iPhone pairing/status instead of checking the failed sync outbox.",
+          "evidence": {
+            "initial_mode": "error",
+            "sync_destination": "iphone",
+            "message": "Sync unavailable",
+            "caption": "KEY3 Check",
+            "key3_calls": "call(return_home=True)",
+            "reachable_from": "app.py dispatch_received_image: sync outbox failure calls print_failed(\"Sync unavailable\")"
+          },
+          "recommendation": "Make the ERROR KEY3 caption destination-aware (iPhone in Sync mode; Check in Print mode), and add a regression for a real Sync unavailable error. Preserve KEY1 Settings and KEY2 Back."
+        }
+      ],
+      "checks": [
+        "Read AGENTS.md and Plan 059; checked current controller, physical input, shared renderer, settings hierarchy and app sync dispatch.",
+        "pytest -q bridge/tests/test_ui_routing.py bridge/tests/test_ui_settings_streamline.py bridge/tests/test_ui_render.py: 180 passed in 0.58s.",
+        "Temporary no-hardware probe reproduced current Sync error caption/action mismatch.",
+        "Confirmed superseding Post/Looks/Correction hierarchy and Ready/Offline/No-film home contexts, no hidden GPIO hold pairing shortcut, Settings reachable without a Printer, Printing KEY2 lock, same physical/remote controller dispatch."
+      ],
+      "limitations": [
+        "Read-only audit; no hardware, film, deployment or edits.",
+        "Visual physical LCD glyph quality and contact timing not measured; existing renderer tests used mocks.",
+        "Historical Plan059 proposal is not used as current desired behavior where later Post and unlock requirements supersede it."
+      ]
+    },
+    {
+      "number": "060",
+      "plan": "docs/plans/060-bridge-post-processing-and-ux-fixes.md",
+      "optimization": "060 \u2014 Bridge Post processing and interface fixes",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/imaging/presets.py",
+          "line": 422,
+          "problem": "Saved Looks lose vignette on persistence/reload. Writer omits vignette and _profile_from_dict (lines498\u2013507) never reads it; selecting a reloaded Custom slot stamps zero into live config.",
+          "evidence": "/tmp-only save/load/stamp repro: AdjustmentsConfig(hue=3,vignette=50) -> saved Custom1 -> loaded vignette0 -> stamped vignette0. Saving Instax Film or any vignette edit cannot reproduce the saved Look after restart.",
+          "recommendation": "Persist profile.vignette, load missing vignette as0 for backward compatibility, and add round-trip coverage including a nonzero vignette and saved Instax Film. Keep Correction independent of saved creative Looks."
+        },
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/imaging/presets.py",
+          "line": 417,
+          "problem": "Hue saving truncates the inverse scale and changes valid edited Look colours after reload.",
+          "evidence": "Valid UI hue3 resolves to round(3*1.8)=5 degrees. int(5/1.8) serializes2; reload round(2*1.8)=4 degrees, and stamping produces UI hue2. /tmp/instantlink-audit-060-presets.toml contains hue=2.",
+          "recommendation": "Use round(profile.hue/1.8), matching stamp_preset_into_config and is_preset_modified. Cover all integer hue values -100..100 through save/load/stamp and repeated saves."
+        }
+      ],
+      "checks": [
+        {
+          "command": "python -m pytest -q tests/test_correction.py tests/test_ui_post.py tests/test_presets.py tests/test_preview_review.py tests/test_prepared_print_reuse.py",
+          "result": "115 passed,2 existing Pillow mode deprecation warnings in2.49s"
+        },
+        "Read AGENTS.md,plan060, current pipeline/postprocess/controller/settings/config/manager correction payload, App model/draft/UI/preview and correction test counterparts.",
+        "Verified source pipeline puts Correction after creative post-fit adjustments; neutral correction returns same image and byte identity is covered.",
+        "Reviewed preview prepared-cache key includes printer,adjustments,correction; correction edits staged and preserve Look; App old-response default/diff validation tests exist.",
+        "Current Print/Post navigation supersedes historical Transform/Workflow arrangement; no mismatch flagged.",
+        "/tmp-only repro saved and reloaded Custom1 with hue3,vignette50; no repository modifications."
+      ],
+      "limitations": [
+        "No Pi access, physical GPIO/LCD check or film used.",
+        "App settings preview is deliberately approximate per plan060; no exact CI/Pillow pixel parity claim.",
+        "Did not run complete App suite; current App correction paths were inspected, existing test source reviewed."
+      ]
+    },
+    {
+      "number": "061",
+      "plan": "docs/plans/061-bridge-three-press-unlock.md",
+      "optimization": "061 triple-unlock guard and reliable LCD wake",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "command": "python -m pytest -q bridge/tests/test_ui_routing.py bridge/tests/test_ui_display.py bridge/tests/test_ui_unlock_render.py bridge/tests/test_unlock_config.py bridge/tests/test_power_performance.py",
+          "result": "137 passed in 0.70s"
+        },
+        {
+          "check": "Additional opt-out/guarded state retention across ERROR, SETTINGS, ADJUSTMENT_EDIT, PRINTING",
+          "cases": [
+            {
+              "mode": "error",
+              "guarded": false,
+              "preserved": true
+            },
+            {
+              "mode": "error",
+              "guarded": true,
+              "preserved": true
+            },
+            {
+              "mode": "settings",
+              "guarded": false,
+              "preserved": true
+            },
+            {
+              "mode": "settings",
+              "guarded": true,
+              "preserved": true
+            },
+            {
+              "mode": "adjustment_edit",
+              "guarded": false,
+              "preserved": true
+            },
+            {
+              "mode": "adjustment_edit",
+              "guarded": true,
+              "preserved": true
+            },
+            {
+              "mode": "printing",
+              "guarded": false,
+              "preserved": true
+            },
+            {
+              "mode": "printing",
+              "guarded": true,
+              "preserved": true
+            }
+          ]
+        },
+        {
+          "check": "Read-only code review",
+          "result": "Verified restore-before-backlight order, cache invalidation, live/visible snapshot separation, same input queue and button identity, selected gate remains stable mid-sequence, restartable 10-second inactivity deadline, CPU boost retention through lock and job cancellation, startup governor gating before later queued presses, cancel-and-join ownership on UI shutdown, and Python/App config default/round trip contract."
+        }
+      ],
+      "limitations": [
+        "No physical GPIO contacts, LCD scanout, Pi hardware, or film accessed in this focused audit. Existing GPIO and framebuffer mocks verify software ordering; parent owns device validation.",
+        "Plan 061 historical mixed-button/fixed-first-press timing is superseded by current same-button/10-second inactivity rules and is explicitly marked historical."
+      ]
+    },
+    {
+      "number": "062",
+      "plan": "docs/plans/062-bridge-same-button-unlock.md",
+      "optimization": "062 \u2014 same-button consecutive unlock identity",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ui/input.py",
+          "line": 158,
+          "problem": "Silent GPIO queue overflow can join two same-button unlock presses to a later same-button press across an intervening different physical button that was dropped. The fallback callback has the same suppression at lines 267\u2013268.",
+          "evidence": {
+            "queue_capacity": 20,
+            "presses": [
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              21,
+              13,
+              13,
+              21,
+              13
+            ],
+            "different_physical_button_dropped": true,
+            "before_final_press": {
+              "locked": true,
+              "count": 2,
+              "id": "gpio:13"
+            },
+            "after_final_press": {
+              "locked": false,
+              "mode": "printer_searching"
+            },
+            "physical_last_four": [
+              13,
+              13,
+              21,
+              13
+            ]
+          },
+          "recommendation": "Fail closed on dropped physical input: invalidate/reset unlock progress and discard uncertain pending presses (or attach an input sequence/generation marker allowing the shared controller to reset on a discontinuity). Preserve task_done accounting and distinguish UI queue gaps from raw GPIO edge sequence gaps. Add a regression at the real 20-item capacity for both kernel and GPIO Zero producers."
+        }
+      ],
+      "checks": [
+        {
+          "command": "python -m pytest -q bridge/tests/test_ui_routing.py bridge/tests/test_ui_input.py bridge/tests/test_unlock_config.py bridge/tests/test_ui_unlock_render.py bridge/tests/test_sync_server.py",
+          "result": "129 passed in 0.82s",
+          "log": "/tmp/instantlink-polish-audit-062-tests.log"
+        },
+        {
+          "command": "python -m pytest -q bridge/tests/test_ui_controller.py -k 'key2_locks or printing_lock or lock'",
+          "result": "...........                                                              [100%]\n11 passed, 259 deselected in 0.17s",
+          "log": "/tmp/instantlink-polish-audit-062-work-tests.log"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src python /tmp/instantlink-polish-audit-062-repro.py",
+          "result": "Confirmed unlock with no three consecutive identical physical button presses at end of sequence. No preceding triple; current 20-item queue capacity reproduced.",
+          "output": "/tmp/instantlink-polish-audit-062-repro.json"
+        },
+        {
+          "review": "KEY1 and joystick press carry distinct gpio:21 and gpio:13 IDs despite both Select; UiAction without identity resolves remote:<action>, which cannot combine with GPIO IDs. Mixed accepted input resets counter, third valid input consumed before mode handlers. Same remote action survives HTTP request/connection boundaries by design; remote physical identity cannot be client-forged."
+        },
+        {
+          "review": "Raw kernel duplicate falling edges/held-at-start presses do not repeat; initial held key must release. Edge sequence gaps discard uncertain edges. GPIO Zero when_held/when_released not assigned; callback generations reject stale callbacks after close. Already enqueued actions have no producer generation/timestamp; audited queue-overflow failure separately."
+        },
+        {
+          "review": "Default-on strict boolean configuration is serialized/persisted and mirrored in App; next wake uses disabled gate once and consumes that input. Printing/live Printer updates remain beneath unlock overlay and manual lock survives background idle activity. Ten-second inactivity semantics supersede original fixed deadline in plan063, implemented/tested."
+        }
+      ],
+      "limitations": [
+        "Read-only source audit and mocked targeted tests; no Pi access, physical contacts, film, source edits, commits, deployment.",
+        "The queue-overflow case requires input producer outrunning the action consumer; realistic during a blocked CPU/power callback or a burst, but not reproduced on physical hardware in this audit.",
+        "Remote actions intentionally identify the abstract button, not TCP/session identity: reconnection is not a separate unlock surface, consistent with documented remote:<action> contract."
+      ]
+    },
+    {
+      "number": "063",
+      "plan": "docs/plans/063-bridge-unlock-inactivity-timeout.md",
+      "optimization": "063 \u2014 ten-second unlock inactivity timeout",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "kind": "focused regression suite",
+          "command": "bridge/.venv/bin/python -m pytest -q bridge/tests/test_ui_routing.py bridge/tests/test_power_performance.py bridge/tests/test_unlock_config.py bridge/tests/test_controller_concurrency.py",
+          "result": "75 passed in 0.25s",
+          "log": "/tmp/instantlink-polish-audit-063-tests.log"
+        },
+        {
+          "kind": "independent controlled-timer exercise",
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python /tmp/instantlink-polish-audit-063-repro.py",
+          "result": "5 additional lifecycle/background-activity checks passed against worktree source",
+          "evidence": "/tmp/instantlink-polish-audit-063-repro.json"
+        },
+        {
+          "kind": "source inspection",
+          "result": "Timer replacement occurs only in accepted unlock handlers. Cancellation cannot race a synchronous expiry mutation on the single event loop; cancellation replaces sleeping coroutine before later callbacks. Successful unlock and explicit relock cancel expiry. Idle expiry preserves active-job CPU boost; controlled-timer suite checks idle and active jobs independently. Setting opt-out takes effect on next wake as documented. Auth-rejected/invalid/full-queue remote input never reaches accepted action handler. Sync screen polling and FTP/status updates cannot refresh unlock timer. stop cancels timeout before closing resources. Application constructs a fresh BridgeUi for each runtime rather than restarting a closed controller."
+        }
+      ],
+      "limitations": [
+        "Read-only software audit; no Pi, physical GPIO, framebuffer, CPU frequency or Printer operation performed.",
+        "Tests verify desired CPU governor requests, not actual hardware clock changes.",
+        "No film used."
+      ]
+    },
+    {
+      "number": "064",
+      "plan": "docs/plans/064-bridge-wifi-recovery.md",
+      "optimization": "064 \u2014 automatic Wi-Fi/hotspot recovery, including driver-holder ordering and plan076 retained-IPv4 correction",
+      "baseline": {
+        "repository": "<repository>",
+        "commit": "c4a27875a612af8bedcd7756d062e4e651cd2c3a"
+      },
+      "findings": [],
+      "checks": [
+        {
+          "type": "read-only source review",
+          "result": "pass",
+          "details": "Reviewed plan064, plan076, controller start/stop, hotspot scheduling/backoff/intent serialization, helper subprocess cleanup, Wi-Fi driver helper, native rtnetlink snapshot and fallback address filtering, network health and manager missing-listener retries."
+        },
+        {
+          "type": "focused mocked/shell tests",
+          "command": "bridge/.venv/bin/python -m pytest -q tests/test_hotspot_recovery.py tests/test_wifi_driver_recovery.py tests/test_net_addresses.py tests/test_net_linux_snapshot.py tests/test_net_health.py",
+          "result": "115 passed in 5.54s",
+          "working_directory": "bridge"
+        },
+        {
+          "type": "shell syntax",
+          "command": "bash -n bridge/scripts/wifi-mode.sh",
+          "result": "pass"
+        },
+        {
+          "type": "correctness conclusions",
+          "result": "No concrete current bug found",
+          "details": [
+            "Healthy wlan0 never triggers driver reload; missing interface reloads brcmfmac_wcc holder before brcmfmac and does not unload Bluetooth.",
+            "Admin-down links with retained IPv4 are excluded by both native and portable batched snapshots; admin-up dormant links remain usable.",
+            "Locked maintenance uses the same network refresh/recovery path without lighting LCD or raising CPU tier, and does not mutate Printer identity/status.",
+            "Recovery is asynchronous, deduplicated, serialized with explicit mode operations, guarded by persisted intent/radio state, deferred for active jobs/other-transport FTP, and cancelled on stop/mode changes.",
+            "Attempts require expected address verification and retain 30/60/120/300-second bounded backoff; process timeout/draining/reaping are bounded."
+          ]
+        }
+      ],
+      "limitations": [
+        "No Pi, Printer, camera, electrical inputs or physical Wi-Fi were operated by this audit agent.",
+        "The existing documented hardware acceptance is historical evidence, not a new live verification.",
+        "Focused tests use mocks and shell stubs; physical driver/firmware behavior and same-time external administrative changes cannot be proved by those tests.",
+        "No source/device edits, commits, film consumption or dependency installs performed."
+      ]
+    },
+    {
+      "number": "065",
+      "plan": "docs/plans/065-bridge-print-flow.md",
+      "optimization": "065 \u2014 streamlined one-photo printing screen cycle",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "kind": "instructions",
+          "result": "Read repository AGENTS.md and docs/plans/065-bridge-print-flow.md."
+        },
+        {
+          "kind": "source_review",
+          "result": "Reviewed image receipt, preparation/review countdown, manual edits/confirm/cancel, preview session retirement, no-film admission, print progress dispatch/drain, completion notice timer, error retention, cached Home navigation, physical/virtual action routing and dark-screen unlock priority."
+        },
+        {
+          "kind": "copy_review",
+          "result": "Printing uses one layout with concise Connecting/Preparing/Sending/Finishing stage mapping. Packet/model/KB detail is omitted. Review uses localized countdown/preparation labels and tool hints. Still printing/Print stalled retains actionable restart feedback."
+        },
+        {
+          "kind": "race_review",
+          "result": "Preview acceptance commits result before cleanup yields; token plus received/result ownership prevents obsolete rebuild repaint. App drains accepted progress before completion/failure and stops accepting progress afterward. Completion expiry checks PRINT_COMPLETE and user Settings entry cancels the timer. Locked state preserves operational printing while render independently presents the unlock prompt."
+        },
+        {
+          "kind": "pytest",
+          "command": "bridge/.venv/bin/python -m pytest -q tests/test_print_flow_ui.py tests/test_ui_controller.py tests/test_ui_render.py tests/test_controller_concurrency.py tests/test_immediate_print_preparation.py",
+          "cwd": "bridge",
+          "result": "414 passed in 7.53s",
+          "log": "/tmp/instantlink-polish-audit-065-tests.log"
+        }
+      ],
+      "limitations": [
+        "Read-only scoped audit; no repository edits or deployment.",
+        "Local mocked control/render tests only; physical LCD/button/Printer timing and camera upload are not revalidated here.",
+        "No film used. Hardware smoke and consolidated running-log/deployment checks belong to the coordinating audit."
+      ]
+    },
+    {
+      "number": "066",
+      "plan": "docs/plans/066-bridge-one-second-review.md",
+      "optimization": "066 \u2014 one-second print review default",
+      "baseline": {
+        "commit": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+        "repo": "<repository>"
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "file": "bridge/src/instantlink_bridge/ui/controller.py",
+          "line": 973,
+          "problem": "The preserved Review 5s choice starts its deadline before the first photo frame is rendered, shortening the promised visible review interval by initial rendering/write latency. The 1s choice happens to retain its full interval because its first wait uses the pre-render remaining value.",
+          "evidence": "Independent no-film synthetic display repro with 250ms first-photo render: configured 5.0s accepted 4.745409s after render completion. Configured 1.0s accepted 1.002249s after render completion. /tmp/instantlink-polish-audit-066-five-second-repro.py and /tmp/instantlink-polish-audit-066-repro.py.",
+          "recommendation": "Render the initial timed photo once, then initialize the monotonic deadline after rendering returns. Add a deterministic fake-clock/display-latency test for both 1s and 5s. Keep current commit-before-cleanup and edit-to-manual behavior."
+        }
+      ],
+      "checks": [
+        {
+          "command": "python -m pytest -q bridge/tests/test_preview_review.py bridge/tests/test_config.py bridge/tests/test_manager_config_api.py bridge/tests/test_ui_unlock_render.py bridge/tests/test_unlock_config.py",
+          "result": "116 passed in 2.37s",
+          "log": "/tmp/instantlink-polish-audit-066-tests.log"
+        },
+        "Read AGENTS, plan066, config parser/serializer/example, manager workflow validation/payload, App config defaults/decoder/draft validation/settings options, runtime dispatch fallback and preview session/action/cleanup state machine.",
+        "Confirmed new/missing defaults=1, explicit 0/1/5/manual preserved, legacy positive nonoption Python values normalize=1, booleans rejected, manager only 0/1/5/off, editing/tool selection incl no-op bounds forces manual confirmation, worker coalescing and session-token gating protect stale callbacks.",
+        "Locked preview follows existing automatic-print policy; input consumed by unlock, preparation CPU boost released after worker completes. No film/no hardware actions."
+      ],
+      "limitations": [
+        "Read-only audit; no repository edits, hardware access, deployment, physical display timing, or film.",
+        "App counterparts reviewed statically; App harness not rerun in this focused audit.",
+        "250ms display latency is injected to expose deadline accounting; current optimized display usually completes much faster, so real current effect is small."
+      ]
+    },
+    {
+      "number": "067",
+      "plan": "docs/plans/067-bridge-startup-settings-performance.md",
+      "optimization": "067",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/app.py",
+          "line": 563,
+          "problem": "A UI shutdown exception aborts the remaining runtime cleanup, leaving FTP, the Bluetooth startup task/agent, CPU governor restoration and shared workers unclosed.",
+          "evidence": "/tmp/instantlink-audit-067-repro.py::test_shutdown_error_skips_owned_resources passed: after core readiness, injected OSError from Ui.stop; ftp-stopping occurred but ftp-stop, agent-cancel and cpu-close did not. Real BridgeUi.stop propagates cached-session disconnect errors through _close_ui_resources; those errors are not caught by shutdown_resources. The reproducer explicitly cancelled the remaining mocked Bluetooth task afterward.",
+          "recommendation": "Make each owned resource shutdown run even after an earlier cleanup error, with try/finally or an ordered cleanup runner that records and rethrows errors only after all cleanup steps. Include a regression using a failed cached Printer disconnect."
+        },
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/manager/api.py",
+          "line": 219,
+          "problem": "Manager HTTP system-information collectors still run synchronously on the event loop. Each /v1/hello performs a blocking bluetoothctl version probe, and /v1/status also performs synchronous system metrics and initial CPU warmup; these requests delay other manager requests, listener retry scheduling and stop handling.",
+          "evidence": "handle_hello directly calls collect_hello_payload, which calls read_system_info/read_bluez_version (subprocess.run timeout=0.5s). The status handler at line 543 directly calls collect_http_status_payload, which also calls read_system_stats (first-sample sleep=0.1s). /tmp/instantlink-audit-067-repro.py::test_hello_collection_blocks_manager_loop passed: a controlled 180ms system-info probe through a real aiohttp TestServer caused a 188ms event-loop heartbeat gap.",
+          "recommendation": "Offload HTTP collectors and cache stable version/identity data. Serialize access to the shared CPUSampler when moving status sampling to workers; preserve request and authentication behavior."
+        },
+        {
+          "severity": "P3",
+          "file": "bridge/src/instantlink_bridge/ui/controller.py",
+          "line": 4034,
+          "problem": "Opening an About CPU/Memory/Storage/temperature detail during initial collection leaves its Help dialog at the missing-value em dash after real data arrives. The completion path updates only dialogs whose body is the ellipsis used by version/identity rows.",
+          "evidence": "/tmp/instantlink-audit-067-repro.py::test_about_metric_dialog_stays_missing_after_collection passed: held the metric reader, opened CPU detail with SELECT, released collection; the cached CPU row became 12% while the still-open dialog remained \u2014. Loading metric rows use format_* on None, yielding \u2014 rather than \u2026.",
+          "recommendation": "Track the selected information key for a value detail and refresh it when collection completes, instead of inferring pending data from the displayed placeholder. Cover all four metrics and ensure explanatory KEY3 Help is preserved."
+        }
+      ],
+      "checks": [
+        "Confirmed frozen HEAD and clean git status.",
+        "Read AGENTS.md and plan 067; considered superseding plans 068, 075, 078, 084, 086, 087 and current implementation.",
+        "Reviewed independent FTP/CPU/Bluetooth startup, deferred Sync/FFI setup, listener retry/removal, Settings grouping/hiding/navigation/Help, font caching and first-frame dependency loading, network snapshots, About collectors, image process-group termination and resource shutdown.",
+        "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_bridge_startup.py bridge/tests/test_ui_settings_streamline.py bridge/tests/test_manager_listeners.py bridge/tests/test_ui_about_concurrency.py bridge/tests/test_net_addresses.py bridge/tests/test_image_worker.py bridge/tests/test_print_metadata_responsiveness.py: 85 passed in 8.23s.",
+        "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -s -p no:cacheprovider /tmp/instantlink-audit-067-repro.py: 3 passed in 1.44s; assertions reproduce the three findings, rather than asserting desired fixed behavior."
+      ],
+      "limitations": [
+        "Read-only source audit on macOS; no Pi operations, deployment, physical GPIO/LCD, camera transfer, Printer interaction or film use.",
+        "Blocking manager timing uses a controlled system-info reader matching its existing blocking probe behavior; actual hardware probe duration is not measured.",
+        "Cleanup failure reproduction uses a mocked UI shutdown exception; current real shutdown paths can propagate cached-session disconnect and GPIO close failures, but hardware fault frequency is not measured.",
+        "No whole-system startup, energy or battery-runtime claim; existing hardware observations in historical plans were not revalidated."
+      ]
+    },
+    {
+      "number": "068",
+      "plan": "docs/plans/068-bridge-concurrency-audit.md",
+      "optimization": "068 Bridge concurrency audit",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P1",
+          "file": "bridge/src/instantlink_bridge/sync/outbox.py",
+          "line": 62,
+          "problem": "A pending Sync photo shares the mutable FTP incoming inode. Once dispatch finishes, app releases the received-source pin; a subsequent STOR to the same incoming filename is allowed and truncates the hard-linked outbox photo. The old outbox item's SHA-256 and size remain unchanged, destroying the first original and making its iOS transfer fail checksum validation.",
+          "evidence": "Reproduced using real pyftpdlib STOR /incoming/reused.HIF twice with production receiver/outbox, only substituting loopback source authorization. /tmp/instantlink-068-hardlink-repro.py reports same_inode_as_incoming=true; old_outbox_bytes='replacement-second-photo' instead of 'original-first-camera-photo'; index_hash_matches_file=false. FTP returned successful completed STOR for both transfers after first job pin release. iOS/InstantLink/Services/SyncClient.swift:178 verifies this stale queue SHA-256.",
+          "recommendation": "Make a published outbox original immutable relative to future FTP writes: copy into its own inode, or detach/reassign the incoming filename before permitting subsequent STOR. Add a real FTP regression that spools and releases an incoming photo, reuploads the same filename, then verifies the first outbox bytes, size and SHA-256 remain unchanged. Also cover APPE/REST mutation if retained."
+        },
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ui/controller.py",
+          "line": 1161,
+          "problem": "Preview cancellation cancels metadata_task (asyncio.to_thread) and then gathers its cancelled asyncio wrapper. The blocking EXIF reader continues after the photo owner completes, allowing source pin/CPU boost release and source overwrite/pruning while the reader still owns its file work. Repeated cancelled slow metadata reads can retain executor workers past UI shutdown rather than preserving owned cleanup.",
+          "evidence": "/tmp/instantlink-068-repro.py held the injected EXIF reader, cancelled _prepare_preview_image, and observed metadata_finished_when_photo_owner_completed=false; deleting the source after owner completion then releasing the reader yielded source_exists_after_owner_finished=false. Existing test_controller_concurrency.py:test_cancel_preview_joins_model_task_and_never_applies_late_metadata intentionally releases its metadata thread only after the cancelled preview has already returned, so the passing test checks stale-result suppression but not thread ownership.",
+          "recommendation": "Cancel and join model detection, but shield and join the EXIF thread task without cancelling its wrapper, retaining photo source ownership until the read completes. If prompt cancellation must interrupt slow metadata parsing, use a killable bounded worker with explicit cleanup. Add held-thread and repeated-cancellation assertions proving source ownership survives until the EXIF read exits."
+        }
+      ],
+      "checks": [
+        "Read repository AGENTS.md and plan 068; reviewed later 070/071/075/076/078/082/083/084/085/088 records as relevant superseding implementation context.",
+        "Inspected current app startup/readiness, per-photo dispatch/shutdown, FTP source reservations/pins, Sync outbox metadata/add locks, HTTP streaming, native FFI lock/cancellation/speculative preparation, image-process single admission/termination/cache, UI preview/accepted edits/About/network/settings concurrency.",
+        "93 tests passed in 9.37s: test_photo_job_concurrency.py, test_ffi_cancel_concurrency.py, test_image_worker.py, test_sync_outbox.py, test_ftp_upload_ownership.py, test_ftp_upload_concurrency.py, test_bridge_startup.py, test_controller_concurrency.py, test_ui_about_concurrency.py; pytest -p no:cacheprovider with external Bridge venv and worktree PYTHONPATH.",
+        "Focused real local FTP hard-link overwrite reproduction completed with checksum mismatch.",
+        "Focused EXIF cancellation ownership reproduction completed; reader remained live after cancelled owner returned.",
+        "Held Sync photo metadata lookup while budget eviction removed the selected item; aiohttp correctly returned 404 rather than 500, so no finding raised for that interleaving.",
+        "git status --short remained empty; no repository edits, Pi changes, commits, hardware operations or film consumed."
+      ],
+      "limitations": [
+        "No Pi hardware timing or 512 MiB resident-memory measurement; bounded large-image memory assessment is code/tests only.",
+        "The EXIF reproduction uses an injected held reader to expose real asyncio cancellation semantics, not a measured typical EXIF latency or naturally hung production file.",
+        "Local FTP reproduction replaces loopback network-source authorization only; file open/truncate, STOR, callbacks, queue handoff and outbox hard-link behavior are production code.",
+        "No broad release suite run because task is a read-only focused audit."
+      ]
+    },
+    {
+      "number": "069",
+      "plan": "docs/plans/069-bridge-hif-flow-benchmark.md",
+      "optimization": "069: normalized HIF working-image decode reuse, preview edit coalescing and camera-upload source ownership",
+      "baseline": {
+        "audited_commit": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+        "worktree": "<repository>",
+        "benchmark_baseline": "473a62c",
+        "benchmark_deployed": "738a088",
+        "live_print_runtime": "7249d4e",
+        "read_only": true
+      },
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/camera/ftp.py",
+          "line": 329,
+          "line_end": 331,
+          "problem": "Queue-overflow cleanup releases the original source pin before unlinking its pathname. The asyncio enqueue callback and FTP server thread can run concurrently: immediately after release, a retry STOR can reserve/open the same incoming pathname, and the older overflow cleanup then unlinks that active upload. The reservation remains present but the uploaded source pathname disappears; a subsequent completed job can reference a missing file.",
+          "evidence": {
+            "repro": "/tmp/test_audit069_overflow_race.py",
+            "result": "1 passed in 0.14s (asserts current broken behavior)",
+            "method": "Uses existing real-socket receiver fixture with queue capacity 1/full. Inserts Event barriers immediately after the first release and after the old unlink. A second FTP client successfully starts STOR /incoming/race.HIF, sends bytes, and confirms path exists plus active reservation. Old overflow callback proceeds; second client then confirms reservation is still active while path no longer exists. Barriers select a valid concurrent schedule; they do not change production admission or unlink behavior.",
+            "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=/tmp/instantlink-audit069-race /tmp/test_audit069_overflow_race.py"
+          },
+          "recommendation": "Keep exclusive ownership through overflow deletion. Release the final pin only after unlink finishes, or provide one cleanup operation protected by the same pending-path lock used for reservation and pins, with inode identity if needed. Add a real-socket regression that attempts same-name retry during overflow cleanup and requires rejection until cleanup completes, then verifies the retry remains present."
+        }
+      ],
+      "checks": [
+        {
+          "name": "Existing cache/FTP/preview/worker focused suite",
+          "result": "97 passed in 12.47s; 12 existing Pillow deprecation warnings",
+          "files": [
+            "bridge/tests/test_working_image_cache.py",
+            "bridge/tests/test_ftp_upload_ownership.py",
+            "bridge/tests/test_ftp_upload_concurrency.py",
+            "bridge/tests/test_ftp_retention.py",
+            "bridge/tests/test_ftp_receive.py",
+            "bridge/tests/test_preview_review.py",
+            "bridge/tests/test_image_worker.py"
+          ],
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=/tmp/instantlink-audit069-tests <listed files>"
+        },
+        {
+          "name": "Late preview results",
+          "result": "3 passed, 267 deselected in 0.17s",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=/tmp/instantlink-audit069-late bridge/tests/test_ui_controller.py -k late_preview_rebuild"
+        },
+        {
+          "name": "Independent extended decode-reuse parity matrix",
+          "result": "1 passed in 1.74s; four variants decode once and exactly match uncached PreparedImage including JPEG bytes",
+          "repro": "/tmp/test_audit069_edit_matrix.py",
+          "coverage": "AUTO/STRETCH/CROP/CONTAIN, quality 62/88/95/100, rotation/zoom/offset, saturation/exposure/hue/sharpness/vignette, independent Correction, datestamp and watermark text changes."
+        },
+        {
+          "name": "Independent real-socket overflow race",
+          "result": "1 passed; confirms P2 race above",
+          "repro": "/tmp/test_audit069_overflow_race.py"
+        },
+        {
+          "name": "Repository preservation",
+          "result": "git status --short empty before and after audit; no source edits, Pi actions, commits or film consumption"
+        }
+      ],
+      "verified_design": [
+        "Source cache key includes canonical source path/device/inode/size/mtime_ns/ctime_ns, model and working bounds. Fit/quality/PrintEdit/Correction/Look/overlays are reapplied after normalized source reuse rather than encoded into the source cache. Existing replacement/model tests and independent edit matrix pass.",
+        "Worker serialization keeps one killable preparation active. Cache BMP dimensions are limited to model working bounds (1200 or 1600 edge); largest RGB BMP approximately 7.68 MB plus header. Pending file replacement is atomic, writer joins before result, and source stat identity is rechecked before publishing cache. Malformed BMP decode falls back to source.",
+        "Worker preparation cancellation/timeout/failure closes process and descendants before dropping cache. Normal worker close deletes cache; idle expiry defaults to 300 seconds. Review SELECT during in-flight edit waits for latest bytes without killing a reusable decode.",
+        "Preview rebuild captures an edit, coalesces subsequent changes, and checks session token/received object/result/mode before painting. Existing late success/failure/newer-session tests pass. Prepared JPEG is consumed once and verifies path/edit plus printer/adjustment/Correction configuration; Printer model is reverified on send.",
+        "FTP STOR canonical reservation is acquired before opening/truncation. Accepted originals are pinned before prune/handoff. Single-consumer asyncio queue preserves completion FIFO; root uploads relocate to unique incoming names, current/incoming same-name writes receive 450. Interrupted transfer/reservation cleanup, shutdown admission/late handoff, queue overflow and pruning tests pass apart from the newly demonstrated cross-thread overflow retry race.",
+        "Incoming retention is explicitly soft: active/queued originals are exempt from 14-day age and configured budget. Pruning happens at startup/arrival; release restores eligibility on the next sweep. Current + queued sources and arbitrary active transfer sizes can exceed budget as already documented."
+      ],
+      "benchmark_assessment": {
+        "069": "Recorded ~0.666-0.676s cached edits versus ~5.75-5.80s uncached edits (~88% lower edit preparation) is scoped to repeated source reuse on the specified Pi/CPU/HEIF/settings. First-photo preparation and sender-boundary replay remain unchanged within variation. Saved seven-HIF parity and hashes support those workload comparisons. Same-Pi local FTP replay does not establish Sony Wi-Fi airtime, BLE send, mechanical ejection, battery improvement or whole-board memory peak.",
+        "072": "One physical Square print measured 32.005s FTP start to successful Bridge PrintStatus completion with film decrement and exact outgoing JPEG. It is correctly labeled one sample with local FTP routing; it does not establish old-to-new full-print speedup, developed-film time, all-model colour validation or a latency distribution. No current broader benchmark claim found.",
+        "status": "Historical performance artifacts were read and their boundaries inspected; no hardware measurements rerun."
+      },
+      "limitations": [
+        "Local macOS Python environment and mocked/fake HIF thumbnailer plus an existing real small HEIF fallback test; no real Sony camera workload or Pi hardware used in this audit.",
+        "No BLE/film, camera Wi-Fi, performance/energy or whole-board memory measurement.",
+        "TemporaryDirectory uses the system temporary directory; current source bounds each BMP, but it does not itself mount tmpfs or guarantee its capacity. /tmp filesystem capacity and crash cleanup remain deployment properties, not newly verified hardware facts.",
+        "Pin safety covers FTP STOR/retention operations; arbitrary external filesystem mutation is outside normal camera ownership and was not presented as a supported source writer.",
+        "No production edits made. Regression probes and pytest artifacts exist only in /tmp. Optional broader tests were not run beyond this focused surface."
+      ]
+    },
+    {
+      "number": "070",
+      "plan": "docs/plans/070-bridge-print-cycle-and-sd-cache-audit.md",
+      "optimization": "070 \u2014 Bridge print cycle and SD cache audit",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/app.py",
+          "line": 530,
+          "problem": "FTP admission remains open after shutdown is observed while the active photo's cancellation cleanup is being joined. run_image_job_until_stopped waits for cancel_and_join_photo_task at lines 1045/1049 before the caller can reach begin_stopping here. A manual-review or Sync upload accepted during this window is queued, then abandoned by shutdown without printing or spooling; there is no automatic replay of these retained incoming originals.",
+          "evidence": {
+            "reproduction": "/tmp/instantlink-audit-070-admission-repro.py",
+            "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python /tmp/instantlink-audit-070-admission-repro.py",
+            "method": "Uses the production FtpReceiveService admission, reservation, receive and handoff paths within the existing Runtime test harness. An event-gated active photo coroutine holds cancellation cleanup after stop_event.set(). The runtime is in iPhone Sync destination, which allows normal uploads independently of Printer state. No socket, Printer or Pi access.",
+            "observed": {
+              "stop_event_set": true,
+              "active_job_cancellation_cleanup_waiting": true,
+              "runtime_done": false,
+              "ftp_stopping": false,
+              "preflight_reply": null,
+              "new_upload_reservation_accepted": true,
+              "queued_late_uploads": 1,
+              "late_source_pinned": true,
+              "owners_after_teardown": 0
+            },
+            "existing_test_gap": "test_ftp_admission_stops_before_slow_shared_resource_cleanup holds ui.stop only after the active image job has exited, so it does not cover the earlier active-job cleanup window. Plan 070 claims shutdown closes admission synchronously."
+          },
+          "recommendation": "Close FTP admission as soon as the runtime observes a shutdown signal or outer cancellation, before awaiting active photo cancellation cleanup. Preserve existing source pins and joins until the active job finishes. Add a regression that blocks active photo cleanup, verifies 451/rejected reservations during that block, then verifies queued ownership is fully released."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_working_image_cache.py bridge/tests/test_image_worker.py bridge/tests/test_preview_review.py bridge/tests/test_bridge_startup.py bridge/tests/test_ftp_retention.py bridge/tests/test_ftp_upload_ownership.py bridge/tests/test_ftp_upload_concurrency.py bridge/tests/test_app.py bridge/tests/test_print_flow_ui.py bridge/tests/test_prepared_print_reuse.py bridge/tests/test_immediate_print_preparation.py bridge/tests/test_image_pipeline.py",
+          "result": "195 passed, 14 existing Pillow mode-parameter DeprecationWarnings, 17.39 seconds"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_ftp_sync_gate.py bridge/tests/test_ftp_receive.py bridge/tests/test_print_metadata_responsiveness.py bridge/tests/test_sync_outbox.py",
+          "result": "65 passed, 0.38 seconds"
+        },
+        {
+          "check": "Current code and later plan reconciliation",
+          "result": "Read AGENTS.md and plans 070, 071 and 075. Verified accepted SELECT freezes and joins the matching preparation, source identity uses inode/ctime/mtime/size/device/path, bounded single-photo temporary cache is invalidated across source/model/working bounds, expiry serializes against preparation, undersized HIF thumbnails retry primary once, and late Sync constructor completion is joined and transferred into shutdown ownership. No additional actionable issue found in these paths."
+        },
+        {
+          "check": "Incoming prune call-site threading",
+          "result": "Startup prune at camera/ftp.py276 occurs before starting the FTP thread. Runtime prune at camera/ftp.py496 runs within on_file_received on the same pyftpdlib thread that executes STOR/reservation. A protected-path snapshot followed by unlocked prune therefore does not permit a concurrent new production STOR reservation; no separate finding raised."
+        },
+        {
+          "check": "Repository cleanliness",
+          "result": "git status --short empty after focused tests; no repository source edits or commits. Report and reproduction are under /tmp."
+        }
+      ],
+      "limitations": [
+        "Read-only local audit with fake I/O; no Pi operations, BLE sends, physical film, camera upload or SD timing measurement.",
+        "No full Bridge suite or static checks were run because no source changed and focused tests cover the assigned surfaces.",
+        "Already independently reported by sibling audits and deliberately not duplicated: overflow release-before-unlink race (069), mutable SyncOutbox hard links and unjoined EXIF metadata threads (068), and teardown abort when ui.stop raises (067).",
+        "Admission reproduction exercises production callbacks directly with a cancellation-gated fake photo job rather than a real FTP socket transfer. It conclusively establishes the incorrect admission state while shutdown waits; actual camera retry behavior was not measured."
+      ]
+    },
+    {
+      "number": "071",
+      "plan": "docs/plans/071-bridge-prepared-jpeg-native-handoff.md",
+      "optimization": "071 \u2014 Prepared JPEG native handoff",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "check": "Read-only implementation and contract audit",
+          "result": "Passed",
+          "details": "Reviewed AGENTS.md, plan 071, core image.rs/models.rs/device.rs, FFI lib.rs and committed header, Bridge ble/instantlink.py and the pipeline flip boundary. Exact model and flip declaration, dimensions/8-bit three-component baseline JPEG, byte budget, complete entropy decode and no trailing bytes are checked before transfer. Core chunks supplied bytes with no resize/flip/re-encode; Mini Link 3 flips once before Python encoding and preview reverses only for display. DEVICE is released before callbacks; per-Printer operation lock covers validation and transaction. Export panic guards and Bridge buffer/callback ownership through repeated cancellation are preserved."
+        },
+        {
+          "check": "cargo test -p instantlink-core -p instantlink-ffi --locked prepared -- --nocapture",
+          "result": "Passed",
+          "details": "12 filtered Rust tests passed, including four core unit tests and four FFI unit tests. The simulated panic is caught and returns -3; it is an expected test diagnostic."
+        },
+        {
+          "check": "cargo test -p instantlink-core --locked --test prepared_jpeg_adversarial --test print_pacing --test mtu_fragmentation",
+          "result": "Passed",
+          "details": "30 tests passed (9 adversarial JPEG, 10 pacing/cancel, 11 MTU/serialization). Covers strict model/flip identity, corrupt and truncated entropy, RGB dimensions/byte limits, invalid input with no writes, exact byte reassembly, callbacks, operation serialization and no replay after cancellation/errors."
+        },
+        {
+          "check": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_prepared_jpeg_backend.py bridge/tests/test_prepared_jpeg_adversarial.py bridge/tests/test_ffi_cancel_concurrency.py bridge/tests/test_prepared_print_reuse.py",
+          "result": "Passed",
+          "details": "47 tests passed. Two existing Pillow mode-parameter deprecation warnings in postprocess.py:716. Native handoff bytes/model/flip/progress, upright previews, old-library compatibility, no retry on native error, repeated cancellation and lock/buffer/callback lifetime all passed."
+        },
+        {
+          "check": "Independent /tmp Rust validation harness linked against current core",
+          "result": "Passed",
+          "details": "44 probes across Mini, Mini Link 3, Square and Wide: valid baseline accepts without mutation; wrong flip, empty data, trailing byte, concatenation, truncated entropy with restored EOI, 12-bit SOF precision, 2-component declaration, wrong width, progressive and grayscale all reject. Independent Pillow-generated asymmetric fixtures and probe source are under /tmp/instantlink-audit-071-independent."
+        },
+        {
+          "check": "Actual C ABI through ctypes without a device",
+          "result": "Passed",
+          "details": "18 calls across all three prepared-JPEG exports verified symbol presence, null/empty/invalid model/invalid flip return -5, oversized length returns -6 before dereference, valid declaration without connected device returns -1. No BLE operation or native initialization was requested."
+        },
+        {
+          "check": "bash scripts/check-ffi-header.sh",
+          "result": "Passed",
+          "details": "Generated public ABI matches committed header. Used stable-aarch64-apple-darwin, CARGO_TARGET_DIR=target/native-checks-071, CARGO_INCREMENTAL=0."
+        },
+        {
+          "check": "git status --short",
+          "result": "Passed",
+          "details": "Worktree remained clean; no repository source edits or commits."
+        }
+      ],
+      "limitations": [
+        "No Pi access, BLE connection, physical Printer transfer, film use, physical LCD inspection, or print color/speed validation; transfer and callback behavior checked with mocks.",
+        "Native validation verifies the declared flip requirement and cannot infer visual orientation from arbitrary content; caller orientation semantics are covered by asymmetric Bridge fixtures.",
+        "Mini versus Mini Link 3 detection depends on supplementary DIS FI033. Core currently classifies 600x800 without a recognized DIS number as Mini (device.rs:658-660), and a failed DIS read becomes None (transport.rs:1380). This existing detection fallback was not changed or hardware-tested in this 071 handoff audit; exact-identity validation matches the core detected model.",
+        "FFI panic safety covers Rust panics; pointer validity and lifetime and callback non-reentry remain caller obligations documented by the C API."
+      ]
+    },
+    {
+      "number": "072",
+      "plan": "docs/plans/072-bridge-live-hif-print-benchmark.md",
+      "optimization": "072 \u2014 full HIF pipeline, prepared quality and orientation",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/app.py",
+          "line": 438,
+          "problem": "Photo jobs combine dequeue-time sender settings with live preview settings. item_config is captured before Bluetooth readiness and sync-pairing deferral, while BridgeUi._prepare_preview_image reads current ui._config. Prepared reuse checks against current UI settings rather than the config actually passed to the sender. A settings change during these waits therefore survives reuse as inconsistent parameters; model-mismatch re-preparation prints old fit, quality, Look/Correction, and sender options/target selection can remain old even when preview bytes are new.",
+          "evidence": {
+            "source": [
+              "app.py:438-447 captures config before readiness wait",
+              "app.py:954-996 awaits UI confirmation then passes original config to target selection and sender",
+              "ui/controller.py:1137-1193 prepares using current self._config",
+              "ui/controller.py:1215-1225 validates prepared settings only against current UI config",
+              "ble/instantlink.py:663-687 rebuilds mismatched model using sender parameters"
+            ],
+            "repro_command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python /tmp/instantlink-audit-072-repro.py",
+            "repro_result": {
+              "captured": [
+                {
+                  "fit": "auto",
+                  "quality": 100,
+                  "correction": 1.0,
+                  "print_option": 0,
+                  "prepared_model": "mini",
+                  "prepared_fit": "contain",
+                  "prepared_quality": 90
+                }
+              ],
+              "sent_matches_old_dequeue_parameters": true,
+              "sent_matches_current_preview_parameters": false,
+              "sha256_sent": "61d7e13c0078a8e6932661aeb19f720eff38d788a7fb44223aa4c02aa9942dcc",
+              "sha256_current_preview_parameters_for_actual_model": "dd31337801fde895bbf13bd53fe9e0c3c0da56fc5a3cc3ff88345e28a43c1631"
+            },
+            "repro_explanation": "Local real BridgeUi preparation and real app.handle_received_image/send_print_to_printer plus mocked connection/native sender. A new live config uses contain/quality90/correction0.6/option7 and preview Mini while detected output is Square; sender retains auto/quality100/correction1.0/option0. Detected-model check correctly discards Mini JPEG, but resulting Square bytes match old dequeue settings and differ from current preview settings."
+          },
+          "recommendation": "Bind one immutable accepted-photo specification carrying the resolved image parameters and selected Printer identity through preview reuse and detected-model fallback, or consistently pass the captured config into preview generation. Preserve captured sync destination independently. Add a gated readiness or sync-pairing regression with settings changed before preview and verify both reuse and model-mismatch fallback use the same accepted parameters."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_image_pipeline.py bridge/tests/test_working_image_cache.py bridge/tests/test_prepared_jpeg_backend.py bridge/tests/test_immediate_print_preparation.py bridge/tests/test_preview_review.py bridge/tests/test_postprocess.py",
+          "result": "124 passed in 9.26s; 17 preexisting Pillow mode-parameter deprecation warnings"
+        },
+        {
+          "review": "New HIF decodes once, normalizes EXIF/RGB/materialized pixels, writes lossless BMP before creative adjustments; cached edits reopen exactly those normalized pixels and rerun same creative/edit/fit/correction/JPEG stages. Cache identity includes resolved path, device/inode/size/mtime/ctime and model/working size; TTL, replacement, cancellation, decode failure and corrupt-cache coverage passed."
+        },
+        {
+          "review": "Correction follows pre-fit Look, per-photo rotation/zoom/offset, fit, post-fit saturation/exposure; Link3 transport flip occurs once after correction before JPEG encode. Prepared LCD preview reverses transport flip for display. Native model, dimensions and flip guards correctly reject mismatches; native validator checks declared model, JPEG integrity/budget/dimensions and non-neutral EXIF before Printer writes."
+        },
+        {
+          "review": "No PhotoJobSpec symbol exists at baseline. PrintEdit, PreparedImage, request, adjustment/correction and config structures are individually frozen, but there is no shared resolved photo-job specification across preview and sender."
+        },
+        {
+          "review": "Historical plan072 measurements are appropriately bounded: one saved Sony a7C II HIF and Square print, recovered wire JPEG hashes, direct user visual confirmation, no colorimetry or mechanical-development timing. Plan073 supersedes MTU candidate with payload236 and Square physical comparison; plan074 changes pacing with no-film download tests; plan076 JPEG print records developed film not inspected. No later document reviewed misrepresents these as current all-model physical quality validation."
+        },
+        {
+          "review": "FTP pins queued/current source paths and refuses overwrites until release after job cleanup. Thus prepared key being path/edit rather than a source hash is not reported as a production stale-source defect."
+        },
+        {
+          "command": "git status --short",
+          "result": "clean before and after audit; repository unchanged"
+        }
+      ],
+      "limitations": [
+        "No Pi, Printer, camera network, film or native hardware calls were accessed. Repro uses synthetic JPEG pixels and mocked native connection/send boundaries; HIF equivalence uses existing controlled fake-thumbnailer and real tiny pillow-heif regression coverage.",
+        "No raw personal HIF/Bluetooth capture or film photograph was independently reanalyzed; historical quality observations were assessed from committed sanitized evidence and accurately scoped records.",
+        "Rust validator/FFI read for contract review; no new Rust build/test run in this audit. Related prepared handoff audit separately covers native tests."
+      ]
+    },
+    {
+      "number": "073",
+      "plan": "docs/plans/073-bridge-mtu-aware-bluetooth-transport.md",
+      "optimization": "073 \u2014 MTU-aware Bridge Bluetooth transport",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "kind": "source review",
+          "result": "pass",
+          "scope": "AGENTS.md, docs/plans/073, current transport/protocol/device/commands/image/models, and later image-transfer/ACK/teardown fixes; MTU exact device/service/characteristic ancestry and ambiguity, 236 production/244 diagnostic/182 fallback and small-MTU clamp, bounded fallback cache, delivery poisoning, fresh-link reset, serialization, prepared JPEG bytes/padding/orientation, cancellation and bounded disconnect"
+        },
+        {
+          "kind": "Rust tests",
+          "command": "cargo test -p instantlink-core --locked --lib transport::",
+          "result": "pass",
+          "passed": 64
+        },
+        {
+          "kind": "Rust tests",
+          "command": "cargo test -p instantlink-core --locked --test mtu_fragmentation --test prepared_jpeg_adversarial --test data_ack_identity --test download_only_benchmark --test download_pacing",
+          "result": "pass",
+          "passed": 40,
+          "counts": {
+            "mtu_fragmentation": 11,
+            "prepared_jpeg_adversarial": 9,
+            "data_ack_identity": 5,
+            "download_only_benchmark": 9,
+            "download_pacing": 6
+          }
+        },
+        {
+          "kind": "Rust tests",
+          "command": "cargo test -p instantlink-core --locked --lib device::",
+          "result": "pass",
+          "passed": 47
+        },
+        {
+          "kind": "environment",
+          "result": "Rust stable 1.97.1, native arm64 macOS; PATH uses <stable Rust toolchain>; CARGO_TARGET_DIR=target/native-checks-071; CARGO_INCREMENTAL=0"
+        },
+        {
+          "kind": "worktree status",
+          "result": "clean before and after; no repository edits or commits"
+        }
+      ],
+      "limitations": [
+        "No Printer, Pi, or film used; no hardware timing, RF reliability, physical orientation, or real BlueZ disconnect claim is newly established.",
+        "Linux-only D-Bus MTU identity and Linux physical-disconnect timer tests were reviewed but not executed on the native macOS host.",
+        "Mini, Mini Link 3, Wide, and model-unknown Data ACKs intentionally preserve opcode/status-tail compatibility; exact indexed Data ACK matching is enabled for verified Square replies.",
+        "A missing ACK or cancellation after an enlarged fragment conservatively downgrades that device because delivery is uncertain; tests confirm it resets and never replays. Small control failures and later teardown errors do not inherit earlier successful enlarged-write attribution."
+      ]
+    },
+    {
+      "number": "074",
+      "plan": "docs/plans/074-bridge-bluetooth-chunk-pacing.md",
+      "optimization": "074 Bridge Bluetooth chunk pacing",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "check": "Read AGENTS.md, docs/plans/074-bridge-bluetooth-chunk-pacing.md and authoritative Rust transfer/ACK/transport/recovery paths",
+          "result": "pass",
+          "details": "Linux + Square + exact production payload 236 + no legacy ACK + no pacing fallback selects 25 ms; other contexts use model baseline. Square final settle remains 150 ms; pre-execute remains 1000 ms."
+        },
+        {
+          "check": "cargo test -p instantlink-core --locked --test print_pacing --test data_ack_identity --test download_pacing --test download_only_benchmark",
+          "result": "pass",
+          "tests": 30,
+          "details": "Exact/stale/future/malformed ACK identity and shared receive deadline; legacy and model compatibility; byte identity; held ACK operation serialization; settling; known versus uncertain errors; no replay and no-film restrictions."
+        },
+        {
+          "check": "cargo test -p instantlink-core --locked --lib transport::adversarial_tests",
+          "result": "pass",
+          "tests": 27,
+          "details": "Context gating, first-short-gap attribution, bounded 128-device cache, separation of pacing/fragment/reset policies, persistent baseline after reset, command cancellation and physical disconnect verification."
+        },
+        {
+          "check": "Independent /tmp harness audit074_cancel_guard_covers_start_end_handoff_preexecute_execute_and_cancel against actual core rlib",
+          "result": "pass",
+          "tests": 1,
+          "subcases": 6,
+          "details": "Aborted actual public print/download futures during Start ACK, End ACK, LED ACK, pre-execute wait, PrintImage ACK, Cancel ACK. Every case invoked failed guard and emitted no later command/replay after 30 seconds paused-time advance.",
+          "source": "/tmp/instantlink-audit074-guard.rs"
+        },
+        {
+          "check": "Post-check git status --short and git rev-parse HEAD",
+          "result": "pass",
+          "details": "Tracked working tree remains clean; baseline unchanged. No repository edits, commits, deployment or hardware commands."
+        }
+      ],
+      "limitations": [
+        "Native checks ran on macOS arm64 with stable Rust and CARGO_TARGET_DIR=target/native-checks-071, CARGO_INCREMENTAL=0. Five Linux-only adversarial cases are not compiled on this host; the pure context test explicitly covers Linux policy selection.",
+        "No Pi, Printer, film, BLE capture or physical print was used. Historical plan evidence was read but not independently re-measured; internal Printer storage, developed-film quality, mechanical timing and battery impact remain outside this offline audit.",
+        "Independent cancellation repro uses hardware-free mock transport for the public device flow; real transport poisoning/cache behavior is covered separately by the authoritative transport adversarial tests.",
+        "No current actionable issue confirmed in optimization 074 scope."
+      ]
+    },
+    {
+      "number": "075",
+      "plan": "docs/plans/075-bridge-runtime-correctness-and-idle-audit.md",
+      "optimization": "075",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P3",
+          "file": "bridge/src/instantlink_bridge/ui/controller.py",
+          "line": 5578,
+          "problem": "About collection resumes behind the unlock prompt. _begin_unlock keeps _screen_locked=True and the underlying SETTINGS/About state, but _effective_idle_stage returns ACTIVE while _unlocking. Consequently the refresh loop passes its not-dark guard and starts metadata/stats reads even though the visible mode is UNLOCKING.",
+          "evidence": "Independent asyncio repro using existing fake UI, real _lock_screen/_begin_unlock/_run_about_page_refresh, 5ms refresh cadence and mocked _collect_about_information: 0 starts while dark; 1 start after the first unlock press with screen_locked=True, unlocking=True and _visible_snapshot().mode=UNLOCKING. Existing test_locked_about_does_not_start_hidden_collectors_but_wake_can only checks full wake and does not cover the unlock overlay.",
+          "recommendation": "Require the About page to be actually visible before periodic refresh or collection starts, including excluding _unlocking / lock overlay; allow normal collection once the three-press unlock completes. Add a focused first-press/abandonment regression."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_runtime_idle_correctness.py bridge/tests/test_ffi_cancel_concurrency.py bridge/tests/test_controller_concurrency.py",
+          "result": "37 passed in 0.93s"
+        },
+        {
+          "command": "Independent inline asyncio hidden About unlock-overlay repro",
+          "result": "Reproduced collector start while visible mode UNLOCKING and screen_locked=True; no collection while dark"
+        },
+        {
+          "review": "Blocking FFI cancellation grace, sender watchdog completion-vs-TimeoutError, stale result guards, bond cancellation/recovery handoff and retired status-task ownership, status change/heartbeat/error logging, dark TTL/wake scheduling",
+          "result": "No additional distinct correctness findings in reviewed paths"
+        }
+      ],
+      "limitations": [
+        "Read-only local audit of frozen baseline; no repository edits, Pi access, Printer access, commits or film use.",
+        "Known app shutdown cleanup abort, metadata to_thread cancellation ownership and About placeholder staleness findings were excluded as requested.",
+        "Focused mocked checks do not establish physical input latency, hardware efficiency or complete live journal acceptance.",
+        "Low-severity finding concerns unnecessary collection during the bounded unlock prompt; no measured battery impact claimed."
+      ]
+    },
+    {
+      "number": "076",
+      "plan": "docs/plans/076-bridge-live-runtime-acceptance.md",
+      "optimization": "076",
+      "baseline": "c4a2787",
+      "findings": [],
+      "checks": [
+        {
+          "check": "Read AGENTS.md, plan 076, commits dedfdb2/683a1ee/811d51f/8bbbd88 and current discovery, polling, pairing, address snapshot and hotspot recovery implementation including later runtime fixes.",
+          "result": "No actionable defect found. Linux candidates without RSSI require confirmed Connected=true; connection checks use one deadline. Startup gate runs before fetch and generation checks preserve supersession. Recovery tasks are shielded against waiter cancellation."
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_runtime_idle_correctness.py bridge/tests/test_net_addresses.py bridge/tests/test_net_linux_snapshot.py bridge/tests/test_ui_pairing_dbus.py",
+          "result": "129 passed in 0.43s"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_hotspot_recovery.py bridge/tests/test_ui_controller.py -k 'locked_recovery or startup or proactive_bond or rebond or poll_waits or cancelled_poll or network_refresh_does_not_record_power_activity'",
+          "result": "26 passed, 269 deselected in 0.30s; locked recovery preserves dark display, idle governor, Printer selection/freshness."
+        },
+        {
+          "command": "PATH=<stable Rust toolchain>:/tmp/instantlink-native-build-tools-071/bin:$PATH CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 cargo test -p instantlink-core --locked scan_evidence -- --nocapture",
+          "result": "4 passed; RSSI skips query, connected-without-RSSI accepted, disconnected/unknown excluded, three pending queries consume 250 ms total."
+        },
+        {
+          "check": "In-memory startup polling reproduction, no source edits: delayed backend readiness followed by two successful fetches, then generation supersession.",
+          "result": "PASS: no calls before readiness; events exactly ['startup_reset', 'fetch', 'fetch']."
+        },
+        {
+          "check": "Recompute docs/assets/bridge-audit-076/wifi-recovery-connected.json sample claims.",
+          "result": "PASS: all 31 samples locked, PID7032, Connected=true, 600000 kHz; four distinct status timestamps; maximum status age 9.542704007000339s matches artifact; film0/history68 unchanged."
+        },
+        {
+          "check": "Review journal-review.json and plan chronology alongside validation and normal-service records.",
+          "result": "Historical boots and controlled shutdowns distinguished from later runtime; injected Bluetooth failures retained; brcmfmac and hci_conn_timeout WARN explicitly remain driver/kernel follow-ups with no claim of established root cause or fix."
+        },
+        {
+          "check": "git status --short",
+          "result": "Clean before audit; repository files not edited. Report written only under /tmp."
+        }
+      ],
+      "limitations": [
+        "Read-only local audit; no Pi, Printer, camera, electrical GPIO, network fault injection or physical print performed; no film used.",
+        "Rust helper tests run on macOS stable toolchain. Linux production collection and BlueZ transport integration inspected but not compiled or executed on Linux in this audit.",
+        "RSSI retained by BlueZ is scan evidence but not proof of current liveness; explicitly documented limitation.",
+        "Raw service/kernel journals are private and absent from repository. Historical boot/PID/monotonic classifications cannot be independently reconstructed from raw entries here; saved artifacts and plan are internally consistent.",
+        "Saved connected Wi-Fi evidence is finite and does not establish indefinite reliability, camera association/airtime, energy consumption, electrical input behavior, or driver/kernel warning root causes.",
+        "Initial Rust invocations failed due Homebrew cargo not accepting +stable and unavailable cmake in shell PATH; exact stable/build-tools PATH retry passed."
+      ]
+    },
+    {
+      "number": "077",
+      "plan": "docs/plans/077-bridge-event-driven-gpio.md",
+      "optimization": "077 \u2014 Bridge event-driven GPIO input",
+      "baseline": "c4a2787",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ui/input.py",
+          "line": 139,
+          "problem": "Kernel event sequence discontinuity resynchronizes pressed levels but preserves the controller\u2019s same-button unlock progress. Lost or discarded intervening buttons can therefore join a prior 2/3 sequence with a later press and unlock incorrectly.",
+          "evidence": {
+            "reproduction": "/tmp/test_instantlink_audit_077.py::test_gap_leaves_unlock_progress_and_next_key_unlocks",
+            "path": "Nonblocking pipe event source \u2192 production GpioUiInput._read_edges \u2192 production BridgeUi._actions \u2192 BridgeUi._run_actions; default maxsize 20 never fills.",
+            "stimulus": "KEY1 fall/release seq 1..4 reaches 2/3. Simulated 128-record kernel ring retains KEY2 seq 6..133 after losing seq 5 KEY2 falling edge. Gap logs expected 5 / received 6; sampled levels show KEY2 held, monotonic cutoff 2000 discards retained timestamps 906..1033. Controller remains 2/3. Clean KEY1 falling seq 134 timestamp 2100 unlocks.",
+            "observed": "gpio._sequence 133; discard cutoff 2000; application queue empty after resync; unlock_presses 2; next KEY1 sets screen_locked False and restores PRINTER_SEARCHING.",
+            "distinct_from_audit 062": "This reproduction has kernel sequence loss and no QueueFull. Independently corroborated existing audit 062 QueueFull omission in a same-read KEY1-second/KEY2 batch and gpiozero suppressed QueueFull path; those are not separate new findings.",
+            "contract": "Plan 077 requires overflow recovery to avoid uncertain unlock presses. Kernel docs specify oldest-event loss on buffer overflow, sequence numbers for detection, monotonic timestamps by default, and stable debounce for values/events.",
+            "primary_sources": [
+              "https://docs.kernel.org/userspace-api/gpio/gpio-v2-line-event-read.html",
+              "https://docs.kernel.org/userspace-api/gpio/gpio-v2-get-line-ioctl.html"
+            ]
+          },
+          "recommendation": "Propagate an input discontinuity to the shared controller whenever kernel sequence loss or enqueue overflow occurs. Conservatively clear pending unlock progress and buffered presses whose continuity cannot be established; preserve queue task_done bookkeeping. Test a 128-event simulated kernel overflow while at 2/3, QueueFull during a batch, legacy callback overflow, and mixed remote/physical identities."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_ui_input.py",
+          "result": "20 passed in 0.17s"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q /tmp/test_instantlink_audit_077.py bridge/tests/test_ui_routing.py bridge/tests/test_ui_input.py",
+          "result": "72 passed in 0.89s, including 4 independent probes that assert observed behavior"
+        },
+        {
+          "inspection": "GPIOv2 ABI, request FD cleanup on setup/read failure, reader removal before close, 8 mappings, 128-record read bound, all-button held suppression, sequence wrap, monotonic discard, owned/shared gpiozero factory lifecycle and callback generation guards",
+          "result": "No additional actionable defects identified"
+        },
+        {
+          "inspection": "Read AGENTS.md, plan 077, plan 062, production input/gpio_edges/controller, focused tests, plan 077 recorded review/validation evidence",
+          "result": "completed"
+        }
+      ],
+      "limitations": [
+        "Host macOS; GPIO ioctls/controller values are mocked and edge streams are injected through a pipe. No new real Linux GPIO mockup or physical switch validation.",
+        "No Pi access, Printer access, film consumption, deployment, commits, or repository edits.",
+        "Ruff/mypy/full Bridge suite were not repeated for this read-only focused audit.",
+        "The tests asserting reproduced defects pass because their assertions describe current incorrect behavior; passing does not mean the defects are fixed."
+      ]
+    },
+    {
+      "number": "078",
+      "plan": "docs/plans/078-bridge-native-network-snapshots.md",
+      "optimization": "078: native network/address snapshots and shared-agent BlueZ ObjectManager lookups",
+      "baseline": "c4a2787",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ble/agent.py",
+          "line": 805,
+          "problem": "A snapshot reply superseded by an authenticated Device1 signal is returned unchanged to mutation callers. The cache revision check protects reusable identity state only; the bond-removal gate can therefore authorize removal using older Connected=False after the cache has already observed Connected=True.",
+          "evidence": {
+            "repro_file": "/tmp/test_instantlink_audit_078.py",
+            "test": "test_repro_reply_then_signal_same_reader_turn_allows_live_bond_remove",
+            "steps": [
+              "Seed registered owner :1.10 and complete target Device1 cache with Connected=False.",
+              "Start BluetoothctlPrinterPairer.reset_bond_if_disconnected using service.managed_objects_snapshot.",
+              "Resolve the pending bus-call Future with a valid owner-authenticated older Connected=False reply.",
+              "Before yielding, deliver owner-authenticated PropertiesChanged Connected=True for the same target path.",
+              "Resume the query: the cache remains Connected=True, but the gate returns disconnected and runs bluetoothctl devices followed by remove FA:AB:BC:51:CC:E2."
+            ],
+            "result": "The controlled repro passes while asserting that Connected is True at the instant remove is invoked. Opposite-direction stale Connected=True also issues disconnect after a newer False signal.",
+            "consumer_ordering": "The installed dbus_fast aio/message_bus.py call() awaits a Future and _reply_handler resolves it. aio/message_reader.py processes buffered messages synchronously in a loop. An older reply followed by a newer signal in the same reader turn can therefore update revision before the snapshot coroutine resumes; the repro does not require BlueZ to send a newer signal before an older reply on the wire.",
+            "related_lines": "agent.py:467 rejects cache seeding when revision changed; agent.py:781 records revision; agent.py:802 invokes cache seeding; agent.py:805 returns original body. ui/pairing.py:698 uses this result as the bond gate; reset_bond_if_disconnected then calls removal."
+          },
+          "recommendation": "Reject or refresh a snapshot whose relevant device revision changed before it can be consumed for mutation. Reconciliation must preserve full Address/Alias/Adapter validation because the reduced watch cache is insufficient for the bond gate. Ensure the gate falls back to fresh authoritative CLI state or a bounded fresh owner-scoped snapshot rather than authorizing removal from the superseded negative. Add the reply-then-signal buffered-consumer case as a regression test."
+        }
+      ],
+      "checks": [
+        {
+          "check": "Read repository AGENTS.md, plan078, later plan082 and plan085 changes, current native parser/address helpers, BlueZ agent and mutation callers, shared network refresh/coalescing and stale-generation rejection.",
+          "result": "Complete; no source edits."
+        },
+        {
+          "check": "Initial focused repository pytest: test_net_linux_snapshot, test_net_addresses, test_ui_pairing_dbus, test_bluez_agent_recovery, test_net_health, test_ui_pairing.",
+          "result": "232 passed in 0.33s."
+        },
+        {
+          "check": "Final expanded focused pytest: same six plus test_sync_server, test_ui_controller, test_controller_concurrency and supplemental /tmp test file as collected then.",
+          "result": "579 passed in 8.20s: 555 repository tests and 24 supplemental cases."
+        },
+        {
+          "check": "Final supplemental /tmp/test_instantlink_audit_078.py after adding ordered consumer repro.",
+          "result": "25 passed in 0.39s."
+        },
+        {
+          "check": "Independent rtnetlink cases",
+          "result": "Malformed/truncated records, duplicate relevant attributes, unexpected sequence/header port/socket sender/group, interrupted dump, kernel error/overrun, timeout, multipart split DONE, kernel port zero, retained addresses/admin-UP, non-host scope, multiple prefixes, descriptor closure and bounded timeouts passed."
+        },
+        {
+          "check": "Independent BlueZ cases",
+          "result": "Generation changes reject delayed snapshots; cancellation leaves bus/agent available for later reads; stale Connected revisions reproduce mutation-caller defect in both directions; reply-before-signal Future delivery reproduces live-bond removal."
+        },
+        {
+          "check": "Native/fallback review",
+          "result": "No additional current finding: fresh native socket per read, 250ms deadline shared across address/link dumps, admin flags sampled last, malformed native data discarded, exactly one 1.5s fallback probe per batch and preserved single-interface assigned-address policy."
+        },
+        {
+          "check": "One attempted expanded pytest invocation named nonexistent test_ui_ftp_status.py/test_ui_reconnect.py.",
+          "result": "No tests ran; corrected to actual test_ui_controller.py/test_controller_concurrency.py before final focused run."
+        }
+      ],
+      "limitations": [
+        "Read-only audit of the specified worktree at c4a2787; no repository edits, commits, Pi access, live system-bus queries, Printer commands or film use.",
+        "Network socket and BlueZ tests use controlled local responses. No Linux kernel parity, physical interface, live BlueZ or hardware performance measurements were rerun.",
+        "The stale-state finding is a deterministic consumer-ordering repro supported by local dbus_fast source, not evidence that this race occurred in a deployed service journal. Real occurrence depends on reply and later signal delivery timing.",
+        "Network snapshots are intentionally non-atomic with interface changes; retained-address admin-UP checks and generation rejection are covered, but no atomicity claim is made.",
+        "No performance, energy, connected-workload or firmware deployment claim is made."
+      ]
+    },
+    {
+      "number": "079",
+      "plan": "docs/plans/079-bridge-native-bluetooth-discovery.md",
+      "optimization": "079 Bridge native Bluetooth discovery and BlueZ agent owner recovery",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [],
+      "checks": [
+        {
+          "check": "Read AGENTS.md and docs/plans/079-bridge-native-bluetooth-discovery.md; reviewed current Rust transport_discovery.rs, collect_instax_peripherals, printer discovery/selection/cleanup, and Python BluezAgentService owner registration/cache/watch lifecycle",
+          "result": "No confirmed current defect. Exact selected-adapter path lookup, conservative malformed/missing fallback, name/service checks, Android exclusion, shared liveness deadline, 500 ms native snapshot budget, resource cancellation ownership, owner generation checks, bounded registration and event-driven late-interface retry are present."
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_bluez_agent_recovery.py",
+          "result": "75 passed in 0.19s"
+        },
+        {
+          "command": "PATH=<stable Rust toolchain>:/tmp/instantlink-native-build-tools-071/bin:$PATH CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 cargo test -p instantlink-core --locked scan_evidence",
+          "result": "4 passed; connected-without-RSSI, inactive/unknown exclusion, and shared deadline covered"
+        },
+        {
+          "command": "PATH=<stable Rust toolchain>:/tmp/instantlink-native-build-tools-071/bin:$PATH CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 cargo test -p instantlink-core --locked printer::tests::select_matching_result",
+          "result": "7 passed; exact/suffix preference and ambiguity handling covered"
+        },
+        {
+          "check": "Temporary harness imported the exact production transport_discovery.rs for parser/async resource tests; cargo test --offline",
+          "result": "Could not execute: vendored libdbus-sys 0.2.7 rejects macOS with Unsupported platform. No production files altered."
+        },
+        {
+          "check": "Attempted Docker availability query",
+          "result": "Docker query produced no output and was terminated; no container or hardware used."
+        },
+        {
+          "command": "git status --short",
+          "result": "Clean worktree after checks"
+        }
+      ],
+      "limitations": [
+        "Rust Linux-only prefilter parser/resource tests were reviewed but not executed on this macOS host; ordinary host tests exclude that module. Historical plan acceptance results are not substituted for current execution.",
+        "No Pi, system Bluetooth daemon, Printer, film, BLE radio, CPU interval, or hardware reconnect check was performed.",
+        "This audit does not independently establish real-device timing or daemon restart recovery; no source edits, commits, or deployment."
+      ]
+    },
+    {
+      "number": "080",
+      "plan": "docs/plans/080-bridge-stale-link-recovery.md",
+      "optimization": "080 Bridge stale-link detection and reconnect retries",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P3",
+          "file": "bridge/src/instantlink_bridge/ble/instantlink.py",
+          "line": 464,
+          "problem": "Failure-log suppression hides the transition from retaining a cached session to disconnecting it. The signature excludes the disconnected decision, so consecutive identical failures within the 60-second log window leave the normal journal describing only keep_connection even when the second failure retired the session.",
+          "evidence": "Independent real-backend/mock-FFI reproduction at INFO: attempt 1 had disconnect_calls=0, failure_streak=1 and status_failed_keep_connection; attempt 2 had disconnect_calls=1, failure_streak=0 with exactly the same single INFO/WARNING log. Existing test_instantlink_status_failure_logs_are_rate_limited asserts the suppressed transition, so current tests pass without proving accurate state-transition logs.",
+          "recommendation": "Include the retirement decision/event in the failure signature, or emit a separate bounded session-retirement event. Preserve suppression for repeats with the same disposition. Assert one keep event and one disconnect transition for identical errors."
+        }
+      ],
+      "checks": [
+        {
+          "kind": "baseline",
+          "result": "Clean git status; HEAD is c4a27875a612af8bedcd7756d062e4e651cd2c3a. Read AGENTS.md and plan 080."
+        },
+        {
+          "kind": "focused_pytest",
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_ui_status.py bridge/tests/test_runtime_idle_correctness.py bridge/tests/test_ui_controller.py -k 'cached_native_connection or cached_connection_remains or first_status_failure or new_native_session or transient_ble_failure or printer_is_gone or status_failure_logs or superseded_status or superseded_during_fetch or poll_recovery or poll_waits or cancelled_poll or retry_delay or proactive_bond or silent_link or auto_rebond or bond_gate or bond_check'",
+          "result": "59 passed, 273 deselected in 0.64s"
+        },
+        {
+          "kind": "independent_fault_reproduction",
+          "result": "Confirmed hidden disconnect log transition using InstantLinkBackend.status and a mocked native library. No Printer/BlueZ involved."
+        },
+        {
+          "kind": "independent_combined_recovery_faults",
+          "result": "Three passed: releasing only rebond while silent recovery remains active cannot start fetch; changing generation while joining both owners prevents fetch; cancelling the poll leaves both shared recovery owners uncancelled."
+        },
+        {
+          "kind": "source_review",
+          "result": "Confirmed known-closed-only immediate cache retirement; unknown getter/error states retain two-failure tolerance; successful new native connect resets failure streak; two 250ms recovery gaps and ordinary configured offline cadence covered by focused tests. Native receive probes preserve original deadline, prioritize queued ACKs, and getter uses local closed state. No additional functional defect identified in these scoped paths."
+        }
+      ],
+      "limitations": [
+        "Read-only audit; no source edits, commits, Pi access, Printer access, print commands, or film use.",
+        "Native Rust paths reviewed but native tests were not run in this subaudit; Python tests use mock FFI/BlueZ boundaries.",
+        "Live timing and power measurements in plan 080 were read as historical evidence and not independently repeated.",
+        "Separately tracked stale in-flight BlueZ snapshot reply authorizing bond removal was deliberately not re-reproduced or duplicated as a finding."
+      ]
+    },
+    {
+      "number": "081",
+      "plan": "docs/plans/081-bridge-disconnect-events.md",
+      "optimization": "081 - Bridge Bluetooth disconnect events",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ble/agent.py",
+          "line": 742,
+          "problem": "Disconnect-watch fallback seeds from the returned stale GetManagedObjects tree even when newer authenticated identity signals have invalidated that response. It can bind a disconnected historical alias and initiate unnecessary native session teardown, or bind an obsolete path and miss the selected live identity disconnect until periodic fallback. This is an additional consumer consequence of the snapshot-return freshness defect already established in optimization 078; deduplicate the underlying root finding.",
+          "evidence": [
+            "Read-only independent asyncio probe reused FakeBus only for transport stubbing, delivering authenticated InterfacesAdded after the GetManagedObjects reply was produced but before its waiter resumed. Preloaded selected IOS alias was Connected=False; newer selected ANDROID alias was Connected=True. The signal-maintained cache remained {IOS: False, ANDROID: True}, but watch_printer_disconnect emitted one disconnect edge and bound only the false IOS path. Two total tree reads: preload and one fallback.",
+            "Companion probe delivered an authenticated rename of the former selected path plus addition of the new selected live path before the stale true-only reply resumed. Watch bound the former path and emitted no edge on subsequent Connected=False for the actual new selected path.",
+            "Lines 741-742 resolve candidates from returned objects, then lines 752-759 select the stale path and notify from its false state. New InterfacesAdded and identity Name/Alias changes are not reconciled into watch.changed. The controller consumes this edge at ui/controller.py:4683-4701, closes the cached native session at 4694, and runs bond recovery at 4701.",
+            "Existing tests cover stale Connected/removal during seed and stale tree cache protection, but not a newer matching live identity arriving during watch seeding."
+          ],
+          "recommendation": "Require a revision-current authenticated snapshot for watch identity resolution, or merge queued identity/addition changes before selecting one live path. On an inconclusive or changed tree, retain periodic fallback or perform a bounded refresh rather than treating a stale false-only alias as current. Preserve sticky loss events for the resolved selected session. Add regressions for false historical alias plus newer live alias, and rename/add followed by current-path disconnect."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_bluez_agent_recovery.py bridge/tests/test_ui_controller.py -k \"disconnect or status_poll or status_fresh or status_generation\"",
+          "result": "40 passed, 305 deselected in 0.97s"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_bluez_agent_recovery.py",
+          "result": "75 passed in 0.17s"
+        },
+        {
+          "command": "Independent inline Python asyncio probes with authenticated FakeBus same-turn reply/signal delivery",
+          "result": "Both related consumer failures reproduced: false_alias_with_new_live_identity arm_edges=[disconnect], old false path bound despite new selected live path in current cache; renamed_old_identity_misses_current_disconnect arm_edges=[], actual current-path drop emitted no edge."
+        },
+        {
+          "command": "Read AGENTS.md, docs/plans/081-bridge-disconnect-events.md, ble/agent.py, ui/controller.py and app.py wiring",
+          "result": "Reviewed sender/path filtering, owner/lifecycle fencing, token/generation cancellation, wake retention during status fetch, print pause, bounded retries, fallback cadence and subscription reuse. No additional independent blocker identified."
+        }
+      ],
+      "limitations": [
+        "Read-only audit; no source edits, commits, deployment or hardware operations.",
+        "No Pi, Printer, film or physical-device validation performed.",
+        "Focused mocked suites and two independent race probes were run; no full repository or Bridge suite.",
+        "The freshness root overlaps optimization 078 and should be represented once in the final consolidated audit, with this watch consumer consequence attached."
+      ]
+    },
+    {
+      "number": "082",
+      "plan": "docs/plans/082-bridge-discovery-setup.md",
+      "optimization": "082 Bridge discovery and connection setup: fresh agent-owned bond gate, owner-scoped device cache, native discovery fallback, overlapping MTU setup and cancellation ownership",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P1",
+          "file": "bridge/src/instantlink_bridge/ui/pairing.py",
+          "line": 260,
+          "problem": "Bond removal enumerates a new identity set after the authoritative negative gate and can remove a newly appeared live Printer identity that was never checked. Both BluetoothctlPrinterPairer.reset_bond_if_disconnected (line 260) and InstantLinkPrinterSelector.reset_bond_if_disconnected (line 461) invoke helpers that query devices again and remove all resulting addresses without validating Connected. A daemon restart, address/platform rotation, or auto-connect between the snapshot and this later subprocess inventory can thus destroy a live bond, violating the live-link guard and potentially wedging the Printer.",
+          "evidence": {
+            "reproduction": "/tmp/test_instantlink_audit082_gate.py",
+            "result": "2 expected regression failures (one per selection backend)",
+            "sequence": [
+              "Fresh provider snapshot: exactly one known adapter and old matching address Connected=false.",
+              "Snapshot completes; later devices inventory exposes replacement matching address 88:B4:36:51:CC:E2, representing a new live platform identity.",
+              "Its info response is available as Connected: yes but is never requested.",
+              "Both backends return True and issue only devices then remove 88:B4:36:51:CC:E2."
+            ],
+            "commands_both_backends": [
+              [
+                "devices"
+              ],
+              [
+                "remove",
+                "88:B4:36:51:CC:E2"
+              ]
+            ],
+            "distinction": "No stale reply, in-flight property signal, malformed snapshot, or cached-data overwrite is required; the new identity is added only after a fresh snapshot has returned. This is separate from the already confirmed 078 snapshot reply freshness issue.",
+            "related_lines": [
+              248,
+              260,
+              317,
+              325,
+              449,
+              461,
+              547,
+              554
+            ]
+          },
+          "recommendation": "Resolve the actual removal targets first, then perform a fresh authoritative live-link check immediately before deletion using that same target set and owner/adapter scope. Abort or repeat validation when owner, relevant identity revision, or address membership changes; never let a later inventory enlarge the authorized removal set without checking the new addresses. Add a regression where an IOS/ANDROID identity appears connected between negative snapshot completion and removal enumeration."
+        }
+      ],
+      "checks": [
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_ui_pairing.py bridge/tests/test_ui_pairing_dbus.py bridge/tests/test_bluez_agent_recovery.py",
+          "result": "149 passed"
+        },
+        {
+          "command": "PATH=/tmp/instantlink-native-build-tools-071/bin:$PATH CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 /opt/homebrew/bin/rustup run stable cargo test -p instantlink-core --locked mtu_",
+          "result": "10 passed: 8 unit tests and 2 integration tests; setup overlap, shared deadline, safe small MTU fallback, cancellation exercised"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_ui_controller.py -k 'proactive_bond or bond_gate or mutating_recovery or print_handoff or replacing_poll or replacement_poll'",
+          "result": "20 passed, 250 deselected"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -s /tmp/test_instantlink_audit082_gate.py",
+          "result": "2 failed as expected, demonstrating unvalidated target-set growth"
+        },
+        {
+          "command": "git status --short",
+          "result": "clean; no tracked repository edits"
+        },
+        {
+          "command": "Initial cargo +stable invocation",
+          "result": "Could not use +stable through Homebrew cargo; repeated successfully using rustup run stable."
+        }
+      ],
+      "limitations": [
+        "Read-only code audit plus local mocked DBus/CLI reproduction; no Pi, Printer, camera, print command, film, deployment, or hardware state changes.",
+        "Host macOS does not compile Linux-only discovery/DBus production branches; those paths were reviewed in source, while generic MTU/cancellation tests ran locally.",
+        "Requested hint symbols prepareRecoveryAgent/cached paired targeted query are not present at frozen HEAD; equivalent current plan 082 paths were reviewed as instructed by parent.",
+        "Previously confirmed 078 older managed_objects_snapshot reply after authenticated signal was excluded from findings to avoid duplication.",
+        "No new bug identified in cache owner invalidation, ambiguous/inactive watch fallback, or overlapping MTU future/task cleanup in this focused review.",
+        "Temporary reproduction file and report are under /tmp; source, tests, and commits were not edited."
+      ]
+    },
+    {
+      "number": "083",
+      "plan": "docs/plans/083-bridge-initial-status.md",
+      "optimization": "083: return the freshly queried initial Printer status during native named connect, removing the duplicate status sequence",
+      "baseline": "c4a2787 in <repository>; compared pre-change source at ffe637e^",
+      "findings": [],
+      "checks": [
+        {
+          "check": "Repository guidance, plan 083 and current core/FFI/Bridge implementation review",
+          "result": "passed",
+          "evidence": "Core status is battery + film/charging + history under its operation lock; connect-and-status returns that same device's successful read. Python consumes the returned tuple only in the current fresh-connect worker; established polls always call native status. Successful adapter cleanup precedes sampling. No status cache, TTL or new status budget is introduced. Existing command timeout and cancellation ownership remain in force. Old progress API retains its initial read and subsequent Python status call (six commands), while the additive API uses three."
+        },
+        {
+          "command": "env PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_instantlink_initial_status.py bridge/tests/test_ui_status.py",
+          "result": "passed: 52 tests"
+        },
+        {
+          "command": "env PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_ffi_cancel_concurrency.py",
+          "result": "passed: 4 tests"
+        },
+        {
+          "command": "RUSTUP_TOOLCHAIN=stable PATH=/tmp/instantlink-native-build-tools-071/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 cargo test -p instantlink-core --locked printer::tests",
+          "result": "passed: 24 tests; includes single initial query, later freshness, initial failure teardown, cleanup-before-sampling regression and name matching"
+        },
+        {
+          "command": "Same Rust environment: cargo test -p instantlink-ffi --locked",
+          "result": "passed: 45 tests; includes null/invalid UTF-8 preservation, reentrant connect admission, callback disconnect generation invalidation, disconnect teardown admission, caught-panic admission recovery, status/getter identity and all-model prepared callback safety"
+        },
+        {
+          "command": "Same Rust environment: bash scripts/check-ffi-header.sh",
+          "result": "passed: generated header matches committed header"
+        },
+        {
+          "command": "env PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python /tmp/instantlink-audit-083-repro.py",
+          "result": "passed independent mock reproduction",
+          "evidence": "All four supported models (Mini, Mini Link 3, Square, Wide) returned actual discovered identity, boundary values including film zero and print_count 65535, one three-command fresh read, changed three-command later poll and fresh three-command reconnect. Older progress library simulated six fresh-connect commands and preserved the no-film battery fallback. Unknown future model failed explicitly."
+        },
+        {
+          "command": "env PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python /tmp/instantlink-audit-083-abi.py",
+          "result": "passed against actual locally built native dylib",
+          "evidence": "Python c_int/c_int32 size and alignment match; all four missing output pointers plus null name and invalid UTF-8 name returned -5, retained sentinel outputs and did not establish a BLE session."
+        },
+        {
+          "command": "clang -std=c11 -Wall -Wextra -Werror -fsyntax-only -I crates/instantlink-ffi/include /tmp/instantlink-audit-083-header.c",
+          "result": "passed: exact seven-argument C function pointer signature and signed 32-bit status slots"
+        },
+        {
+          "command": "git status --short",
+          "result": "clean; no repository source edits or commits"
+        }
+      ],
+      "limitations": [
+        "Read-only source audit and local mocks/native argument validation only; no Pi access, physical Printer commands, film, deployment or commits.",
+        "Three-versus-six counts in independent reproduction are modeled command counts; actual core three-command behavior is covered by existing Rust transport mocks. Plan 083 hardware measurements were read, not independently repeated.",
+        "Non-connect native operations retain the documented caller serialization contract; actual device name/model getters can race an independently uncoordinated native client, which is outside this change's API contract and prevented by the Bridge backend worker lock.",
+        "Raw invalid memory, misaligned pointers and C callback exceptions violate the documented caller contract and were not invoked. Valid writable distinct slots, null rejection and ordinary callback lifecycle cases were reviewed/tested."
+      ]
+    },
+    {
+      "number": "084",
+      "plan": "docs/plans/084-bridge-model-query-startup.md",
+      "optimization": {
+        "id": "084",
+        "name": "Bridge model-query startup recovery",
+        "result": "No new confirmed actionable finding in the reviewed scope.",
+        "invariants": [
+          "Only ImageSupportInfo may resend, once after the one-second first response window.",
+          "A shared ten-second deadline bounds initial write, retry write, and both receives; one command lock and DeliveryGuard span the transaction.",
+          "Assembler resets before each model-query write prevent the cancelled first receive prefix from corrupting the retry reply; queued notifications remain available.",
+          "Write errors and confirmed link closure are returned without retry. Terminal timeout or cancellation poisons delivery; construction errors disconnect.",
+          "Model identity requires capability dimensions; ASCII-trimmed exact FI033 selects MiniLink3 only at 600x800 and FI017 selects Square only at 800x800. Conflicts and ambiguous FI033-containing strings fail.",
+          "MiniLink3 image preparation applies the existing vertical flip once; Square remains unflipped; prepared transfer preserves exact encoded bytes."
+        ]
+      },
+      "baseline": {
+        "workspace": "<repository>",
+        "reviewed_commit": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+        "working_tree": "Clean before and after read-only review.",
+        "implementation_commit_recorded_by_plan": "b2b6c8ceab6b2ba7f8b0151dd8b283a8c0560d62",
+        "historical_comparison": "Pre-084 startup queried ImageSupportInfo once. The current implementation adds the single read-only resend and exact known-DIS dimension validation.",
+        "documented_hardware_evidence": "Plan 084 records a baseline missed model ACK and later recovery. Candidate/installed warm starts were healthy single-query runs: physical retry speedup was not observed. This audit did not repeat hardware work."
+      },
+      "findings": [],
+      "checks": [
+        {
+          "check": "Read AGENTS.md, plan 084, current transport/device/commands/protocol/models/image implementations and prior adversarial evidence; compared pre-084 model detection.",
+          "result": "Completed"
+        },
+        {
+          "command": "PATH=/tmp/instantlink-native-build-tools-071/bin:$PATH CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 rustup run stable cargo test -p instantlink-core --locked model_query -- --nocapture",
+          "result": "8 passed: healthy single query; one retry at 1s and recovery at 1.140s; original deadline on silent links; write/link errors not replayed; stalled write bounded; cancellation and timeout retirement; partial frame and duplicate reply handling."
+        },
+        {
+          "command": "PATH=/tmp/instantlink-native-build-tools-071/bin:$PATH CARGO_TARGET_DIR=target/native-checks-071 CARGO_INCREMENTAL=0 rustup run stable cargo test -p instantlink-core --locked --lib device::tests::",
+          "result": "47 passed: capability/DIS identity and conflicts, missing DIS fallback, malformed/link failures, status freshness selectors, prepared JPEG exact transfer and model/flip mismatch rejection."
+        },
+        {
+          "command": "target/native-checks-071/debug/deps/instantlink_core-850a75d42083c879 image::tests::prepare_image_from_bytes_flips_vertically_for_link3 --exact --nocapture",
+          "result": "1 passed: asymmetric red/blue source verifies vertical flip after JPEG decoding."
+        },
+        {
+          "command": "target/native-checks-071/debug/deps/instantlink_core-850a75d42083c879 transport::adversarial_tests --nocapture",
+          "result": "27 passed: confirmed disconnect cancels write and refuses actuator, cancellation/error poisoning, no replay, fallback attribution, and bounded teardown."
+        },
+        {
+          "check": "git status --porcelain; git rev-parse HEAD; rustup run stable rustc --version",
+          "result": "Clean; frozen commit unchanged; rustc 1.97.1 (8bab26f4f 2026-07-14)."
+        },
+        {
+          "check": "Initial cargo +stable invocation",
+          "result": "Environment invocation failed because Homebrew cargo does not accept +toolchain; corrected with rustup run stable. All focused checks then passed."
+        }
+      ],
+      "limitations": [
+        "No Pi, Printer, physical BLE, or film access and no edits or commits; 83 focused native macOS tests passed.",
+        "Missing or unrecognized DIS with 600x800 capabilities selects Mini. As recorded by audit 071, dimensions alone cannot establish Link 3 identity/orientation; no new unsupported identity guess is recommended.",
+        "Review preserves the current packet selector compatibility. Physical radio ordering and missed-first-ACK acceleration were not newly measured.",
+        "The shared protocol deadline begins after command-lock acquisition and does not bound overall GATT setup, DIS read, or error-path disconnect cleanup."
+      ]
+    },
+    {
+      "number": "085",
+      "plan": "docs/plans/085-bridge-disconnect-watch-registration.md",
+      "optimization": "085 \u2014 Bridge initial Bluetooth disconnect-watch registration",
+      "baseline": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ble/agent.py",
+          "line": 805,
+          "problem": "Fresh snapshot fallback can retain a watch identity from a reply whose sender is not the current BlueZ unique owner. The sender check protects only the reusable cache; the unauthenticated tree is still returned and consumed by watch_printer_disconnect.",
+          "evidence": "A local FakeBus returned a correctly shaped GetManagedObjects reply with sender :1.99 while the service owner remained :1.10. Registration completed without an exception and retained /org/bluez/hci0/dev_FA_AB_BC_C7_95_64; _device_cache_complete was false. Thus invalidating the cache did not enforce authenticated ownership for the fallback watch itself. This is a mocked defensive ownership check, not a demonstrated real system-bus spoofing exploit.",
+          "recommendation": "Reject a snapshot reply unless its sender equals the captured nonempty BlueZ unique owner and the captured bus remains connected before returning its tree. Let watch registration clean up and leave periodic status polling as the fallback. Add a wrong-sender reply test asserting no retained watch."
+        },
+        {
+          "severity": "P3",
+          "file": "bridge/src/instantlink_bridge/ble/agent.py",
+          "line": 703,
+          "problem": "The pending fallback watch.changed dictionary has no explicit path bound even though the identity cache is capped at 512 rows. Before seeding, authenticated Connected/removal signals for all device paths are retained, including unrelated devices.",
+          "evidence": "With the fallback GetManagedObjects held pending, 2,048 distinct valid authenticated Device1 Connected signals produced 2,048 watch.changed rows while the identity cache had zero rows. After release the watch state pruned to one selected path and the selected disconnect was observed. The enclosing three-second timeout bounds retention duration, so this is not a persistent memory leak or a demonstrated production exhaustion.",
+          "recommendation": "Apply an explicit bound to pending watch changes. On overflow, disarm or conservatively abandon signal registration and preserve periodic status polling; do not silently drop possibly relevant pending disconnects. Add an overflow regression exercising a blocked initial snapshot."
+        }
+      ],
+      "checks": [
+        {
+          "command": "Read AGENTS.md, docs/plans/085-bridge-disconnect-watch-registration.md, agent cache/watch/snapshot code, controller watch token and selected identity code, and associated tests",
+          "result": "Completed read-only. Cache completeness/revision/lifecycle checks and controller obsolete result cleanup are present."
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_bluez_agent_recovery.py bridge/tests/test_ui_controller.py -k \"disconnect or cached or cache or snapshot or lifecycle\"",
+          "result": "75 passed, 270 deselected in 2.10s"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_bluez_agent_recovery.py bridge/tests/test_ui_pairing_dbus.py bridge/tests/test_ui_controller.py",
+          "result": "392 passed in 7.73s"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python /tmp/instantlink-audit-085-extra.py",
+          "result": {
+            "in_flight_signal_count": 2048,
+            "watch_changed_rows_pending": 2048,
+            "identity_cache_rows_pending": 0,
+            "watch_changed_rows_after_seed": 1,
+            "selected_disconnect_observed": true,
+            "wrong_sender_reply_watch_paths": [
+              "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+            ],
+            "wrong_sender_reply_cache_complete": false
+          }
+        },
+        {
+          "command": "git status --short",
+          "result": "Clean worktree before and after local checks"
+        }
+      ],
+      "limitations": [
+        "No source edits, deployments, Pi access, Printer commands, film use, or commits.",
+        "Extra reproductions use the existing FakeBus fixture; actual system-bus policy and hardware behavior were not exercised.",
+        "Already-confirmed stale snapshot return versus newer signal identity binding from audits 078/081 was reviewed but deliberately not reproduced or duplicated as an independent finding here.",
+        "The 512-row reusable cache itself remained bounded; the additional row-bound finding concerns only temporary pending watch.changed state under the three-second registration deadline."
+      ]
+    },
+    {
+      "number": "086",
+      "plan": "docs/plans/086-bridge-lcd-rendering.md",
+      "optimization": "086 LCD exact Pillow RGB565 fallback",
+      "baseline": "c4a2787",
+      "findings": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ui/display.py",
+          "line": 195,
+          "problem": "FramebufferDisplay.close() never releases the owned GPIO backlight fallback. A stopped UI can keep BCM24 claimed and leave an active backlight enabled. This is a current inherited issue, present before plan086, rather than a Pillow packing regression.",
+          "evidence": "Using a fake ST7789 sysfs without backlight nodes, the real constructor obtains _GpioBacklight around an owned device. render() calls on(); two close() calls set _closed but leave owned device unclosed, with calls [on]. BridgeUi._close_ui_resources() calls display.close() at controller.py:783. The pre086 display.close() was also a no-op.",
+          "recommendation": "Idempotently release the _GpioBacklight in FramebufferDisplay.close(), ensuring task cancellation and hardware cleanup both run; cover the constructor fallback with an owned-device close test."
+        }
+      ],
+      "checks": [
+        {
+          "check": "all RGB colors against independent scalar division oracle",
+          "status": "passed",
+          "pixels": 16777216,
+          "bytes": 33554432,
+          "sha256": "67320994e853fd614d1f25e7bdc096bb0c1f9b769b7b51b4e27aaa940a13e24c"
+        },
+        {
+          "check": "disjoint band LUT fields and absence of ImageChops saturation",
+          "status": "passed",
+          "channel_pairs": 131072
+        },
+        {
+          "check": "Pillow mode conversion and caller immutability",
+          "status": "passed",
+          "modes": [
+            "1",
+            "L",
+            "P",
+            "RGB",
+            "RGBA",
+            "RGBX",
+            "CMYK",
+            "YCbCr",
+            "I",
+            "F",
+            "LA",
+            "PA",
+            "HSV",
+            "LAB",
+            "I;16",
+            "I;16B",
+            "I;16L",
+            "RGBa",
+            "La"
+          ],
+          "matched_conversion_errors": {
+            "La": "conversion from La to L not supported"
+          }
+        },
+        {
+          "check": "zero and odd dimensions and row order",
+          "status": "passed",
+          "sizes": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              5
+            ],
+            [
+              5,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              3,
+              5
+            ],
+            [
+              239,
+              241
+            ],
+            [
+              321,
+              241
+            ]
+          ]
+        },
+        {
+          "check": "concurrent fallback calls have independent immutable bytes",
+          "status": "passed",
+          "frames": 48,
+          "workers": 4
+        },
+        {
+          "check": "every UI state fallback bytes",
+          "status": "passed",
+          "frames": 40,
+          "themes": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "check": "confirmed GPIO ownership close gap",
+          "status": "passed",
+          "observed_calls": [
+            "on"
+          ],
+          "device_closed": false
+        },
+        {
+          "check": "focused existing Pillow/display tests",
+          "status": "passed",
+          "passed": 37,
+          "deselected": 26,
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_ui_display.py -k 'pillow or framebuffer_render or framebuffer_screen_off or framebuffer_wake or framebuffer_repeated or framebuffer_non_off or framebuffer_power or framebuffer_uses or discovers or without_event_loop'"
+        },
+        {
+          "check": "controller deduplication, render tick, lock/wake and power stages",
+          "status": "passed",
+          "passed": 7,
+          "deselected": 275,
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_ui_controller.py -k 'render_tick or key2_locks or power_events or manual_preview_does_not_redraw' bridge/tests/test_ui_unlock_render.py"
+        },
+        {
+          "check": "routing same-button unlock, mixed-button reset, timeout dark idle and shutdown/wake",
+          "status": "passed",
+          "passed": 35,
+          "deselected": 33,
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_ui_routing.py -k 'unlock or lock or wake' bridge/tests/test_runtime_idle_correctness.py -k 'unlock or lock or wake or stop_waits_for_retired'"
+        },
+        {
+          "check": "unlock prompt rendering",
+          "status": "passed",
+          "passed": 12,
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_ui_unlock_render.py"
+        },
+        {
+          "check": "read-only worktree unchanged",
+          "status": "passed",
+          "head": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+          "git_status": "",
+          "display_sha256": "608d52b29c5b4aad4c116fd0e63111b4f6155dfa81e26ab2fe679513ac17af1a"
+        }
+      ],
+      "limitations": [
+        "Read-only audit; no Pi, GPIO contacts, panel scanout, Printer or film used.",
+        "Host Pillow 11.3.0; physical framebuffer/backlight operations mocked or temporary files.",
+        "Later NumPy088 full backend performance/concurrency/import audit intentionally excluded.",
+        "Review at baseline c4a2787, clean worktree; no implementation files changed."
+      ],
+      "duration_seconds": 3.2651013340801,
+      "test_summary": {
+        "focused_pytest_passed": 91,
+        "rgb_colors_exhaustively_checked": 16777216,
+        "mode_conversion_cases": 19,
+        "ui_snapshot_checks": 40,
+        "packing_regressions_found": 0,
+        "confirmed_inherited_findings": 1
+      }
+    },
+    {
+      "number": "087",
+      "plan": "docs/plans/087-bridge-lcd-text-layout.md",
+      "optimization": "087 Bridge LCD text/layout cache",
+      "baseline": {
+        "audit_commit": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+        "pre_optimization_pixel_oracle": "e895b44",
+        "implementation_commit": "06bbe86",
+        "renderer_sha256": "df10cadf41ea34c9b3baabcd5edcb08b75764804fda851151a4f6c60ebed7775",
+        "worktree": "<repository>"
+      },
+      "findings": [],
+      "checks": {
+        "full_frame_baseline": {
+          "frames": 720,
+          "cold_and_warm_comparisons": 1440,
+          "caller_output_mutation_isolated": true,
+          "preview_immutable": true
+        },
+        "clock_baseline_preserved": {
+          "fixed_phase_comparisons": true,
+          "lcd_breath_tint_disabled_in_original": true
+        },
+        "glyph_pixels": {
+          "comparisons": 1764,
+          "negative_bearing_cases": 168,
+          "anchors": 7,
+          "fonts": [
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            "/System/Library/Fonts/Supplemental/Arial Italic.ttf"
+          ]
+        },
+        "real_variable_font": {
+          "path": "/System/Library/Fonts/SFNS.ttf",
+          "axis_settings": 3,
+          "bypasses": true
+        },
+        "bounded_lru": {
+          "metrics_entries": 512,
+          "mask_entries": 256,
+          "max_mask_pixels": 11520,
+          "max_retained_mask_bytes": 2949120,
+          "hits_and_eviction_verified": true
+        },
+        "fallback_and_key_changes": {
+          "fallback_comparisons": 48,
+          "font_core_and_cjk_changes": true
+        },
+        "concurrent_render": {
+          "threads": 8,
+          "frames": 160,
+          "output_mutation_and_preview_immutable": true
+        },
+        "fault_cases": {
+          "invalid_anchor_error_equal": true,
+          "all_fonts_unavailable_fallback_equal": true
+        },
+        "environment": {
+          "python": "3.13.9",
+          "pillow": "11.3.0",
+          "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+        },
+        "host_timing": {
+          "samples_per_variant": 18,
+          "median_ms": {
+            "baseline": 3.962,
+            "candidate_cold": 3.0061,
+            "candidate_warm": 0.2109
+          },
+          "pixels_exact": true,
+          "scope": "Host draw only; fonts loaded; no Pi, framebuffer, input latency or battery claim"
+        },
+        "focused_existing_tests": [
+          {
+            "files": [
+              "test_ui_render_text_cache.py",
+              "test_ui_render.py",
+              "test_render_slider.py",
+              "test_ui_unlock_render.py"
+            ],
+            "passed": 244,
+            "seconds": 2.54
+          },
+          {
+            "files": [
+              "test_ui_display.py",
+              "test_status_indicator.py",
+              "test_ui_theme.py"
+            ],
+            "passed": 99,
+            "seconds": 0.33
+          }
+        ],
+        "source_review": {
+          "cache_keys": "Retain resolved font object, underlying font core and text; glyph masks also retain anchor. CJK resolution precedes cached smart text/width calls; direct call sites preserve original font choice.",
+          "shared_render_path": [
+            "ui/display.py:LumaSt7789Display.render",
+            "ui/display.py:FramebufferSt7789Display.render",
+            "app.py:make_screen_provider"
+          ],
+          "mask_storage": "Private L masks read by bitmap; output images allocated per render; retained pixel storage at most 2949120 bytes excluding metadata and fonts.",
+          "fallbacks": "Variable fonts, multiline and >256 character text bypass; >240x48 masks return cached None and draw original text; non-RGB, non-L fontmode, fractional origins use original draw.text."
+        }
+      },
+      "limitations": [
+        "Host-only audit using macOS fonts; production Pi Noto/WQY font files and panel scanout not independently exercised.",
+        "No Pi, Printer, camera, GPIO, film, deployment or physical button operations; existing hardware evidence read only.",
+        "Host timings are draw-only with fonts loaded; no whole-device CPU, battery or event-loop latency claim.",
+        "All checks ran from temporary scripts; no repository edits or commits."
+      ]
+    },
+    {
+      "number": "088",
+      "plan": "docs/plans/088-bridge-rgb565-packing.md",
+      "optimization": "088 \u2014 Bridge optional NumPy RGB565 packing and owned post-first-paint preload",
+      "baseline": {
+        "commit": "c4a27875a612af8bedcd7756d062e4e651cd2c3a",
+        "worktree": "<repository>",
+        "display_sha256": "608d52b29c5b4aad4c116fd0e63111b4f6155dfa81e26ab2fe679513ac17af1a",
+        "runtime": "Python 3.13.9 from bridge/.venv/bin/python",
+        "plan": "docs/plans/088-bridge-rgb565-packing.md"
+      },
+      "findings": [],
+      "checks": [
+        {
+          "name": "Existing display tests",
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q bridge/tests/test_ui_display.py",
+          "result": "63 passed in 0.41s"
+        },
+        {
+          "name": "Independent exhaustive pixels, conversions, memory and lifecycle",
+          "command": "PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -o addopts= /tmp/test_instantlink_audit_088.py",
+          "result": "74 passed in 3.69s",
+          "details": [
+            "All 16,777,216 RGB colors, independently computed with scalar division/multiplication and struct.pack little endian, match both NumPy and Pillow backends; checked in bounded 65,536-pixel chunks.",
+            "16 Pillow modes (1, L, LA, P, PA, RGB, RGBA, RGBX, CMYK, YCbCr, I, F, I;16, I;16L, I;16B, HSV) \u00d7 four dimensions including all zero-axis combinations preserve conversion, byte count and caller mode/pixels/palette/info.",
+            "40 simultaneous calls on the same image per backend preserve input; outputs stay immutable and correct after later caller mutation.",
+            "First write, backlight-on and backlight-off failures schedule no preload; later successful paint writes pixels and completes backlight before a single loader runs.",
+            "Blocked worker leaves event-loop heartbeat, synchronous render and black blank/wake usable with Pillow.",
+            "Close cancels the task; late worker success and late exception do not change closed display backend or framebuffer. Worker executes outside event-loop thread.",
+            "Unexpected loader fault keeps Pillow, warns once and does not retry after ten render/blank/wake cycles."
+          ],
+          "measurements": {
+            "rgb_colors_compared_each_backend": 16777216,
+            "numpy_240x240_peak_traced_bytes": 519478,
+            "numpy_1000_packs_retained_traced_bytes": 168
+          }
+        },
+        {
+          "name": "Fresh-process missing optional dependency",
+          "result": "passed",
+          "details": [
+            "Import blocker observes no NumPy attempt during display module import, constructor, no-event-loop first paint, black blank or wake.",
+            "Explicit backend lookup with missing NumPy falls back quietly; two calls perform only one import attempt.",
+            "Installed rawpy distribution metadata requires numpy>=1.26.0; repository constraints already pin numpy==2.4.6. No new dependency is introduced."
+          ]
+        },
+        {
+          "name": "Focused Ruff lint and format",
+          "result": "All checks passed; 2 files already formatted",
+          "files": [
+            "bridge/src/instantlink_bridge/ui/display.py",
+            "bridge/tests/test_ui_display.py"
+          ]
+        },
+        {
+          "name": "Read-only source review",
+          "result": "passed",
+          "details": [
+            "Red and green are stored in uint16 arrays before shifts, so intermediate arithmetic cannot overflow; output explicitly uses dtype <u2.",
+            "RGB byte storage and scratch arrays belong to each call; no mutable cached pack buffers. Memory grows linearly with frame dimensions.",
+            "Constructor leaves preload task absent; preload is created after framebuffer write and selected backlight operation return successfully.",
+            "Task only assigns ready packer on open display; import worker has no display/device reference. CancelledError propagates task cancellation without warning.",
+            "Completed task remains recorded, preventing per-frame retries even after loader failure.",
+            "Current display source hash equals reviewed final implementation 398dde5 and plan 088 hash.",
+            "Recorded first-paint evidence agrees with post-paint scheduling and explicitly scopes warm-start and scanout limitations.",
+            "Git status remained clean; no repository edits, Pi commands, image/print commands, film or commits."
+          ]
+        }
+      ],
+      "limitations": [
+        "No fresh Pi, framebuffer scanout, physical GPIO contact, Printer, film, startup-speed or battery-runtime measurement. Historical plan 088 hardware assets were reviewed as recorded evidence only.",
+        "Tracemalloc measures Python-traced allocations; excludes Pillow native memory and NumPy module resident memory. The plan records the separate approximately 15.4 MiB NumPy RSS increase.",
+        "Cancelling asyncio.to_thread does not stop an in-progress import worker. The worker may finish after close; independent tests confirm no closed-display mutation or late-device write.",
+        "Big-endian host and Python 3.11/3.12 were not available; explicit <u2 dtype was verified by code and exact little-endian bytes on the available host.",
+        "Inherited FramebufferDisplay.close GPIO backlight resource-release issue is tracked separately by audit 086 and is intentionally not duplicated as a new finding here.",
+        "Initial independent fixture run had missing required ftp_host and excessive I/F putdata entries; these test-only fixture errors were corrected before the final 74-pass run."
+      ]
+    }
+  ],
+  "limits": "Audits use local mock/source verification. Counts overlap and must not be added as unique coverage. Raw device journals and personal images are not included."
+}

@@ -7,6 +7,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any, cast
 
@@ -74,16 +75,13 @@ REQUEST_ID_FACTORY_KEY = web.AppKey("instantlink_bridge.manager.request_id_facto
 AUTH_VERIFIER_KEY = web.AppKey("instantlink_bridge.manager.auth_verifier", SignedRequestVerifier)
 CLIENT_STORE_KEY = web.AppKey("instantlink_bridge.manager.client_store", ClientStore)
 PAIRING_STORE_KEY = web.AppKey("instantlink_bridge.manager.pairing_store", PairingWindowStore)
+SYSTEM_INFO_CACHE_KEY = web.AppKey(
+    "instantlink_bridge.manager.system_info_cache", manager_status.SystemInfoCache
+)
 ENVIRONMENT_KEY = web.AppKey("instantlink_bridge.manager.environment", ManagerEnvironment)
-LOG_STREAM_SOURCE_KEY = web.AppKey(
-    "instantlink_bridge.manager.log_stream_source", LogStreamSource
-)
-SUPPORT_BUNDLE_DIR_KEY = web.AppKey(
-    "instantlink_bridge.manager.support_bundle_dir", Path
-)
-SUPPORT_BUNDLE_SOURCES_KEY = web.AppKey(
-    "instantlink_bridge.manager.support_bundle_sources", object
-)
+LOG_STREAM_SOURCE_KEY = web.AppKey("instantlink_bridge.manager.log_stream_source", LogStreamSource)
+SUPPORT_BUNDLE_DIR_KEY = web.AppKey("instantlink_bridge.manager.support_bundle_dir", Path)
+SUPPORT_BUNDLE_SOURCES_KEY = web.AppKey("instantlink_bridge.manager.support_bundle_sources", object)
 NOW_SECONDS_KEY = web.AppKey("instantlink_bridge.manager.now_seconds", object)
 DEFAULT_SUPPORT_BUNDLE_DIR = Path("/var/lib/InstantLinkBridge/support-bundles")
 
@@ -145,6 +143,7 @@ def create_app(
     app[REQUEST_ID_FACTORY_KEY] = request_id_factory
     app[CLIENT_STORE_KEY] = actual_client_store
     app[PAIRING_STORE_KEY] = pairing_store or PairingWindowStore()
+    app[SYSTEM_INFO_CACHE_KEY] = manager_status.SystemInfoCache()
     app[AUTH_VERIFIER_KEY] = actual_auth_verifier
     app[ENVIRONMENT_KEY] = environment or ManagerEnvironment.production()
     app[LOG_STREAM_SOURCE_KEY] = log_stream_source or LogStreamSource()
@@ -216,9 +215,11 @@ async def handle_hello(request: web.Request) -> web.Response:
 
     return json_success(
         request,
-        manager_status.collect_hello_payload(
+        await asyncio.to_thread(
+            manager_status.collect_hello_payload,
             config_path_for(request),
             pairing_store=pairing_store_for(request),
+            system_info_cache=request.app[SYSTEM_INFO_CACHE_KEY],
         ),
     )
 
@@ -271,7 +272,9 @@ async def handle_pairing_complete(request: web.Request) -> web.Response:
         )
 
     if body.expected_device_id is not None:
-        actual_device_id = manager_status.current_device_id()
+        actual_device_id = await asyncio.to_thread(
+            manager_status.current_device_id, request.app[SYSTEM_INFO_CACHE_KEY]
+        )
         if body.expected_device_id != actual_device_id:
             return json_failure(
                 request,
@@ -337,8 +340,7 @@ async def handle_pairing_usb_auto_trust(request: web.Request) -> web.Response:
     peer = peer_address_for(request)
     if local_ip is None or not local_ip.startswith(USB_AUTO_TRUST_LOCAL_PREFIX):
         LOGGER.info(
-            "ui.management.usb_auto_trust.rejected reason=not_usb_interface "
-            "local_ip=%s peer=%s",
+            "ui.management.usb_auto_trust.rejected reason=not_usb_interface local_ip=%s peer=%s",
             local_ip,
             peer,
         )
@@ -370,7 +372,9 @@ async def handle_pairing_usb_auto_trust(request: web.Request) -> web.Response:
         )
 
     if body.expected_device_id is not None:
-        actual_device_id = manager_status.current_device_id()
+        actual_device_id = await asyncio.to_thread(
+            manager_status.current_device_id, request.app[SYSTEM_INFO_CACHE_KEY]
+        )
         if body.expected_device_id != actual_device_id:
             return json_failure(
                 request,
@@ -540,7 +544,11 @@ def auth_required_handler(route: ManagementRoute) -> Handler:
         if route.operation_id == "status":
             return json_success(
                 request,
-                manager_status.collect_http_status_payload(config_path_for(request)),
+                await asyncio.to_thread(
+                    manager_status.collect_http_status_payload,
+                    config_path_for(request),
+                    system_info_cache=request.app[SYSTEM_INFO_CACHE_KEY],
+                ),
             )
 
         admin_handler = ADMIN_OPERATION_HANDLERS.get(route.operation_id)
@@ -587,7 +595,11 @@ async def handle_update_install(request: web.Request) -> web.Response:
     """Back up and install a staged, verified firmware bundle."""
 
     package = await read_package_body(request)
-    payload = await asyncio.to_thread(run_install, environment_for(request), package)
+    payload = await asyncio.to_thread(
+        run_firmware_change,
+        request.app[SYSTEM_INFO_CACHE_KEY],
+        partial(run_install, environment_for(request), package),
+    )
     return json_success(request, payload)
 
 
@@ -614,8 +626,26 @@ async def handle_update_rollback(request: web.Request) -> web.Response:
     """Roll back the current release to the previous one."""
 
     reason = await read_rollback_reason(request)
-    payload = await asyncio.to_thread(run_rollback, environment_for(request), reason)
+    payload = await asyncio.to_thread(
+        run_firmware_change,
+        request.app[SYSTEM_INFO_CACHE_KEY],
+        partial(run_rollback, environment_for(request), reason),
+    )
     return json_success(request, payload)
+
+
+def run_firmware_change(
+    system_info_cache: manager_status.SystemInfoCache,
+    operation: Callable[[], JsonObject],
+) -> JsonObject:
+    """Refresh versions after a worker changes firmware, even if its request is cancelled."""
+
+    try:
+        return operation()
+    finally:
+        # A failed update may already have changed installed files. Keep the
+        # invalidation in the worker so it runs after the operation finishes.
+        system_info_cache.invalidate()
 
 
 async def handle_backup_create(request: web.Request) -> web.Response:

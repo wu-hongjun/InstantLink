@@ -144,7 +144,7 @@ def test_settings_explanations_live_in_help_but_saved_and_error_notices_remain(
 
 
 @pytest.mark.asyncio
-async def test_slow_preview_exif_read_does_not_block_input_or_task_cancellation(
+async def test_slow_preview_exif_read_keeps_input_responsive_and_joins_cancelled_owner(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from threading import Event
@@ -181,8 +181,12 @@ async def test_slow_preview_exif_read_does_not_block_input_or_task_cancellation(
         await asyncio.wait_for(ui._handle_action(UiAction.SELECT), 0.05)
         assert ui.snapshot.mode is UiMode.SETTINGS
         task.cancel()
+        await asyncio.sleep(0)
+        assert not task.done()
+        await asyncio.wait_for(ui._handle_action(UiAction.UP), 0.05)
+        release.set()
         with pytest.raises(asyncio.CancelledError):
-            await asyncio.wait_for(task, 0.05)
+            await asyncio.wait_for(task, 0.2)
     finally:
         release.set()
         if not task.done():

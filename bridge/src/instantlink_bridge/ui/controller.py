@@ -71,12 +71,14 @@ from instantlink_bridge.system_stats import (
     read_system_stats,
 )
 from instantlink_bridge.ui.display import Display, create_display
-from instantlink_bridge.ui.input import GpioUiInput, NullInput, create_input
+from instantlink_bridge.ui.input import GpioUiInput, NullInput, create_input, enqueue_input
 from instantlink_bridge.ui.models import (
     PairedPrinter,
     SettingsRow,
     UiAction,
     UiButtonPress,
+    UiInputEvent,
+    UiInputGap,
     UiMode,
     UiSnapshot,
 )
@@ -481,6 +483,7 @@ class BridgeUi:
         self._cached_system_stats: SystemStatsSnapshot | None = None
         self._cached_system_stats_at: float = 0.0
         self._about_load_task: asyncio.Task[None] | None = None
+        self._help_information_key: SettingKey | None = None
         self._about_next_retry_at = 0.0
         self._loading_system_info = SystemInfo("…", "…", "…", "…", "…")
         self._loading_system_stats = SystemStatsSnapshot(None, None, None, None, None, None)
@@ -545,7 +548,7 @@ class BridgeUi:
         # deferred behind SYNC_PAIRING (plan 051 pass 2). One event per QR
         # session — created on entry, set + cleared on exit.
         self._sync_pairing_exit_event: asyncio.Event | None = None
-        self._actions: asyncio.Queue[UiAction | UiButtonPress] = asyncio.Queue(maxsize=20)
+        self._actions: asyncio.Queue[UiInputEvent] = asyncio.Queue(maxsize=20)
         self._snapshot = self._build_snapshot(
             mode=UiMode.BOOTING,
             printer_model=config.printer.model,
@@ -665,17 +668,15 @@ class BridgeUi:
         ``_run_actions`` does for physical buttons — power-activity
         recording, the startup settle window, per-mode handling — applies
         to remote input unchanged. Returns ``False`` when the queue is
-        full (a burst-tapping client just loses the extra presses, exactly
-        like a bouncing physical button would).
+        full. Lost input resets buffered actions and consecutive-button unlock
+        progress, using the same discontinuity event as physical input.
 
         Must be called on the event loop thread: ``put_nowait`` on an
         asyncio queue is not thread-safe. The sync server's aiohttp
         handlers satisfy that by construction.
         """
 
-        try:
-            self._actions.put_nowait(action)
-        except asyncio.QueueFull:
+        if not enqueue_input(self._actions, action):
             LOGGER.warning("ui.remote_input_dropped action=%s reason=queue_full", action)
             return False
         return True
@@ -773,14 +774,16 @@ class BridgeUi:
             raise asyncio.CancelledError
 
     async def _close_ui_resources(self) -> None:
-        self._input.close()
         try:
-            await self._close_cached_printer_session()
+            self._input.close()
         finally:
             try:
-                await self._status_provider.close()
+                await self._close_cached_printer_session()
             finally:
-                self._display.close()
+                try:
+                    await self._status_provider.close()
+                finally:
+                    self._display.close()
 
     async def _deferred_initial_status(self) -> None:
         """Load/configure the Printer backend after core and agent readiness.
@@ -970,17 +973,21 @@ class BridgeUi:
                 return accepted_edit
             if not self._preview_session_can_apply(session_token, received, result):
                 return None
-            deadline = None if timeout_s is None else loop.time() + timeout_s
+            deadline: float | None = None
             while True:
                 if not self._preview_session_can_apply(session_token, received, result):
                     return None
-                if self._preview_manual_confirmation or deadline is None:
+                if self._preview_manual_confirmation or timeout_s is None:
                     if self._snapshot.print_title != "Updating preview":
                         self._show_print_preview(received, None, None)
                     accepted_edit = await asyncio.shield(result)
                     return accepted_edit
-                remaining_s = max(0.0, deadline - loop.time())
+                remaining_s = timeout_s if deadline is None else max(0.0, deadline - loop.time())
                 self._show_print_preview(received, remaining_s, timeout_s)
+                if deadline is None:
+                    # The selected interval starts once its first photo frame
+                    # is on the display, including a slow physical render.
+                    deadline = loop.time() + timeout_s
                 if remaining_s <= 0:
                     if self._preview_blocked_by_no_film(received):
                         return None
@@ -1158,9 +1165,10 @@ class BridgeUi:
             try:
                 model, datestamp_text = await asyncio.shield(preparation)
             except BaseException:
-                for task in (model_task, metadata_task):
-                    if not task.cancelling():
-                        task.cancel()
+                if not model_task.cancelling():
+                    model_task.cancel()
+                # Cancelling a to_thread wrapper cannot stop its EXIF reader.
+                # Keep the wrapper alive and join it before source ownership ends.
                 await _join_ui_cleanup(
                     asyncio.gather(model_task, metadata_task, return_exceptions=True)
                 )
@@ -1632,9 +1640,16 @@ class BridgeUi:
     async def _run_actions(self) -> None:
         while True:
             press = await self._actions.get()
-            action = press.action if isinstance(press, UiButtonPress) else press
-            button_id = press.button_id if isinstance(press, UiButtonPress) else f"remote:{action}"
             try:
+                if isinstance(press, UiInputGap):
+                    if self._unlocking:
+                        self._lock_screen()
+                    LOGGER.info("ui.input_progress_reset reason=lost_input")
+                    continue
+                action = press.action if isinstance(press, UiButtonPress) else press
+                button_id = (
+                    press.button_id if isinstance(press, UiButtonPress) else f"remote:{action}"
+                )
                 was_dark = self._screen_is_dark()
                 await self._record_power_activity()
                 loop = asyncio.get_running_loop()
@@ -2087,7 +2102,9 @@ class BridgeUi:
     # Help-dialog overlay
     # ------------------------------------------------------------------
 
-    def _show_help_dialog(self, *, title: str, body: str) -> None:
+    def _show_help_dialog(
+        self, *, title: str, body: str, information_key: SettingKey | None = None
+    ) -> None:
         """Open the read-only help overlay.
 
         The previous mode (and settings page) is captured so dismissal
@@ -2098,6 +2115,7 @@ class BridgeUi:
 
         self._previous_mode_before_dialog = self._snapshot.mode
         self._previous_page_before_dialog = self._settings_page
+        self._help_information_key = information_key
         self._snapshot = replace(
             self._snapshot,
             mode=UiMode.HELP_DIALOG,
@@ -2118,6 +2136,7 @@ class BridgeUi:
         self._dismiss_help_dialog()
 
     def _dismiss_help_dialog(self) -> None:
+        self._help_information_key = None
         previous_mode = self._previous_mode_before_dialog or UiMode.SETTINGS
         previous_page = self._previous_page_before_dialog or self._settings_page
         startup_finished = self._printer_backend_ready_event.is_set() or (
@@ -2301,6 +2320,7 @@ class BridgeUi:
             self._show_help_dialog(
                 title=row.label,
                 body=row.value or self._info_message_for_setting(key),
+                information_key=key,
             )
             return
         # Slider rows on the Adjustments page always enter focused edit mode
@@ -3991,7 +4011,12 @@ class BridgeUi:
         except RuntimeError:
             # Pure snapshot inspection outside a running UI cannot launch I/O.
             return
-        if self._stopping or self._screen_is_dark() or loop.time() < self._about_next_retry_at:
+        if (
+            self._stopping
+            or self._screen_locked
+            or self._screen_is_dark()
+            or loop.time() < self._about_next_retry_at
+        ):
             return
         if self._about_load_task is not None and not self._about_load_task.done():
             return
@@ -4031,20 +4056,17 @@ class BridgeUi:
             elif (
                 self._snapshot.mode is UiMode.HELP_DIALOG
                 and self._settings_page is SettingsPage.ABOUT
-                and self._snapshot.help_dialog_body == "…"
+                and self._help_information_key is not None
             ):
                 # An info row opened during loading stays the same dialog;
                 # update its value rather than leaving a permanent placeholder.
-                for key in SETTINGS_BY_PAGE[SettingsPage.ABOUT]:
-                    row = self._settings_row_for_key(key, "")
-                    if row.label == self._snapshot.help_dialog_title:
-                        self._snapshot = replace(
-                            self._snapshot,
-                            help_dialog_body=row.value,
-                            settings_rows=self._current_settings_rows(),
-                        )
-                        self._render()
-                        break
+                row = self._settings_row_for_key(self._help_information_key, "")
+                self._snapshot = replace(
+                    self._snapshot,
+                    help_dialog_body=row.value,
+                    settings_rows=self._current_settings_rows(),
+                )
+                self._render()
         except Exception:
             self._about_next_retry_at = self._monotonic() + SYSTEM_STATS_CACHE_S
             LOGGER.warning("ui.about_collection_failed", exc_info=True)
@@ -5575,6 +5597,7 @@ class BridgeUi:
                 if (
                     self._snapshot.mode is UiMode.SETTINGS
                     and self._settings_page is SettingsPage.ABOUT
+                    and not self._screen_locked
                     and not self._screen_is_dark()
                 ):
                     self._snapshot = replace(

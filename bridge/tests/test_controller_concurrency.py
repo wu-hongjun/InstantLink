@@ -299,11 +299,15 @@ async def test_cancel_preview_joins_model_task_and_never_applies_late_metadata(
     try:
         assert await asyncio.to_thread(metadata_started.wait, 1)
         task.cancel()
+        await asyncio.wait_for(model_cancelled.wait(), 0.2)
+        await asyncio.sleep(0)
+        assert not task.done()
+        assert not metadata_finished.is_set()
+        metadata_release.set()
         with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, 0.2)
         assert model_cancelled.is_set()
-        metadata_release.set()
-        assert await asyncio.to_thread(metadata_finished.wait, 1)
+        assert metadata_finished.is_set()
         assert ui._prepared_print_image is None
     finally:
         metadata_release.set()
@@ -433,6 +437,7 @@ async def test_repeated_preview_cancellation_does_not_interrupt_model_cleanup(
         assert not task.done()
         assert not finished.is_set()
         release_model.set()
+        release_metadata.set()
         with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, 0.2)
         assert finished.is_set()

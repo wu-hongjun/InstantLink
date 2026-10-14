@@ -39,7 +39,7 @@ def test_auto_resolves_to_dark_outside_the_window() -> None:
     assert resolve_auto_appearance(_at(19)) is Appearance.DARK  # 19:00 starts dark
     assert resolve_auto_appearance(_at(23)) is Appearance.DARK
     assert resolve_auto_appearance(_at(0)) is Appearance.DARK
-    assert resolve_auto_appearance(_at(6)) is Appearance.DARK   # 06:00 still dark
+    assert resolve_auto_appearance(_at(6)) is Appearance.DARK  # 06:00 still dark
 
 
 def test_auto_window_is_inclusive_on_start_exclusive_on_end() -> None:

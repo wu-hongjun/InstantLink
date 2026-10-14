@@ -3042,7 +3042,8 @@ def _footer_label_lines(snapshot: UiSnapshot) -> tuple[tuple[str, str, str], ...
     if snapshot.mode is UiMode.PRINTING:
         return (("", "KEY2 Lock", ""),)
     if snapshot.mode is UiMode.ERROR:
-        return (("KEY1 Settings", "KEY2 Back", "KEY3 Check"),)
+        context = "KEY3 iPhone" if snapshot.sync_destination == "iphone" else "KEY3 Check"
+        return (("KEY1 Settings", "KEY2 Back", context),)
     if snapshot.sync_destination == "iphone":
         return (("KEY1 Settings", "KEY2 Lock", "KEY3 iPhone"),)
     if snapshot.mode in {UiMode.PRINTER_OFFLINE, UiMode.PRINTER_SEARCHING}:

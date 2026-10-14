@@ -261,7 +261,7 @@ class InstantLinkBackend:
         self._lib: ctypes.CDLL | None = None
         self._lock = asyncio.Lock()
         self._last_status_failure_log_at = -float("inf")
-        self._last_status_failure_signature: tuple[str, str, str] | None = None
+        self._last_status_failure_signature: tuple[str, str, str, bool] | None = None
         self._consecutive_status_failures = 0
 
     def prepared_jpeg_available(self) -> bool:
@@ -461,7 +461,7 @@ class InstantLinkBackend:
     def _log_status_failure(self, name: str, exc: BaseException, *, disconnected: bool) -> None:
         normalized_name = normalize_printer_name(name)
         event = "status_failed_disconnect" if disconnected else "status_failed_keep_connection"
-        signature = (normalized_name, type(exc).__name__, str(exc))
+        signature = (normalized_name, type(exc).__name__, str(exc), disconnected)
         expected_absence = isinstance(exc, InstantLinkPrinterNotFoundError)
         now = time.monotonic()
         if signature != self._last_status_failure_signature or (

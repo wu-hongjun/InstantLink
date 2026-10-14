@@ -515,6 +515,7 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 await run_image_job_until_stopped(
                     dispatch_ready_image(received),
                     stop_event=stop_event,
+                    on_stop=service.begin_stopping,
                 )
             except Exception as exc:
                 LOGGER.exception(
@@ -541,38 +542,56 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         stop_event.set()
 
         async def shutdown_resources() -> None:
-            if watchdog_task is not None:
-                watchdog_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await watchdog_task
-            if power_task is not None:
-                power_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await power_task
-            for task in ui_event_tasks:
+            failures: list[BaseException] = []
+
+            async def close_resource(name: str, work: Awaitable[object]) -> None:
+                try:
+                    await work
+                except BaseException as exc:
+                    failures.append(exc)
+                    LOGGER.error("bridge.shutdown_resource_failed resource=%s", name, exc_info=exc)
+
+            async def stop_task(task: asyncio.Task[None]) -> None:
                 task.cancel()
-            if ui_event_tasks:
-                await asyncio.gather(*ui_event_tasks, return_exceptions=True)
-            if sync_setup_task is not None:
-                sync_setup_task.cancel()
+                await join_stopped_task(task)
+
+            async def join_stopped_task(task: asyncio.Task[None]) -> None:
                 with suppress(asyncio.CancelledError):
-                    await sync_setup_task
+                    await task
+
+            if watchdog_task is not None:
+                await close_resource("watchdog", stop_task(watchdog_task))
+            if power_task is not None:
+                await close_resource("power", stop_task(power_task))
+            event_tasks = tuple(ui_event_tasks)
+            for task in event_tasks:
+                task.cancel()
+            for task in event_tasks:
+                await close_resource("ui_event", join_stopped_task(task))
+            if sync_setup_task is not None:
+                await close_resource("sync_setup", stop_task(sync_setup_task))
             if cpu_start_task is not None:
-                await join_photo_task_cleanup(cpu_start_task)
-            await stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
-            await ui.stop()
+                await close_resource("cpu_start", join_photo_task_cleanup(cpu_start_task))
+            await close_resource(
+                "sync", stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
+            )
+            await close_resource("ui", ui.stop())
             if bluetooth_task is not None:
-                bluetooth_task.cancel()
-                with suppress(asyncio.CancelledError, Exception):
-                    await bluetooth_task
-            await cpu_performance.close()
-            await close_default_instantlink_backend()
+                await close_resource("bluetooth_start", stop_task(bluetooth_task))
+            await close_resource("cpu", cpu_performance.close())
+            await close_resource("instantlink_backend", close_default_instantlink_backend())
             if bluez_agent is not None:
-                await bluez_agent.stop()
-            await close_default_ble_session_manager()
-            await close_default_image_preparation_worker()
+                await close_resource("bluez_agent", bluez_agent.stop())
+            await close_resource("ble_sessions", close_default_ble_session_manager())
+            await close_resource("image_worker", close_default_image_preparation_worker())
             if service is not None:
-                service.stop()
+                try:
+                    service.stop()
+                except BaseException as exc:
+                    failures.append(exc)
+                    LOGGER.error("bridge.shutdown_resource_failed resource=ftp", exc_info=exc)
+            if failures:
+                raise failures[0]
 
         # A second shutdown/cancellation request must not abandon the remaining
         # services while child operations still own their resources.
@@ -949,6 +968,14 @@ async def handle_received_image(
             LOGGER.info("bridge.print_cancelled path=%s", received.path)
             return
 
+        # Preview preparation reads the live settings after readiness/pairing
+        # waits. Freeze those accepted settings before consuming its JPEG, so
+        # model-mismatch preparation and sender options describe the same photo.
+        # Injected/headless PrintUi implementations retain their supplied config.
+        accepted_config = getattr(ui, "config", None)
+        if isinstance(accepted_config, BridgeConfig):
+            config = accepted_config
+
         if cpu_performance is not None:
             await performance_scope.enter_async_context(cpu_performance.boost())
 
@@ -1028,7 +1055,12 @@ async def handle_received_image(
         await performance_scope.aclose()
 
 
-async def run_image_job_until_stopped(work: Awaitable[None], *, stop_event: asyncio.Event) -> None:
+async def run_image_job_until_stopped(
+    work: Awaitable[None],
+    *,
+    stop_event: asyncio.Event,
+    on_stop: Callable[[], None] | None = None,
+) -> None:
     """Observe shutdown while one ordered photo job owns its resources.
 
     Cancellation joins the job's cleanup before another photo or service
@@ -1039,10 +1071,16 @@ async def run_image_job_until_stopped(work: Awaitable[None], *, stop_event: asyn
     stopping = asyncio.create_task(stop_event.wait())
     try:
         done, _ = await asyncio.wait({job, stopping}, return_when=asyncio.FIRST_COMPLETED)
+        if stopping in done and on_stop is not None:
+            on_stop()
         if job in done:
             await job
         else:
             await cancel_and_join_photo_task(job)
+    except asyncio.CancelledError:
+        if on_stop is not None:
+            on_stop()
+        raise
     finally:
         stopping.cancel()
         try:
@@ -1224,12 +1262,20 @@ async def send_print_to_printer(
     # If datestamp is enabled, read EXIF and format the date now so
     # apply_adjustments stays locale-agnostic.
     if config.adjustments.datestamp:
-        datestamp_text = await asyncio.to_thread(
-            read_exif_datestamp_text,
-            received.path,
-            config.ui.language.value,
-            fmt=config.adjustments.datestamp_format,
+        metadata = asyncio.create_task(
+            asyncio.to_thread(
+                read_exif_datestamp_text,
+                received.path,
+                config.ui.language.value,
+                fmt=config.adjustments.datestamp_format,
+            )
         )
+        try:
+            datestamp_text = await asyncio.shield(metadata)
+        except BaseException:
+            # Retain the FTP source until the thread actually stops reading it.
+            await join_photo_task_cleanup(metadata)
+            raise
         adjustments = _replace(adjustments, datestamp_text=datestamp_text)
     if instantlink_backend_enabled():
         # When a preview was shown it already built this exact image; hand it

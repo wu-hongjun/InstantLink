@@ -12,6 +12,10 @@ from 1 to 10 seconds. Once all listeners bind, retries stop. A missing address d
 the bind to a wildcard or change USB-local authentication. If no configured address can bind,
 the service fails for its existing systemd restart policy. API payloads are unchanged.
 
+Hello/status collection runs outside the HTTP event loop. Stable system identity and versions
+are cached for at most 60 seconds and invalidated after firmware install/rollback attempts.
+Configuration, pairing state and system metrics are collected for each response.
+
 ## Print review delay
 
 `workflow.auto_print_delay_s` defaults to **1 second** when absent. Management updates accept

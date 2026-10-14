@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shutil
+import tempfile
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -326,11 +328,7 @@ class FtpReceiveService:
                         self._queue_overflow_callback(received, queue_depth, queue_max_size)
                     except Exception:
                         LOGGER.exception("ftp.queue_overflow_callback_failed path=%s", path)
-                if self.release_received_image(path):
-                    try:
-                        path.unlink(missing_ok=True)
-                    except OSError:
-                        LOGGER.exception("ftp.queue_full_cleanup_failed path=%s", path)
+                self._discard_received_image(path)
 
         try:
             self._loop.call_soon_threadsafe(enqueue)
@@ -342,6 +340,25 @@ class FtpReceiveService:
         canonical = path.resolve()
         with self._pending_paths_lock:
             self._pending_paths[canonical] = self._pending_paths.get(canonical, 0) + 1
+
+    def _discard_received_image(self, path: Path) -> None:
+        """Delete an overflowed source before releasing its final upload exclusion."""
+        canonical = path.resolve()
+        with self._pending_paths_lock:
+            count = self._pending_paths.get(canonical, 0)
+            if count > 1:
+                self._pending_paths[canonical] = count - 1
+                return
+            if count == 0:
+                return
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                LOGGER.exception("ftp.queue_full_cleanup_failed path=%s", path)
+            finally:
+                # Reservation uses this same lock, so a retry can only open
+                # the pathname after the old cleanup has finished using it.
+                self._pending_paths.pop(canonical, None)
 
     def release_received_image(self, path: Path) -> bool:
         """Release one queued/current job; return whether no job owns the source."""
@@ -370,7 +387,35 @@ class FtpReceiveService:
             ):
                 return False
             self._upload_owners[canonical] = owner
-            return True
+        try:
+            self._detach_legacy_upload_source(canonical)
+        except OSError:
+            self._release_upload(canonical, owner)
+            LOGGER.exception("ftp.shared_source_detach_failed path=%s", canonical)
+            return False
+        except BaseException:
+            self._release_upload(canonical, owner)
+            raise
+        return True
+
+    def _detach_legacy_upload_source(self, path: Path) -> None:
+        """Protect old outbox hard links before opening this filename for writing.
+
+        FTP is ready before deferred Sync startup migrates the persisted spool.
+        Keep the original inode immutable even when that migration overlaps a
+        new upload. Copying existing bytes also preserves REST/append semantics.
+        """
+        try:
+            shared = path.stat().st_nlink > 1
+        except FileNotFoundError:
+            return
+        if not shared:
+            return
+        with tempfile.TemporaryDirectory(prefix=".instantlink-detach-", dir=path.parent) as temp:
+            detached = Path(temp) / "original"
+            shutil.copy2(path, detached)
+            os.replace(detached, path)
+        LOGGER.info("ftp.shared_source_detached path=%s", path)
 
     def _release_upload(self, path: Path, owner: object) -> None:
         canonical = path.resolve()

@@ -35,8 +35,7 @@ ed25519 = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519
 
 
 class SigningPrivateKey(Protocol):
-    def sign(self, data: bytes) -> bytes:
-        ...
+    def sign(self, data: bytes) -> bytes: ...
 
 
 def test_manager_cli_hello_json_is_safe(

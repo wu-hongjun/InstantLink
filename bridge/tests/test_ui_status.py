@@ -429,7 +429,7 @@ async def test_instantlink_status_failure_logs_are_rate_limited(
     backend._lib = cast(Any, library)
     caplog.set_level(logging.WARNING, logger="instantlink_bridge.ble.instantlink")
 
-    for _ in range(3):
+    for _ in range(2):
         with pytest.raises(InstantLinkBleError, match="status failed"):
             await backend.status("INSTAX-1N034655")
 
@@ -439,6 +439,21 @@ async def test_instantlink_status_failure_logs_are_rate_limited(
         if record.getMessage().startswith("instantlink.status_failed_keep_connection")
     ]
     assert len(warning_messages) == 1
+    assert (
+        sum(
+            record.getMessage().startswith("instantlink.status_failed_disconnect")
+            for record in caplog.records
+        )
+        == 1
+    )
+    backend._log_status_failure(
+        "INSTAX-1N034655",
+        InstantLinkBleError(
+            "status failed: unexpected printer response", code=ERROR_PRINT_REJECTED
+        ),
+        disconnected=True,
+    )
+    assert len(caplog.records) == 2
     # A single transient failure keeps the connection, but a link that keeps failing is dead:
     # the 2nd consecutive failure hits STALE_LINK_STATUS_FAILURE_THRESHOLD and tears it down so
     # the next poll reconnects (rather than retrying status on a dead handle forever).

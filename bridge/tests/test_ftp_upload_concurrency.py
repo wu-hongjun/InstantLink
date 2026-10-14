@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import ftplib
+import socket
 from collections.abc import AsyncIterator
 from contextlib import closing
 from pathlib import Path
@@ -154,5 +155,185 @@ async def test_real_disconnect_releases_open_upload_for_retry(receiver: Receiver
     assert received.path.read_bytes() == b"complete-retry"
     assert queue.empty(), "an interrupted upload must not become a completed job"
     assert not service._upload_owners
+    service.release_received_image(received.path)
+    queue.task_done()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("command", ["STOR", "APPE", "REST"])
+async def test_pending_sync_original_survives_same_name_ftp_mutation(
+    receiver: Receiver, tmp_path: Path, command: str
+) -> None:
+    import hashlib
+
+    from instantlink_bridge.sync.outbox import SyncOutbox
+
+    service, queue, port = receiver
+    first_bytes = b"original-camera-photo"
+    replacement = b"replacement"
+
+    def upload(payload: bytes, *, mutation: bool = False) -> None:
+        with closing(connect(service, port)) as client:
+            client.voidcmd("TYPE I")
+            if mutation and command == "REST":
+                client.sendcmd("REST 4")
+            verb = "APPE" if mutation and command == "APPE" else "STOR"
+            with closing(client.transfercmd(f"{verb} /incoming/reused.HIF")) as stream:
+                stream.sendall(payload)
+            client.voidresp()
+            client.voidcmd("NOOP")
+
+    await asyncio.wait_for(asyncio.to_thread(upload, first_bytes), 3)
+    first = await asyncio.wait_for(queue.get(), 1)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+    item = await asyncio.to_thread(outbox.add, first.path)
+    spool = outbox.path_for(item.item_id)
+    assert spool is not None
+    assert (spool.stat().st_dev, spool.stat().st_ino) != (
+        first.path.stat().st_dev,
+        first.path.stat().st_ino,
+    )
+    service.release_received_image(first.path)
+    queue.task_done()
+
+    if command == "APPE":
+        # The camera account does not have append permission. Keep that
+        # restriction and prove rejected appends preserve the pending photo.
+        with pytest.raises(ftplib.error_perm, match="550"):
+            await asyncio.wait_for(asyncio.to_thread(upload, replacement, mutation=True), 3)
+        assert queue.empty()
+    else:
+        await asyncio.wait_for(asyncio.to_thread(upload, replacement, mutation=True), 3)
+        second = await asyncio.wait_for(queue.get(), 1)
+        assert second.path == first.path
+        assert second.path.read_bytes() != first_bytes
+        service.release_received_image(second.path)
+        queue.task_done()
+    assert spool.read_bytes() == first_bytes
+    assert spool.stat().st_size == item.size_bytes == len(first_bytes)
+    assert hashlib.sha256(spool.read_bytes()).hexdigest() == item.sha256
+    assert SyncOutbox(tmp_path / "outbox", budget_mb=64).get(item.item_id) == item
+
+
+@pytest.mark.asyncio
+async def test_real_overflow_cleanup_finishes_before_same_name_retry_can_open(
+    receiver: Receiver, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service, queue, port = receiver
+    queue._maxsize = 1
+    queue.put_nowait(ReceivedImage(service.config.incoming_dir / "held.HIF", "camera"))
+    path = service.config.incoming_dir / "race.HIF"
+    deleting, allow_delete, deletion_done = Event(), Event(), Event()
+    retry_reservation = Event()
+    original_unlink = Path.unlink
+    original_reserve = service._reserve_upload
+
+    def held_unlink(item: Path, *args: object, **kwargs: object) -> None:
+        if item == path and not deletion_done.is_set():
+            deleting.set()
+            assert allow_delete.wait(3), "retry did not attempt reservation"
+            original_unlink(item, *args, **kwargs)
+            deletion_done.set()
+        else:
+            original_unlink(item, *args, **kwargs)
+
+    def reserve(item: Path, owner: object) -> bool:
+        retry = item == path and deleting.is_set()
+        if retry:
+            retry_reservation.set()
+            allow_delete.set()
+        accepted = original_reserve(item, owner)
+        if retry and accepted:
+            assert deletion_done.is_set(), "retry opened before prior overflow deletion"
+        return accepted
+
+    monkeypatch.setattr(Path, "unlink", held_unlink)
+    monkeypatch.setattr(service, "_reserve_upload", reserve)
+    loop = asyncio.get_running_loop()
+
+    def drop_filler() -> None:
+        queue.get_nowait()
+        queue.task_done()
+
+    def uploads() -> None:
+        try:
+            with (
+                closing(connect(service, port)) as first,
+                closing(connect(service, port)) as second,
+            ):
+                second.voidcmd("TYPE I")
+                retry_address = second.makepasv()
+                retry_stream = socket.create_connection(retry_address, timeout=2)
+                with closing(first.transfercmd("STOR /incoming/race.HIF")) as stream:
+                    stream.sendall(b"overflowed-photo")
+                first.voidresp()
+                assert deleting.wait(3)
+                assert path.resolve() in service._pending_paths, (
+                    "cleanup released its pin too early"
+                )
+                loop.call_soon_threadsafe(drop_filler)
+                second.putcmd("STOR /incoming/race.HIF")
+                allow_delete.set()
+                assert second.getresp().startswith("1")
+                with closing(retry_stream) as stream:
+                    stream.sendall(b"retained-retry")
+                second.voidresp()
+                second.voidcmd("NOOP")
+                assert retry_reservation.is_set()
+        finally:
+            allow_delete.set()
+
+    await asyncio.wait_for(asyncio.to_thread(uploads), 8)
+    received = await asyncio.wait_for(queue.get(), 1)
+    assert received.path == path
+    assert path.read_bytes() == b"retained-retry"
+    service.release_received_image(path)
+    queue.task_done()
+    assert not service._pending_paths
+    assert not service._upload_owners
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("restart_offset", [None, 4])
+async def test_real_ftp_preserves_legacy_outbox_before_deferred_sync_reload(
+    receiver: Receiver, tmp_path: Path, restart_offset: int | None
+) -> None:
+    import hashlib
+    import os
+
+    from instantlink_bridge.sync.outbox import SyncOutbox
+
+    service, queue, port = receiver
+    source = service.config.incoming_dir / "legacy.HIF"
+    original = b"legacy-original-photo"
+    source.write_bytes(original)
+    outbox = SyncOutbox(tmp_path / "outbox", budget_mb=64)
+    item = outbox.add(source)
+    spool = outbox.path_for(item.item_id)
+    assert spool is not None
+    spool.unlink()
+    os.link(source, spool)
+    assert source.stat().st_ino == spool.stat().st_ino
+
+    def upload() -> None:
+        with closing(connect(service, port)) as client:
+            client.voidcmd("TYPE I")
+            if restart_offset is not None:
+                client.sendcmd(f"REST {restart_offset}")
+            with closing(client.transfercmd("STOR /incoming/legacy.HIF")) as stream:
+                stream.sendall(b"new")
+            client.voidresp()
+            client.voidcmd("NOOP")
+
+    # Sync has not reloaded or migrated the persisted index yet.
+    await asyncio.wait_for(asyncio.to_thread(upload), 3)
+    received = await asyncio.wait_for(queue.get(), 1)
+    expected_incoming = b"new" if restart_offset is None else b"leganeworiginal-photo"
+    assert received.path.read_bytes() == expected_incoming
+    assert spool.read_bytes() == original
+    assert spool.stat().st_size == item.size_bytes
+    assert hashlib.sha256(spool.read_bytes()).hexdigest() == item.sha256
+    assert SyncOutbox(tmp_path / "outbox", budget_mb=64).get(item.item_id) == item
+    assert set(source.parent.iterdir()) == {source}
     service.release_received_image(received.path)
     queue.task_done()

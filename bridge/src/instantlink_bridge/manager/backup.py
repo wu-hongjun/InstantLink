@@ -580,11 +580,7 @@ def verify_backup_archive(
     )
     result = BackupArchiveVerificationResult(
         ok=not (
-            archive_digest_mismatch
-            or missing_paths
-            or extra_paths
-            or mismatches
-            or invalid_paths
+            archive_digest_mismatch or missing_paths or extra_paths or mismatches or invalid_paths
         ),
         archive_sha256=archive_sha256,
         checked_paths=tuple(checked_paths),

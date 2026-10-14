@@ -1,0 +1,91 @@
+{
+  "baseline": "c4a2787",
+  "pid": 44093,
+  "elapsed_s": 30.05571222800063,
+  "cpu_khz": [
+    600000
+  ],
+  "threads": [
+    {
+      "tid": "44106",
+      "name": "instantlink-bri",
+      "cpu_s": 0.22,
+      "one_core_percent": 0.7319740032480171
+    },
+    {
+      "tid": "44093",
+      "name": "instantlink-bri",
+      "cpu_s": 0.12,
+      "one_core_percent": 0.39925854722619114
+    },
+    {
+      "tid": "44110",
+      "name": "tokio-rt-worker",
+      "cpu_s": 0.09,
+      "one_core_percent": 0.29944391041964336
+    },
+    {
+      "tid": "44096",
+      "name": "instantlink-bri",
+      "cpu_s": 0.01,
+      "one_core_percent": 0.033271545602182595
+    },
+    {
+      "tid": "44099",
+      "name": "instantlink-bri",
+      "cpu_s": 0.01,
+      "one_core_percent": 0.033271545602182595
+    },
+    {
+      "tid": "44101",
+      "name": "instantlink-bri",
+      "cpu_s": 0.01,
+      "one_core_percent": 0.033271545602182595
+    },
+    {
+      "tid": "44098",
+      "name": "instantlink-bri",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "tid": "44108",
+      "name": "tokio-rt-worker",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "tid": "44109",
+      "name": "tokio-rt-worker",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "tid": "44111",
+      "name": "tokio-rt-worker",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "tid": "44117",
+      "name": "instantlink-bri",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "tid": "44118",
+      "name": "instantlink-bri",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "tid": "44119",
+      "name": "instantlink-bri",
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    }
+  ],
+  "existing_thread_cpu_s": 0.46,
+  "film_used": 0,
+  "conditions": "Normal runtime, idle and Printer unavailable; CPU process threads only, no energy or battery measurement."
+}

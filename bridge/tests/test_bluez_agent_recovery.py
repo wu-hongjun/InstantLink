@@ -1077,12 +1077,17 @@ async def test_snapshot_in_flight_cannot_overwrite_newer_cached_identity_state(
     await bus.entered.wait()
     if kind == "disconnect":
         emit(bus, connection_signal(bus))
+        fresh = selected_tree(False)
     elif kind == "remove":
         emit(bus, removal_signal(bus, DEVICE_PATH, "org.bluez.Device1"))
+        fresh = {}
     elif kind == "rename":
         signal = connection_signal(bus, Variant("b", True))
         signal.body[1] = {"Name": Variant("s", "INSTAX-99999999")}
         emit(bus, signal)
+        fresh = {
+            DEVICE_PATH: {"org.bluez.Device1": signal.body[1] | {"Connected": Variant("b", True)}}
+        }
     else:
         emit(
             bus,
@@ -1095,8 +1100,25 @@ async def test_snapshot_in_flight_cannot_overwrite_newer_cached_identity_state(
                 },
             ),
         )
+        fresh = selected_tree()
+        fresh[OTHER_PATH] = {
+            "org.bluez.Device1": {
+                "Alias": Variant("s", "INSTAX-52006924(ANDROID)"),
+                "Connected": Variant("b", True),
+            }
+        }
+    stale = bus.snapshot
+    original_call = bus.call
+
+    async def refreshed_call(request: Message) -> Message:
+        bus.snapshot = fresh
+        return await original_call(request)
+
+    bus.call = refreshed_call
     bus.release.set()
-    await query
+    assert await query == fresh
+    assert stale != fresh
+    assert tree_calls(bus) == 3
     assert service._cached_watch_candidates("instax-52006924") is None
     await service.stop()
 

@@ -43,6 +43,8 @@ def objects(*devices: dict[str, object]) -> dict[str, object]:
 
 
 class FakeBus:
+    connected = True
+
     def __init__(self, reply: Message | None) -> None:
         self.reply = reply
         self.disconnects = 0
@@ -70,6 +72,7 @@ def reply(value: object) -> Message:
     return Message(
         message_type=MessageType.METHOD_RETURN,
         reply_serial=1,
+        sender=":1.10",
         signature="a{oa{sa{sv}}}",
         body=[value],
     )
@@ -79,6 +82,7 @@ def install_bus(monkeypatch: pytest.MonkeyPatch, bus: FakeBus) -> BluezAgentServ
     agent = BluezAgentService()
     agent._bus = bus
     agent._registered = True
+    agent._owner = ":1.10"
     original_lookup = pairing._connected_bluez_addresses_from_dbus
 
     async def lookup(
@@ -110,7 +114,7 @@ async def test_fresh_snapshot_only_connected_alias_matches_and_no_discovery_cli(
     assert bus.disconnects == 0
     request = bus.calls[0]
     assert (request.destination, request.path, request.interface, request.member) == (
-        "org.bluez",
+        ":1.10",
         "/",
         "org.freedesktop.DBus.ObjectManager",
         "GetManagedObjects",
@@ -305,6 +309,7 @@ async def test_pairer_injection_uses_existing_agent_connection(
     bus = FakeBus(reply(objects(device(connected=False))))
     agent._bus = bus
     agent._registered = True
+    agent._owner = ":1.10"
 
     async def forbidden(*_args: str, **_kwargs: object) -> pairing._CommandResult:
         raise AssertionError("connected-state query must not spawn CLI")
@@ -357,6 +362,8 @@ async def test_cancelled_query_does_not_cancel_other_shared_bus_call() -> None:
     two_calls = asyncio.Event()
 
     class ConcurrentBus:
+        connected = True
+
         async def call(self, _request: Message) -> Message:
             pending: asyncio.Future[Message] = asyncio.get_running_loop().create_future()
             calls.append(pending)
@@ -369,6 +376,7 @@ async def test_cancelled_query_does_not_cancel_other_shared_bus_call() -> None:
 
     agent._bus = ConcurrentBus()
     agent._registered = True
+    agent._owner = ":1.10"
     first = asyncio.create_task(
         pairing._connected_bluez_addresses_from_dbus(SELECTED, agent.managed_objects_snapshot)
     )
@@ -449,7 +457,7 @@ async def test_bond_reset_snapshot_gate_preserves_live_alias_and_removal_order(
         calls.append(args)
         if args == ("devices",):
             return pairing._CommandResult(0, f"Device {ADDRESS} INSTAX-1N034655(IOS)")
-        assert args == ("remove", ADDRESS)
+        assert args in {("remove", ADDRESS), ("remove", OTHER_ADDRESS)}
         assert backend.disconnect_calls == 0
         return pairing._CommandResult(0, "")
 
@@ -462,8 +470,8 @@ async def test_bond_reset_snapshot_gate_preserves_live_alias_and_removal_order(
     else:
         pairer = pairing.BluetoothctlPrinterPairer(store=store, bluez_objects_provider=provider)
     assert await pairer.reset_bond_if_disconnected(SELECTED) is not connected
-    assert queries == 1
-    assert calls == ([] if connected else [("devices",), ("remove", ADDRESS)])
+    assert queries == (1 if connected else 2)
+    assert calls == ([] if connected else [("remove", OTHER_ADDRESS), ("remove", ADDRESS)])
     assert backend.disconnect_calls == int(native_selector and not connected)
     assert store.load() == SELECTED
 
@@ -508,8 +516,10 @@ async def test_bond_gate_snapshot_failure_uses_cli_before_authorizing_removal(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("native", [False, True])
 async def test_bond_gate_cancellation_never_falls_back_or_removes_bond(
     monkeypatch: pytest.MonkeyPatch,
+    native: bool,
 ) -> None:
     entered = asyncio.Event()
 
@@ -521,7 +531,12 @@ async def test_bond_gate_cancellation_never_falls_back_or_removes_bond(
         raise AssertionError("cancelled bond gate cannot issue CLI commands")
 
     monkeypatch.setattr(pairing, "_run_bluetoothctl", forbidden)
-    pairer = pairing.BluetoothctlPrinterPairer(bluez_objects_provider=provider)
+    backend = BondBackend()
+    pairer = (
+        pairing.InstantLinkPrinterSelector(backend=backend, bluez_objects_provider=provider)
+        if native
+        else pairing.BluetoothctlPrinterPairer(bluez_objects_provider=provider)
+    )
     task = asyncio.create_task(pairer.reset_bond_if_disconnected(SELECTED))
     await entered.wait()
     task.cancel()

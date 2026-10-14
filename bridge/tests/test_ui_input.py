@@ -14,7 +14,7 @@ import pytest
 
 from instantlink_bridge.ui import gpio_edges
 from instantlink_bridge.ui.input import ACTION_PINS, GpioUiInput, _enqueue
-from instantlink_bridge.ui.models import UiAction, UiButtonPress
+from instantlink_bridge.ui.models import UiAction, UiButtonPress, UiInputGap
 
 
 def _event(pin: int, sequence: int, *, edge: int = 2, timestamp: int = 1) -> bytes:
@@ -92,7 +92,7 @@ async def test_full_queue_does_not_stop_edges_or_repeat_held_press(
     try:
         os.write(write_fd, _event(21, 1))
         await asyncio.sleep(0.01)
-        assert queue.get_nowait() is UiAction.BACK
+        assert isinstance(queue.get_nowait(), UiInputGap)
         os.write(write_fd, _event(21, 2) + _event(21, 3, edge=1) + _event(21, 4))
         await asyncio.sleep(0.01)
         assert queue.get_nowait() == UiButtonPress(UiAction.SELECT, "gpio:21")
@@ -117,6 +117,7 @@ async def test_sequence_gap_suppresses_uncertain_press_and_resumes_after_release
     try:
         os.write(write_fd, _event(21, 3, timestamp=900) + _event(21, 4, timestamp=950))
         await asyncio.sleep(0.01)
+        assert isinstance(queue.get_nowait(), UiInputGap)
         assert queue.empty()
         assert "ui.input_edge_gap" in caplog.text
         os.write(
@@ -396,6 +397,7 @@ async def test_edge_eof_closes_request_and_recovers_legacy_input(
     assert len(buttons) == 8
     buttons[5].when_pressed()
     await asyncio.sleep(0)
+    assert isinstance(queue.get_nowait(), UiInputGap)
     assert queue.get_nowait() == UiButtonPress(UiAction.SELECT, "gpio:21")
     gpio.close()
 

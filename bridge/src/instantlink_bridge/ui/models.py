@@ -69,6 +69,14 @@ class UiButtonPress:
 
 
 @dataclass(frozen=True, slots=True)
+class UiInputGap:
+    """Input was lost; consecutive-button unlock progress is no longer trustworthy."""
+
+
+UiInputEvent = UiAction | UiButtonPress | UiInputGap
+
+
+@dataclass(frozen=True, slots=True)
 class PairedPrinter:
     """A selected Bluetooth printer."""
 

@@ -202,8 +202,8 @@ def test_selected_option_index_falls_back_to_nearest_for_off_grid() -> None:
     ("saturation", "expected_index", "note"),
     [
         (-75, 0, "tie between -100 and -50 → lower index wins"),  # dist to -100=25, dist to -50=25
-        (-74, 1, "nearer to -50"),    # dist to -100=26, dist to -50=24
-        (-76, 0, "nearer to -100"),   # dist to -100=24, dist to -50=26
+        (-74, 1, "nearer to -50"),  # dist to -100=26, dist to -50=24
+        (-76, 0, "nearer to -100"),  # dist to -100=24, dist to -50=26
         (1, 2, "nearest to 0"),
         (24, 2, "still nearest to 0"),
         (25, 2, "tie between 0 and 50 → lower index (0) wins"),

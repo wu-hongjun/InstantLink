@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 
 from instantlink_bridge.config import (
     DEFAULT_CONFIG_PATH,
@@ -28,6 +31,46 @@ DISPLAY_NAME = "InstantLink Bridge"
 # over the interval since the previous /v1/status request, which is the same
 # pattern the LCD About page uses.
 _status_cpu_sampler = CPUSampler()
+# HTTP collectors run in worker threads. Keep the baseline and first-sample
+# warm-up together so concurrent requests cannot interleave sampler updates.
+_status_cpu_lock = Lock()
+
+
+class SystemInfoCache:
+    """Bound stable identity/version probes to once per minute per manager app.
+
+    Only system information is cached; config and pairing state stay fresh on
+    every request. The lock also prevents simultaneous cold requests from
+    spawning duplicate bluetoothctl probes. Use this cache only from workers.
+    """
+
+    def __init__(
+        self,
+        *,
+        max_age_seconds: float = 60.0,
+        now: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._max_age_seconds = max_age_seconds
+        self._now = now
+        self._lock = Lock()
+        self._info: SystemInfo | None = None
+        self._expires_at = 0.0
+
+    def read(self) -> SystemInfo:
+        """Read or refresh the snapshot, serializing concurrent worker probes."""
+
+        with self._lock:
+            if self._info is None or self._now() >= self._expires_at:
+                self._info = read_system_info()
+                self._expires_at = self._now() + self._max_age_seconds
+            return self._info
+
+    def invalidate(self) -> None:
+        """Discard version data after a firmware operation, including failures."""
+
+        with self._lock:
+            self._info = None
+            self._expires_at = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,10 +98,11 @@ def collect_hello_payload(
     config_path: Path = DEFAULT_CONFIG_PATH,
     *,
     pairing_store: PairingWindowStore | None = None,
+    system_info_cache: SystemInfoCache | None = None,
 ) -> JsonObject:
     """Return unauthenticated discovery metadata with no credentials or printer identifiers."""
 
-    info = read_system_info()
+    info = system_info_cache.read() if system_info_cache is not None else read_system_info()
     snapshot = read_config_snapshot(config_path)
     pairing = read_pairing_status(pairing_store)
     return {
@@ -153,14 +197,17 @@ def collect_status_payload(
 
 def collect_http_status_payload(
     config_path: Path = DEFAULT_CONFIG_PATH,
+    *,
+    system_info_cache: SystemInfoCache | None = None,
 ) -> JsonObject:
     """Return the BridgeStatus-shaped payload used by the macOS management API."""
 
-    info = read_system_info()
+    info = system_info_cache.read() if system_info_cache is not None else read_system_info()
     snapshot = read_config_snapshot(config_path)
     config = snapshot.config
     upload_mode = bridge_upload_mode(config.ftp.mode)
-    stats = read_system_stats(_status_cpu_sampler)
+    with _status_cpu_lock:
+        stats = read_system_stats(_status_cpu_sampler)
     return {
         "status": {
             "device_id": info.device_id,
@@ -310,10 +357,11 @@ def read_pairing_status(
     )
 
 
-def current_device_id() -> str:
+def current_device_id(system_info_cache: SystemInfoCache | None = None) -> str:
     """Return the Bridge device id used to guard pairing completion."""
 
-    return read_system_info().device_id
+    info = system_info_cache.read() if system_info_cache is not None else read_system_info()
+    return info.device_id
 
 
 def device_payload(info: SystemInfo, *, pairing_open: bool = False) -> JsonObject:

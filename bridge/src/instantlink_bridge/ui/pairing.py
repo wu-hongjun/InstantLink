@@ -245,7 +245,8 @@ class BluetoothctlPrinterPairer:
         removal is gated on ``Connected=no`` because removing a live bond wedges the printer.
         """
 
-        if await _identity_has_connected_link(printer, self._bluez_objects_provider):
+        addresses = await _bond_reset_targets(printer, self._bluez_objects_provider)
+        if addresses is None:
             LOGGER.info(
                 "bluetooth.reset_bond skipped=connected address=%s name=%s",
                 printer.address,
@@ -257,8 +258,9 @@ class BluetoothctlPrinterPairer:
             printer.address,
             printer.name,
         )
-        await self._remove_selected_bluez_devices(printer)
-        return True
+        return await _remove_validated_bond_targets(
+            printer, addresses, self._bluez_objects_provider
+        )
 
     async def disconnect_bluez_link(self, printer: PairedPrinter) -> bool:
         """Drop any connected-but-silent BlueZ link for ``printer`` so it re-advertises."""
@@ -446,7 +448,8 @@ class InstantLinkPrinterSelector:
         a bond was actually removed so the next connect re-pairs fresh.
         """
 
-        if await _identity_has_connected_link(printer, self._bluez_objects_provider):
+        addresses = await _bond_reset_targets(printer, self._bluez_objects_provider)
+        if addresses is None:
             LOGGER.info(
                 "instantlink.reset_bond skipped=connected address=%s name=%s",
                 printer.address,
@@ -458,9 +461,12 @@ class InstantLinkPrinterSelector:
             printer.address,
             printer.name,
         )
-        await _remove_bluez_devices_for_identity(printer)
-        await self._backend.disconnect()
-        return True
+        removed = await _remove_validated_bond_targets(
+            printer, addresses, self._bluez_objects_provider
+        )
+        if removed:
+            await self._backend.disconnect()
+        return removed
 
     async def disconnect_bluez_link(self, printer: PairedPrinter) -> bool:
         """Drop any connected-but-silent BlueZ link for ``printer`` so it re-advertises.
@@ -607,6 +613,14 @@ async def _connected_bluez_addresses_from_dbus(
 
 def _connected_addresses_from_bluez_objects(selected: PairedPrinter, objects: object) -> list[str]:
     """Mirror bluetoothctl Address/Alias matching and default-adapter scope."""
+    states = _identity_states_from_bluez_objects(selected, objects)
+    return sorted(address for address, connected in states.items() if connected)
+
+
+def _identity_states_from_bluez_objects(
+    selected: PairedPrinter, objects: object
+) -> dict[str, bool]:
+    """Resolve target membership and connection state from the same full tree."""
     if not isinstance(objects, dict):
         raise ValueError("invalid BlueZ object snapshot")
     adapters: set[str] = set()
@@ -627,7 +641,7 @@ def _connected_addresses_from_bluez_objects(selected: PairedPrinter, objects: ob
         # bluetoothctl uses its default controller. ObjectManager includes
         # every adapter; guessing the default could disconnect another link.
         raise ValueError("ambiguous BlueZ default adapter")
-    connected: set[str] = set()
+    states: dict[str, bool] = {}
     for path, properties in devices:
         adapter = _bluez_variant_value(properties.get("Adapter"), "o")
         if adapter not in adapters or not path.startswith(str(adapter) + "/dev_"):
@@ -650,9 +664,10 @@ def _connected_addresses_from_bluez_objects(selected: PairedPrinter, objects: ob
         live = _bluez_variant_value(properties.get("Connected"), "b")
         if type(live) is not bool:
             raise ValueError("unknown BlueZ device connection state")
-        if live:
-            connected.add(address.upper())
-    return sorted(connected)
+        if address.upper() in states:
+            raise ValueError("duplicate BlueZ device address")
+        states[address.upper()] = live
+    return states
 
 
 def _bluez_variant_value(value: object, signature: str) -> object:
@@ -661,57 +676,94 @@ def _bluez_variant_value(value: object, signature: str) -> object:
     return value.value
 
 
-async def _identity_has_connected_link(
-    selected: PairedPrinter, objects_provider: BluezObjectsProvider | None = None
-) -> bool:
-    """Return true when any BlueZ device matching the identity reports ``Connected=yes``.
+async def _bond_reset_targets(
+    selected: PairedPrinter,
+    objects_provider: BluezObjectsProvider | None = None,
+    *,
+    last_address: str | None = None,
+) -> list[str] | None:
+    """Authorize exactly the disconnected targets resolved by a fresh query.
 
-    Used to gate the proactive bond reset (docs/plans/031): the bond must only be removed when the
-    link is down. Removing a bond while a link is live leaves the printer holding a half-open
-    "ghost" link and stops it advertising. Reuses the same ``Connected`` probe as
-    ``_disconnect_bluez_link_for_identity``.
+    None means a matching live link forbids removal. An uncertain query raises
+    rather than permitting destructive fallback from an incomplete inventory.
     """
-
     if objects_provider is not None:
-
-        async def scoped_snapshot() -> object:
-            objects = await objects_provider()
-            # Unlike silent-link lookup, an authoritative negative here permits
-            # destructive bond removal. Require a known single controller even
-            # when BlueZ returns no devices during adapter/daemon startup.
-            if (
-                not isinstance(objects, dict)
-                or sum(
-                    isinstance(interfaces, dict) and "org.bluez.Adapter1" in interfaces
-                    for interfaces in objects.values()
-                )
-                != 1
-            ):
-                raise ValueError("unknown BlueZ bond-gate adapter scope")
-            return objects
-
         try:
-            # The agent already owns a system bus. One bounded, fresh snapshot can
-            # check every IOS/ANDROID identity without starting devices/info
-            # subprocesses. Unknown properties or adapter scope still use the
-            # established CLI gate before any bond-removal command is issued.
-            return bool(await _connected_bluez_addresses_from_dbus(selected, scoped_snapshot))
+            async with asyncio.timeout(2.0):
+                objects = await objects_provider()
+                if (
+                    not isinstance(objects, dict)
+                    or sum(
+                        isinstance(interfaces, dict) and "org.bluez.Adapter1" in interfaces
+                        for interfaces in objects.values()
+                    )
+                    != 1
+                ):
+                    raise ValueError("unknown BlueZ bond-gate adapter scope")
+                states = _identity_states_from_bluez_objects(selected, objects)
+                return None if any(states.values()) else sorted(states)
         except Exception:
             LOGGER.debug("bluetooth.bond_gate_snapshot_unavailable", exc_info=True)
     addresses = await _bluez_addresses_for_identity(
         selected, include_selected_address=True, require_success=True
     )
-    for address in addresses:
-        # Short timeout: this gate runs on the drop edge, just before the immediate reconnect, so a
-        # momentarily-busy BlueZ must not stall it (a timeout raises and the caller skips removal,
-        # falling back to the dormant auto_rebond). bluetoothctl info normally returns sub-second.
+    # The first deletion uses the first sorted address. Check that exact
+    # target last so checking other identities cannot supersede its negative
+    # state. Later deletions explicitly choose their target for this last check.
+    target = last_address if last_address is not None else (addresses[0] if addresses else None)
+    check_order = [address for address in addresses if address != target]
+    if target is not None and target in addresses:
+        check_order.append(target)
+    for address in check_order:
         info_result = await _run_bluetoothctl("info", address, check=False, timeout_seconds=4)
         connected = parse_device_info(info_result.output).get("Connected", "").casefold()
         if info_result.returncode != 0 or connected not in {"yes", "true", "no", "false"}:
             raise PrinterPairingError("Unable to confirm BlueZ link state before bond reset")
         if connected in {"yes", "true"}:
-            return True
-    return False
+            return None
+    return addresses
+
+
+async def _remove_validated_bond_targets(
+    selected: PairedPrinter,
+    addresses: list[str],
+    objects_provider: BluezObjectsProvider | None,
+) -> bool:
+    """Delete only authorized addresses; refresh after each subprocess yields."""
+    removed = False
+    for index, address in enumerate(addresses):
+        if index:
+            try:
+                current = await _bond_reset_targets(
+                    selected, objects_provider, last_address=address
+                )
+            except Exception:
+                # Report earlier deletions so the caller retires its native
+                # session, while leaving uncertain remaining targets alone.
+                LOGGER.debug("bluetooth.remaining_bond_targets_unconfirmed", exc_info=True)
+                break
+            if current is None or not set(current).issubset(addresses) or address not in current:
+                break
+        LOGGER.info(
+            "bluetooth.remove_bond_cache address=%s selected_name=%s", address, selected.name
+        )
+        result = await _run_bluetoothctl("remove", address, check=False)
+        if result.returncode == 0:
+            removed = True
+        else:
+            LOGGER.info(
+                "bluetooth.remove_bond_failed address=%s returncode=%s",
+                address,
+                result.returncode,
+            )
+    return removed
+
+
+async def _identity_has_connected_link(
+    selected: PairedPrinter, objects_provider: BluezObjectsProvider | None = None
+) -> bool:
+    """Return true only when a fresh authoritative query finds a live identity."""
+    return await _bond_reset_targets(selected, objects_provider) is None
 
 
 def _matches_selected_identity(selected: PairedPrinter, candidate: PairedPrinter) -> bool:

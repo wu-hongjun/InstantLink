@@ -59,3 +59,18 @@ Hardware unchanged: Pi Zero 2 W Rev 1.0/ST7789/X306, Debian 13.2/kernel 6.12.47/
 Link Square INSTAX-52006924.
 
 Public evidence: [plan 094 audit assets](../assets/bridge-audit-094/README.md).
+
+## Live follow-up after Printer power-on
+
+The normal installed service recovered one exact native setup drop at 15:49:24 EDT and
+published fresh status at 15:49:28: one detailed INFO record, no duplicate warning. A subsequent
+external Disconnect completed native connection/status setup again at 15:49:40 while the
+service stayed at 600 MHz with the screen dark and FTP responsive. Film remained zero.
+
+That first probe timed out because unchanged successful status after a disconnect was DEBUG,
+so its INFO-only journal observer could not prove controller acceptance. Connected BlueZ and
+native progress alone were not promoted to a successful fresh-status acceptance result.
+The follow-up clears the status-log signature only on an accepted current disconnect event:
+the next accepted fresh status is INFO once, with unchanged later polls returning to DEBUG.
+Stale watches and replies arriving while a disconnect is pending cannot generate fresh status.
+This restores the documented recovery logging without adding polls or changing BLE operations.

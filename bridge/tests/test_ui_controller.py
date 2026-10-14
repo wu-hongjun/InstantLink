@@ -1752,9 +1752,12 @@ async def test_disconnect_callback_cannot_poison_paused_replaced_or_stopped_poll
     else:
         ui._stopping = True
     published = ui.live_snapshot
+    signature = ("unchanged existing status",)
+    ui._last_printer_status_log_signature = signature
     watcher.callbacks[0]()
     assert not ui._printer_disconnect_pending
     assert ui.live_snapshot is published
+    assert ui._last_printer_status_log_signature is signature
     assert not ui._printer_check_requested.is_set()
     assert provider.close_cached_calls == 0
 
@@ -7415,3 +7418,46 @@ async def test_confirmed_disconnect_owns_failure_recovery_until_serialized_poll_
     assert ui._silent_link_recovery_task is None
     assert not ui.live_snapshot.printer_status_fresh
     assert provider.close_cached_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_identical_status_logs_once_after_confirmed_disconnect_recovery(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    caplog.set_level(logging.DEBUG, logger="instantlink_bridge.ui.controller")
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert await ui._refresh_printer_status_in_background(printer)
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    watcher.callbacks[0]()
+    assert ui._last_printer_status_log_signature is None
+    assert not ui.live_snapshot.printer_status_fresh
+    # A status whose ACK races the confirmed drop cannot publish or log recovery.
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui._last_printer_status_log_signature is None
+    assert not ui.live_snapshot.printer_status_fresh
+    before = [r for r in caplog.records if r.getMessage().startswith("ui.printer_status ")]
+    assert [r.levelno for r in before] == [logging.INFO, logging.DEBUG]
+    # Model the poll's serialized cleanup before its next accepted fresh response.
+    ui._printer_disconnect_pending = False
+    ui._disarm_printer_disconnect_watch()
+    await ui._close_cached_printer_session()
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui.live_snapshot.printer_status_fresh
+    signature = ui._last_printer_status_log_signature
+    assert await ui._refresh_printer_status_in_background(printer)
+    records = [r for r in caplog.records if r.getMessage().startswith("ui.printer_status ")]
+    assert [r.levelno for r in records] == [
+        logging.INFO,
+        logging.DEBUG,
+        logging.INFO,
+        logging.DEBUG,
+    ]
+    # An obsolete subscription cannot force a second recovery announcement.
+    watcher.callbacks[0]()
+    assert ui._last_printer_status_log_signature == signature
+    assert not ui._printer_disconnect_pending

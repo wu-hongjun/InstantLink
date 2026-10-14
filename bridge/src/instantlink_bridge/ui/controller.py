@@ -4855,6 +4855,9 @@ class BridgeUi:
             notified = True
             self._printer_disconnect_pending = True
             self._last_printer_status_ok_at = float("-inf")
+            # Recovery is a new connected episode even if film/battery are unchanged. Emit
+            # its first accepted fresh status at INFO; pending/late replies remain rejected.
+            self._last_printer_status_log_signature = None
             # Invalidate the published state in the same turn as the signal.
             # Dark screens may otherwise retain a fresh status until their
             # next maintenance tick or the reconnect attempt finishes.

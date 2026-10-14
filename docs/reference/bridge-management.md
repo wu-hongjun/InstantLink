@@ -144,11 +144,13 @@ input guard prevents accidental button actions; it is not an authentication mech
 
 ### Service startup
 
-The Bridge starts after the system D-Bus socket is listening; Python imports can overlap the
-socket-activated bus daemon's startup. Default systemd initialization and filesystem dependencies
-remain enabled. Network, DHCP and Bluetooth start independently; LCD and FTP do not wait for
-network-online. Printer requests still wait for the application pairing-agent readiness gate.
-The manager retains independent startup/recovery and its exact USB/hotspot listener bindings.
+The Bridge orders startup after the system D-Bus daemon, preserving the reverse shutdown order
+for cleanup. Default systemd initialization and filesystem dependencies remain enabled. Network,
+DHCP and Bluetooth start independently; LCD and FTP do not wait for network-online. Printer
+requests still wait for the application pairing-agent readiness gate. The manager retains
+independent startup/recovery and its exact USB/hotspot listener bindings. Ordering the Bridge
+only after the bus socket was benchmarked and rejected; it showed no meaningful readiness gain
+and removed daemon shutdown ordering.
 
 ### Python startup imports
 

@@ -18,7 +18,7 @@ def unit_dependencies(unit: ConfigParser, field: str) -> set[str]:
     return set(unit.get("Unit", field, fallback="").split())
 
 
-def test_bridge_waits_for_listening_bus_without_serializing_network_or_daemon() -> None:
+def test_bridge_keeps_bus_daemon_ordering_without_serializing_network() -> None:
     unit = read_unit("instantlink-bridge.service")
     after = unit_dependencies(unit, "After")
     wants = unit_dependencies(unit, "Wants")
@@ -29,10 +29,10 @@ def test_bridge_waits_for_listening_bus_without_serializing_network_or_daemon() 
         "NetworkManager.service",
     }
 
-    # Requiring a listening socket retains the bus-connect guarantee while its
-    # socket-activated daemon can initialize during Python's initial imports.
-    assert "dbus.socket" in after & wants
-    assert not after & (independent_services | {"dbus.service", "network-online.target"})
+    # The daemon must start first and stop after Bridge cleanup. Ordering only
+    # against its socket loses that reverse shutdown dependency (plan 098).
+    assert "dbus.service" in after
+    assert not after & (independent_services | {"network-online.target"})
     assert independent_services <= wants
     # Retain systemd's sysinit/basic/shutdown ordering and real app readiness.
     assert unit.getboolean("Unit", "DefaultDependencies", fallback=True)

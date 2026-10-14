@@ -42,3 +42,25 @@ button input. Collect LCD/FTP/core/agent/Printer and manager/hotspot milestones,
 source/unit provenance, actual framebuffer/CPU state, isolated production FTP receipt, automatic
 screen-off reconnect, complete application logs and broader service notices. Record observations
 and rejected experiments with their limits after validation.
+
+## Candidate rejected; original ordering restored
+
+Clean80c2c8d passed2529tests/eight expected host GPIO warnings, Ruff/format165/mypy70 and
+strict docs, plus actual Pi `systemd-analyze verify`. Its actual launch9.398s preceded daemon
+readiness9.866s, establishing overlap. Baseline→candidate normal reboot: UI13.605683→13.595050s,
+FTP13.582428→13.593595s, core13.616155→13.609813s. These single reboots show no meaningful
+readiness gain; earlier launch was offset by import/system contention. No Printer was advertising
+in either capture, so no connected-time comparison is claimed. The initial connected observer
+timed out after reboot; the retained baseline component measurements remain valid.
+
+Full candidate reboot cleanup succeeded6.728s/no forced kill, but D-Bus stopped before Bridge
+finished. Two shutdown warnings were retained: waiting for native status worker and failed status
+as BlueZ activation was refused during shutdown. These warnings are not attributed solely to the
+candidate without a baseline control: BlueZ already shuts down independently. Removing the daemon
+lifetime ordering is itself a regression risk. Independent review agreed to reject the change
+rather than retain it for an11ms LCD observation. No warning was suppressed and no speculative
+service disabling, priorities or manager serialization were added.
+
+The final Bridge unit is restored byte-for-byte to a815fb1 (`After=dbus.service`), with regression
+coverage protecting daemon startup/reverse cleanup ordering and independent manager rescue.
+Final installed boot/LCD/FTP/automatic reconnect and live-log results follow after validation.

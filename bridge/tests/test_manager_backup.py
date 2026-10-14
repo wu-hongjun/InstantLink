@@ -408,3 +408,205 @@ def test_backup_retention_selects_oldest_artifacts(tmp_path: Path) -> None:
     assert not (backups_dir / "update-20260520.tar.gz").exists()
     assert (backups_dir / "update-20260523.manifest.json").exists()
     assert (backups_dir / "update-20260523.tar.gz").exists()
+
+
+ADAPTER = "B8:27:EB:8E:59:C2"
+PRINTER = "FA:AB:BC:C7:95:64"
+OTHER = "FA:AB:BC:C7:95:65"
+
+
+def _pairing_root(tmp_path: Path, *, address: str = PRINTER, configured: str = "") -> Path:
+    root = tmp_path / "source"
+    config = root / "etc/InstantLinkBridge/config.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text(f'[printer]\ndevice_name = "{configured}"\n', encoding="utf-8")
+    selected = root / "var/lib/InstantLinkBridge/printer.json"
+    selected.parent.mkdir(parents=True)
+    selected.write_text(
+        json.dumps({"address": address, "name": "INSTAX-52006924"}), encoding="utf-8"
+    )
+    return root
+
+
+def _bond(
+    root: Path, address: str = PRINTER, adapter: str = ADAPTER, name: str = "INSTAX-52006924"
+) -> Path:
+    path = root / "var/lib/bluetooth" / adapter / address / "info"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        f"[General]\nName={name}\n[LongTermKey]\nKey=synthetic-test-key\n", encoding="utf-8"
+    )
+    path.chmod(0o644)
+    return path
+
+
+def test_default_backup_includes_only_selected_bond_and_adapter_identity(tmp_path: Path) -> None:
+    root = _pairing_root(tmp_path)
+    selected = _bond(root)
+    unrelated = _bond(root, OTHER, name="Other device")
+    identity = selected.parent.parent / "identity"
+    identity.write_text(
+        "[General]\nIdentityResolvingKey=synthetic-test-identity\n", encoding="utf-8"
+    )
+    cache = selected.parent.parent / "cache" / OTHER
+    cache.parent.mkdir()
+    cache.write_text("never include scan cache", encoding="utf-8")
+    created = create_backup_archive(tmp_path / "backups", root=root)
+    paths = {entry.path for entry in created.manifest.files}
+    assert selected.relative_to(root).as_posix() in paths
+    assert identity.relative_to(root).as_posix() in paths
+    assert unrelated.relative_to(root).as_posix() not in paths
+    assert cache.relative_to(root).as_posix() not in paths
+    assert all(
+        entry.mode == 0o600
+        for entry in created.manifest.files
+        if entry.path.startswith("var/lib/bluetooth/")
+    )
+    assert stat.S_IMODE(created.archive_path.stat().st_mode) == 0o600
+    assert stat.S_IMODE(created.manifest_path.stat().st_mode) == 0o600
+    assert stat.S_IMODE(created.archive_path.parent.stat().st_mode) == 0o700
+    destination = tmp_path / "restored"
+    destination.mkdir()
+    execute_backup_restore_plan(
+        plan_backup_restore(created.archive_path, created.manifest, root=destination)
+    )
+    restored = destination / selected.relative_to(root)
+    assert restored.read_bytes() == selected.read_bytes()
+    assert stat.S_IMODE(restored.stat().st_mode) == 0o600
+    assert stat.S_IMODE(restored.parent.stat().st_mode) == 0o700
+
+
+def test_unpaired_selection_is_a_normal_backup(tmp_path: Path) -> None:
+    root = _pairing_root(tmp_path)
+    created = create_backup_archive(tmp_path / "backups", root=root)
+    assert not any(entry.path.startswith("var/lib/bluetooth/") for entry in created.manifest.files)
+
+
+def test_selected_mac_is_authoritative_when_other_alias_matches(tmp_path: Path) -> None:
+    root = _pairing_root(tmp_path)
+    _bond(root, OTHER)
+    assert not any("bluetooth" in str(source.path) for source in default_backup_sources(root=root))
+
+
+def test_configured_selection_overrides_saved_identity_and_normalizes_suffix(
+    tmp_path: Path,
+) -> None:
+    root = _pairing_root(tmp_path, configured="INSTAX-00009999")
+    _bond(root)
+    selected = _bond(root, OTHER, name="INSTAX-00009999 (ANDROID)")
+    assert selected in {source.path for source in default_backup_sources(root=root)}
+    assert root / "var/lib/bluetooth" / ADAPTER / PRINTER / "info" not in {
+        source.path for source in default_backup_sources(root=root)
+    }
+
+
+@pytest.mark.parametrize("kind", ["adapter", "device", "info", "identity", "selection"])
+def test_pairing_discovery_rejects_symlink_components(tmp_path: Path, kind: str) -> None:
+    root = _pairing_root(tmp_path)
+    info = _bond(root)
+    identity = info.parent.parent / "identity"
+    identity.write_text("synthetic identity", encoding="utf-8")
+    target = {
+        "adapter": info.parent.parent,
+        "device": info.parent,
+        "info": info,
+        "identity": identity,
+        "selection": root / "var/lib/InstantLinkBridge/printer.json",
+    }[kind]
+    moved = tmp_path / "moved"
+    target.rename(moved)
+    target.symlink_to(moved, target_is_directory=moved.is_dir())
+    with pytest.raises(BackupPathError, match="symlink"):
+        default_backup_sources(root=root)
+
+
+def test_pairing_discovery_rejects_multiple_adapters(tmp_path: Path) -> None:
+    root = _pairing_root(tmp_path)
+    _bond(root)
+    _bond(root, adapter="B8:27:EB:8E:59:C3")
+    with pytest.raises(BackupPathError, match="ambiguous Bluetooth adapters"):
+        default_backup_sources(root=root)
+
+
+def test_backup_failure_removes_partial_private_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from instantlink_bridge.manager import backup
+
+    root = _pairing_root(tmp_path)
+
+    def fail(*args: object, **kwargs: object) -> None:
+        raise BackupVerificationError("synthetic verification failure")
+
+    monkeypatch.setattr(backup, "verify_backup_archive", fail)
+    with pytest.raises(BackupVerificationError):
+        create_backup_archive(tmp_path / "backups", root=root)
+    assert list((tmp_path / "backups").iterdir()) == []
+
+
+def test_restore_uses_directory_descriptor_when_parent_swapped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source"
+    original = source / "etc/InstantLinkBridge/config.toml"
+    original.parent.mkdir(parents=True)
+    original.write_text("private synthetic config", encoding="utf-8")
+    created = create_backup_archive(tmp_path / "backups", [original], root=source)
+    destination = tmp_path / "destination"
+    parent = destination / "etc/InstantLinkBridge"
+    parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    moved = destination / "etc/old-safe-directory"
+    real_replace = os.replace
+
+    def raced_replace(src: str, dst: str, *, src_dir_fd: int, dst_dir_fd: int) -> None:
+        parent.rename(moved)
+        parent.symlink_to(outside, target_is_directory=True)
+        real_replace(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+
+    monkeypatch.setattr(os, "replace", raced_replace)
+    execute_backup_restore_plan(
+        plan_backup_restore(created.archive_path, created.manifest, root=destination)
+    )
+    assert list(outside.iterdir()) == []
+    assert (moved / "config.toml").read_text(encoding="utf-8") == "private synthetic config"
+
+
+def test_archive_collision_during_exclusive_write_preserves_other_creator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from instantlink_bridge.manager import backup
+
+    root = _pairing_root(tmp_path)
+    writer = backup._write_backup_tar_archive
+    competing = b"successful competing archive"
+
+    def collide(path: Path, manifest: BackupManifest, filesystem_root: Path) -> tuple[int, int]:
+        path.write_bytes(competing)
+        return writer(path, manifest, filesystem_root)
+
+    monkeypatch.setattr(backup, "_write_backup_tar_archive", collide)
+    with pytest.raises(FileExistsError):
+        create_backup_archive(tmp_path / "backups", root=root, backup_id="collision")
+    assert (tmp_path / "backups/collision.tar.gz").read_bytes() == competing
+
+
+def test_manifest_collision_preserves_other_creator_and_removes_own_archive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from instantlink_bridge.manager import backup
+
+    root = _pairing_root(tmp_path)
+    writer = backup.write_backup_manifest
+    competing = b"successful competing manifest"
+
+    def collide(path: Path, manifest: BackupManifest) -> None:
+        path.write_bytes(competing)
+        writer(path, manifest)
+
+    monkeypatch.setattr(backup, "write_backup_manifest", collide)
+    with pytest.raises(FileExistsError):
+        create_backup_archive(tmp_path / "backups", root=root, backup_id="collision")
+    assert (tmp_path / "backups/collision.manifest.json").read_bytes() == competing
+    assert not (tmp_path / "backups/collision.tar.gz").exists()

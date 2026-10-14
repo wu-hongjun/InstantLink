@@ -194,6 +194,7 @@ install_file systemd/instantlink-bridge-usb0-rearm.service \
   /etc/systemd/system/instantlink-bridge-usb0-rearm.service
 install_file systemd/instantlink-bridge-usb0-lost.service \
   /etc/systemd/system/instantlink-bridge-usb0-lost.service
+bash "${REPO_DIR}/scripts/install-backup-broker.sh" "${ROOT}"
 if [[ ! -f "${ROOT%/}/etc/InstantLinkBridge/config.toml" ]]; then
   install_file config/config.example.toml /etc/InstantLinkBridge/config.toml
 else

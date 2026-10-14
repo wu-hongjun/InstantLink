@@ -4,6 +4,35 @@ The Bridge manager exposes authenticated configuration at `/v1/config`. The App 
 configuration, validates a draft and applies a field diff. The independent Printer correction
 section is additive; older configurations and older responses without it default to zero.
 
+## Local backups and Printer pairing
+
+Authenticated `POST /v1/backup/create` creates a verified on-device configuration backup.
+`POST /v1/backup/restore` accepts its `backup_id` and restores that local archive. Pre-update
+backups use the same private backup service. Backup response identifiers and restore payloads
+retain their existing contract; archive download/upload is not provided by these endpoints.
+
+Backups include the saved Printer selection and its persisted BlueZ `info` file, when present.
+An adapter `identity` file is included when the selected device has a stored bond. Unrelated
+devices, adapter settings and scan caches are excluded. A Printer without an OS-level bond is
+normal and still has its saved selection backed up. Ambiguous adapter or device selection is
+rejected rather than including unrelated pairing data.
+
+The manager remains `ib` with `NoNewPrivileges=yes`. A socket-activated root helper accepts
+only local backup create/restore requests from `ib` or root. Its code is a separate root-owned
+stdlib-only copy under `/usr/local/libexec/instantlink-bridge-backup`, loaded with isolated
+system Python. Deploy, provisioning and current firmware installation refresh this helper.
+
+Archives and manifests reside in `/var/lib/InstantLinkBridgeBackups`, root-owned with directory
+mode 0700 and file mode 0600. Keep the latest three verified backups. Pairing secrets remain
+inside these private archives and are excluded from responses and diagnostic logs.
+
+Restore validates archive hashes, allowed product paths and private pairing-file modes before
+writing. Pairing restoration requires the same active Bluetooth adapter. A conflicting adapter
+identity is rejected if another saved device could be affected. The Bridge runtime stops for
+restore; BlueZ also stops and reloads when pairing state is restored. Previously active services
+are started again on completion or failure. Restored Bridge state remains writable by `ib`,
+while pairing files remain root-only. Old archives without pairing data remain supported.
+
 ## Listener recovery
 
 The manager binds configured device addresses individually. If USB is available before the

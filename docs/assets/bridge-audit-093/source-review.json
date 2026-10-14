@@ -1,0 +1,49 @@
+{
+  "task": 93,
+  "reviewer": "independent adversarial subagent",
+  "status": "source_review_passed",
+  "blocking_findings": [],
+  "reviewed_sha256": {
+    "bridge/src/instantlink_bridge/imaging/postprocess.py": "490f9102e51bc7592c84f68f75b8f1a0e143c75a39f063724385d0d60246d374",
+    "bridge/src/instantlink_bridge/manager/backup.py": "e07149eee854c7ae4a11fe1ff7090b3e830a12aabfa943498b1ab7f5a775dc09",
+    "bridge/src/instantlink_bridge/manager/backup_client.py": "5914e54b8c7e5ed7bd6f601936ef6745fde5179f9d1f0f61fc38e5970caa3470",
+    "bridge/src/instantlink_bridge/manager/update_flow.py": "dea5d2a567ef98ccd9aaf817fd8a7b5142201be25c5a8006d1a0c56d59029cf6",
+    "bridge/scripts/backup-broker.py": "93e5e5603bfda372a97b66bac11a71d275bb3fa1c5ae6b08ecdf97fb2c61f2a5",
+    "bridge/scripts/install-backup-broker.sh": "0bb9c02d57ccee40ccb3d2cfc82a7265a9ebf50ea3fc3edb6d5a79cce98cda20",
+    "bridge/systemd/instantlink-bridge-backup.socket": "55d28ad8f92f2fbfd7df75ead5e587abbddddeed1d0c0aac27980068bd1026de",
+    "bridge/systemd/instantlink-bridge-backup@.service": "9d59275f9a8b259519de9da6661a297accd169222b7f43876aecd09d833e0b24"
+  },
+  "resolved_findings": [
+    "Production manager root/privilege mismatch addressed by root-owned isolated socket broker; manager sandbox retained.",
+    "Authoritative saved MAC no longer falls back to another matching name.",
+    "Root-private archives/manifests and selected BlueZ info/conditional adapter identity use mode0600 with storage0700.",
+    "Selected/config identity reads are bounded and use descriptor-relative nofollow; lexical source paths preserve symlink checks.",
+    "Root restore uses descriptor-relative nofollow writes and ownership repair beneath mutable runtime directories.",
+    "Bluetooth and Bridge resume are both attempted via nested finally; restored systemd units reload before resume.",
+    "Different active adapter or changed/missing adapter identity with unrelated saved devices is rejected before mutation.",
+    "Request bytes/deadline and absolute timed subprocesses bounded; broker serialization and client/service budgets aligned.",
+    "Partial artifact cleanup tracks writer-owned inode and preserves competing artifacts on O_EXCL collisions.",
+    "Legacy no-bond archives remain supported and missing backup preserves HTTP404.",
+    "Pillow inferredRGB output identical to previous explicitRGB and input remains unchanged."
+  ],
+  "independent_validation": [
+    {
+      "command": "python -m pytest -q tests/test_manager_backup.py tests/test_backup_broker.py tests/test_backup_broker_install.py tests/test_postprocess.py -W error::DeprecationWarning",
+      "result": "91 passed in1.37s"
+    },
+    {
+      "check": "private adversarial source-symlink swap immediately after precheck",
+      "result": "refused descriptoropen; unrelated file untouched"
+    },
+    {
+      "check": "private adversarial restore-parent-symlink swap immediately after targetcheck",
+      "result": "refused descriptorwalk; unrelated directory untouched"
+    }
+  ],
+  "boundaries": [
+    "No hardware mutation performed by reviewer. Parent owns live Linux socket activation, no-film reconnect and deployment checks.",
+    "Review does not claim keys are present for the physical Instax Square; absence is valid when Printer uses unbonded selection.",
+    "Backups remain local and root-private; file-transfer API is not introduced.",
+    "Identity restoration is limited to same active adapter and rejects conflicts with unrelated saved devices."
+  ]
+}

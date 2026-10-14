@@ -23,6 +23,7 @@ from instantlink_bridge.manager.backup import (
     read_backup_manifest,
     restore_backup_archive,
 )
+from instantlink_bridge.manager.backup_client import PrivateBackupError, request_private_backup
 from instantlink_bridge.manager.contract import JsonObject, JsonValue
 from instantlink_bridge.manager.health import (
     BridgeHealthGate,
@@ -101,6 +102,7 @@ class ManagerEnvironment:
     now: Callable[[], str] | None = None
     health_probes: Callable[[], Mapping[BridgeHealthGate, HealthProbe]] | None = None
     restart_service: bool = True
+    private_backup_broker: bool = False
     _resolved_uploads_dir: Path = field(init=False)
 
     def __post_init__(self) -> None:
@@ -111,7 +113,7 @@ class ManagerEnvironment:
     def production(cls) -> ManagerEnvironment:
         """Return the production environment with on-device defaults."""
 
-        return cls()
+        return cls(private_backup_broker=True)
 
     @property
     def resolved_uploads_dir(self) -> Path:
@@ -221,12 +223,25 @@ def run_install(
     resolved_bundle = bundle_dir or (env.resolved_uploads_dir / "staged")
     timestamp = env.timestamp()
     try:
-        backup = create_backup_archive(
-            env.backups_dir,
-            root=env.install_root,
-            version=_package_version(package),
-            created_at=timestamp,
-        )
+        if env.private_backup_broker:
+            payload = request_private_backup("create", version=_package_version(package))
+            private_backup = payload["backup"]
+            if not isinstance(private_backup, dict):
+                raise BackupError("invalid private backup response")
+            backup_info = private_backup
+        else:
+            backup = create_backup_archive(
+                env.backups_dir,
+                root=env.install_root,
+                version=_package_version(package),
+                created_at=timestamp,
+            )
+            backup_info = {
+                "backup_id": backup.manifest.backup_id,
+                "manifest_path": str(backup.manifest_path),
+                "archive_sha256": backup.archive_sha256,
+            }
+
     except BackupError as exc:
         raise UpdateFlowError(
             "backup_failed",
@@ -251,11 +266,7 @@ def run_install(
     operation_id = _package_version(package) or "installing_update"
     payload = update_state_payload(state, operation_id=operation_id)
     update = _update_object(payload)
-    update["backup"] = {
-        "backup_id": backup.manifest.backup_id,
-        "manifest_path": str(backup.manifest_path),
-        "archive_sha256": backup.archive_sha256,
-    }
+    update["backup"] = backup_info
     return payload
 
 
@@ -374,6 +385,8 @@ def run_backup_create(env: ManagerEnvironment) -> JsonObject:
     """Create and verify a backup archive, returning its identifiers."""
 
     try:
+        if env.private_backup_broker:
+            return request_private_backup("create")
         backup = create_backup_archive(
             env.backups_dir,
             root=env.install_root,
@@ -401,6 +414,23 @@ def run_backup_restore(env: ManagerEnvironment, *, backup_id: str) -> JsonObject
     """Restore a previously created backup archive into the install root."""
 
     safe_backup_id = _safe_backup_id(backup_id)
+    if env.private_backup_broker:
+        try:
+            return request_private_backup("restore", backup_id=safe_backup_id)
+        except PrivateBackupError as exc:
+            if exc.error_code == "backup_not_found":
+                raise UpdateFlowError(
+                    "backup_not_found",
+                    "No backup archive matches the requested backup id.",
+                    http_status=404,
+                ) from exc
+            raise UpdateFlowError(
+                "restore_failed", "The backup archive could not be restored.", http_status=500
+            ) from exc
+        except BackupError as exc:
+            raise UpdateFlowError(
+                "restore_failed", "The backup archive could not be restored.", http_status=500
+            ) from exc
     artifact = _find_backup_artifact(env, safe_backup_id)
     if artifact is None or artifact.archive_path is None:
         raise UpdateFlowError(

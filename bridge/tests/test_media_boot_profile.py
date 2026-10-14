@@ -24,8 +24,8 @@ UNUSED_MODULES = {
 def sandbox_environment(tmp_path: Path) -> dict[str, str]:
     tools = tmp_path / "tools"
     tools.mkdir()
-    # Use actual install/chmod/awk/sed against the offline root. The target's ib
-    # identity and systemd are not identities or services on the test host.
+    # Use actual copying/chmod/awk/sed against the offline root. The target's
+    # root/ib identities and systemd are not identities or services on this host.
     for command in ("chown", "chgrp", "systemctl", "systemd-analyze", "journalctl"):
         executable = tools / command
         executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -33,8 +33,28 @@ def sandbox_environment(tmp_path: Path) -> dict[str, str]:
     # Provisioning targets Linux GNU install. Homebrew exposes the same utility
     # with a g prefix on macOS; do not substitute BSD install's different -D.
     ginstall = shutil.which("ginstall")
-    if ginstall is not None:
-        (tools / "install").symlink_to(ginstall)
+    install_binary = ginstall or shutil.which("install")
+    assert install_binary is not None
+    # The isolated backup helper requests root-owned files. Simulate ownership
+    # in this fixture while retaining GNU install's real file and mode handling.
+    install = tools / "install"
+    install.write_text(
+        f"#!{sys.executable}\n"
+        "import os\nimport sys\n"
+        "arguments = []\n"
+        "iterator = iter(sys.argv[1:])\n"
+        "for argument in iterator:\n"
+        "    if argument in ('-o', '-g'):\n"
+        "        next(iterator)\n"
+        "    else:\n"
+        "        arguments.append(argument)\n"
+        f"os.execv({install_binary!r}, [{install_binary!r}, *arguments])\n",
+        encoding="utf-8",
+    )
+    install.chmod(0o755)
+    identity = tools / "id"
+    identity.write_text("#!/bin/sh\n[ \"$1\" = '-u' ] && echo 0\n", encoding="utf-8")
+    identity.chmod(0o755)
     bash_environment = tmp_path / "bash-environment"
     bash_environment.write_text(
         # The stub systemctl reports no units. Bash 3 on macOS lacks mapfile;

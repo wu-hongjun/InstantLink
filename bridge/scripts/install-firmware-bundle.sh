@@ -135,6 +135,14 @@ install_python_deps() {
   "${TARGET}/scripts/install-runtime-deps.sh"
 }
 
+install_backup_broker() {
+  # Historical firmware archives predate the isolated backup helper. Restoring
+  # one must remain supported; current bundles always include this installer.
+  if [[ -f "${TARGET}/scripts/install-backup-broker.sh" ]]; then
+    bash "${TARGET}/scripts/install-backup-broker.sh" /
+  fi
+}
+
 restart_service() {
   systemctl daemon-reload
   if is_truthy "${RESTART}"; then
@@ -169,6 +177,7 @@ main() {
   install_native_artifacts "${bundle_dir}"
   install_metadata "${bundle_dir}"
   chown -R "${OWNER}:${GROUP}" "${TARGET}"
+  install_backup_broker
   install_python_deps
   restart_service
 

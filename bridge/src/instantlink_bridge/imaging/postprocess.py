@@ -378,7 +378,7 @@ def _apply_vignette(image: Image.Image, strength: int) -> Image.Image:
     arr = np.array(image, dtype=np.float32)  # H×W×3 — copy so we can mutate
     arr *= factor[:, :, np.newaxis]  # in-place multiply (no second H×W×3 alloc)
     np.clip(arr, 0.0, 255.0, out=arr)  # in-place clip
-    return Image.fromarray(arr.astype(np.uint8), mode="RGB")
+    return Image.fromarray(arr.astype(np.uint8))
 
 
 def _render_overlay(
@@ -713,5 +713,5 @@ def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:
         )
 
     out_u8 = (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
-    result = Image.fromarray(out_u8, mode="RGB")
+    result = Image.fromarray(out_u8)
     return result

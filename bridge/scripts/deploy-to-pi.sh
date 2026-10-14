@@ -323,6 +323,9 @@ for relative in (
     "scripts/wifi-mode.sh",
     "scripts/poweroff.sh",
     "scripts/cpu-mode.sh",
+    "scripts/install-backup-broker.sh",
+    "scripts/backup-broker.py",
+    "src/instantlink_bridge/manager/backup.py",
     "config/sudoers-instantlink-bridge-cpu",
 ):
     path = root / relative
@@ -821,12 +824,16 @@ main() {
     "set -euo pipefail; \
      shopt -s nullglob; \
      if [ -d '${TARGET}/systemd' ]; then \
-       units=('${TARGET}/systemd/'*.service); \
+       units=('${TARGET}/systemd/'*.service '${TARGET}/systemd/'*.socket); \
        if [ \${#units[@]} -gt 0 ]; then \
          sudo cp \"\${units[@]}\" /etc/systemd/system/ && \
          sudo systemctl daemon-reload; \
        fi; \
      fi"
+
+  echo "Installing the private backup broker on ${HOST}..."
+  "${SSH_CMD[@]}" -T "${USER}@${HOST}" \
+    "sudo bash '${TARGET}/scripts/install-backup-broker.sh' /"
 
   if [[ "${SYSTEM}" -eq 1 ]]; then
     "${SSH_CMD[@]}" -T "${USER}@${HOST}" "sudo '${TARGET}/scripts/provision-sd.sh' /"

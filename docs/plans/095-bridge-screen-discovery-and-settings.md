@@ -75,3 +75,26 @@ Short labels avoid the previous clipped unlock row and exposed token terminology
 panel scanout or physical button contact claim. Pi Zero 2 W/ST7789/X306, Debian 13.2/Linux
 6.12.47/BlueZ 5.82 and Link Square INSTAX-52006924; native firmware, camera transfer and image
 rules are unchanged by this Python/UI update.
+
+### Installed live follow-up — accepted
+
+With the Printer powered on, clean `2cfd194` booted to UI **14.138 s**, FTP/core **14.152 s**
+and fresh Printer status **20.041 s**, measured from kernel startup. No button action preceded
+connection. Film **10→10**; no print/image/actuator commands. This excludes firmware startup time
+and is not a matched availability-controlled improvement claim. The observer initially mistook
+GPIO initialization for input; checking actual `ui.input action=` events in the retained journal
+accepted that same boot without repeating it.
+
+Normal screen-off external BlueZ Disconnect → fresh status passed in **8.885 s**. All 14 samples
+retained Bridge PID 502, 600 MHz/powersave/backlight low and FTP 220/200. One real GATT setup
+drop was retained at INFO and recovered through prompt retry. Film **10→10**; no manual Reconnect.
+Controlled explicit lock/triple-unlock coverage is recorded above; this live run observes automatic
+screen-off idle, without introspecting internal manual-lock flags or exercising physical contacts.
+
+Accepted health: Bridge502/manager661 active, zero automatic restarts, connected/fresh Printer,
+throttle0x0 and backup socket active. Reviewed source hashes match; native FFI unchanged. Full
+Bridge PID log had 83 records and zero warning/error matches. Wider boot logs retain one manager
+hotspot-bind warning, which became listening 1.004 s later (HTTP responsive), two BlueZ notices
+and 22 system warning-priority records. Platform warnings are recorded in evidence, not hidden;
+there is no whole-system warning-free claim. No further production defect was identified in this
+scope. Live results supersede the earlier pending availability checkpoint.

@@ -1692,3 +1692,18 @@ no extra JPEG library is required on the Pi.
   600MHz/powersave/GPIO24low, no warnings, reviewed source hashes and unchanged FFI b91cf3f...
   Actual Printer unavailable; **normal installed boot-to-connected check pending availability**.
   Device/OS unchanged. Evidence in plan095 and `docs/assets/bridge-audit-095/`.
+
+#### Plan 095 live follow-up — automatic boot and dark reconnect accepted
+
+- Clean2cfd194 boot: UI14.138s/FTP-core14.152s/fresh Printer20.041s from kernel startup, no
+  button action before connection. Film10→10. Excludes firmware startup; no matched speedup claim.
+  Retained journal corrected observer's GPIO-initialization/input false positive without reboots.
+- External BlueZ Disconnect→fresh status8.885s; all14samples PID502/600MHz/powersave/GPIO24low/
+  FTP220+200, film10→10. One actual setup drop recovered through prompt retry; no manual Reconnect.
+  Normal automatic screen-off idle verified; physical contacts/internal manual-lock flags not probed.
+- Bridge502/manager661 active/zero automatic restarts, connected/fresh, throttle0x0, backup socket
+  active, reviewed source/unchanged FFI hashes. Full Bridge PID log83records/zero warnings or errors.
+  Wider logs retain manager hotspot-bind retry (listening1.004s later/HTTP responsive), two BlueZ
+  notices and22system warning-priority boot records. No whole-system warning-free claim.
+- Earlier availability checkpoint completed. No image/print/actuator commands or film used.
+  Source review was performed by the primary agent; no independent subagent review for plan095.

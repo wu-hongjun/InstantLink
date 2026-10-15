@@ -1,0 +1,32 @@
+Validation: 2026-10-15
+Host: arm64 macOS 27.0.1 (26A434), Xcode 27.0 (27A266a), Apple Swift 6.4
+Simulator: iPhone 17, iOS 27.0, UUID 657CB222-AE66-4F0E-9783-431CE286072C
+Generated with: /opt/homebrew/bin/xcodegen generate --spec ios/project.yml
+Command (ios/): /usr/bin/xcodebuild test -project InstantLink-iOS.xcodeproj -scheme InstantLink-iOS -destination platform=iOS Simulator,id=657CB222-AE66-4F0E-9783-431CE286072C CODE_SIGNING_ALLOWED=NO
+Full local build/test log: /tmp/instantlink-099-ios-tests.log
+Build/test held exclusive fcntl.flock on /tmp/instantlink-099-benchmark.lock.
+
+Test Suite 'DownloadProgressReporterTests' passed at 2026-10-15 01:55:19.805.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds
+Test Suite 'DownloadProgressStateTests' passed at 2026-10-15 01:55:19.808.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'PairingInfoTests' passed at 2026-10-15 01:55:19.819.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.008 (0.011) seconds
+/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/ios/InstantLinkTests/PairingStoreTests.swift:74: -[InstantLink_iOSTests.PairingStoreTests testSaveLoadForgetRoundTrip] : Test skipped - Keychain unavailable in this test environment; skipping save/load round trip.
+Test Suite 'PairingStoreTests' passed at 2026-10-15 01:55:23.762.
+	 Executed 3 tests, with 1 test skipped and 0 failures (0 unexpected) in 3.942 (3.942) seconds
+Test Suite 'PhotoSaverTests' passed at 2026-10-15 01:55:23.768.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'SyncClientTests' passed at 2026-10-15 01:55:23.916.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.145 (0.148) seconds
+Test Suite 'SyncModelsTests' passed at 2026-10-15 01:55:23.920.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'InstantLink-iOSTests.xctest' passed at 2026-10-15 01:55:23.920.
+	 Executed 51 tests, with 1 test skipped and 0 failures (0 unexpected) in 4.108 (4.122) seconds
+Test Suite 'All tests' passed at 2026-10-15 01:55:23.920.
+	 Executed 51 tests, with 1 test skipped and 0 failures (0 unexpected) in 4.108 (4.123) seconds
+** TEST SUCCEEDED **
+
+git diff --check -- ios: passed
+Ruff check and format --check using bridge/pyproject.toml on 10-ios-progress-benchmark.py: passed
+No physical hardware smoke test.

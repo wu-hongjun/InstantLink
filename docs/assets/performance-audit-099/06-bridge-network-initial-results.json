@@ -1,0 +1,95 @@
+{
+  "python": "3.13.9 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 19:11:29) [Clang 20.1.8 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "unit": "microseconds_per_complete_message_link_address_parse",
+  "sample_pairs": 9,
+  "excludes": "kernel/socket I/O; fixture generation; baseline reconstruction",
+  "workloads": {
+    "bridge_3_addresses": {
+      "iterations_per_sample": 4000,
+      "samples_us": {
+        "baseline": [
+          81.24352075,
+          180.72883325,
+          126.28471875,
+          124.78935425,
+          135.9603645,
+          131.971271,
+          115.96983325,
+          309.851698,
+          86.77029175
+        ],
+        "packed": [
+          82.13861474999999,
+          82.93434375,
+          91.2596355,
+          90.28839574999999,
+          67.88090625,
+          120.38064575,
+          97.58225,
+          62.801802,
+          59.11709375
+        ]
+      },
+      "median_us": {
+        "baseline": 126.28471875,
+        "packed": 82.93434375
+      },
+      "min_max_us": {
+        "baseline": [
+          81.24352075,
+          309.851698
+        ],
+        "packed": [
+          59.11709375,
+          120.38064575
+        ]
+      },
+      "median_reduction_percent": 34.327490633145196,
+      "speedup": 1.522707156527057
+    },
+    "many_64_addresses": {
+      "iterations_per_sample": 1000,
+      "samples_us": {
+        "baseline": [
+          1176.9944580000001,
+          2218.951333,
+          2668.36625,
+          1167.963084,
+          817.355667,
+          862.84275,
+          1154.447875,
+          937.882833,
+          1196.130875
+        ],
+        "packed": [
+          603.4065420000001,
+          599.8909170000001,
+          1295.1948340000001,
+          1864.012667,
+          451.66316700000004,
+          434.19325,
+          666.761458,
+          688.831167,
+          1197.9191669999998
+        ]
+      },
+      "median_us": {
+        "baseline": 1167.963084,
+        "packed": 666.761458
+      },
+      "min_max_us": {
+        "baseline": [
+          817.355667,
+          2668.36625
+        ],
+        "packed": [
+          434.19325,
+          1864.012667
+        ]
+      },
+      "median_reduction_percent": 42.91245441452669,
+      "speedup": 1.7516955576637425
+    }
+  }
+}

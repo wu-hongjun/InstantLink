@@ -111,6 +111,7 @@ final class SyncClientTests: XCTestCase {
 
         XCTAssertEqual(try Data(contentsOf: destination), body)
         let progress = reported.withLock { $0 }
+        XCTAssertEqual(progress.first, 0)
         XCTAssertEqual(progress.last, Int64(body.count))
         XCTAssertEqual(progress, progress.sorted(), "progress must be monotonic")
     }
@@ -139,7 +140,7 @@ final class SyncClientTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: destination), body)
         // Progress resumes from the partial's size, not from zero.
         let progress = reported.withLock { $0 }
-        XCTAssertGreaterThan(try XCTUnwrap(progress.first), Int64(splitPoint))
+        XCTAssertEqual(try XCTUnwrap(progress.first), Int64(splitPoint))
         XCTAssertEqual(progress.last, Int64(body.count))
     }
 
@@ -156,9 +157,14 @@ final class SyncClientTests: XCTestCase {
         }
 
         let item = Self.item("item-1", body: body)
-        try await client.downloadPhoto(item, to: destination) { _ in }
+        let reported = OSAllocatedUnfairLock(initialState: [Int64]())
+        try await client.downloadPhoto(item, to: destination) { received in
+            reported.withLock { $0.append(received) }
+        }
 
         XCTAssertEqual(try Data(contentsOf: destination), body)
+        XCTAssertEqual(reported.withLock { $0.first }, 0)
+        XCTAssertEqual(reported.withLock { $0.last }, Int64(body.count))
     }
 
     func testDownloadFailsChecksumOnCorruptBytes() async {
@@ -177,12 +183,16 @@ final class SyncClientTests: XCTestCase {
             receivedAt: Date()
         )
 
+        let reported = OSAllocatedUnfairLock(initialState: [Int64]())
         do {
-            try await client.downloadPhoto(item, to: destination) { _ in }
+            try await client.downloadPhoto(item, to: destination) { received in
+                reported.withLock { $0.append(received) }
+            }
             XCTFail("Expected SyncClientError.checksumMismatch")
         } catch SyncClientError.checksumMismatch(let expected, let actual) {
             XCTAssertEqual(actual, Self.sha256Hex(body))
             XCTAssertNotEqual(expected, actual)
+            XCTAssertEqual(reported.withLock { $0.last }, Int64(body.count))
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
@@ -201,6 +211,27 @@ final class SyncClientTests: XCTestCase {
             // Expected.
         } catch {
             XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testRejectedResumePreservesPartialAndVisibleProgress() async throws {
+        let body = Self.patternData(count: 100_000)
+        let partial = body.prefix(40_000)
+        let destination = stagingDirectory.appendingPathComponent("rejected-resume.jpg")
+        try partial.write(to: destination)
+        StubURLProtocol.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Range"), "bytes=40000-")
+            return (Self.response(for: request, status: 401), Data())
+        }
+        let progress = DownloadProgressState(received: 40_000)
+        do {
+            try await client.downloadPhoto(Self.item("item-1", body: body), to: destination) {
+                progress.update($0)
+            }
+            XCTFail("Expected unauthorized")
+        } catch SyncClientError.unauthorized {
+            XCTAssertEqual(progress.latestReceived, 40_000)
+            XCTAssertEqual(try Data(contentsOf: destination), partial)
         }
     }
 

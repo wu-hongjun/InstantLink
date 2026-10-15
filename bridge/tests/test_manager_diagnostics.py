@@ -12,7 +12,9 @@ Covers:
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import random
 import zipfile
 from collections.abc import Mapping
 from pathlib import Path
@@ -38,6 +40,7 @@ from instantlink_bridge.manager.diagnostics import (
     BridgeLogEvent,
     LogStreamSource,
     SupportBundleSource,
+    _file_sha256,
     create_support_bundle,
     format_sse_event,
     redact_log_line,
@@ -269,6 +272,82 @@ async def test_logs_stream_route_filter_by_level_drops_other_events(
 
 
 # --- Support bundle --------------------------------------------------------
+
+
+@pytest.mark.parametrize("size", [0, 1, 262143, 262144, 262145, 1048576])
+def test_file_sha256_matches_whole_file_digest(tmp_path: Path, size: int) -> None:
+    # Exercise empty input, partial reads, and the default file_digest buffer boundary.
+    payload = random.Random(42).randbytes(size)
+    path = tmp_path / "archive.zip"
+    path.write_bytes(payload)
+
+    assert _file_sha256(path) == hashlib.sha256(payload).hexdigest()
+
+
+def test_file_sha256_propagates_read_errors_and_closes_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "archive.zip"
+    path.write_bytes(b"archive bytes")
+
+    class FailingReader(io.BufferedReader):
+        def readinto(self, buffer: object) -> int:
+            raise OSError("archive read failed")
+
+    reader = FailingReader(io.FileIO(path, "rb"))
+    monkeypatch.setattr(Path, "open", lambda *args, **kwargs: reader)
+
+    with pytest.raises(OSError, match="archive read failed"):
+        _file_sha256(path)
+    assert reader.closed
+
+
+def test_file_sha256_reads_bounded_chunks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = random.Random(42).randbytes(1048576)
+    path = tmp_path / "archive.zip"
+    path.write_bytes(payload)
+    read_sizes: list[int] = []
+
+    class BoundedReader(io.BufferedReader):
+        def read(self, size: int | None = -1) -> bytes:
+            pytest.fail("hashing must use bounded reads into a reusable buffer")
+
+        def readinto(self, buffer: object) -> int:
+            assert isinstance(buffer, bytearray)
+            assert 0 < len(buffer) <= 262144
+            read_sizes.append(len(buffer))
+            return super().readinto(buffer)
+
+    reader = BoundedReader(io.FileIO(path, "rb"))
+    monkeypatch.setattr(Path, "open", lambda *args, **kwargs: reader)
+
+    assert _file_sha256(path) == hashlib.sha256(payload).hexdigest()
+    assert len(read_sizes) > 1
+    assert reader.closed
+
+
+def test_create_support_bundle_hashes_completed_zip_without_read_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = random.Random(42).randbytes(1048576).hex()
+
+    def reject_whole_file_read(path: Path) -> bytes:
+        pytest.fail(f"unexpected whole-file read: {path}")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "read_bytes", reject_whole_file_read)
+        result = create_support_bundle(
+            bundles_dir=tmp_path,
+            sources=(),
+            extra_payloads={"large-log.txt": payload},
+            bundle_id="bounded-hash",
+        )
+
+    assert result.size_bytes > 1048576
+    assert result.sha256 == hashlib.sha256(result.archive_path.read_bytes()).hexdigest()
+    with zipfile.ZipFile(result.archive_path) as archive:
+        assert archive.testzip() is None
+        assert archive.read("large-log.txt").decode() == payload
 
 
 def _write(path: Path, contents: str) -> Path:

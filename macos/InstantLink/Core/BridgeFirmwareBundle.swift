@@ -83,7 +83,22 @@ enum BridgeFirmwareBundleService {
     }
 
     private static func sha256Hex(_ url: URL) -> String? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        do {
+            let file = try FileHandle(forReadingFrom: url)
+            defer { try? file.close() }
+
+            var hash = SHA256()
+            // Firmware archives can be large. Release each read buffer before reading the next.
+            while try autoreleasepool(invoking: {
+                guard let data = try file.read(upToCount: 1024 * 1024), !data.isEmpty else {
+                    return false
+                }
+                hash.update(data: data)
+                return true
+            }) {}
+            return hash.finalize().map { String(format: "%02x", $0) }.joined()
+        } catch {
+            return nil
+        }
     }
 }

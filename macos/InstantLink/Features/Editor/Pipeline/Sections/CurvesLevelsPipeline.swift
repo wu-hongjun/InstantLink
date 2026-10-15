@@ -26,15 +26,26 @@ enum CurvesLevelsPipeline {
     static func apply(_ image: CIImage,
                       curves: AdjustmentState.Curves,
                       levels: AdjustmentState.Levels) -> CIImage {
-        guard curves.sectionEnabled || levels.sectionEnabled else { return image }
+        guard let data = curvesData(curves: curves, levels: levels) else { return image }
+        let filter = CIFilter(name: "CIColorCurves") ?? CIFilter(name: "CIColorCurves")
+        guard let filter else { return image }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        filter.setValue(data, forKey: "inputCurvesData")
+        filter.setValue(CIVector(x: 0, y: 1), forKey: "inputCurvesDomain")
+        filter.setValue(CGColorSpaceCreateDeviceRGB(), forKey: "inputColorSpace")
+        return filter.outputImage ?? image
+    }
+
+    /// Build the exact transfer data independently of the image/filter lifetime.
+    static func curvesData(curves: AdjustmentState.Curves,
+                           levels: AdjustmentState.Levels) -> Data? {
+        guard curves.sectionEnabled || levels.sectionEnabled else { return nil }
         let curvesActive = curves.sectionEnabled && !curvesAllIdentity(curves)
         let levelsActive = levels.sectionEnabled && !levels.isNeutral
-        guard curvesActive || levelsActive else { return image }
+        guard curvesActive || levelsActive else { return nil }
 
-        // Build per-component lookup tables for the active stack.
-        var lutR = [Float](repeating: 0, count: lutResolution)
-        var lutG = [Float](repeating: 0, count: lutResolution)
-        var lutB = [Float](repeating: 0, count: lutResolution)
+        // Write directly in CIColorCurves RGB order, avoiding three temporary arrays.
+        var packed = [Float](repeating: 0, count: lutResolution * 3)
 
         // Pre-evaluate the spline samplers once.
         let masterSpline = curvesActive ? MonotoneSpline(points: curves.master) : nil
@@ -42,11 +53,11 @@ enum CurvesLevelsPipeline {
         let greenSpline  = curvesActive ? MonotoneSpline(points: curves.green)  : nil
         let blueSpline   = curvesActive ? MonotoneSpline(points: curves.blue)   : nil
 
-        let lumLevels = levelsActive ? levels.channels[.luminance] : nil
-        let rgbLevels = levelsActive ? levels.channels[.rgb]       : nil
-        let rLevels   = levelsActive ? levels.channels[.red]       : nil
-        let gLevels   = levelsActive ? levels.channels[.green]     : nil
-        let bLevels   = levelsActive ? levels.channels[.blue]      : nil
+        let lumLevels = levelsActive ? levels.channels[.luminance].map(PreparedLevels.init) : nil
+        let rgbLevels = levelsActive ? levels.channels[.rgb].map(PreparedLevels.init)       : nil
+        let rLevels   = levelsActive ? levels.channels[.red].map(PreparedLevels.init)       : nil
+        let gLevels   = levelsActive ? levels.channels[.green].map(PreparedLevels.init)     : nil
+        let bLevels   = levelsActive ? levels.channels[.blue].map(PreparedLevels.init)      : nil
 
         for i in 0..<lutResolution {
             let t = Double(i) / Double(lutResolution - 1)
@@ -62,22 +73,22 @@ enum CurvesLevelsPipeline {
             var b = t
 
             // 1. Per-channel Levels.
-            if let l = rLevels { r = applyLevels(r, l) }
-            if let l = gLevels { g = applyLevels(g, l) }
-            if let l = bLevels { b = applyLevels(b, l) }
+            if let l = rLevels { r = l.apply(r) }
+            if let l = gLevels { g = l.apply(g) }
+            if let l = bLevels { b = l.apply(b) }
 
             // 2. RGB Levels (applied to each channel).
             if let l = rgbLevels {
-                r = applyLevels(r, l)
-                g = applyLevels(g, l)
-                b = applyLevels(b, l)
+                r = l.apply(r)
+                g = l.apply(g)
+                b = l.apply(b)
             }
 
             // 3. Luminance Levels (per-channel approximation in the LUT path).
             if let l = lumLevels {
-                r = applyLevels(r, l)
-                g = applyLevels(g, l)
-                b = applyLevels(b, l)
+                r = l.apply(r)
+                g = l.apply(g)
+                b = l.apply(b)
             }
 
             // 4. Per-channel Curves spline.
@@ -92,57 +103,56 @@ enum CurvesLevelsPipeline {
                 b = s.evaluate(b)
             }
 
-            lutR[i] = Float(max(0.0, min(1.0, r)))
-            lutG[i] = Float(max(0.0, min(1.0, g)))
-            lutB[i] = Float(max(0.0, min(1.0, b)))
-        }
-
-        var packed = [Float](repeating: 0, count: lutResolution * 3)
-        for i in 0..<lutResolution {
-            packed[i * 3 + 0] = lutR[i]
-            packed[i * 3 + 1] = lutG[i]
-            packed[i * 3 + 2] = lutB[i]
+            packed[i * 3 + 0] = Float(max(0.0, min(1.0, r)))
+            packed[i * 3 + 1] = Float(max(0.0, min(1.0, g)))
+            packed[i * 3 + 2] = Float(max(0.0, min(1.0, b)))
         }
         let data = packed.withUnsafeBufferPointer { Data(buffer: $0) }
-        let filter = CIFilter(name: "CIColorCurves") ?? CIFilter(name: "CIColorCurves")
-        guard let filter else { return image }
-        filter.setValue(image, forKey: kCIInputImageKey)
-        filter.setValue(data, forKey: "inputCurvesData")
-        filter.setValue(CIVector(x: 0, y: 1), forKey: "inputCurvesDomain")
-        filter.setValue(CGColorSpaceCreateDeviceRGB(), forKey: "inputColorSpace")
-        return filter.outputImage ?? image
+        return data
     }
 
     // MARK: - Levels transfer
 
-    /// Photoshop-style Levels transfer for one channel value `v ∈ [0, 1]`:
-    /// input clamp + stretch, midtone gamma, then output remap. The
-    /// shadows/highlights handles bias the gamma curvature.
+    /// Photoshop-style transfer, also available for individual sample evaluation.
     static func applyLevels(_ v: Double, _ l: AdjustmentState.Levels.ChannelLevels) -> Double {
-        let blackIn = min(max(l.blackIn, 0.0), 0.999)
-        let whiteIn = max(blackIn + 1e-3, min(l.whiteIn, 1.0))
-        // Stage 1: input clamp + stretch.
-        var t = (v - blackIn) / (whiteIn - blackIn)
-        if t < 0 { t = 0 } else if t > 1 { t = 1 }
-        // Stage 2: shadows / highlights shaping. Map the inflection points
-        // (which live in input-domain coords) into the stretched domain and
-        // pull the toe / shoulder toward them with a piecewise mix.
-        let shadowsT = clamp01((l.shadows - blackIn) / (whiteIn - blackIn))
-        let highlightsT = clamp01((l.highlights - blackIn) / (whiteIn - blackIn))
-        let shadowDelta = shadowsT - 0.25
-        let highlightDelta = highlightsT - 0.75
-        // Subtle nudge — keep the diagonal recognisable when handles sit at
-        // their defaults (delta == 0 means no change).
-        let shadowBias = shadowDelta * (1 - t) * t * 4
-        let highlightBias = highlightDelta * t * (1 - t) * 4
-        t = clamp01(t - shadowBias - highlightBias)
-        // Stage 3: midtone gamma (Photoshop direction: > 1 = brighter mids).
-        let gamma = max(0.1, min(9.99, l.gamma))
-        t = pow(t, 1.0 / gamma)
-        // Stage 4: output remap.
-        let blackOut = clamp01(l.blackOut)
-        let whiteOut = clamp01(l.whiteOut)
-        return blackOut + t * (whiteOut - blackOut)
+        PreparedLevels(l).apply(v)
+    }
+
+    /// Channel parameters are invariant across all 256 LUT samples. Preserve
+    /// the original divisions and expression order so the Float LUT is exact.
+    private struct PreparedLevels {
+        let blackIn: Double
+        let inputRange: Double
+        let shadowDelta: Double
+        let highlightDelta: Double
+        let inverseGamma: Double
+        let blackOut: Double
+        let outputRange: Double
+
+        init(_ l: AdjustmentState.Levels.ChannelLevels) {
+            blackIn = min(max(l.blackIn, 0.0), 0.999)
+            let whiteIn = max(blackIn + 1e-3, min(l.whiteIn, 1.0))
+            inputRange = whiteIn - blackIn
+            let shadowsT = clamp01((l.shadows - blackIn) / inputRange)
+            let highlightsT = clamp01((l.highlights - blackIn) / inputRange)
+            shadowDelta = shadowsT - 0.25
+            highlightDelta = highlightsT - 0.75
+            let gamma = max(0.1, min(9.99, l.gamma))
+            inverseGamma = 1.0 / gamma
+            blackOut = clamp01(l.blackOut)
+            let whiteOut = clamp01(l.whiteOut)
+            outputRange = whiteOut - blackOut
+        }
+
+        func apply(_ v: Double) -> Double {
+            var t = (v - blackIn) / inputRange
+            if t < 0 { t = 0 } else if t > 1 { t = 1 }
+            let shadowBias = shadowDelta * (1 - t) * t * 4
+            let highlightBias = highlightDelta * t * (1 - t) * 4
+            t = clamp01(t - shadowBias - highlightBias)
+            t = pow(t, inverseGamma)
+            return blackOut + t * outputRange
+        }
     }
 
     private static func clamp01(_ x: Double) -> Double {

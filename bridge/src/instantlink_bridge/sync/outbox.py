@@ -18,7 +18,6 @@ import shutil
 import tempfile
 import threading
 import time
-from dataclasses import asdict
 from hashlib import sha256 as sha256_hasher
 from pathlib import Path
 
@@ -204,7 +203,19 @@ class SyncOutbox:
         """Publish a staged index while holding the mutation lock (or constructing)."""
         payload = {
             "version": INDEX_VERSION,
-            "items": [asdict(item) for item in proposed.values()],
+            # OutboxItem contains only immutable scalars; avoid the generic
+            # recursive dataclass traversal on every queue mutation.
+            "items": [
+                {
+                    "item_id": item.item_id,
+                    "file_name": item.file_name,
+                    "size_bytes": item.size_bytes,
+                    "sha256": item.sha256,
+                    "received_at": item.received_at,
+                    "source_remote_ip": item.source_remote_ip,
+                }
+                for item in proposed.values()
+            ],
         }
         index_path = self._root / INDEX_FILE_NAME
         tmp_path = self._root / f"{INDEX_FILE_NAME}.tmp"

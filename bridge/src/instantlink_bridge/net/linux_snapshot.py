@@ -7,7 +7,7 @@ import struct
 import sys
 import time
 from collections.abc import Iterator
-from ipaddress import IPv4Address, IPv4Interface
+from ipaddress import IPv4Interface
 
 _HEADER = struct.Struct("=IHHII")
 _LINK = struct.Struct("=BBHiII")
@@ -174,7 +174,7 @@ def _parse_addresses(
         local = attributes.get(2, attributes.get(1))  # IFA_LOCAL wins over point-to-point peer.
         if prefix > 32 or local is None or len(local) != 4:
             raise NetlinkSnapshotError("invalid IPv4 snapshot record")
-        addresses[links[index]].append(IPv4Interface(f"{IPv4Address(local)}/{prefix}"))
+        addresses[links[index]].append(IPv4Interface((local, prefix)))
     return addresses
 
 

@@ -545,7 +545,44 @@ def render_adjustments_preview(
     return apply_correction(apply_adjustments(source, profile), correction)
 
 
+# Bound both axes: a row-only limit would still allocate large intermediates
+# for panoramic sources. The float working set stays within one 512x256 tile.
+_HUE_TILE_WIDTH = 512
+_HUE_TILE_HEIGHT = 256
+
+
 def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:
+    """Rotate pointwise HSV hue with a bounded working set for RGB images.
+
+    Tiles preserve the per-pixel arithmetic exactly: hue has no neighborhood
+    or frame geometry dependence. The source and RGB result remain full size;
+    only the NumPy intermediates are bounded. Small images avoid crop/paste.
+    """
+    width, height = image.size
+    if (
+        image.mode != "RGB"
+        or width == 0
+        or height == 0
+        or (width <= _HUE_TILE_WIDTH and height <= _HUE_TILE_HEIGHT)
+    ):
+        # Preserve the existing helper behavior outside its RGB input contract,
+        # including empty dimensions and unsupported channel layouts.
+        return _apply_hue_tile(image, degrees)
+
+    result = Image.new("RGB", image.size)
+    for top in range(0, height, _HUE_TILE_HEIGHT):
+        for left in range(0, width, _HUE_TILE_WIDTH):
+            box = (
+                left,
+                top,
+                min(left + _HUE_TILE_WIDTH, width),
+                min(top + _HUE_TILE_HEIGHT, height),
+            )
+            result.paste(_apply_hue_tile(image.crop(box), degrees), (left, top))
+    return result
+
+
+def _apply_hue_tile(image: Image.Image, degrees: int) -> Image.Image:
     """Rotate the HSV hue channel by ``degrees`` using NumPy array math.
 
     Converts RGB → HSV, shifts H by ``degrees / 360.0`` (wrapping [0, 1)),
@@ -599,31 +636,19 @@ def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:
     t = v * (1.0 - s * (1.0 - f))
 
     out = np.empty_like(arr)
-    for channel, (v0, v1, v2, v3, v4, v5) in enumerate(
-        [
-            (v, q, p, p, t, v),
-            (t, v, v, q, p, p),
-            (p, p, t, v, v, q),
-        ]
-    ):
-        out[..., channel] = np.where(
-            i == 0,
-            v0,
-            np.where(
-                i == 1,
-                v1,
-                np.where(
-                    i == 2,
-                    v2,
-                    np.where(
-                        i == 3,
-                        v3,
-                        np.where(i == 4, v4, v5),
-                    ),
-                ),
-            ),
-        )
+    # Each channel has only four distinct values across the six hue sectors.
+    # Group identical choices to avoid two full-image selection temporaries
+    # per channel, preserving the original HSV values and rounding exactly.
+    out[..., 0] = np.where((i == 0) | (i == 5), v, np.where(i == 1, q, np.where(i == 4, t, p)))
+    out[..., 1] = np.where((i == 1) | (i == 2), v, np.where(i == 0, t, np.where(i == 3, q, p)))
+    out[..., 2] = np.where((i == 3) | (i == 4), v, np.where(i == 2, t, np.where(i == 5, q, p)))
 
-    out_u8 = (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+    # These are the same float32 operations in the same order as the original
+    # expression. Reuse our private output buffer instead of allocating an
+    # additional RGB float array for each step.
+    np.clip(out, 0.0, 1.0, out=out)
+    out *= 255.0
+    out += 0.5
+    out_u8 = out.astype(np.uint8)
     result = Image.fromarray(out_u8)
     return result

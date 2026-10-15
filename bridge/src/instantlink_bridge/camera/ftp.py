@@ -81,20 +81,22 @@ def prune_incoming_dir(
     """
 
     moment = time.time() if now is None else now
-    protected = frozenset(path.resolve() for path in protected_paths)
+    protected = frozenset(str(path.resolve()) for path in protected_paths)
     try:
         candidates = [entry for entry in incoming_dir.resolve().iterdir() if entry.is_file()]
     except OSError:
         LOGGER.warning("ftp.incoming_prune_scan_failed dir=%s", incoming_dir, exc_info=True)
         return []
 
-    stats: list[tuple[float, int, Path]] = []
-    for path in candidates:
+    # The parent is resolved above, so strings preserve exact path equality
+    # without repeatedly parsing/hashing Path components during retention.
+    stats: list[tuple[float, int, str]] = []
+    for candidate in candidates:
         try:
-            info = path.stat()
+            info = candidate.stat()
         except OSError:
             continue
-        stats.append((info.st_mtime, info.st_size, path))
+        stats.append((info.st_mtime, info.st_size, str(candidate)))
 
     stats.sort(key=lambda entry: entry[0])  # oldest first
     total_bytes = sum(size for _, size, _ in stats)
@@ -102,19 +104,20 @@ def prune_incoming_dir(
 
     removed: list[Path] = []
 
-    def drop(path: Path, size: int, reason: str) -> bool:
+    def drop(path: str, size: int, reason: str) -> bool:
         nonlocal total_bytes
+        original = Path(path)
         try:
-            path.unlink()
+            original.unlink()
         except OSError:
             LOGGER.warning("ftp.incoming_prune_unlink_failed path=%s", path, exc_info=True)
             return False
         total_bytes -= size
-        removed.append(path)
-        LOGGER.info("ftp.incoming_pruned file=%s size=%s reason=%s", path.name, size, reason)
+        removed.append(original)
+        LOGGER.info("ftp.incoming_pruned file=%s size=%s reason=%s", original.name, size, reason)
         return True
 
-    survivors: list[tuple[float, int, Path]] = []
+    survivors: list[tuple[float, int, str]] = []
     for mtime, size, path in stats:
         age = moment - mtime
         if path in protected or age < grace_s:

@@ -232,6 +232,13 @@ def _read_redacted(source: SupportBundleSource) -> str | None:
     return _redact_text(raw)
 
 
+def _file_sha256(path: Path) -> str:
+    """Hash a completed archive without allocating a copy of its contents."""
+
+    with path.open("rb") as archive:
+        return hashlib.file_digest(archive, "sha256").hexdigest()
+
+
 def create_support_bundle(
     *,
     bundles_dir: Path,
@@ -278,7 +285,7 @@ def create_support_bundle(
             contents.append(archive_name)
 
     size_bytes = archive_path.stat().st_size
-    sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    sha256 = _file_sha256(archive_path)
     return SupportBundleResult(
         bundle_id=resolved_bundle_id,
         archive_path=archive_path,

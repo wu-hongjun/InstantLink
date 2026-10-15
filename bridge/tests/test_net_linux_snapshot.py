@@ -328,3 +328,95 @@ def test_native_failure_runs_exactly_one_fresh_bounded_ip_fallback(
             "missing": [],
         }
         assert calls == [["ip", "-j", "-4", "addr", "show"]]
+
+
+@pytest.mark.parametrize("prefix", range(33))
+@pytest.mark.parametrize(
+    "value", ["0.0.0.0", "1.2.3.4", "127.0.0.1", "169.254.1.2", "192.168.8.1", "255.255.255.255"]
+)
+def test_packed_addresses_preserve_host_bits_and_every_prefix(value: str, prefix: int) -> None:
+    records = [
+        (kind, body)
+        for kind, _flags, _seq, _port, body in native._messages(address(5, value, prefix=prefix))
+    ]
+    actual = native._parse_addresses(records, {5: "usb0"}, ("usb0",))["usb0"][0]
+    expected = IPv4Interface(f"{value}/{prefix}")
+    assert actual == expected
+    assert actual.ip == expected.ip
+    assert actual.network == expected.network
+    assert actual.netmask == expected.netmask
+
+
+@pytest.mark.parametrize("prefix", [33, 255])
+def test_invalid_ipv4_prefix_rejects_entire_snapshot(
+    monkeypatch: pytest.MonkeyPatch, prefix: int
+) -> None:
+    fake = FakeSocket(
+        [
+            address(5, "192.168.7.1") + address(5, "10.0.0.1", prefix=prefix) + message(3),
+            link(5, "usb0") + message(3, sequence=2),
+        ]
+    )
+    install_socket(monkeypatch, fake)
+    with pytest.raises(native.NetlinkSnapshotError, match="invalid IPv4"):
+        native.read_ipv4_interfaces(("usb0",))
+    assert fake.closed
+
+
+@pytest.mark.parametrize("local", [None, b"", b"\x01\x02\x03", b"\x01\x02\x03\x04\x05"])
+@pytest.mark.parametrize("with_peer", [False, True])
+def test_invalid_local_never_uses_valid_peer_or_partial_result(
+    monkeypatch: pytest.MonkeyPatch, local: bytes | None, with_peer: bool
+) -> None:
+    raw = struct.pack("=BBBBI", socket.AF_INET, 24, 0, 0, 5)
+    if local is not None:
+        raw += attribute(2, local)
+    if with_peer:
+        raw += attribute(1, socket.inet_aton("10.0.0.2"))
+    fake = FakeSocket(
+        [
+            address(5, "192.168.7.1") + message(20, raw) + message(3),
+            link(5, "usb0") + message(3, sequence=2),
+        ]
+    )
+    install_socket(monkeypatch, fake)
+    if local is None and with_peer:
+        assert native.read_ipv4_interfaces(("usb0",))["usb0"] == [
+            IPv4Interface("192.168.7.1/24"),
+            IPv4Interface("10.0.0.2/24"),
+        ]
+    else:
+        with pytest.raises(native.NetlinkSnapshotError, match="invalid IPv4"):
+            native.read_ipv4_interfaces(("usb0",))
+    assert fake.closed
+
+
+def test_ipv6_record_is_ignored_without_affecting_ipv4(monkeypatch: pytest.MonkeyPatch) -> None:
+    ipv6 = struct.pack("=BBBBI", socket.AF_INET6, 64, 0, 0, 5)
+    ipv6 += attribute(2, socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
+    fake = FakeSocket(
+        [
+            message(20, ipv6) + address(5, "192.168.7.1") + message(3),
+            link(5, "usb0") + message(3, sequence=2),
+        ]
+    )
+    install_socket(monkeypatch, fake)
+    assert native.read_ipv4_interfaces(("usb0",))["usb0"] == [IPv4Interface("192.168.7.1/24")]
+
+
+def test_next_snapshot_observes_changed_then_removed_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for value in ("192.168.7.1", "10.10.10.10", None):
+        fake = FakeSocket(
+            [
+                (address(5, value) if value else b"") + message(3),
+                link(5, "usb0") + message(3, sequence=2),
+            ]
+        )
+        install_socket(monkeypatch, fake)
+        assert native.read_ipv4_interfaces(("usb0",))["usb0"] == (
+            [IPv4Interface(f"{value}/24")] if value else []
+        )
+        assert len(fake.requests) == 2
+        assert fake.closed

@@ -258,9 +258,14 @@ impl PacketAssembler {
             return Err(ProtocolError::BadChecksum { opcode });
         }
 
-        // Parse the complete, validated packet.
-        let packet_data: Vec<u8> = self.buffer.drain(..expected_total).collect();
-        Ok(parse_packet(&packet_data))
+        // Header, length, and checksum have already been validated above. Copy only
+        // the returned payload rather than allocating and parsing the full packet again.
+        let packet = Packet {
+            opcode: u16::from_be_bytes([self.buffer[4], self.buffer[5]]),
+            payload: self.buffer[6..expected_total - 1].to_vec(),
+        };
+        self.buffer.drain(..expected_total);
+        Ok(Some(packet))
     }
 
     /// Reset the assembler, discarding any buffered data.
@@ -503,5 +508,141 @@ mod tests {
             }
             other => panic!("expected LengthMismatch, got {other:?}"),
         }
+    }
+
+    fn with_header(opcode: u16, payload: &[u8], header: [u8; 2]) -> Vec<u8> {
+        let mut packet = build_packet(opcode, payload).unwrap();
+        packet[..2].copy_from_slice(&header);
+        let last = packet.len() - 1;
+        packet[last] = checksum(&packet[..last]);
+        packet
+    }
+
+    #[test]
+    fn assembler_matches_parser_across_headers_sizes_and_fragment_boundaries() {
+        for header in [HEADER, RESPONSE_HEADER] {
+            for length in [0, 1, 5, 18, 175, 182, 1024, MAX_PACKET_PAYLOAD] {
+                let payload: Vec<_> = (0..length).map(|i| (i * 37 + 11) as u8).collect();
+                let bytes = with_header(0xABCD, &payload, header);
+                let expected = Packet {
+                    opcode: 0xABCD,
+                    payload,
+                };
+                assert_eq!(parse_packet(&bytes), Some(expected.clone()));
+                for chunk_size in [1, 2, 3, 4, 20, 182, 236, 65535] {
+                    let mut assembler = PacketAssembler::new();
+                    assert_eq!(assembler.feed(&[]), Ok(None));
+                    let chunks = bytes.chunks(chunk_size);
+                    let count = chunks.len();
+                    for (index, chunk) in chunks.enumerate() {
+                        let result = assembler.feed(chunk).unwrap();
+                        if index + 1 == count {
+                            assert_eq!(result, Some(expected.clone()));
+                        } else {
+                            assert_eq!(result, None);
+                            assert_eq!(assembler.feed(&[]), Ok(None));
+                        }
+                    }
+                    assert_eq!(assembler.feed(&[]), Ok(None));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn assembler_concatenated_packets_and_partial_tail_at_every_split() {
+        let packets = [
+            with_header(0x0001, &[], HEADER),
+            with_header(0x3001, &[0, 0, 0, 0, 1], RESPONSE_HEADER),
+            with_header(0x0201, &[0, 1, 0, 87], RESPONSE_HEADER),
+            with_header(0xFFFF, &[0x41, 0x62, 0x61, 0x42, 0xFF], HEADER),
+        ];
+        let stream: Vec<_> = packets.iter().flatten().copied().collect();
+        let expected: Vec<_> = packets.iter().map(|p| parse_packet(p).unwrap()).collect();
+        // Retain a partial final packet, including its header and part of its length.
+        let tail = with_header(0x9876, &[1, 2, 3], RESPONSE_HEADER);
+        for split in 0..=stream.len() {
+            let mut assembler = PacketAssembler::new();
+            let mut actual = Vec::new();
+            for part in [&stream[..split], &stream[split..], &tail[..3]] {
+                if let Some(packet) = assembler.feed(part).unwrap() {
+                    actual.push(packet);
+                }
+                while let Some(packet) = assembler.feed(&[]).unwrap() {
+                    actual.push(packet);
+                }
+            }
+            assert_eq!(actual, expected);
+            assert_eq!(assembler.feed(&tail[3..]).unwrap(), parse_packet(&tail));
+            assert_eq!(assembler.feed(&[]), Ok(None));
+        }
+    }
+
+    #[test]
+    fn assembler_bad_checksum_discards_only_bad_packet_for_both_headers() {
+        for header in [HEADER, RESPONSE_HEADER] {
+            for length in [0, 5, MAX_PACKET_PAYLOAD] {
+                let mut bad = with_header(0xBEEF, &vec![0xFF; length], header);
+                let last = bad.len() - 1;
+                bad[last] ^= 1;
+                assert_eq!(parse_packet(&bad), None);
+                let good = with_header(0x1234, &[0x61, 0x42], RESPONSE_HEADER);
+                bad.extend_from_slice(&good);
+                let mut assembler = PacketAssembler::new();
+                assert_eq!(
+                    assembler.feed(&bad),
+                    Err(ProtocolError::BadChecksum { opcode: 0xBEEF })
+                );
+                assert_eq!(assembler.feed(&[]).unwrap(), parse_packet(&good));
+                assert_eq!(assembler.feed(&[]), Ok(None));
+            }
+        }
+    }
+
+    #[test]
+    fn assembler_invalid_lengths_preserve_error_and_resynchronization() {
+        for header in [HEADER, RESPONSE_HEADER] {
+            for declared in 0..MIN_PACKET_SIZE as u16 {
+                let good = with_header(0x1234, &[7, 8, 9], RESPONSE_HEADER);
+                let mut input = header.to_vec();
+                input.extend_from_slice(&declared.to_be_bytes());
+                input.extend_from_slice(&good);
+                let mut assembler = PacketAssembler::new();
+                assert_eq!(
+                    assembler.feed(&input),
+                    Err(ProtocolError::LengthMismatch {
+                        declared,
+                        actual: input.len(),
+                    })
+                );
+                // Only the invalid header is dropped, then the two length bytes.
+                assert_eq!(
+                    assembler.feed(&[]),
+                    Err(ProtocolError::InvalidHeader { discarded: 2 })
+                );
+                assert_eq!(assembler.feed(&[]).unwrap(), parse_packet(&good));
+                assert_eq!(assembler.feed(&[]), Ok(None));
+            }
+        }
+    }
+
+    #[test]
+    fn assembler_resynchronizes_at_each_potential_header_byte() {
+        let good = with_header(0x3001, &[0, 0, 0, 0, 3], RESPONSE_HEADER);
+        let mut input = vec![0xFF, HEADER[0], 0xFF, RESPONSE_HEADER[0], 0xFF];
+        input.extend_from_slice(&good);
+        let mut assembler = PacketAssembler::new();
+        assert_eq!(
+            assembler.feed(&input),
+            Err(ProtocolError::InvalidHeader { discarded: 1 })
+        );
+        for _ in 0..2 {
+            assert_eq!(
+                assembler.feed(&[]),
+                Err(ProtocolError::InvalidHeader { discarded: 2 })
+            );
+        }
+        assert_eq!(assembler.feed(&[]).unwrap(), parse_packet(&good));
+        assert_eq!(assembler.feed(&[]), Ok(None));
     }
 }

@@ -54,6 +54,29 @@ pub fn resize_image(img: &DynamicImage, model: PrinterModel, fit: FitMode) -> Dy
                 for pixel in rgb.pixels_mut() {
                     *pixel = image::Rgb([255, 255, 255]);
                 }
+                // Opaque RGB needs no blending or pixel-format conversion. Copy
+                // whole rows while keeping the same centered white padding.
+                // Other formats retain DynamicImage's conversion/alpha semantics.
+                if let Some(source) = resized.as_rgb8() {
+                    let row_bytes = rw as usize * 3;
+                    if row_bytes != 0 {
+                        let left = ((target_w - rw) / 2) as usize * 3;
+                        let top = ((target_h - rh) / 2) as usize;
+                        for (source_row, destination_row) in source
+                            .as_raw()
+                            .chunks_exact(row_bytes)
+                            .take(rh as usize)
+                            .zip(
+                                rgb.as_mut()
+                                    .chunks_exact_mut(target_w as usize * 3)
+                                    .skip(top),
+                            )
+                        {
+                            destination_row[left..left + row_bytes].copy_from_slice(source_row);
+                        }
+                    }
+                    return canvas;
+                }
             }
             image::imageops::overlay(
                 &mut canvas,

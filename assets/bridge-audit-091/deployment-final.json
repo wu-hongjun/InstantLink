@@ -1,0 +1,13 @@
+{
+  "commit": "8bb1ec7413903b913eb50b472e1b236d9fd4a2d5",
+  "dirty": false,
+  "pid": 2626,
+  "no_restart_after_docs_deploy": true,
+  "profile_owner_mode": "root:root0644",
+  "profile_sha256": "7af5254ad22a53189caa21d38c5d0158c0e39cb93f3cec6aafa4446aea35172e",
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "services": "NRestarts=0\nActiveState=active\n\nNRestarts=0\nActiveState=active",
+  "printer_connected": true,
+  "film_used": 0
+}

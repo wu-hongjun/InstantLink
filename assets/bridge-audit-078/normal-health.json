@@ -1,0 +1,38 @@
+{
+  "timestamp_utc": "2026-10-13T02:55:52.995069+00:00",
+  "runtime_commit": "3052ef54d0ba16a4dd91f18390a5f94eb57a369b",
+  "dirty": false,
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "temperature_c": 42.932,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "services": "MainPID=13865\nNRestarts=0\nActiveState=active\n\nMainPID=13408\nNRestarts=0\nActiveState=active",
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Mon 2026-10-12 22:54:03 EDT] ; stop_time=[n/a] ; pid=13865 ; code=(null) ; status=0/0 }",
+  "ftp_probe_path": "Pi hotspot address; no wireless airtime or upload measured",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "ffi_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
+  "source_sha256": {
+    "src/instantlink_bridge/ui/input.py": "8414a97a36b6625ed44dca6b2bfd091c58deb0115ba7ed368f35770f8ed5e16c",
+    "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97",
+    "src/instantlink_bridge/net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+    "src/instantlink_bridge/net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+    "src/instantlink_bridge/ui/pairing.py": "d80a12437e42f164cf4651132ef2b4ed650e6b836b3a937c3b9d6f429eb83831",
+    "src/instantlink_bridge/ble/agent.py": "f372a4cea1b199d553a922f530e8530bd754df45af87f5511e0de7ad97941275",
+    "src/instantlink_bridge/app.py": "6953654c8642f5da0daf06165934fdaa7e7afd0a05658c92d2c8814528c5fe14"
+  },
+  "working_cache_directories": 0,
+  "addresses": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \nusb0             UP             192.168.7.1/24 \nwlan0            UP             192.168.8.1/24",
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false,
+  "input_backend_log": [
+    "2026-10-12 22:54:06,326 INFO instantlink_bridge.ui.input ui.input_edges_started backend=linux_gpio_v2 debounce_ms=50 lines=8"
+  ],
+  "input_failures": [],
+  "normal_app_warning_error_lines": [],
+  "network_fallback_log": [],
+  "printer_connected": false,
+  "film_used_in_this_task": 0
+}

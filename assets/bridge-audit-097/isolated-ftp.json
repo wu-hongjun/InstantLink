@@ -1,0 +1,12 @@
+{
+  "greeting": "220",
+  "completion": "226",
+  "noop": "200",
+  "transfer_s": 0.04433625000000063,
+  "passed": true,
+  "payload_bytes": 886,
+  "payload_sha256": "ef89a15d17c58e9776abf49c9e42cd48735dbfe5ece9e4f998a9753128aeac21",
+  "received_sha256": "ef89a15d17c58e9776abf49c9e42cd48735dbfe5ece9e4f998a9753128aeac21",
+  "film_used": 0,
+  "scope": "Isolated production FtpReceiveService on the Pi, temporary directory/credentials and high port, normal source policy and actual JPEG STOR\u2192ReceivedImage queue. No application consumer, native backend or Printer calls exist in this probe. Normal installed Bridge/port21 retained. Does not verify a physical camera or normal application print dispatch."
+}

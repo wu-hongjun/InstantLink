@@ -1,0 +1,98 @@
+{
+  "passed": true,
+  "require_connected_printer": false,
+  "film_used": 0,
+  "rows": [
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 57509,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "frame_nonblank": null
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 57509,
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "cpu_khz": 1000000,
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "frame_nonblank": true
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 57509,
+        "locked": true,
+        "unlocking": true,
+        "presses": 2,
+        "cpu_khz": 1000000,
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "frame_nonblank": null
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 57509,
+        "locked": false,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 1000000,
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "frame_nonblank": true
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 57509,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "frame_nonblank": null
+      }
+    }
+  ],
+  "boundary": "Shared production input queue, physical LCD and CPU; button contacts not actuated; Printer offline."
+}

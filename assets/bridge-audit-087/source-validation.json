@@ -1,0 +1,16 @@
+{
+  "source_commit": "06bbe86",
+  "renderer_sha256": "df10cadf41ea34c9b3baabcd5edcb08b75764804fda851151a4f6c60ebed7775",
+  "new_test_sha256": "318c21a77b7fb28bbdc4d1a0361b3de8e4eddfc1e95e1831d8bb8d6701d2ed13",
+  "bridge_tests_passed": 1926,
+  "existing_warnings": 27,
+  "ruff": "passed",
+  "format_touched_files": "passed",
+  "strict_mypy_modules": 67,
+  "strict_mkdocs": "passed",
+  "independent_tests": 454,
+  "independent_pixel_behavior_cache_checks": 1303,
+  "independent_concurrent_frames": 80,
+  "runtime_audit_tests": 136,
+  "film_used": 0
+}

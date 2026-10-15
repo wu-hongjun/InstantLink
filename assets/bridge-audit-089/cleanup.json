@@ -1,0 +1,20 @@
+{
+  "removed": [
+    "/tmp/instantlink-polish-runtime-observer-089.py",
+    "/tmp/instantlink-polish-client-089.py",
+    "/tmp/instantlink-polish-frame-benchmark-089.py",
+    "/tmp/instantlink-polish-gpio-smoke-089.py",
+    "/tmp/instantlink-polish-ui-smoke-089.py",
+    "/tmp/instantlink-polish-reconnect-089.py",
+    "/tmp/instantlink-polish-startup-089.py",
+    "/tmp/instantlink-polish-health-089.py",
+    "/tmp/instantlink-polish-baseline-render-089.py",
+    "/tmp/instantlink-polish-storage-manager-089.py",
+    "/tmp/instantlink-polish-tools-089.tar",
+    "/tmp/instantlink-polish-source-hashes-089.json",
+    "/tmp/__pycache__/instantlink-polish-baseline-render-089.cpython-313.pyc"
+  ],
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false
+}

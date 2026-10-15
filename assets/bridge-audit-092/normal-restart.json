@@ -1,0 +1,46 @@
+{
+  "label": "installed",
+  "film_used": 0,
+  "boundary": "Normal service restart, no observer; first fresh status journal milestone. No image/print/actuator commands. Timings include radio/retries, not cold boot.",
+  "pid": 5618,
+  "boot_start_to_fresh_s": 4.811162,
+  "restart_to_observed_fresh_s": 7.203645933999724,
+  "status_message": "2026-10-14 12:06:24,385 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "passed": true,
+  "setup_progress": [
+    {
+      "monotonic_s": 4157.080348,
+      "message": "2026-10-14 12:06:21,130 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=device_matched detail=INSTAX-52006924 (IOS)"
+    },
+    {
+      "monotonic_s": 4157.124234,
+      "message": "2026-10-14 12:06:21,174 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=ble_connecting detail="
+    },
+    {
+      "monotonic_s": 4158.570508,
+      "message": "2026-10-14 12:06:22,620 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=service_discovery detail="
+    },
+    {
+      "monotonic_s": 4158.6383,
+      "message": "2026-10-14 12:06:22,688 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=characteristic_lookup detail="
+    },
+    {
+      "monotonic_s": 4158.970773,
+      "message": "2026-10-14 12:06:23,021 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=notification_subscribe detail="
+    },
+    {
+      "monotonic_s": 4159.660398,
+      "message": "2026-10-14 12:06:23,710 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=model_detecting detail="
+    },
+    {
+      "monotonic_s": 4159.85016,
+      "message": "2026-10-14 12:06:23,900 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=status_fetching detail="
+    },
+    {
+      "monotonic_s": 4160.332497,
+      "message": "2026-10-14 12:06:24,382 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=connected detail=INSTAX-52006924 (IOS)"
+    }
+  ],
+  "warning_error_messages": [],
+  "ffi_sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+}

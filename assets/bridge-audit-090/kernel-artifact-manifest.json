@@ -1,0 +1,35 @@
+{
+  "abi": {
+    "candidate": {
+      "depends": "brcmutil,cfg80211",
+      "license": "Dual BSD/GPL",
+      "name": "brcmfmac",
+      "srcversion": "2254D80EF43499080344466",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+    },
+    "exported_symbols": 11,
+    "imported_symbols": 254,
+    "stock": {
+      "depends": "brcmutil,cfg80211",
+      "license": "Dual BSD/GPL",
+      "name": "brcmfmac",
+      "srcversion": "FBBF7D1EF3ACBA683834518",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+    }
+  },
+  "baseline_sha256": "8ff164d9338f552b822528f12d6cf8d75fc173541f8f4a8abbf9b2da45ac18af",
+  "built_at_utc": "2026-10-14T13:06:59.981691+00:00",
+  "compiler": "gcc-14 (Debian 14.2.0-19) 14.2.0",
+  "exports_sha256": "fa79e56aff4104234b3731df5398ab4ddc5416054651b8caa6d72662ca7a4e0f",
+  "headers_config_sha256": "fc9d5fe054e82fa9b7f6883eabe7d17b77470361b3028b2f6082c0dde761c43b",
+  "headers_symvers_sha256": "f67adf230aa3d4fc9770f1c33a896e279ad1912f85e2a99771e648c8a4a06cd8",
+  "kernel": "6.12.47+rpt-rpi-v8",
+  "module_sha256": "a2b930a1668775132fa9446d69bc33edc7785aed48bfa6fb35873ae6a14a02c7",
+  "patch_sha256": "36a55fd0afb9aab74e787843d8e2f5ad16d2f6d38fc16fede0aa50cc451c6970",
+  "schema_version": 1,
+  "source_archive_sha256": "c8431ce04c144c307fedfccd8b5c26b9e69cb3f0d5071e56f82c933478da3b71",
+  "source_commit": "359f37f0faefb712add32a39f98751aea67d5c1f",
+  "stock_path": "/usr/lib/modules/6.12.47+rpt-rpi-v8/kernel/drivers/net/wireless/broadcom/brcm80211/brcmfmac/brcmfmac.ko.xz",
+  "stock_sha256": "17220c97a914247bdc4a789caac0dee5c2533e897cd3892834402595d3dce1d7",
+  "upstream_commit": "aba23b0a6a0df84b06ed0323ce127bf7257e4025"
+}

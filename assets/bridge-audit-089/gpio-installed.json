@@ -1,0 +1,177 @@
+{
+  "passed": true,
+  "boundary": "real kernel mockup edges + production action queue + real LCD/CPU/FTP/BLE; physical button contacts not actuated",
+  "case_count": 11,
+  "accepted_actions_observed": 15,
+  "max_queue_to_done_ms": 400.2133329922799,
+  "max_unlock_frame_write_after_input_ms": 52.18859399610665,
+  "latency_limit": "Queue completion includes waiting for the governor; frame write return is not physical panel scanout.",
+  "cases": [
+    {
+      "case": "key2_lock_low_tier",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": null,
+        "frame_matches": null
+      }
+    },
+    {
+      "case": "short_bounce_does_not_wake",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": null,
+        "frame_matches": null
+      }
+    },
+    {
+      "case": "sub_50ms_press_does_not_wake",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": null,
+        "frame_matches": null
+      }
+    },
+    {
+      "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+      "passed": true,
+      "state": {
+        "mode": "unlocking",
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "cpu_khz": 1000000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": true,
+        "frame_matches": true
+      }
+    },
+    {
+      "case": "held_key1_counts_once",
+      "passed": true,
+      "state": {
+        "mode": "unlocking",
+        "locked": true,
+        "unlocking": true,
+        "presses": 2,
+        "cpu_khz": 1000000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": true,
+        "frame_matches": true
+      }
+    },
+    {
+      "case": "joystick_select_resets_same_action_different_button",
+      "passed": true,
+      "state": {
+        "mode": "unlocking",
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "cpu_khz": 1000000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": null,
+        "frame_matches": null
+      }
+    },
+    {
+      "case": "key1_resets_joystick_sequence",
+      "passed": true,
+      "state": {
+        "mode": "unlocking",
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "cpu_khz": 1000000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": null,
+        "frame_matches": null
+      }
+    },
+    {
+      "case": "three_same_joystick_presses_unlock_home",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": false,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 1000000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": true,
+        "frame_matches": true
+      }
+    },
+    {
+      "case": "10s_without_press_returns_dark_low_tier",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": false,
+        "frame_matches": false
+      }
+    },
+    {
+      "case": "rapid_75ms_triple_key1_unlocks",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": false,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 1000000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": true,
+        "frame_matches": true
+      }
+    },
+    {
+      "case": "detached_mock_has_no_callbacks_real_input_remains",
+      "passed": true,
+      "state": {
+        "mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "input_backend": "gpio_v2",
+        "camera_ready": true,
+        "frame_nonblank": null,
+        "frame_matches": null
+      }
+    }
+  ],
+  "film_used": 0
+}

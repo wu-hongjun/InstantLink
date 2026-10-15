@@ -1,0 +1,26 @@
+{
+  "source_commit": "57e7db9853564657c19b0640b3a511f8619175ea",
+  "status": "PASS",
+  "sha256": {
+    "bridge/src/instantlink_bridge/ble/agent.py": "1e659407946e9a9cf5e2abb592612cebe3314f97889289c3b221a9be85ceee3d",
+    "bridge/src/instantlink_bridge/ui/controller.py": "caeaba46a30b4ddefd358aa1fbf0ed13638d00fc96d7ee24dce5b96bca97cdd8"
+  },
+  "full_Bridge_tests": 1807,
+  "existing_warnings": 27,
+  "producer_agent_pairing_tests": 122,
+  "producer_controller_tests": 270,
+  "independent_affected_tests": 392,
+  "additional_independent_adversarial_cases": 3,
+  "gates": [
+    "normal pre-commit hooks",
+    "Ruff",
+    "touched Python formatting",
+    "strict mypy67",
+    "strict MkDocs"
+  ],
+  "native_unchanged_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+  "native_source_commit": "b2b6c8ceab6b2ba7f8b0151dd8b283a8c0560d62",
+  "no_C_ABI_config_sync_schema_change": true,
+  "policy": "Reuse complete512-row bounded owner/lifecycle signal-maintained cache only for unique live watch identity while bus connected. Existing fresh snapshot fallback and fresh bond gate retained, no new query/task/per-poll work. Delayed controller completion must retain token/generation/selected identity ownership.",
+  "film_used": 0
+}

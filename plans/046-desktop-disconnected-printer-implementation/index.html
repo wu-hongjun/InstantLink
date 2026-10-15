@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3057,7 +3087,7 @@
 <p><code>macos/InstantLink/Core/PrinterConnectionCoordinator.swift:enterReconnectFallback</code> (line 567)</p>
 <p>After the snapshot mutation, emit a sticky warning banner so the failure surfaces in the existing global banner system (the <code>BannerStrip</code> shipped in 043):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">emitStatus</span><span class="p">(.</span><span class="n">show</span><span class="p">(</span><span class="n">PrinterConnectionStatusMessage</span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">text</span><span class="p">:</span><span class="w"> </span><span class="n">L</span><span class="p">(</span><span class="s">&quot;couldnt_reach_printer_banner&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">target</span><span class="p">),</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">text</span><span class="p">:</span><span class="w"> </span><span class="n">L</span><span class="p">(</span><span class="s">"couldnt_reach_printer_banner"</span><span class="p">,</span><span class="w"> </span><span class="n">target</span><span class="p">),</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">tone</span><span class="p">:</span><span class="w"> </span><span class="p">.</span><span class="n">warning</span><span class="p">,</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">autoDismiss</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)))</span>
@@ -3068,7 +3098,7 @@
 <p><code>MainView.swift:116–123</code></p>
 <p>Add a one-line <code>Label</code> after the 3-step checklist, visible only when <code>pairingRecoveryMode == .reconnectFallback</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">if</span><span class="w"> </span><span class="n">viewModel</span><span class="p">.</span><span class="n">pairingRecoveryMode</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="p">.</span><span class="n">reconnectFallback</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">Label</span><span class="p">(</span><span class="n">L</span><span class="p">(</span><span class="s">&quot;bluetooth_hint_after_failed_reconnect&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">systemImage</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;info.circle&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">Label</span><span class="p">(</span><span class="n">L</span><span class="p">(</span><span class="s">"bluetooth_hint_after_failed_reconnect"</span><span class="p">),</span><span class="w"> </span><span class="n">systemImage</span><span class="p">:</span><span class="w"> </span><span class="s">"info.circle"</span><span class="p">)</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="p">.</span><span class="n">font</span><span class="p">(.</span><span class="n">caption</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="p">.</span><span class="n">foregroundColor</span><span class="p">(.</span><span class="n">secondary</span><span class="p">)</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">}</span>

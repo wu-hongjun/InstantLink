@@ -1,0 +1,36 @@
+{
+  "verdict": "Installed validation accepted; no blockers. Final normal-service cleanup/health pending independent review.",
+  "display_sha256": "ef6e7fd51003578d40117f5f758bdbe435972bc695fd23ad2955b9b20165b5a1",
+  "candidate_source_commit": "cac3318",
+  "installed_pid": 38129,
+  "frame_count": 18,
+  "all_frame_sha256_match_baseline": true,
+  "frame_frequency_khz": 1000000,
+  "installed_frame_medians_ms": {
+    "total_ms": 41.82997449970571,
+    "pack_ms": 9.349973995995242,
+    "draw_ms": 31.02169300109381,
+    "write_ms": 0.36541649751598015,
+    "backlight_ms": 0.9001559956232086,
+    "cpu_ms": 41.15445399999995
+  },
+  "gpio_cases_passed": 11,
+  "kernel_gpio_mockup_only": true,
+  "startup_initial_status_attempt_seconds": 3.8150305199960712,
+  "subsequent_fresh_poll_passed": true,
+  "reconnect_seconds": 6.465819320990704,
+  "reconnect_observations": 15,
+  "all_reconnect_locked600_camera_ready": true,
+  "final_bluez_connected_and_fresh": true,
+  "journal_rows_reviewed": 198,
+  "matched_errors_warnings_render_input_panics": [],
+  "film_used": 0,
+  "boundaries": [
+    "Kernelwrite completion excludespanel scanout.",
+    "GPIO checks exercise productionqueue viareal kernelmockup edges, notphysical buttoncontacts.",
+    "Wake timing includespowertransitions; no universal below50ms buttonlatencyclaim.",
+    "Installedframe timings arefinite local samples; no guaranteed constantlatency claim.",
+    "No film orphysical printquality test needed forunchanged Printer/imagepipeline."
+  ],
+  "blockers": []
+}

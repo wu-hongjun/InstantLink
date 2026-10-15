@@ -1,0 +1,28 @@
+{
+  "services": {
+    "records": 15434,
+    "flagged": 150,
+    "previous_capture_recount_with_same_predicate": 150,
+    "new_records": 262,
+    "new_flagged": 0,
+    "process_scope_flags": {
+      "45900": 0,
+      "46719": 0,
+      "47347": 0,
+      "47710": 0,
+      "47345": 0
+    }
+  },
+  "kernel": {
+    "records": 644,
+    "flagged": 199,
+    "previous_capture_recount_with_same_predicate": 193,
+    "new_records": 7,
+    "new_flagged": 6,
+    "new_vendor_ie_errors": 6,
+    "new_hci_faults": 0
+  },
+  "predicate": "Distinct journal records matching case-sensitive severity/panic/unwrap text OR journald PRIORITY<=3. Expanded panic matching recounts two already historical unwrap lines compared with initial inventory.",
+  "classification": "All newly flagged records are six brcmfmac vendor-IE errors during three service reconfigurations. Existing historical faults remain. All current runtime and observer scopes have zero flags; no new HCI fault.",
+  "limits": "Full available current-boot journals were reviewed; raw messages retained privately. No kernel driver repair claimed; AP and FTP probes healthy. One expected not-advertising INFO during first reconnect attempt recovered automatically."
+}

@@ -1,0 +1,14 @@
+{
+  "records": 3226,
+  "installed_pid": "20395",
+  "installed_records_at_capture": 27,
+  "installed_warning_error_messages": [],
+  "harness_wrong_method_attribute_errors": 8,
+  "full_boot_priority_counts": {
+    "6": 2951,
+    "5": 258,
+    "4": 9,
+    "3": 8
+  },
+  "boundary": "Full current-boot Bridge and manager service journals reviewed; historical faults from079 remain. Raw journals private0600; no kernel log claim."
+}

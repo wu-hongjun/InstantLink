@@ -16,7 +16,7 @@
         <link rel="prev" href="../ffi/">
       
       
-        <link rel="next" href="../../development/architecture/">
+        <link rel="next" href="../bridge-management/">
       
       
         
@@ -560,6 +560,8 @@
       
         
       
+        
+      
     
     
     
@@ -811,10 +813,49 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#outbox-concurrency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outbox concurrency
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2855,6 +2896,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#outbox-concurrency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outbox concurrency
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2952,6 +3004,9 @@ service so the new token takes effect; all paired clients must re-pair).</p>
 </table>
 <p><code>OutboxItem</code> fields: <code>item_id</code> (hex), <code>file_name</code>, <code>size_bytes</code>, <code>sha256</code>,
 <code>received_at</code> (epoch seconds), <code>source_remote_ip</code>.</p>
+<p>Queued originals retain their own bytes and checksum when a camera reuses the same upload
+filename. New spool files use independent inodes; upgrades detach older shared files before
+they can be changed by a subsequent FTP write.</p>
 <p>Unknown id → <code>404 {"error": "unknown_item", "item_id": …}</code>.</p>
 <p>Typical pull loop: <code>GET /v1/queue</code> → for each item <code>GET /v1/photos/{id}</code>
 (resume with <code>Range</code> if a partial exists) → verify <code>sha256</code> → save →
@@ -2986,10 +3041,28 @@ drives the physical LCD.</p>
 <p><code>action</code> ∈ <code>up, down, left, right, select, back, help, pair</code> — injected into
 the same action queue as the physical joystick/keys, so all input handling
 (settle window, power activity) applies.</p>
+<p>When the LCD is locked or automatically dark, repeat the <strong>same action three consecutive times</strong>
+to unlock it by default. For example, three separate <code>{"action": "select"}</code> requests progress
+through <code>1 / 3</code>, <code>2 / 3</code> and the restored live screen. A different action resets progress to
+<code>1 / 3</code> for that action. All inputs are consumed until unlocking completes.</p>
+<p>The first input wakes the prompt and starts the awake CPU tier. An incomplete sequence expires
+10 seconds after its last accepted input. Every accepted action restarts this inactivity timer,
+including an action change that resets the count. Rejected input requests and screen polling do
+not restart the unlock timer. Remote actions
+use internal <code>remote:&lt;action&gt;</code> identities, distinct from physical GPIO buttons, so remote and
+physical inputs cannot combine to finish a sequence. No new request field is required. Physical
+unlock likewise requires the same physical button three consecutive times: KEY1 and joystick
+press have separate identities even though both normally produce Select.</p>
+<p>The Bridge's <code>ui.unlock_requires_three_presses</code> setting can restore single-action wake, which
+consumes that action without executing it. The screen endpoint renders the shared unlock prompt;
+receiving photos and Printer operations retain their live state.</p>
 <p>Errors: <code>remote_ui = false</code> → <code>404 {"error": "remote_ui_disabled"}</code>; no
 snapshot/injector wired → <code>404 {"error": "remote_ui_unavailable"}</code>; bad
 action → <code>400 {"error": "invalid_action", "allowed": [...]}</code>; queue full →
 <code>400 {"error": "input_rejected"}</code>; render failure → <code>500</code>.</p>
+<p>A full shared input queue discards its uncertain buffered actions and resets an incomplete
+unlock attempt. Kernel event loss or input-backend recovery does the same. Subsequent accepted
+input starts a new sequence; no wire action or field is added.</p>
 <p><code>/v1/screen</code> is CPU-guarded on the Pi Zero 2 W: frames are memoized by
 snapshot identity and re-rendered at most every ~0.3 s, so a fast-polling
 client cannot peg the CPU.</p>
@@ -2998,6 +3071,16 @@ client cannot peg the CPU.</p>
 TLS with a pinned self-signed cert is a v1.5 hardening item. See
 <code>docs/plans/050-iphone-auto-sync.md</code> and <code>051-sync-ux-audit.md</code> for the
 threat model and token-rotation story.</p>
+<h2 id="outbox-concurrency">Outbox concurrency<a class="headerlink" href="#outbox-concurrency" title="Permanent link">&para;</a></h2>
+<p>Copying and checksumming a new camera file does not block status/queue reads, existing-photo
+lookup or acknowledgements. Additions remain ordered; a new item becomes visible only after
+its checksum is complete and its metadata commit is protected by the index lock. Existing
+range/download and authentication contracts are unchanged. Cancellation of the receive task
+joins the filesystem transaction before runtime teardown (plan 068).</p>
+<p>Index publication precedes the visible queue update and deletion of evicted/acknowledged
+originals. If publication fails, the committed queue and its originals remain available;
+unpublished arrivals are cleaned up. Readers continue using the committed snapshot while
+publication runs.</p>
 
 
 

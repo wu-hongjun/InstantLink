@@ -1,0 +1,305 @@
+{
+  "rounds": [
+    {
+      "round_order": 1,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 25277.57477760315,
+      "inter_chunk_gap_ms": {
+        "min": 153.84197235107422,
+        "mean": 154.48675411088126,
+        "max": 156.64911270141602,
+        "sum": 8651.25823020935
+      },
+      "last_chunk_to_end_gap_ms": 155.242919921875,
+      "fragment_spans_ms_sum": 12557.389259338379,
+      "post_last_fragment_ack_ms_sum": 3807.8715801239014,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 2,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 19584.702014923096,
+      "inter_chunk_gap_ms": {
+        "min": 103.69586944580078,
+        "mean": 104.49744973863874,
+        "max": 105.34095764160156,
+        "sum": 5851.8571853637695
+      },
+      "last_chunk_to_end_gap_ms": 153.76710891723633,
+      "fragment_spans_ms_sum": 10488.751411437988,
+      "post_last_fragment_ack_ms_sum": 2990.542411804199,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 3,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 17410.42399406433,
+      "inter_chunk_gap_ms": {
+        "min": 78.70101928710938,
+        "mean": 79.54564690589905,
+        "max": 85.11114120483398,
+        "sum": 4454.556226730347
+      },
+      "last_chunk_to_end_gap_ms": 155.1821231842041,
+      "fragment_spans_ms_sum": 9396.851539611816,
+      "post_last_fragment_ack_ms_sum": 3305.0901889801025,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 4,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 15685.142040252686,
+      "inter_chunk_gap_ms": {
+        "min": 53.81894111633301,
+        "mean": 54.376968315669465,
+        "max": 55.42707443237305,
+        "sum": 3045.1102256774902
+      },
+      "last_chunk_to_end_gap_ms": 154.09016609191895,
+      "fragment_spans_ms_sum": 9727.198123931885,
+      "post_last_fragment_ack_ms_sum": 2659.2085361480713,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 5,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 14785.441875457764,
+      "inter_chunk_gap_ms": {
+        "min": 28.541088104248047,
+        "mean": 29.54316564968654,
+        "max": 31.20708465576172,
+        "sum": 1654.4172763824463
+      },
+      "last_chunk_to_end_gap_ms": 154.04081344604492,
+      "fragment_spans_ms_sum": 9581.654071807861,
+      "post_last_fragment_ack_ms_sum": 3295.2418327331543,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 6,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 13135.146856307983,
+      "inter_chunk_gap_ms": {
+        "min": 3.3140182495117188,
+        "mean": 3.492061580930437,
+        "max": 4.018068313598633,
+        "sum": 195.5554485321045
+      },
+      "last_chunk_to_end_gap_ms": 153.75089645385742,
+      "fragment_spans_ms_sum": 10042.657136917114,
+      "post_last_fragment_ack_ms_sum": 2643.3515548706055,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 7,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 13135.313034057617,
+      "inter_chunk_gap_ms": {
+        "min": 3.2961368560791016,
+        "mean": 3.499358892440796,
+        "max": 4.003047943115234,
+        "sum": 195.96409797668457
+      },
+      "last_chunk_to_end_gap_ms": 153.63001823425293,
+      "fragment_spans_ms_sum": 9396.925687789917,
+      "post_last_fragment_ack_ms_sum": 3288.267135620117,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 8,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 15100.517988204956,
+      "inter_chunk_gap_ms": {
+        "min": 28.55396270751953,
+        "mean": 29.4455885887146,
+        "max": 30.82108497619629,
+        "sum": 1648.9529609680176
+      },
+      "last_chunk_to_end_gap_ms": 153.98287773132324,
+      "fragment_spans_ms_sum": 9829.663515090942,
+      "post_last_fragment_ack_ms_sum": 3367.7825927734375,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 9,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 15714.436054229736,
+      "inter_chunk_gap_ms": {
+        "min": 53.55405807495117,
+        "mean": 54.50670208249773,
+        "max": 55.36913871765137,
+        "sum": 3052.375316619873
+      },
+      "last_chunk_to_end_gap_ms": 153.84292602539062,
+      "fragment_spans_ms_sum": 9104.617834091187,
+      "post_last_fragment_ack_ms_sum": 3304.715871810913,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 10,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 17334.604024887085,
+      "inter_chunk_gap_ms": {
+        "min": 78.64212989807129,
+        "mean": 79.52413388660976,
+        "max": 80.57284355163574,
+        "sum": 4453.3514976501465
+      },
+      "last_chunk_to_end_gap_ms": 153.74493598937988,
+      "fragment_spans_ms_sum": 9985.737562179565,
+      "post_last_fragment_ack_ms_sum": 2642.0559883117676,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 11,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 19000.378847122192,
+      "inter_chunk_gap_ms": {
+        "min": 103.71994972229004,
+        "mean": 104.62877154350281,
+        "max": 106.39214515686035,
+        "sum": 5859.211206436157
+      },
+      "last_chunk_to_end_gap_ms": 153.85699272155762,
+      "fragment_spans_ms_sum": 10165.03643989563,
+      "post_last_fragment_ack_ms_sum": 2722.435235977173,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 12,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 21519.833087921143,
+      "inter_chunk_gap_ms": {
+        "min": 153.7630558013916,
+        "mean": 154.4293761253357,
+        "max": 155.95197677612305,
+        "sum": 8648.045063018799
+      },
+      "last_chunk_to_end_gap_ms": 153.764009475708,
+      "fragment_spans_ms_sum": 9755.81979751587,
+      "post_last_fragment_ack_ms_sum": 2862.6370429992676,
+      "cancel_ack": "00"
+    }
+  ],
+  "film_before": 1,
+  "film_after": 1,
+  "history_before": 67,
+  "history_after": 67,
+  "print_image_command_count": 0,
+  "request_opcodes": {
+    "0x2": 7,
+    "0x1000": 12,
+    "0x1001": 684,
+    "0x1002": 12,
+    "0x1003": 12
+  },
+  "boundary": "No-film download/end/cancel; outboundJPEGbytes and indexedACKverified; no storedimage or physicalfilmmeasurement"
+}

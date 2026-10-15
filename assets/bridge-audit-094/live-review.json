@@ -1,0 +1,67 @@
+{
+  "task": 94,
+  "review_type": "Independent final installed no-film evidence review",
+  "passed": true,
+  "blocking_findings": [],
+  "runtime_commit": "7c312adb51b7d43b29d1c6b3978f32cb33adf9ed",
+  "runtime_pid": 13213,
+  "manager_pid": 13211,
+  "source_hashes_match_final_review": true,
+  "native_ffi_unchanged": true,
+  "measurements": [
+    {
+      "trial": 1,
+      "dispatch_to_fresh_controller_status_seconds": 11.159350347999862,
+      "samples": 21,
+      "film_before": 0,
+      "film_after": 0,
+      "disconnect_event_observed": true,
+      "all_probes_powersave_600mhz_backlight_off_same_pid_ftp_220_200": true,
+      "intermediate_status_failure_evidence": [
+        "2026-10-14 15:54:48,595 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkPrinterNotFoundError error=connect failed: printer not found stage=0 detail=no Instax printer found setup_drop_streak=0"
+      ],
+      "warning_error_records": 0
+    },
+    {
+      "trial": 2,
+      "dispatch_to_fresh_controller_status_seconds": 7.366599411001516,
+      "samples": 11,
+      "film_before": 0,
+      "film_after": 0,
+      "disconnect_event_observed": true,
+      "all_probes_powersave_600mhz_backlight_off_same_pid_ftp_220_200": true,
+      "intermediate_status_failure_evidence": [
+        "2026-10-14 15:55:16,083 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed stage=5 detail=BLE error: BLE link disconnected during GATT setup setup_drop_streak=1"
+      ],
+      "warning_error_records": 0
+    }
+  ],
+  "final_health": {
+    "bridge_active": true,
+    "manager_active": true,
+    "automatic_restarts": 0,
+    "printer_connected": true,
+    "current_pid_records_reviewed": 132,
+    "warning_error_records": 0,
+    "fresh_controller_status_records": 3,
+    "ftp_greeting": "220",
+    "ftp_noop": "200",
+    "backup_socket": "active",
+    "cpu_khz": 600000,
+    "governor": "powersave",
+    "backlight": "off",
+    "throttled": "0x0"
+  },
+  "validation_method": "Read helper source and all three supplied JSON reports; programmatic assertions checked film, sample invariants, commit/provenance, final reviewed source hashes, event presence and all-current-PID warning records. No hardware or source mutations by reviewer.",
+  "rejected_observation": "Earlier helper timed out observing INFO-only status after already-connected native success. Its result was not accepted as controller freshness proof. The accepted-callback log signature correction was independently source-tested before the two successful final trials.",
+  "limits": [
+    "Timings start immediately before external BlueZ Disconnect dispatch and end at journal monotonic timestamp of fresh controller status; they are not event-to-status latency.",
+    "No matched old-build baseline exists; these results establish installed recovery, not a controlled speedup.",
+    "Normal automatic screen-off measured 600 MHz/backlight low; internal lock flag and physical button contacts were not introspected or actuated.",
+    "External BlueZ Disconnect does not reproduce Printer physical power-cycle or camera Wi-Fi airtime; FTP was same-Pi AP-address greeting/NOOP only.",
+    "No image, print or actuator commands were issued; film count remained zero.",
+    "One real native canonical GATT setup drop recovered as INFO streak1 before fresh status. These results do not claim elimination of physical Bluetooth drops or exhaustive testing of all Printer models.",
+    "Owned test-helper removal remains root operational cleanup; not established by the three reviewed captures."
+  ],
+  "film_used": 0
+}

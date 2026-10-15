@@ -1,0 +1,891 @@
+{
+  "scope": "Owned kernel gpio-mockup edges via production input/controller and actualLCD, notphysicalbutton contacts; independentRGB565oracle. Darktimeoutrequiresblack; acceptedqueue\u2192done includesCPUtransition andnotpanel scanout.",
+  "film_used": 0,
+  "variants": {
+    "baseline": {
+      "passed": true,
+      "cases": [
+        {
+          "case": "key2_lock_low_tier",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "short_bounce_does_not_wake",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "sub_50ms_press_does_not_wake",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "held_key1_counts_once",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "joystick_select_resets_same_action_different_button",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "key1_resets_joystick_sequence",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "three_same_joystick_presses_unlock_home",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": false,
+          "unlocking": false,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "10s_without_press_returns_dark_low_tier",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": false,
+          "frame_matches": false
+        },
+        {
+          "case": "rapid_75ms_triple_key1_unlocks",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": false,
+          "unlocking": false,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "detached_mock_has_no_callbacks_real_input_remains",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        }
+      ],
+      "actions": [
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92787.270755218,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 178.14177100080997,
+          "queued": 92787.092614697,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92787.322584436,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 18.171613992308266,
+          "queued": 92787.304413916,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92787.520442613,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 20.012135995784774,
+          "queued": 92787.500431415,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 92787.726096259,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 13.69421900017187,
+          "queued": 92787.712403811,
+          "unlocking": false
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92788.684382665,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 396.01770900480915,
+          "queued": 92788.288365998,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92789.068736884,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 16.519479991984554,
+          "queued": 92789.052217977,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 92789.808733446,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 16.473334006150253,
+          "queued": 92789.792260737,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92789.992733029,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 1.577917006216012,
+          "queued": 92789.991155685,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 92790.185746467,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 1.478072997997515,
+          "queued": 92790.184269123,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 92790.380756102,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 16.484584004501812,
+          "queued": 92790.364272091,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 92790.774627664,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 18.397447987808846,
+          "queued": 92790.756230893,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 92791.444754279,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 12.56276000640355,
+          "queued": 92791.432192508,
+          "unlocking": false
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92791.757469435,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 121.07005200232379,
+          "queued": 92791.636400372,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92791.836711778,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 16.427708003902808,
+          "queued": 92791.820284591,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92802.523476878,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 115.07869799970649,
+          "queued": 92802.408399014,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92802.576551566,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 16.352655991795473,
+          "queued": 92802.560199483,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 92802.730450941,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 18.16567700006999,
+          "queued": 92802.712286201,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 92803.121026878,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 12.803332996554673,
+          "queued": 92803.108224795,
+          "unlocking": false
+        }
+      ],
+      "mock_attached_after": false,
+      "physical_input_after": "gpio_v2"
+    },
+    "candidate": {
+      "passed": true,
+      "cases": [
+        {
+          "case": "key2_lock_low_tier",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "short_bounce_does_not_wake",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "sub_50ms_press_does_not_wake",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "held_key1_counts_once",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "joystick_select_resets_same_action_different_button",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "key1_resets_joystick_sequence",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "three_same_joystick_presses_unlock_home",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": false,
+          "unlocking": false,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "10s_without_press_returns_dark_low_tier",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": false,
+          "frame_matches": false
+        },
+        {
+          "case": "rapid_75ms_triple_key1_unlocks",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": false,
+          "unlocking": false,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "detached_mock_has_no_callbacks_real_input_remains",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        }
+      ],
+      "actions": [
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 93565.514092942,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 17.75604199792724,
+          "queued": 93565.496338462,
+          "unlocking": false
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93566.477246483,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 420.6341659883037,
+          "queued": 93566.056614504,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93566.864567264,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 16.32807299029082,
+          "queued": 93566.848239764,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 93567.594513618,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 10.28562500141561,
+          "queued": 93567.584228566,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93567.773799034,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 1.479894999647513,
+          "queued": 93567.772319764,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 93567.965813045,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 1.4575519890058786,
+          "queued": 93567.964356066,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 93568.154502784,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 10.253125001327135,
+          "queued": 93568.144250284,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 93568.544495649,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 12.245833000633866,
+          "queued": 93568.532250545,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 93569.206916846,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 6.669323003734462,
+          "queued": 93569.200248878,
+          "unlocking": false
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93569.50484044,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 104.44885399192572,
+          "queued": 93569.400392419,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93569.590514555,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 10.247604994219728,
+          "queued": 93569.580267575,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93580.26604554,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 105.67552100110333,
+          "queued": 93580.160370748,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93580.322527988,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 10.299009998561814,
+          "queued": 93580.312229603,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93580.476332155,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 12.076250000973232,
+          "queued": 93580.464256582,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 93580.874791842,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 6.561979011166841,
+          "queued": 93580.868231009,
+          "unlocking": false
+        }
+      ],
+      "mock_attached_after": false,
+      "physical_input_after": "gpio_v2"
+    },
+    "installed": {
+      "passed": true,
+      "cases": [
+        {
+          "case": "key2_lock_low_tier",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "short_bounce_does_not_wake",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "sub_50ms_press_does_not_wake",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "held_key1_counts_once",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "joystick_select_resets_same_action_different_button",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "key1_resets_joystick_sequence",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": true,
+          "unlocking": true,
+          "frame_nonblank": null,
+          "frame_matches": null
+        },
+        {
+          "case": "three_same_joystick_presses_unlock_home",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": false,
+          "unlocking": false,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "10s_without_press_returns_dark_low_tier",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": false,
+          "frame_matches": false
+        },
+        {
+          "case": "rapid_75ms_triple_key1_unlocks",
+          "passed": true,
+          "cpu_khz": 1000000,
+          "locked": false,
+          "unlocking": false,
+          "frame_nonblank": true,
+          "frame_matches": true
+        },
+        {
+          "case": "detached_mock_has_no_callbacks_real_input_remains",
+          "passed": true,
+          "cpu_khz": 600000,
+          "locked": true,
+          "unlocking": false,
+          "frame_nonblank": null,
+          "frame_matches": null
+        }
+      ],
+      "actions": [
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93996.208909236,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 163.88125000230502,
+          "queued": 93996.045029965,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93996.387411319,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 17.15171900286805,
+          "queued": 93996.370260746,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 93996.559686944,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 12.415833989507519,
+          "queued": 93996.547271735,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 94043.898942707,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 18.6486460006563,
+          "queued": 94043.880295363,
+          "unlocking": false
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94044.88512953,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 408.48984400508925,
+          "queued": 94044.476641196,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94045.25614479,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 11.747084005037323,
+          "queued": 94045.244398331,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 94045.995187498,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 10.86067700816784,
+          "queued": 94045.984327498,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94046.181845206,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 1.5077080024639145,
+          "queued": 94046.180338071,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 94046.377686664,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 1.4534379879478365,
+          "queued": 94046.376233956,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 94046.570509581,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 10.27406299544964,
+          "queued": 94046.560236091,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:13",
+          "cpu_khz": 1000000,
+          "end": 94046.965839425,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 13.485468996805139,
+          "queued": 94046.952354737,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 94047.628373851,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 8.103333006147295,
+          "queued": 94047.62027182,
+          "unlocking": false
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94047.931308695,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 106.90786399936769,
+          "queued": 94047.82440156,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94048.018525414,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 10.257709000143223,
+          "queued": 94048.008268226,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94058.70465093,
+          "locked": true,
+          "presses": 1,
+          "queue_to_done_ms": 104.25546900660265,
+          "queued": 94058.600396399,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94058.762446295,
+          "locked": true,
+          "presses": 2,
+          "queue_to_done_ms": 10.21765598852653,
+          "queued": 94058.752229264,
+          "unlocking": true
+        },
+        {
+          "action": "select",
+          "button": "gpio:21",
+          "cpu_khz": 1000000,
+          "end": 94058.916392337,
+          "locked": false,
+          "presses": 0,
+          "queue_to_done_ms": 12.155938005889766,
+          "queued": 94058.904237232,
+          "unlocking": false
+        },
+        {
+          "action": "back",
+          "button": "gpio:20",
+          "cpu_khz": 1000000,
+          "end": 94059.306769055,
+          "locked": true,
+          "presses": 0,
+          "queue_to_done_ms": 6.556927008205093,
+          "queued": 94059.300213118,
+          "unlocking": false
+        }
+      ],
+      "mock_attached_after": false,
+      "physical_input_after": "gpio_v2"
+    }
+  }
+}

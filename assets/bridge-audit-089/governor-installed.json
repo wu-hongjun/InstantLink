@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "retry_recovery_s": 0.33720109399291687,
+  "calls": [
+    {
+      "governor": "powersave",
+      "at": 100438.630971464
+    },
+    {
+      "governor": "powersave",
+      "at": 100438.887391204
+    }
+  ],
+  "cancelled_after_actual_performance_write": true,
+  "locked_final_khz": 600000,
+  "film_used": 0,
+  "boundary": "Production policy and actual root-owned sysfs helper; intentional one-shot failure and held post-write cancellation. No image commands."
+}

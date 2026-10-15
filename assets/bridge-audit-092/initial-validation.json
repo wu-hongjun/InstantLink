@@ -1,0 +1,29 @@
+{
+  "source_commit": "b2e4e2a6bf4a39c0a9281e402780ad5ce2f94b34",
+  "linux_core_tests": 227,
+  "linux_core_failed": 0,
+  "linux_test_seconds": 80.85,
+  "film_used": 0,
+  "boundary": "Cross-built full core lib test binary executed on real Linux arm64 Pi with two test threads; uses mock transports, no hardware BLE/image/actuator commands.",
+  "test_binary_sha256": "7bbf3ec185dafa4bacb27b73baa9efeef85b2512d9c944c3e87a9234e2f69e9c",
+  "gatt_tests": [
+    "test transport::tests::gatt_confirmed_disconnect_is_not_missing_characteristic",
+    "test transport::tests::gatt_final_confirmation_loss_cannot_authorize_stale_bond_recovery",
+    "test transport::tests::gatt_pending_and_unknown_deadlines_cannot_authorize_stale_bond_recovery",
+    "test transport::tests::gatt_query_and_discovery_share_real_deadline_and_drop_pending_futures",
+    "test transport::tests::gatt_ready_retry_has_no_fixed_delay",
+    "test transport::tests::gatt_resolved_incomplete_table_requires_final_live_confirmation",
+    "test transport::tests::gatt_retry_preserves_last_discovery_error_detail",
+    "test transport::tests::gatt_snapshot_requires_typed_properties_on_exact_device",
+    "test transport::tests::gatt_unknown_state_keeps_discovery_fallback",
+    "test transport::tests::gatt_unresolved_link_waits_before_rediscovery",
+    "test transport::tests::gatt_zero_budget_starts_no_io"
+  ],
+  "host_bridge_tests": 2383,
+  "host_bridge_existing_warnings": 27,
+  "rust_workspace_fmt_clippy_tests_passed": true,
+  "ffi_header_drift_passed": true,
+  "ruff_strict_mypy_passed": true,
+  "focused_bridge_tests": 81,
+  "initial_gate_failure": "One unchanged HIF worker decoder-descendant timeout test did not start its decoder during concurrent compilation; four affected worker cases reran passed, then full normal gate passed without source/test changes."
+}

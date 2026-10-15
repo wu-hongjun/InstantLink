@@ -1,0 +1,1931 @@
+{
+  "label": "candidate",
+  "passed": true,
+  "frames": 240,
+  "preview_unchanged": true,
+  "duration_s": 15.912486816989258,
+  "rows": [
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "booting",
+      "rgb_sha256": "23db929da7999d7d1fbde14081c8b1c333fe9a3ad0bd109af012939cf4afca58",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "unlocking",
+      "rgb_sha256": "9ed3a74298445615e630a25a6fc042c08890044107b9b8b6144cbcc9dbdfb7b1",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "settings",
+      "rgb_sha256": "c40b9920a6b8c38fe042b0919852f45c21e033e6561ec195d42db822a8b58967",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "ac21ed043606ca945b6f0cc07223a654f7b0c536e7eaa6dc72350c63463bcff0",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "needs_pairing",
+      "rgb_sha256": "4a76e2d57aa334be269f2fd6ad0cb64252203b73e19d857a22c1d85b04909fae",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "pairing",
+      "rgb_sha256": "9b914be3ae00ab2953bf6838b027e663317792b67ef58e372d5db7db5f434c51",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "printer_searching",
+      "rgb_sha256": "afb8f1b8346d70aaa238cd9dc25fa5c62cff173a62cfd14fe3d414f9d78171c5",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "printer_offline",
+      "rgb_sha256": "812c1463bcf77159f5e4377382d4a03e5ce6f5b5fdcf23393797b566b7c54931",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "validation",
+      "rgb_sha256": "af4ed0e02595a08e02a5e9288c05cd2e146604a9f6a64c533648c5af95ad3a24",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "ready",
+      "rgb_sha256": "cbcab97a1639a9d42981f7ecb4e98c194a590434a814c9f798f8500180f0c670",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "no_film",
+      "rgb_sha256": "6ae5d6059d492cb763d8fa4a11360e55edb08bcd64efc9d9fc090181f2e242a3",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "image_received",
+      "rgb_sha256": "1edac1c570172112e4afb64a4871181a4508fb67898bb20c169d3e68bafd78fc",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "d07d95444b053021df128bd0626312bc68e5ad3c0e3053d919bd921ef8dad2af",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "printing",
+      "rgb_sha256": "de885efe8bf299ffd8bea9af67545cdc3635cfb8d8af76d926c56d26738c4bce",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "print_complete",
+      "rgb_sha256": "b44725c2d79326e75f235fd35c9a8c80d9bce85067d95ef44eb81e5ef8015239",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "pair_failed",
+      "rgb_sha256": "ec4e9caef86f8139cae9d36186c768ed73a0d72f1d838ee307b1c0564732c634",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "error",
+      "rgb_sha256": "51ff77cd3b117daf5e572776d1db348f2c66550551279a9fb56adeec797e4438",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "fc3e580e8083c39c78d56b988b1215ddf3d546375f9f817d8660812b1480eb52",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "help_dialog",
+      "rgb_sha256": "858e5cdd0b9b32a22bb266e083133dc21e34da391c25048a5fbe3e2b6e511f4d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "small",
+      "mode": "sync_pairing",
+      "rgb_sha256": "d5dfb2c1cc8dd469f1d2f2d96bf0f94bddb72d88f79dbef5faa28050ea1e9a6c",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "booting",
+      "rgb_sha256": "dbd59cbf41dd834398957de72dc96f7ab9ce0f8fa5afdd230fc416388c113206",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "unlocking",
+      "rgb_sha256": "57d1ab57084c81ec2adda066db0325c94fb4fc0449f0f42b35b2942dfb291cde",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "settings",
+      "rgb_sha256": "6ebd17cabde4c73a62ab74aea71307e82540247e4741177bdfa1a5bd5bfcaf55",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "dc4e28e5d0b199a5389aeac7783ddd4173729d58a72370f54dc9cad005bd6dbd",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "needs_pairing",
+      "rgb_sha256": "ba2796c6aa8891cabf87fc2282ddf7355bf3cbd73930d8d7cb84b827940f4914",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "pairing",
+      "rgb_sha256": "fb45ac18c43549ea36c2699528053a639e7afd5f5881fbd6e57e2c8fe470aa37",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "printer_searching",
+      "rgb_sha256": "469beec5f22ead209a585029803b24711cf9a55c85d246388ce86f053d8e8b20",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "printer_offline",
+      "rgb_sha256": "2935daffd2d5c245fbb9c30423d862f67ce04deee05d091d1087ea4f9ce5099a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "validation",
+      "rgb_sha256": "e2fca41433807223a4f8a93254c563d53312cf9d7cb66fbd6aabe5ec6e6143ca",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "ready",
+      "rgb_sha256": "a9585e0fee94f0083d1b8377110e83de821658f3b1992efde5852e20cb1cc4aa",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "no_film",
+      "rgb_sha256": "b9d7f993b5cee27d9e7533d3e09c0925447755b32a76533bf2a995b27e06eb6a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "image_received",
+      "rgb_sha256": "fadec99a4bfa6fad502f4448577f9d041ec99748eccaeb6c3caadb12e46a055d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "7f3961002ad68ce3804503adec0c438aa15f09d4a582f5f146589b2386c21f06",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "printing",
+      "rgb_sha256": "53317eeb39a29938240d84b3703aa2c83a77e1d88ee60e17514aed6a40e1de04",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "print_complete",
+      "rgb_sha256": "f7cd5c6e41947c8cc0afd438db4b7512c889b2c4be514ebe0169b1ee2f5d5c50",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "pair_failed",
+      "rgb_sha256": "99747affea393525c5a1d5d36acb495e47e227ebeb29dd5b4e51e88aea32e71b",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "error",
+      "rgb_sha256": "9749a56215412f81e068decc00f4052bae507f97c674e1983dca64f6c1d27018",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "df9d456edeff7bba7f44828b49a80a87a2885f478cec63b426ed5e57b21092ad",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "help_dialog",
+      "rgb_sha256": "107114b8dc5f65182692a6adb7792e96f3fcf5e1456387f49418ab7131b5c239",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "sync_pairing",
+      "rgb_sha256": "5ecb84122556f82bd197eaba155884a4e6a64830866568a64265a97768e558fd",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "booting",
+      "rgb_sha256": "2a76dee8094539a8e61f9603785c5a053b13e330ccf7e2b97da50c7d93af8fb9",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "unlocking",
+      "rgb_sha256": "b4f1e795e22df18dfb8e74ab6c8ca96e395905cbb217e639688fa3f00cf09b85",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "settings",
+      "rgb_sha256": "35fa00e2669d8f0cd7bfb58f1a4913da16dc08b88a6e5716949dc64d5e9d960b",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "aad5f911c03920601fadb92236423aad8ee8756ee7c2ec178ed0d1e5b5cc00c1",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "needs_pairing",
+      "rgb_sha256": "881c69a0d6b8d1ddd1bf663727c60e29c03c36f1f1a60b83a6c5b4c261da423c",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "pairing",
+      "rgb_sha256": "39915d61ced3ba1061aab55fb1c37c5f9a00c3c2d02bb1d0b9554a3211b0951a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "printer_searching",
+      "rgb_sha256": "4067f7d1c203c829bf8eb2223a660a830b726a80ba4270d8ad4d52bb74043f65",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "printer_offline",
+      "rgb_sha256": "22eda11a7444aa284ed62f26c23696ff9b626798956cbf4706558c25b0aecd0d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "validation",
+      "rgb_sha256": "acf4903e15e92401f549fab837352d7e8a6f02bb52b00da31170fe5705a439bf",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "ready",
+      "rgb_sha256": "86c6b471a5461bd169ef3e5f4c8fffc34f1dd55f5cf2531aa03f13884b334705",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "no_film",
+      "rgb_sha256": "bcf6a5b59ad36553746f47cf3be7fa9434f35a7b50c7697b97882a2a2cbc58d8",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "image_received",
+      "rgb_sha256": "795b60d8b9aa48f88f0d582e2fed343afcef08c545981299beeeb0a9d7b512ed",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "fb7b92522f2add85d97d2d2e146b220f1f98d569a08e6610335d847ae371e9f9",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "printing",
+      "rgb_sha256": "793a175b63daaffc25e0a499b2d593180e30accd810a4a85f6b3069abada1879",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "print_complete",
+      "rgb_sha256": "7ec51e4175c9d979cfc4a475d9ef25ac87b6c0421f519ee4f31fe0f0c06176ca",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "pair_failed",
+      "rgb_sha256": "e70797cbb5dbf16627f4b7cbc4e9b46b0520c9ccf98ab13c99a6bf0118ae1e69",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "error",
+      "rgb_sha256": "2921a1a6313a33bafdb0d194ebd1d76fb401cccd3a1c9ff0247ffa4dbb138c18",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "975bae2a71f1ac92e84940ebddb51891d6d5e50d6d5d36ea06ca118484c23db3",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "help_dialog",
+      "rgb_sha256": "bfcd79ffa6cb6120df2f2aeca96d7011795cb1ea114aa0dfc314a23886fe321c",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "font_size": "large",
+      "mode": "sync_pairing",
+      "rgb_sha256": "b4ac9bf12d710f3daa32f0ebcf21bd0f7cae2f22ecb12f4223f0583aab355a9a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "booting",
+      "rgb_sha256": "05bbd77fe195d242a3bd80199248179c1e39bd96eb66b20ab433b8b22dd3128d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "unlocking",
+      "rgb_sha256": "b42ba274788c1ba34ca3df1c1f9aae82c1347afcc11652c92a91ccf4d7b201b7",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "settings",
+      "rgb_sha256": "9d29e9bb996acd1180c78cb490313c8bdfd1d4ef0af4ae28f3335328de7e793e",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "aea6c98b1ad352f2700bcacfd074ddfbff152e8544a849bead854fc88c613b85",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "needs_pairing",
+      "rgb_sha256": "1f4d64d2e7ab1542b024fe09b0e5fa65c5648fe3b17e993dd04a08ed1f74434c",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "pairing",
+      "rgb_sha256": "86ce5f1c3534bc7209b940a6350b932ab0077c6b77ce68f0fb290a88a93ca936",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "printer_searching",
+      "rgb_sha256": "50c39ff30387cd58e6c2bfae7cbdcf0e8030f997df188fbdcf41ffe47f84e6f8",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "printer_offline",
+      "rgb_sha256": "b427a628ed13145003a2de838c744a6ee89a58dab79c4e710ae03f67d8fcd63d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "validation",
+      "rgb_sha256": "46466514832e1e710ae719776e256853fb223b6b636b178ddbc040308db9756c",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "ready",
+      "rgb_sha256": "9215022540c25c6363978bdd1e8d93a76792e1078f3891a54b6febe379450ac2",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "no_film",
+      "rgb_sha256": "516288d3ed4cb9534b13b8915716902b1bfcda842c84cf25aae5d0c703e77f6d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "image_received",
+      "rgb_sha256": "882ca9a440be969f434991aef4b0c6d36be0183dc030efb7a1036ba4d29bc1c2",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "f823c26a8a4c64f1cd057ad7450f618413acc686e2f527cad39e0600810d85cb",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "printing",
+      "rgb_sha256": "4fb783883fdd49859fee0d147df155ee5ee6b003ca656e616cacd821e9ee9944",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "print_complete",
+      "rgb_sha256": "e1d9a5a8088c93aa25741a5877c5fde068a713f26a05f57dcf508ffd10cf1433",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "pair_failed",
+      "rgb_sha256": "36c4bddf118269869211d6b20e8fee0107921905708cc3ed65f619a9f0f16d36",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "error",
+      "rgb_sha256": "c8d0169088b0941c09bb44c85e8531d58e54eb314b4f7422bcb261bb3f2f0cbd",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "da60eae718c8fa7170d01dd082c431ed5502c8360f500ff9d5f9cafc9103fde5",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "help_dialog",
+      "rgb_sha256": "ee5e0598b46db264f939bb3701361617c3ad0599c7115391eed7e0c8bb10b490",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "sync_pairing",
+      "rgb_sha256": "8aab102a5529d6fb6b0939a4454446632399cb32f4e67d5c6e73fe2c204a6d0e",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "booting",
+      "rgb_sha256": "37c6437b950632076fe9286d0ef1026f9d73558c14dbded1c35e0dc862c6b1bc",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "unlocking",
+      "rgb_sha256": "203143d07e875bb6c1a0e467cf83a0ebeee13ae8770b8ac02b6b5d77e06554b1",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "settings",
+      "rgb_sha256": "18a79b7f1c66eb497d33c33517656ab4b7ce3fb842daa9cf0509f307f3e7073e",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "ac0592e1e3e0cf9cbb9614a5f13fe2577bf9c29803f17771353191690c9500f6",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "needs_pairing",
+      "rgb_sha256": "405337a0d5fc7b01b22c40f258d844557ce33c6695f69987c2a4e6286921bfdf",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "pairing",
+      "rgb_sha256": "ebb69c18ede495c8dc542f14d76723f96ee5989613cccdba5b2341b513fcfecc",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "printer_searching",
+      "rgb_sha256": "fe279d6022d6bb97610c6e994e19dcca81cd2c2612f6de4248c9cd64d95af347",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "printer_offline",
+      "rgb_sha256": "eff4de717ac9112dfc6c2a45aebf5e1d38ba1a1fb185df5e174d45cd40560c10",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "validation",
+      "rgb_sha256": "e57c438458508a40fb8dbd580cb30da8cd76dc8c3e0f843a2bf482b788098001",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "ready",
+      "rgb_sha256": "ae0daf4ae2f5bd30045ae26bdf25728b4e77fe196c492d860dbbc25ef343f9c6",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "no_film",
+      "rgb_sha256": "59dab4a309dba19069af769ece08b002181675ffcfe7d3cdaa7d157159e350ac",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "image_received",
+      "rgb_sha256": "a1794bc4a71cb5b3a1226181f493e16bf8d24d689dd05baee91e7f31544ba7a9",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "d1bc94ffd8534a5b34c2cb6ffe08038d72ad269eeb4bfe46026c5f456573e422",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "printing",
+      "rgb_sha256": "596df669b4f984f8c7b4c4bc8784c259149c7bc0ad9cb3a82b9ae4aa410e8d26",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "print_complete",
+      "rgb_sha256": "5ef66fbc5c9c6d5282224466ec28cb5a3f0bec32913cab7ac0111db3a4c3a321",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "pair_failed",
+      "rgb_sha256": "9ea7ca8c831bac6e9667f10b75cc02a5285a8f9717116e4c332f6b780acfb599",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "error",
+      "rgb_sha256": "0ae588335cf074094024314881d29575d25981fe197b00b0fbdfa254b6d1fff9",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "ce110a0a724c79f205297a8b7e2bda82beb33356cc3469bdcc642dcf73299547",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "help_dialog",
+      "rgb_sha256": "c7c0efe55ba8222615126be05977499543863c68ef204123d7dd06d233430b81",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "sync_pairing",
+      "rgb_sha256": "367b5d42dc4e596d1cd2f41ead0a4a457b807d5b53edeabdff15a7d4cdbcd184",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "booting",
+      "rgb_sha256": "108270b5aa3e24e99b6f2443e1abf5e8b2ed630e021a93d13ed762b53fc3b584",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "unlocking",
+      "rgb_sha256": "03fbe21664d49bb58641a9922a8bba5e5f10079676f0970ca2db86e21eb94c22",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "settings",
+      "rgb_sha256": "4a310e5670d4c3697c410babe2c894645ffc0d60ce645bc6a130959f74714ede",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "ee30e9a125e7c1aeae458046a16b834b8bc53cb63660639ef9268f2529c0edf1",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "needs_pairing",
+      "rgb_sha256": "64bd71206588119add30151d437afe0af2ada6879476d9caa135594cbb0ebb45",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "pairing",
+      "rgb_sha256": "5759a8575cb4c611df791881908a4601d0ad98f6cac24192b24884daf275d7c9",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "printer_searching",
+      "rgb_sha256": "3c80e0f037d5feb011c10166127b3f5fff0fbc483a57942313a93d4e7639b3a2",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "printer_offline",
+      "rgb_sha256": "26a6ce34d0ae210dee365e1b1a1d3a4cf366c42452c00bdecdabeee851c46dc9",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "validation",
+      "rgb_sha256": "b45f79acea8d6b97df9eeaa535a2292783f43c015ccd00b136500d79f5793180",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "ready",
+      "rgb_sha256": "4249c2bc6481f6987435e63bfa0030267b9349c3afa31082570ef2ee7c6c4aaa",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "no_film",
+      "rgb_sha256": "32a47135cb72b857699b88977c8ec9c28206f607e63e108b0b7f4226d57df7c5",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "image_received",
+      "rgb_sha256": "6a16d6e4b1b6da23a4b19b481c560b038fcbdc408cf426800a3e8261e325251e",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "6464fee806807078450e01d4d2d1cb60a57004234a37f28be7222f79e77ec28a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "printing",
+      "rgb_sha256": "f16f83d219f468d635e1d7837f5993e44af83b8e650811bc9cfdb08a5ec04bb6",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "print_complete",
+      "rgb_sha256": "ff9e984f2bc7e37ad18a1890ae9cbaf8be1444d68a9c7b637748bf319855b1f4",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "pair_failed",
+      "rgb_sha256": "26af723939feb12f22d5ea5b8400f6f2405ec934873ae5f543852676c306837d",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "error",
+      "rgb_sha256": "d411b8424aeac4aa2c6e65962c1b64f37c4f16de8b2b1e99d49b796fd96955a3",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "4aa3d6cabb650fea44ccad60a834f37c070149864a542c0726dc44a7ec14830a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "help_dialog",
+      "rgb_sha256": "69aabac541308aaf043b56bdd2a32aa341f73b83d5cda6a5d4291d025852080a",
+      "equal": true
+    },
+    {
+      "theme": "light",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "sync_pairing",
+      "rgb_sha256": "a224f3909c642c26c18d6d314e3fd93efe3641dc4755f939ae4ac3603219c8e4",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "booting",
+      "rgb_sha256": "bbd3b58b361d6c6ee27d2a25ac2da2a0a976602978eead0e6d6330bad84d8092",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "unlocking",
+      "rgb_sha256": "abc22c545b99b02b6c6f95070c3a2ac833dd97c439b4e7ed88ef76f7616d5072",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "settings",
+      "rgb_sha256": "87522ab20fab17f9189ba73c05d904d774531c9496f46e2bbd15416364a8b9c8",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "1f2b139c572382939787f38a2ee938d3dbe012d5c1ce630eb023e12b5a4f55e4",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "needs_pairing",
+      "rgb_sha256": "1363222579c844376895ab00b6fcf1412b2fc124d76372cafd51d9223ad3a16f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "pairing",
+      "rgb_sha256": "4045414475fb632e0e1f0689f2ebd89e4200a4ea6c5fdc0a32d359405bdb9f59",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "printer_searching",
+      "rgb_sha256": "c30bd9948e9d7fa3b9d3423e86df0a6485a469431ef4c35d43643c5405d86bb3",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "printer_offline",
+      "rgb_sha256": "5fde908de26d95550596ed38e72a69a3965a45f26d833992fb66a5697bdd1c29",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "validation",
+      "rgb_sha256": "1e82192df5d47ddf498df5c49eaabfa5b908bf05b4fcc7949ff985883c28a240",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "ready",
+      "rgb_sha256": "873f4c4b188b26b8bf2a0651c1d2359ef41f13c87bb2cd118043e862a794fc52",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "no_film",
+      "rgb_sha256": "5f9a44cfd61f00e5142865200ab9c7e6b90f5a6363d69809bb41449b617faaa2",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "image_received",
+      "rgb_sha256": "f7ad19fb2b3b4dc0bb7f59d9c5af5ce7fd0f0b00555060d1c42bc1ff5eea616e",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "41fa89523359e26d565f004561d8cb08b9f2f2184227405e6b14a6884b829d46",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "printing",
+      "rgb_sha256": "10a387559884603ef3acd6db39433ae3f7ca78c144c5b587bf0d762447645768",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "print_complete",
+      "rgb_sha256": "7b1ed5d5076fad9982013397c3ed93ced7f86a9a3f86ffb98944a2bd76efc4f3",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "pair_failed",
+      "rgb_sha256": "81eb8d6b1c6705fb7f6de4d4d826759cb7d09ea4cd4a57c80eaba10056ac8131",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "error",
+      "rgb_sha256": "508b2f77a011b6a6a388d089a0b632f80dd831d5967cb202cc4c64009cb10d60",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "d31fab8a242f3f5bb0217eba5c17f264004184fa9fe7691c3696552ccd75129a",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "help_dialog",
+      "rgb_sha256": "119f14d92e9be8c18f9e71d42b6fcaadd318d211df1882ff40edc806408e9dd6",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "small",
+      "mode": "sync_pairing",
+      "rgb_sha256": "45774aee271a2ad0ebec2ff2af6632622b44aa9b0bea117e81dd3d2246eb592a",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "booting",
+      "rgb_sha256": "12f18274d0ae0468658cb2bef14f74f6c4b87e4463c9e6e503c57c45bf46fe0e",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "unlocking",
+      "rgb_sha256": "e45b028ea15f29a857a9be44c553c51517502987c9d57d2f1411701c42550862",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "settings",
+      "rgb_sha256": "d303809a5e4ce8666e335fe9970c18eac80b061684c0839930ca7279eef73ae6",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "0fb54068a263249c51137e69e5b7a433ecea4129767970167829354f547ca0c2",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "needs_pairing",
+      "rgb_sha256": "53878e07914c6f688699249a75d39866cc039b6476bfbb79db0345410bc5c103",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "pairing",
+      "rgb_sha256": "eee13711a6bab9f3528f40efcac271c44d52801d9b41d016058641e5ec1dee5b",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "printer_searching",
+      "rgb_sha256": "04f3af25a7b5045039f93548896b07d582afb51c6f049e0617d8a87e22257916",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "printer_offline",
+      "rgb_sha256": "26786c84dd3a426d4c20ff28608127394444edc0f285f50c9dfd374ee7379a74",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "validation",
+      "rgb_sha256": "c37408a376c0bcfb746b989eb558a4d6f906d5e543aace09df2d6af87c3f8920",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "ready",
+      "rgb_sha256": "5a0504f0eb6b627df71f624ad7f9539f87759ca4fe204a7b91b49af7c6eebe5b",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "no_film",
+      "rgb_sha256": "276b98739c529b9678e1b1ffb9cdcc3f076225d2ee23dd68ac69e4eb5f178c9d",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "image_received",
+      "rgb_sha256": "9a8edfc85705dfb86dda3a5cba4e4576a78e39a46785fac7e2e4ff8d12a16faa",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "a0d90416b06ba4300867f1a5a47041fe77b93763c5567b75d5c098c2c74db8bf",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "printing",
+      "rgb_sha256": "5f110ad456a6ff5529ff19abce1a2ca7a0e8dca4229e3e61fd124b83177b59d0",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "print_complete",
+      "rgb_sha256": "7dd7c64ad41d206086abf1a1e65d0e3b5664f528f810bb5ef18e5863db326e32",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "pair_failed",
+      "rgb_sha256": "088880ef0de0293be33bb4382d4b136c27b3328d30e64d2cfb14f1963c4ca15e",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "error",
+      "rgb_sha256": "b1de584ce3444ad9f815772fa0f650408a7d084f9fb59b06db78c6aeadc4904d",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "ada97b8b0b148cfb05f103f1beb624ed2453420b890bb7a0ae9304af1a6aa84b",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "help_dialog",
+      "rgb_sha256": "921e2141ffeb2718933bd0e72cb0e0d8cce75db4b5a55abd28c1aac6b92d6726",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "medium",
+      "mode": "sync_pairing",
+      "rgb_sha256": "2033e7e25f12c2197512a3e27c56e45495dd763f65073a4468f0a2690c78aa8e",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "booting",
+      "rgb_sha256": "db1d4f7fd933313e5d7ff2a4252ca0508024965699304ed2c5522403f52dd4dc",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "unlocking",
+      "rgb_sha256": "1a2746b7e13eafe7eaf52656eba0a7ddb657090ed9439f24daa2965eb6101e97",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "settings",
+      "rgb_sha256": "3a8c8f94c6ba9ec0236894747687d04a808ad8aac54620ba792857eee7711f5f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "9b0dfd8c87dfb7b374657b2e58c3d95a9821d752486bdf6d894a20b0c15e4dd8",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "needs_pairing",
+      "rgb_sha256": "ec952ab5f2b477395a85fb44ef7cc5a4ba58708f1100a0356581d9fd277875fb",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "pairing",
+      "rgb_sha256": "d513b5c33cb4ebbbcf619814d8dc8aa66b5457a4b77261c5a95f9ae3500bf662",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "printer_searching",
+      "rgb_sha256": "265aaec4374864c4ec85f928e8cc2ed5c55130b1e502f1410bbd100349b2e623",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "printer_offline",
+      "rgb_sha256": "ba9063dc19db0fe357caefc11fbe65ea30bc3bf5e25ae7a6d290afdf9f1e7a6e",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "validation",
+      "rgb_sha256": "aca53b773c2d68fd5ecfba1e9589d742b6baf889c9db3c0f9008e543c5407b21",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "ready",
+      "rgb_sha256": "d1eb9bb2823c20b5422caa9151241e9f07a5a1295bf8978c094c95c73338e1ea",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "no_film",
+      "rgb_sha256": "201d31c10d335246dcd77a1141ebff763e3d3639536d17c2d872b6eb73f49c1f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "image_received",
+      "rgb_sha256": "4dbb3fa6d0e97eb40c6d55f3500f1d33b33d7abea9c240423d908460b8eed396",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "d50fc54e684528af76e3a65abfd6bcd447c9bfb969b1566b42f7f12aeadcfb3d",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "printing",
+      "rgb_sha256": "4d4e7520d52b948f0356433d394a5c7c1018f3dca2f9dc4c995211912bf35ebe",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "print_complete",
+      "rgb_sha256": "e472d10756e53fe79c07d89f606c45741c33a690b481f3ccd6b145bb54245668",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "pair_failed",
+      "rgb_sha256": "579cf2889fef1758cf0e744cba3f862c1afcad2a429a938d21c9fa71117c5a5f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "error",
+      "rgb_sha256": "ffd4c3bf39d8fe40c08ef223e3baa0888dfa274929224db6ba7a23db315453ca",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "82a021e475b596230ce7acabc5775ba615a44c3426ffa50228637187c2994502",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "help_dialog",
+      "rgb_sha256": "0e42f1fc72466d07262c7dc099db73cdeb8afa4ea1dfa679a662939e2de1a430",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "font_size": "large",
+      "mode": "sync_pairing",
+      "rgb_sha256": "b9dc531e65a6e5a65ee5381cbb7ad45bc924c48f5c4dcb03a14b7cf1d1fec39c",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "booting",
+      "rgb_sha256": "3fc28bfec4546118551c4d0e7efbb1ac9ffecf16cc3606b7a97c4de039db0b62",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "unlocking",
+      "rgb_sha256": "e5745c62947fef5efd69eaeb4c2da798c1817bd113b6be5c72262aa37a54e102",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "settings",
+      "rgb_sha256": "bd820b471f9e26e15507eeb92b1a102b54c5c2e126e8bc835a32445a1bd5e56d",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "59c3c7eb0381463796c79f2fcb0971f5056273e566d0409bf3be5997d959dbeb",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "needs_pairing",
+      "rgb_sha256": "49399480cc4562d25259ab2c9ee07ebdf4e0108c0f86bae6fd3a649499c9611c",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "pairing",
+      "rgb_sha256": "5fe83ecab02f0a86305e803459c9d7b2b8604280190e0cbf71fe14a77348c0d2",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "printer_searching",
+      "rgb_sha256": "fdde5e3ace82053638f9d3c14ffaf415d527ab8690e696155d376a646747d963",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "printer_offline",
+      "rgb_sha256": "7ab7f5d343824753b9531854def7126ddc5c9e0af47d4261926bc960ef5fd9d8",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "validation",
+      "rgb_sha256": "116d3ecd58e448d33968cfac7cb2af13d64712e0ea440d9203079763b28ee1b9",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "ready",
+      "rgb_sha256": "7ab5410d45c04a83c8a9f4f870bae5b7010cfdd0c19ab4d28990adf474d1a774",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "no_film",
+      "rgb_sha256": "0a049593df4889bff5e368ba62771985d1cc5925381be5e6c6c801aec02886f0",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "image_received",
+      "rgb_sha256": "d4011712a096e96b775d9034e4fcb430cb8bf4e04ab3d268a6d6030c9310ad44",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "1124dddb0597e6150d8cd56c05fcda0c996c041911343019f66e5ab784a34ba0",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "printing",
+      "rgb_sha256": "b0be73555700bf4a6129ac75027b059923c72b11800c17c8e6d07b45fd9d3671",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "print_complete",
+      "rgb_sha256": "f6645e3f3acf20e669dd3046680b096535a661b281196fc4823b8b758f202a45",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "pair_failed",
+      "rgb_sha256": "eddbe56cee8ff4f2f199746870b896a8fc651f91a23a9618ae538a389c3cf7ed",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "error",
+      "rgb_sha256": "b12b24f8c0b792991d64efbe09d7f5078f3f10581eea0368a30a8c92794628ac",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "4d4b30bb94e4e6e971c4ff3f3ba5055864c45b3c18221ce9af519dfebcace6b4",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "help_dialog",
+      "rgb_sha256": "b32a41db34032eaa68e6cfae758c6fae0af57eb6610299e3daa605d7f377bae1",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "small",
+      "mode": "sync_pairing",
+      "rgb_sha256": "7775eb9ab67062a8641e14bb103bc116bdb1301ac6944fd88775a3980aba3383",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "booting",
+      "rgb_sha256": "22abc00f99c73cd3a98423221064b50dcd72a91f958479b971ce2645c3224a39",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "unlocking",
+      "rgb_sha256": "1c03cf3530fa61753a5af0e27aed3138359ab4753fae12618783a75ce0252805",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "settings",
+      "rgb_sha256": "698b44fff62207ea183f4ac78f61b24bed4aa7170001256f61ab090c8794cf89",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "8e54120ef1400b6c5bc83a300aad0f21141bb06d7403b82ba6eebf5075a6693f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "needs_pairing",
+      "rgb_sha256": "e113955d189405c6590e1b822e500039fecb366d8b26361845a71f4a0c4c2336",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "pairing",
+      "rgb_sha256": "4331a3f14e58b5b189b117b10a1fa2af4a17c1d4a9eb089fefe4e59f7490ab68",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "printer_searching",
+      "rgb_sha256": "44c9210c8bda83000b8715c67f4cb119058f818bef63a1995c3b493f0c308b07",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "printer_offline",
+      "rgb_sha256": "c7c758c2885a76ee72b074a3ff7b7fdcfa2fab9e3c87e756edb6b0cc266319e4",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "validation",
+      "rgb_sha256": "b7f9c40a385e7f3ffc15a74fd7b6cb7808f8a3aec53c9e049311ff9aa4d1d810",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "ready",
+      "rgb_sha256": "7b98980533c7089eba48751b65b0c007ce35662006de694edbd4a66f6079c580",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "no_film",
+      "rgb_sha256": "84c41001f4a714ca860fc32cc8e81f8a608eba93d5505f606c8342a440de8df5",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "image_received",
+      "rgb_sha256": "7c71f6c1ed7b5832415175aa8c8dcc5b2857dd295dfeab358b2e26ebfc8e868d",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "85419760aee42df16650e9c0be3b456762ca98db2d30e15de85b3fdbe86a985a",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "printing",
+      "rgb_sha256": "3c0acd3429288e1b17c246c25a93e331afee36e088ca2bb02cc17b102b8ba115",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "print_complete",
+      "rgb_sha256": "b5640d562b058def31f48c26572fe643a762965befb87bb8920b54f43d034076",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "pair_failed",
+      "rgb_sha256": "7f76fc78be2d6110dc0d585f97a797586dc4a1e2c1bdf4bae9f264334add0141",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "error",
+      "rgb_sha256": "1b47e815fb36ee1dedcdd0c4be021d847b8bdd5b4c702a5643a26d663f34be94",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "dd465fa5f6d823868a37890f4717e7752f5200350ee93c29929c61e0ad6e4a47",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "help_dialog",
+      "rgb_sha256": "f27adb5c4a33dcd3eb0be13f292f8007677fd9cb5fd8124f040f8b1a98acdb90",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "medium",
+      "mode": "sync_pairing",
+      "rgb_sha256": "cd9c39fe30a23e2d2f274cb7e26bf10a748826da54a701e035375b763146041c",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "booting",
+      "rgb_sha256": "a3d89a4af7033cb51596547b1753faed3e70a6b8b33974ef71eb460674aac444",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "unlocking",
+      "rgb_sha256": "2906b8befc8bcce00d3abc0b1c52373478b419246571c500a9ea5b21eb699d5b",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "settings",
+      "rgb_sha256": "88e1b1284dee79cf2897ac025d018d7b890a09affe8d5e4fd61a747d99f47f0c",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "adjustment_edit",
+      "rgb_sha256": "6bbc19c067072ba988bdac04f76d92fa2dad10e7b93078be1077b16163325db0",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "needs_pairing",
+      "rgb_sha256": "f45ad78933ab73b7c11af0c598cacafba0d4f448c4df1a722a322439fb779df5",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "pairing",
+      "rgb_sha256": "daf8cfb47b7b21f8bb61318b434d232318ee4550b1d876faf37bde70fcd0a98f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "printer_searching",
+      "rgb_sha256": "52dad2966536d6d24c76f0ad538f011ad3b87fbe92cf9fc5ac6ccca7ab386ced",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "printer_offline",
+      "rgb_sha256": "7807a7e0f08189c1db65d62067805b580688a9a385259f6b7603c736c8f81281",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "validation",
+      "rgb_sha256": "6a67d9068688736c5989f6096fae1ee78d571e6b1d7b3b422b1ab5f3f59bd33f",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "ready",
+      "rgb_sha256": "594f081b7ed19ac74434a369f52dd018ab47495ca4b37c9aaf0d002c4263ce2a",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "no_film",
+      "rgb_sha256": "69d245570696a5153f7a13b3291d63386cc1edfc769d6e678734108b457abb44",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "image_received",
+      "rgb_sha256": "828b62458da835f009c10f201cc7b0d5a736bf33fda503d4e06eb8c9706691b2",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "awaiting_confirm",
+      "rgb_sha256": "55dd963878093d68528ad6431640fe197a8aa23229aee6101f375c83f9c85917",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "printing",
+      "rgb_sha256": "cb81874836f00ae7ff73675861274ab7803e5fb7069773b3afa809bb7a194f30",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "print_complete",
+      "rgb_sha256": "4c5b547e1281581f776a7cf2308e38fd92ad7bcc525130e53469eb41f30ce426",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "pair_failed",
+      "rgb_sha256": "8c9bb91516879425fc79327cd24572ddd4ecc24375bed3ba31e2b4be1f35c32e",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "error",
+      "rgb_sha256": "4daa013bbe189eee626c32c83f41cbe55708194f5c510fe059eb891ac97c2857",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "confirmation_dialog",
+      "rgb_sha256": "a33ff44a9946d74d55c4bd8ee45c984330827506b1e9baeb8c5333993718f863",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "help_dialog",
+      "rgb_sha256": "05d3a02990492b712c718b986f54b98ee10d480462442c05843b4b20d494d9af",
+      "equal": true
+    },
+    {
+      "theme": "dark",
+      "language": "zh-Hans",
+      "font_size": "large",
+      "mode": "sync_pairing",
+      "rgb_sha256": "cb48c9592af92ab86b34010d370b25860e2c59b1747dcdd70f6e51a3b7280075",
+      "equal": true
+    }
+  ],
+  "film_used": 0,
+  "boundary": "Draw-only original vs candidate on Pi with actual installed font files; no framebuffer or Printer commands; timing is not performance benchmark."
+}

@@ -1,0 +1,230 @@
+{
+  "film_used": 0,
+  "boundary": "Normal installed service, no observer. External BlueZ Disconnect and read-only journal/CPU/backlight/FTP probes. Internal lock flag not introspected; powersave600/backlight low verified. No image/print/actuator commands.",
+  "pid": 482,
+  "before_gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "film_before": 10,
+  "disconnect_monotonic": 74.435841325,
+  "recovered_s": 12.542774675000004,
+  "status_message": "2026-10-14 18:26:02,493 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=80 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "film_after": 10,
+  "passed": true,
+  "samples": [
+    {
+      "elapsed_s": 2.5904093740000036,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.0443281760000076,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.494028228000005,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.9313203629999975,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.370864581999996,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.811897393999999,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 5.254241977000007,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 5.703221196000001,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 6.149646144000002,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 6.597949373000006,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 7.049465935000001,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 7.503698851999999,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 7.959154737000006,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 8.415911559999998,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 8.887891299000003,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 9.356329162999998,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 9.823050361,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 10.288956350000007,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 10.759798173000007,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 11.253665517000002,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 11.727182079000002,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 12.211525359999996,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 12.692566765999999,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 482,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    }
+  ],
+  "setup_failure_messages": [
+    "2026-10-14 18:25:58,423 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkPrinterNotFoundError error=connect failed: printer not found stage=0 detail=no Instax printer found setup_drop_streak=0"
+  ],
+  "warning_error_messages": [],
+  "event_messages": [
+    "2026-10-14 18:25:52,540 INFO instantlink_bridge.ui.controller ui.printer_disconnect_event name=INSTAX-52006924"
+  ],
+  "runtime_commit": "079af5a37503ff82191ff6c3d8e75f37871e2660",
+  "ffi_sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+}

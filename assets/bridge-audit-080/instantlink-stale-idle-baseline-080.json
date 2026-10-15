@@ -1,0 +1,30 @@
+{
+  "label": "baseline",
+  "rows": [
+    {
+      "sample": 1,
+      "elapsed_s": 20.001173482000013,
+      "process_cpu_percent_one_core": 3.0498210544944646,
+      "child_cpu_percent_one_core": 0.0,
+      "cpu_khz": 600000,
+      "pid": 18894
+    },
+    {
+      "sample": 2,
+      "elapsed_s": 20.00109025299753,
+      "process_cpu_percent_one_core": 1.9498937061271018,
+      "child_cpu_percent_one_core": 0.0,
+      "cpu_khz": 600000,
+      "pid": 18894
+    },
+    {
+      "sample": 3,
+      "elapsed_s": 20.00103697099985,
+      "process_cpu_percent_one_core": 2.649862608466072,
+      "child_cpu_percent_one_core": 0.0,
+      "cpu_khz": 600000,
+      "pid": 18894
+    }
+  ],
+  "boundary": "Three20s dark600MHz process samples; ambientBLE and separate runtime starts prevent universal CPU/energyclaims"
+}

@@ -1,0 +1,117 @@
+{
+  "source_commit": "06bbe86",
+  "source_render_sha256": "df10cadf41ea34c9b3baabcd5edcb08b75764804fda851151a4f6c60ebed7775",
+  "status": "candidate accepted for deployment; installed/normal-service acceptance pending",
+  "blockers": [],
+  "checks": {
+    "18_real_framebuffer_hashes_identical_fixed_clock": true,
+    "12_independent_original_rgb_matches_cold_warm": true,
+    "240_pi_actual_font_all_modes_rgb_exact": true,
+    "11_kernel_gpio_lock_unlock_cases": true,
+    "fresh_startup_followed_by_fresh_periodic_status": true,
+    "automatic_reconnect_while_locked600MHz": true,
+    "candidate_log_no_warnings_or_render_input_panic_faults": true
+  },
+  "frame_metrics": {
+    "baseline": {
+      "total_ms": 42.09190150140785,
+      "draw_ms": 31.157968995103147,
+      "cpu_ms": 41.417449499999925,
+      "draw_cpu_ms": 30.538959499999407,
+      "pack_ms": 9.501953507424332,
+      "write_ms": 0.3657034976640716,
+      "backlight_ms": 0.891119496372994,
+      "max_event_loop_lag_ms": 48.52333300106693
+    },
+    "candidate": {
+      "total_ms": 18.576458503957838,
+      "draw_ms": 3.655520995380357,
+      "cpu_ms": 15.599765500000196,
+      "draw_cpu_ms": 3.4697919999997495,
+      "pack_ms": 11.662212993542198,
+      "write_ms": 0.4637760066543706,
+      "backlight_ms": 1.2839845003327355,
+      "max_event_loop_lag_ms": 157.34635400178377
+    }
+  },
+  "frame_notes": [
+    "Actual display draw/pack/write/backlight timing ends at kernel write return, not panel scanout.",
+    "Both suites prewarm six glyph/layout states before measuring18frames. These are warm-layout production frame measurements.",
+    "Candidate Bluetooth setup overlapped first portion offrame test: some measured walltimes and157.346ms heartbeat spike include scheduler/other task work. Do notclaim maximum eventloop latency reduction fromthis run.",
+    "MainthreadCPU excludesothernative/Pythonthreads, otherprocesses and wholeboard power.",
+    "Rejected mixed600/1000MHz baseline is excluded; only accepted replacementall1000MHz frames used."
+  ],
+  "cold_warm": {
+    "cold": {
+      "rows": 6,
+      "candidate_draw_ms": 26.045051999972202,
+      "baseline_draw_ms": 29.160416510421783,
+      "candidate_draw_cpu_ms": 26.046796500000635,
+      "baseline_draw_cpu_ms": 29.147812500000203
+    },
+    "warm": {
+      "rows": 6,
+      "candidate_draw_ms": 2.7425000007497147,
+      "baseline_draw_ms": 29.034141000011005,
+      "candidate_draw_cpu_ms": 2.738151500000008,
+      "baseline_draw_cpu_ms": 29.041562499999785
+    }
+  },
+  "cold_warm_notes": [
+    "Fonts loaded beforeexperiment; cold means addedtext caches cleared beforeeach ofsix states, not machineboot/fontdiskcold.",
+    "Reviewed observer run_cold_warm_benchmark source: no awaits duringcold/warm/oracle draw, so concurrentPythonUI tasks cannotwarm caches betweenphases.",
+    "Independent frozen original renderer module is used fororacle and comparative timing; no candidate helper replay.",
+    "Entirecoldstate stillrequiresraster work; largestimprovement comes fromreusingglyphs onsubsequentframes."
+  ],
+  "pixel_notes": [
+    "20UiModes \u00d72themes \u00d72languages \u00d73sizes; actualPiinstalled fonts. This draw-onlyquality matrixisnotframebuffer/panelperformancebenchmark.",
+    "Originalandcandidate usefixednow=1.25; preview bytesunchanged. Animated clocks andchanging preview/status arealso coveredbyindependenthostbaselineoracle."
+  ],
+  "gpio_cases": [
+    "key2_lock_low_tier",
+    "short_bounce_does_not_wake",
+    "sub_50ms_press_does_not_wake",
+    "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+    "held_key1_counts_once",
+    "joystick_select_resets_same_action_different_button",
+    "key1_resets_joystick_sequence",
+    "three_same_joystick_presses_unlock_home",
+    "10s_without_press_returns_dark_low_tier",
+    "rapid_75ms_triple_key1_unlocks",
+    "detached_mock_has_no_callbacks_real_input_remains"
+  ],
+  "gpio_notes": [
+    "Kernel simulated edges exercise real GPIOeventreader, productionactions andactualLCD/CPU; physicalcontactswere notactuated.",
+    "75ms validpresses, rejectedbounces/sub50ms, heldpresscount, sameactiondifferentphysicalbutton reset, sametripleunlock,10s timeoutdark600MHz, rapidtriple, mockdetachmentpassed.",
+    "Captureframeoracle isoriginalrender.py plusoriginalscalarRGB565conversion, independentofcandidate helpers; queue-to-done isnotcontact-to-photon latency."
+  ],
+  "startup_successful_attempt_s": 3.534007811002084,
+  "startup_notes": [
+    "3.534s successfulconnectionattempt, not fullboot or userturnonwait. Baseline Printeravailabilitywindowexcludedfromconnectspeedcomparison.",
+    "Noimageorprintcommandssent; status-onlyfilm0reported. Startup evidencecaptureslateststateafterGPIOactivity, notnecessarilyfirstactualUIreadyframe."
+  ],
+  "bounded_memory": {
+    "independent_host_churn_labels": 900,
+    "mask_entries": 256,
+    "metric_entries": 512,
+    "variation_entries_max": 32,
+    "max_retained_mask_pixel_bytes": 2949120,
+    "notes": "Pixel storageboundonly, nativefontsandPythonentrymetadataadditional. NoRSSorenergyclaim; coldwarmPiobservedcacheswellunderlimits."
+  },
+  "remaining_acceptance": [
+    "Deployedproductionsourcehashverification andinstalledGPIO/rendercold/warmrepeat.",
+    "Remove ownedobserver/dropin/mockmodule andrestore normalservice; review currentnormalPIDlogs."
+  ],
+  "reconnect": {
+    "seconds": 12.463238433003426,
+    "rows": 32,
+    "no_film": true,
+    "camera_ready_locked600_all_rows": true,
+    "final_fresh": true,
+    "boundary": "Real Bridge automatic status recovery after external Device1.Disconnect; radio advertising is not controlled. No manual Reconnect action or image commands."
+  },
+  "candidate_log_review": {
+    "messages": 297,
+    "warnings_errors_critical_render_input_panic_matches": []
+  }
+}

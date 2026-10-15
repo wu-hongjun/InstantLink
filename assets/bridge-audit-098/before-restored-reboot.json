@@ -1,0 +1,142 @@
+{
+  "pid": 1591,
+  "commit": "1a3a61dcb73ab6169927ffc356c0e476824bb46c",
+  "dirty": false,
+  "boot_to_ui_s": 300.974266,
+  "boot_to_ftp_s": 300.922528,
+  "boot_to_core_s": 301.00574,
+  "boot_to_agent_s": 301.054129,
+  "boot_to_status_s": 305.472426,
+  "boot_marker_s": 300.654487,
+  "printer_connected_at_capture": true,
+  "input_messages": [],
+  "warning_error_messages": [],
+  "film_used": 0,
+  "units": {
+    "dbus.socket": {
+      "Result": "success",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "9262428"
+    },
+    "dbus.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9382525",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "9866080"
+    },
+    "instantlink-bridge.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "298810175",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "300993416"
+    },
+    "instantlink-bridge-manager.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "298737372",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "298740478"
+    },
+    "instantlink-bridge-boot-splash.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9306004",
+      "ExecMainExitTimestampMonotonic": "9525892",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "9532424"
+    },
+    "NetworkManager.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "9883963",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "15333455"
+    },
+    "dnsmasq.service": {
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainStartTimestampMonotonic": "15970000",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestampMonotonic": "16133190"
+    }
+  },
+  "bridge_unit_sha256": "b3f8672c9e792fec1bf12806b796d6a30ebf39aa04bb95407255ea2cbbf079ff",
+  "scope": "Normal installed current boot; kernel monotonic timings exclude firmware startup. Read-only capture with no Bridge button, image or Printer commands. A missing status/false connection is not a passing Printer check.",
+  "manager_milestones": [
+    {
+      "uptime_s": 18.971449,
+      "message": "2026-10-14 18:49:55,448 INFO instantlink_bridge.manager.cli manager.listening host=192.168.7.1 port=8742"
+    },
+    {
+      "uptime_s": 18.971449,
+      "message": "2026-10-14 18:49:55,449 WARNING instantlink_bridge.manager.cli manager.bind_pending host=192.168.8.1 port=8742 errno=None"
+    },
+    {
+      "uptime_s": 19.973766,
+      "message": "2026-10-14 18:49:56,452 INFO instantlink_bridge.manager.cli manager.listening host=192.168.8.1 port=8742"
+    },
+    {
+      "uptime_s": 301.744662,
+      "message": "2026-10-14 18:54:38,221 INFO instantlink_bridge.manager.cli manager.listening host=192.168.7.1 port=8742"
+    },
+    {
+      "uptime_s": 301.747357,
+      "message": "2026-10-14 18:54:38,223 INFO instantlink_bridge.manager.cli manager.listening host=192.168.8.1 port=8742"
+    }
+  ],
+  "network_milestones": [
+    {
+      "uptime_s": 301.027694,
+      "message": "2026-10-14 18:54:37,505 INFO instantlink_bridge.ui.controller ui.network_status home_wifi_host=none hotspot_host=192.168.8.1 usb_carrier=True usb_configured=True camera_lease=192.168.7.10 ftp_recent=False recent_source_ready=False receive_ready=True preferred_wifi_host=none wifi_preferred=True"
+    }
+  ],
+  "agent_messages": [
+    {
+      "uptime_s": 301.048599,
+      "message": "2026-10-14 18:54:37,526 INFO instantlink_bridge.ble.agent bluetooth.agent_registered path=/com/instantlink_bridge/agent adapter=/org/bluez/hci0 owner=:1.91"
+    },
+    {
+      "uptime_s": 302.076821,
+      "message": "2026-10-14 18:54:38,554 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=device_matched detail=INSTAX-52006924 (IOS)"
+    },
+    {
+      "uptime_s": 302.14067,
+      "message": "2026-10-14 18:54:38,619 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=ble_connecting detail="
+    },
+    {
+      "uptime_s": 303.862808,
+      "message": "2026-10-14 18:54:40,340 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=service_discovery detail="
+    },
+    {
+      "uptime_s": 303.929911,
+      "message": "2026-10-14 18:54:40,408 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=characteristic_lookup detail="
+    },
+    {
+      "uptime_s": 304.214541,
+      "message": "2026-10-14 18:54:40,691 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=notification_subscribe detail="
+    },
+    {
+      "uptime_s": 304.902133,
+      "message": "2026-10-14 18:54:41,380 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=model_detecting detail="
+    },
+    {
+      "uptime_s": 305.043033,
+      "message": "2026-10-14 18:54:41,521 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=status_fetching detail="
+    },
+    {
+      "uptime_s": 305.470733,
+      "message": "2026-10-14 18:54:41,948 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=connected detail=INSTAX-52006924 (IOS)"
+    },
+    {
+      "uptime_s": 305.472426,
+      "message": "2026-10-14 18:54:41,950 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=65 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+    }
+  ]
+}

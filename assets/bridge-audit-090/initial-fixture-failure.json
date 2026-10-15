@@ -1,0 +1,7 @@
+{
+  "isolated_benchmark_failed": true,
+  "reason": "Four retained 32MiB synthetic uploads exhausted /tmp tmpfs (232MiB, initially130MiBused); report failed ENOSPC. Owned temporary inputs were cleaned on unwind. No production storage fault or throughput result claimed. Replaced fixture with SD-backed /var/tmp, free-space preflight, streaming checksums and report after cleanup.",
+  "production_uploads": 0,
+  "film_used": 0,
+  "printer_disconnect_predated_benchmark": true
+}

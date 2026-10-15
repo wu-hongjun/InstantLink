@@ -1,0 +1,25 @@
+{
+  "reports": [
+    {
+      "exit_code": 1,
+      "report": {
+        "available_payload": 244,
+        "benchmark_complete": true,
+        "benchmark_error": null,
+        "cleanup_error": "printer response timed out",
+        "disconnected": false,
+        "film_after": 1,
+        "film_before": 1,
+        "history_after": 0,
+        "history_before": 0,
+        "mode": "download-only; no print execution",
+        "model": "Square",
+        "rounds": []
+      },
+      "stderr": "Error: Timeout\n"
+    }
+  ],
+  "trace_evidence": "BlueZ Device1.Disconnect received; no reply/HCI disconnect before2s deadline; subsequent GetAllConnectedtrue succeeds",
+  "wire_history_payload_hex": "00030000004300000012",
+  "decoded_history_issue": "Existing decoder reported0; wire leading32-bit counter67. Parser correction follows."
+}

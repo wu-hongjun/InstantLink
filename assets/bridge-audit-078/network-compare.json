@@ -1,0 +1,160 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "sample": 1,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 2,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 3,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 4,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 5,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 6,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 7,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 8,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 9,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    },
+    {
+      "sample": 10,
+      "native": {
+        "usb0": [
+          "192.168.7.1/24"
+        ],
+        "wlan0": [
+          "192.168.8.1/24"
+        ],
+        "lo": [],
+        "missing": []
+      },
+      "matched": true
+    }
+  ],
+  "native": {
+    "calls": 100,
+    "median_ms": 3.590313000131573,
+    "p95_ms": 4.090937000000849,
+    "parent_cpu_s": 0.3584,
+    "child_cpu_s": 1.3877787807814457e-17
+  },
+  "ip": {
+    "calls": 100,
+    "median_ms": 13.822135500049626,
+    "p95_ms": 18.351458000324783,
+    "parent_cpu_s": 0.3342500000000001,
+    "child_cpu_s": 1.14617
+  },
+  "boundary": "Physical interfaces read only; direct query benchmark is separate from full runtime CPU"
+}

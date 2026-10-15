@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "film_used": 0,
+  "cancelled_off_waiter_returncode": 143,
+  "cancelled_off_waiter_elapsed_s": 0.002873958001146093,
+  "concurrent_hotspot_calls": [
+    {
+      "returncode": 0,
+      "already_active": true
+    },
+    {
+      "returncode": 0,
+      "already_active": true
+    },
+    {
+      "returncode": 0,
+      "already_active": true
+    }
+  ],
+  "concurrent_total_s": 5.8818652059999295,
+  "activation_and_address_unchanged": true,
+  "initial_state": {
+    "pid": 50594,
+    "locked": true,
+    "fresh": false,
+    "film": null,
+    "cpu_khz": 600000,
+    "camera_ready": true,
+    "disconnect_watch_count": 0,
+    "retired_status_tasks": 0
+  },
+  "final_state": {
+    "pid": 50594,
+    "locked": true,
+    "fresh": false,
+    "film": null,
+    "cpu_khz": 600000,
+    "camera_ready": true,
+    "disconnect_watch_count": 0,
+    "retired_status_tasks": 0
+  },
+  "boundary": "Real Linux flock and helper process cancellation/concurrent repeated hotspot calls; cancelled off waiter never executed radio mutation."
+}

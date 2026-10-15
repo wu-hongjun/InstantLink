@@ -1,0 +1,25 @@
+{
+  "base_commit": "4c9e28b9e2bb9fc5b64261b396b87897b42fc4cd",
+  "status": "PASS",
+  "reviewed_diff_sha256": "e4e3c33a7268aeac38b3801917ac27782aed2633dfb9d4f678a6829c9431da2a",
+  "source_sha256": {
+    "crates/instantlink-core/src/transport.rs": "a66b41440f15ce20c245c10e0ce1e7d06282cc6487a3ea5089d0866fa063ac67",
+    "crates/instantlink-core/src/device.rs": "4e4d72a6bd88457e5d273985cc888baa461041b73cf5c7a1bdb77f53e3a4349a",
+    "crates/instantlink-ffi/src/lib.rs": "421b4b354d6a3841074b277212d1476d3a7fe93fdc91e53450db32376b24aed3",
+    "crates/instantlink-ffi/include/instantlink.h": "726d4f9a4ba35fc416d0b87e40b08bd2fb8e0c9be00d1db9a324abe5eff5e6ac",
+    "bridge/src/instantlink_bridge/ble/instantlink.py": "998829a573fbe388114e1c171f749f1f527908da937c81d5e7b886f82dcc1509",
+    "bridge/src/instantlink_bridge/ui/controller.py": "8816b2bef3ccdfc51500b6088166550620676ba10f0089c19e97f224fd563a2e"
+  },
+  "independent_targeted_python_tests": 16,
+  "resolved_finding": "Polling now waits for both rebond and silent-link recovery with generation checks and shielding.",
+  "reviewed_boundaries": [
+    "ACKpriority and unchanged deadlines",
+    "unknown state conservative",
+    "cancellation dropsquery",
+    "closure poisons before wake/no image or execute replay",
+    "cheap callback-safe getter",
+    "oldkeepalive localownership",
+    "two prompt retries then normal offline cadence"
+  ],
+  "hardware_review": "Separate acceptance gate; reviewer performed no hardware operations"
+}

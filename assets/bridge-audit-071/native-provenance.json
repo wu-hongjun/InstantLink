@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "built_at_utc": "2026-10-12T12:04:00Z",
+  "target_triple": "aarch64-unknown-linux-gnu",
+  "cargo": {
+    "command": "cargo zigbuild",
+    "locked": true,
+    "packages": [
+      "instantlink-ffi",
+      "instantlink-cli"
+    ],
+    "profile": "release"
+  },
+  "instantlink_workspace": {
+    "branch": "codex/bridge-battery-day",
+    "commit_sha": "6ca70359937f0e241c0cbd9661ee53ddfcae3764",
+    "dirty": false
+  },
+  "artifacts": {
+    "instantlink": {
+      "sha256": "c23bb710a517c1e1abbb964b3fe5e88ff66e13c01c6775a4f5ce7a26d5939758"
+    },
+    "libinstantlink_ffi.so": {
+      "sha256": "8d5ee8081dc297f9c588038410941433d3f72a5eebe9b8c5f688dad476e5f75d"
+    }
+  }
+}

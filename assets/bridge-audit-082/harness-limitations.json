@@ -1,0 +1,7 @@
+{
+  "candidate_1": "Prototype Printer absent:100s initial readiness timeout, retained",
+  "candidate_final_1": "Complete passedJSON7.990s retained; stdout capture could not finish while /tmp filled",
+  "candidate_final_2": "No usableJSON:write Errno28 from owned ARMtest uploads filling232MiB /tmp. Not counted in timing comparison; Bridge stillconnected/PID27611/NRestarts0",
+  "fix": "Removed4ownedtestbinary/partialfiles; /tmp199MiBfree. Subsequentunitbinaries use /var/tmp onSD48GiBfree; measurement repeated",
+  "film_used": 0
+}

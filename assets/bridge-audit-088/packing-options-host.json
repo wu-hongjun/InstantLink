@@ -1,0 +1,125 @@
+{
+  "numpy_version": "2.4.6",
+  "results": [
+    {
+      "size": [
+        240,
+        240
+      ],
+      "strategy": "pillow",
+      "median_ms": 0.29058300000000004,
+      "cpu_median_ms": 0.2895,
+      "sha256": "94956271e6061cc4f73a8bdb9f9251e9ce0be1b37082b324d3a6700bf9ee1216"
+    },
+    {
+      "size": [
+        240,
+        240
+      ],
+      "strategy": "byte_out",
+      "median_ms": 0.1491875,
+      "cpu_median_ms": 0.1485,
+      "sha256": "94956271e6061cc4f73a8bdb9f9251e9ce0be1b37082b324d3a6700bf9ee1216"
+    },
+    {
+      "size": [
+        240,
+        240
+      ],
+      "strategy": "word_expr",
+      "median_ms": 0.11039550000000001,
+      "cpu_median_ms": 0.11,
+      "sha256": "94956271e6061cc4f73a8bdb9f9251e9ce0be1b37082b324d3a6700bf9ee1216"
+    },
+    {
+      "size": [
+        240,
+        240
+      ],
+      "strategy": "word_out",
+      "median_ms": 0.1428545,
+      "cpu_median_ms": 0.1425,
+      "sha256": "94956271e6061cc4f73a8bdb9f9251e9ce0be1b37082b324d3a6700bf9ee1216"
+    },
+    {
+      "size": [
+        321,
+        241
+      ],
+      "strategy": "pillow",
+      "median_ms": 0.3734375,
+      "cpu_median_ms": 0.373,
+      "sha256": "3e7c2b847b7cf44bd0521339fb938a36c18c9c6ebfeef866372fccae2fddae3e"
+    },
+    {
+      "size": [
+        321,
+        241
+      ],
+      "strategy": "byte_out",
+      "median_ms": 0.19775,
+      "cpu_median_ms": 0.197,
+      "sha256": "3e7c2b847b7cf44bd0521339fb938a36c18c9c6ebfeef866372fccae2fddae3e"
+    },
+    {
+      "size": [
+        321,
+        241
+      ],
+      "strategy": "word_expr",
+      "median_ms": 0.144125,
+      "cpu_median_ms": 0.1435,
+      "sha256": "3e7c2b847b7cf44bd0521339fb938a36c18c9c6ebfeef866372fccae2fddae3e"
+    },
+    {
+      "size": [
+        321,
+        241
+      ],
+      "strategy": "word_out",
+      "median_ms": 0.18562499999999998,
+      "cpu_median_ms": 0.185,
+      "sha256": "3e7c2b847b7cf44bd0521339fb938a36c18c9c6ebfeef866372fccae2fddae3e"
+    },
+    {
+      "size": [
+        0,
+        3
+      ],
+      "strategy": "pillow",
+      "median_ms": 0.0424995,
+      "cpu_median_ms": 0.042,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "size": [
+        0,
+        3
+      ],
+      "strategy": "byte_out",
+      "median_ms": 0.005917,
+      "cpu_median_ms": 0.005,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "size": [
+        0,
+        3
+      ],
+      "strategy": "word_expr",
+      "median_ms": 0.0055625,
+      "cpu_median_ms": 0.005,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "size": [
+        0,
+        3
+      ],
+      "strategy": "word_out",
+      "median_ms": 0.006125,
+      "cpu_median_ms": 0.006,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

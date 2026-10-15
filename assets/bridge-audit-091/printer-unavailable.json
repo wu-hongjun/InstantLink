@@ -1,0 +1,8 @@
+{
+  "label": "installed091",
+  "film_used": 0,
+  "boundary": "Readiness wait only; Printer unavailable for100s, no Disconnect dispatched, no connected live reconnect measurement. No film or image commands.",
+  "passed": false,
+  "error": "TimeoutError('Printer not initially ready')",
+  "rows": []
+}

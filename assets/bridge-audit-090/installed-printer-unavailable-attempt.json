@@ -1,0 +1,8 @@
+{
+  "label": "wifi-090-patched-final",
+  "film_used": 0,
+  "boundary": "Real Bridge automatic status recovery after external Device1.Disconnect; radio advertising is not controlled. No manual Reconnect action or image commands.",
+  "passed": false,
+  "error": "TimeoutError('Printer not initially ready')",
+  "rows": []
+}

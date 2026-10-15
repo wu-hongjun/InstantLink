@@ -1,0 +1,113 @@
+{
+  "hardware": "Pi Zero 2 W Rev 1.0, Waveshare ST7789 LCD HAT, X306 2300 mAh",
+  "os": "Debian 13.2, Linux 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82",
+  "baseline": {
+    "runtime": "4574aa9",
+    "systemd_total_s": 16.948,
+    "kernel_s": 2.635,
+    "userspace_s": 14.313,
+    "milestones_s": {
+      "service_start": 9.832957,
+      "boot_start": null,
+      "ui_ready": null,
+      "ftp_ready": 13.964363,
+      "bluetooth_ready": null,
+      "core_ready": 16.145854,
+      "hotspot_ready": 18.624912,
+      "manager_usb": null,
+      "manager_hotspot": null,
+      "printer_status": 141.67592,
+      "splash_done": null
+    }
+  },
+  "after_trial_1": {
+    "runtime": "50d2ec6",
+    "systemd_total_s": 17.178,
+    "kernel_s": 2.654,
+    "userspace_s": 14.523,
+    "milestones_s": {
+      "service_start": 9.88525,
+      "boot_start": 12.922326,
+      "ui_ready": 14.535727,
+      "ftp_ready": 14.203759,
+      "bluetooth_ready": 14.617013,
+      "core_ready": 14.551496,
+      "hotspot_ready": 18.88865,
+      "manager_usb": 19.434745,
+      "manager_hotspot": 19.436261,
+      "printer_status": null,
+      "splash_done": 9.864368
+    }
+  },
+  "idle_cpu_samples": {
+    "baseline": {
+      "duration_s": 35.109244569999646,
+      "board_busy_percent": 7.2990076226089435,
+      "process_one_core_percent": {
+        "instantlink-bridge.service": 9.313786269255615,
+        "instantlink-bridge-manager.service": 0.0
+      },
+      "rss_kib": {
+        "instantlink-bridge.service": 69320,
+        "instantlink-bridge-manager.service": 51028
+      },
+      "frequencies": [
+        600000
+      ]
+    },
+    "after": {
+      "duration_s": 35.10465514200001,
+      "board_busy_percent": 3.3987209887188286,
+      "process_one_core_percent": {
+        "instantlink-bridge.service": 9.457435165138188,
+        "instantlink-bridge-manager.service": 0.0
+      },
+      "rss_kib": {
+        "instantlink-bridge.service": 68448,
+        "instantlink-bridge-manager.service": 51628
+      },
+      "frequencies": [
+        600000
+      ]
+    }
+  },
+  "notes": [
+    "Kernel-monotonic reboot timing excludes firmware and power-button delay.",
+    "Baseline Printer was powered on late; exclude its timestamp from the boot comparison.",
+    "Short CPU samples are exploratory; no battery-runtime or wattage claim."
+  ],
+  "after_trial_2": {
+    "runtime": "8eb962d",
+    "systemd_total_s": 16.924,
+    "kernel_s": 2.614,
+    "userspace_s": 14.31,
+    "milestones_s": {
+      "service_start": 9.824199,
+      "boot_start": 12.741762,
+      "ui_ready": 14.323978,
+      "ftp_ready": 13.995237,
+      "bluetooth_ready": 14.402895,
+      "core_ready": 14.340263,
+      "hotspot_ready": 18.68516,
+      "manager_usb": 19.229277,
+      "manager_hotspot": 19.230575,
+      "printer_status": null,
+      "splash_done": 9.808118
+    }
+  },
+  "manager_recovery_final": {
+    "initial": {
+      "usb": false,
+      "hotspot": false
+    },
+    "final": {
+      "elapsed_s": 42.91,
+      "usb": true,
+      "hotspot": true,
+      "frequency_khz": 600000
+    },
+    "bridge_pid_unchanged": true,
+    "manager_pid_unchanged": true,
+    "first_usb_response_s": 4.64
+  }
+}

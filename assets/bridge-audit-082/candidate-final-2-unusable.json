@@ -1,0 +1,5 @@
+{
+  "status": "unusable",
+  "bytes_saved": 0,
+  "reason": "Errno28 testfixture filled /tmp; not application failure"
+}

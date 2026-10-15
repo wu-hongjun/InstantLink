@@ -1,0 +1,35 @@
+{
+  "base_commit": "096c7ca",
+  "production_preferred_square_chunk_delay_ms": 150,
+  "shorter_delay_enabled": false,
+  "rust_workspace_tests": 278,
+  "pi_arm_mock_tests": 52,
+  "independent_review": "No unresolved P1/P2 issue in passive implementation",
+  "build_fmt_clippy_header_drift_strict_docs": true,
+  "prepared_square_jpeg": {
+    "bytes": 102846,
+    "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+    "quality": 87,
+    "settings": {
+      "fit": "auto",
+      "quality": 100,
+      "adjustments": {
+        "saturation": 1.5,
+        "exposure": 1.0,
+        "sharpness": 1.0,
+        "hue": 0,
+        "vignette": 0,
+        "datestamp": false,
+        "watermark": false,
+        "datestamp_text": "",
+        "watermark_text": ""
+      },
+      "correction": {
+        "saturation": 1.0
+      }
+    }
+  },
+  "hardware_status": "Pi reachable; Bridge and manager active; Printer not advertising. Sweep and final deployment pending power-on.",
+  "film_commands_sent_in_this_task": 0,
+  "limits": "Pi tests use mock transports; they do not constitute a real Printer pacing benchmark."
+}

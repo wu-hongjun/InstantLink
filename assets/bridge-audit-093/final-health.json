@@ -1,0 +1,38 @@
+{
+  "pid": 9806,
+  "services": "MainPID=9806\nNRestarts=0\nActiveState=active\n\nMainPID=8053\nNRestarts=0\nActiveState=active",
+  "runtime_commit": "9de0f1b46d21c369827b720a833753326e0de490",
+  "governor": "powersave",
+  "cpu_khz": 600000,
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "throttle": "throttled=0x0",
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "printer_connected": true,
+  "fresh_status": "2026-10-14 13:59:00,029 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "runtime_log_records": 93,
+  "warning_error_messages": [
+    "2026-10-14 13:55:56,716 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+    "2026-10-14 13:55:56,719 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none",
+    "2026-10-14 13:57:27,942 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+    "2026-10-14 13:57:27,944 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none",
+    "2026-10-14 13:58:56,781 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+    "2026-10-14 13:58:56,783 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none"
+  ],
+  "flags_after_latest_fresh_status": [],
+  "presets_load_failed": false,
+  "backup_worker_units": "",
+  "socket_active": "active",
+  "manager_no_new_privileges": "yes",
+  "latest_archive_bluez_info_count": 1,
+  "latest_archive_has_cryptographic_key_sections": true,
+  "private_archive_modes_ok": true,
+  "trusted_file_sha256": {
+    "/usr/local/libexec/instantlink-bridge-backup/broker.py": "f7a8b6f988a0a14914358e67c0e8daf057f541991a2b9563bf4118894fe68382",
+    "/usr/local/libexec/instantlink-bridge-backup/backup.py": "e07149eee854c7ae4a11fe1ff7090b3e830a12aabfa943498b1ab7f5a775dc09",
+    "/opt/InstantLinkBridge/lib/libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+  },
+  "film_used": 0,
+  "boundary": "Normal automatic screen-off idle verified via600MHz/backlightlow, not manual lock/internalflag introspection. Full current-PID warnings retained; physical switch contacts not actuated. Synthetic FTP uses same-Pi hotspot address. Secrets never exported.",
+  "passed": true
+}

@@ -1,0 +1,80 @@
+{
+  "timestamp_utc": "2026-10-13T14:43:26.313176+00:00",
+  "runtime_commit": "82f60971f7465fa46492cda455edff38de2695b4",
+  "dirty": false,
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "temperature_c": 45.084,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "services": "MainPID=29062\nNRestarts=0\nActiveState=active\n\nMainPID=28530\nNRestarts=0\nActiveState=active",
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Tue 2026-10-13 10:41:02 EDT] ; stop_time=[n/a] ; pid=29062 ; code=(null) ; status=0/0 }",
+  "ftp_probe_path": "Pi hotspot address; no wireless airtime or upload measured",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "ffi_sha256": "d23d3b817108b0243ab474af2970f1fd7748431c317af64b38bc4c5eb94f3d38",
+  "source_sha256": {
+    "src/instantlink_bridge/ui/input.py": "8414a97a36b6625ed44dca6b2bfd091c58deb0115ba7ed368f35770f8ed5e16c",
+    "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97",
+    "src/instantlink_bridge/net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+    "src/instantlink_bridge/net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+    "src/instantlink_bridge/ui/pairing.py": "59d1c3450642b620053c7795a0fdfa41dfa2605ca5d88e0c97db6cdf3fc10bbe",
+    "src/instantlink_bridge/ble/agent.py": "fefb9bccbad62fa32a2a8426134bef19bda4e872cd515000c63e35321ba8dbec",
+    "src/instantlink_bridge/app.py": "1219f4ad62d5a0c5ccc077036b9226c0a9cdaa9eaa23e2cd06c7c0637f72fabb",
+    "src/instantlink_bridge/ui/controller.py": "cc2804a121da7fc7799b17339866f9b46a58c34501c9ded3870aff8e0535d312",
+    "src/instantlink_bridge/ble/instantlink.py": "998829a573fbe388114e1c171f749f1f527908da937c81d5e7b886f82dcc1509"
+  },
+  "working_cache_directories": 0,
+  "addresses": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \nusb0             UP             192.168.7.1/24 \nwlan0            UP             192.168.8.1/24",
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false,
+  "input_backend_log": [
+    "2026-10-13 10:41:03,968 INFO instantlink_bridge.ui.input ui.input_edges_started backend=linux_gpio_v2 debounce_ms=50 lines=8"
+  ],
+  "input_failures": [],
+  "normal_app_warning_error_lines": [],
+  "network_fallback_log": [],
+  "printer_connected": true,
+  "film_used_in_this_task": 0,
+  "cli_sha256": "b3fcffc0c0d1a351e2cdafbdddee065393434cb1c01f56e6fa1239874e9502dc",
+  "native_manifest": {
+    "artifacts": {
+      "instantlink": {
+        "sha256": "b3fcffc0c0d1a351e2cdafbdddee065393434cb1c01f56e6fa1239874e9502dc",
+        "source_path": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release/instantlink"
+      },
+      "libinstantlink_ffi.so": {
+        "sha256": "d23d3b817108b0243ab474af2970f1fd7748431c317af64b38bc4c5eb94f3d38",
+        "source_path": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release/libinstantlink_ffi.so"
+      }
+    },
+    "artifacts_dir": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release",
+    "built_at_utc": "2026-10-13T14:34:02Z",
+    "cargo": {
+      "command": "cargo zigbuild",
+      "locked": true,
+      "packages": [
+        "instantlink-ffi",
+        "instantlink-cli"
+      ],
+      "profile": "release"
+    },
+    "instantlink_workspace": {
+      "branch": "codex/bridge-battery-day",
+      "commit_sha": "82f60971f7465fa46492cda455edff38de2695b4",
+      "dirty": false
+    },
+    "schema_version": 1,
+    "target_triple": "aarch64-unknown-linux-gnu"
+  },
+  "library_mapping": [
+    "7f88930000-7f88b52000 r--p 00000000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+    "7f88b52000-7f88b61000 ---p 00222000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+    "7f88b61000-7f88f99000 r-xp 00221000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+    "7f88f99000-7f88fa8000 ---p 00669000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+    "7f88fa8000-7f88fdf000 r--p 00658000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+    "7f88fdf000-7f88fee000 ---p 006af000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so",
+    "7f88fee000-7f88ff0000 rw-p 0068e000 b3:02 515411                         /opt/InstantLinkBridge/lib/libinstantlink_ffi.so"
+  ]
+}

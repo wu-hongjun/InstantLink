@@ -1,0 +1,10 @@
+{
+  "probe_exit_code": 0,
+  "clock_sample_count": 364,
+  "sampled_cpu_khz": [
+    1000000
+  ],
+  "prepared_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+  "film_printing_permitted": false,
+  "throttled": "throttled=0x0"
+}

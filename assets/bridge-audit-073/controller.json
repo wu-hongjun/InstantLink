@@ -1,0 +1,30 @@
+{
+  "hardware": "Pi Zero 2 W; Broadcom UART HCI/LMP 4.2",
+  "bluez": "5.82",
+  "att_mtu": 247,
+  "le_buffer_packet_length": 27,
+  "le_buffer_packets": 15,
+  "le_features_hex": "1f00000000000000",
+  "data_length_extension_supported": false,
+  "read_max_data_length": "Unknown HCI Command",
+  "read_suggested_default_data_length": "Unknown HCI Command",
+  "full_square_data_packet_bytes": 1819,
+  "fragment_comparison": [
+    {
+      "payload": 182,
+      "att_writes_per_chunk": 10,
+      "hci_acl_packets_per_chunk": 70
+    },
+    {
+      "payload": 244,
+      "att_writes_per_chunk": 8,
+      "hci_acl_packets_per_chunk": 75
+    },
+    {
+      "payload": 236,
+      "att_writes_per_chunk": 8,
+      "hci_acl_packets_per_chunk": 70
+    }
+  ],
+  "limits": "HCI captures do not measure radio retransmissions or battery energy."
+}

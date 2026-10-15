@@ -1,0 +1,77 @@
+{
+  "samples": [
+    {
+      "label": "baseline",
+      "warmup": true,
+      "import_s": 2.0766435410000668,
+      "wall_s": 2.5616641139999956,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "candidate",
+      "warmup": true,
+      "import_s": 2.0120847389998744,
+      "wall_s": 2.4848494259999825,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "baseline",
+      "warmup": false,
+      "import_s": 2.078013644999828,
+      "wall_s": 2.562378227999943,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "candidate",
+      "warmup": false,
+      "import_s": 2.025962864000121,
+      "wall_s": 2.5634336960001747,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "candidate",
+      "warmup": false,
+      "import_s": 2.107650311999805,
+      "wall_s": 2.606356770000275,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "baseline",
+      "warmup": false,
+      "import_s": 2.1075519260002693,
+      "wall_s": 2.6228172910000467,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "baseline",
+      "warmup": false,
+      "import_s": 2.116806092000388,
+      "wall_s": 2.6021849470002962,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    },
+    {
+      "label": "candidate",
+      "warmup": false,
+      "import_s": 2.0189864580001995,
+      "wall_s": 2.490482864000114,
+      "governor_before": "powersave",
+      "governor_after": "powersave",
+      "cpu_khz_after": 600000
+    }
+  ],
+  "scope": "Counterbalanced fresh-process app import on the Pi, two warm-ups then three measurements per source tree, same dependencies/Python and observed CPU tier, precompiled bytecode/warm filesystem cache. Candidate temporary source; normal service retained. No app run, device operations or Printer commands."
+}

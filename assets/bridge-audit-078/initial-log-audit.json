@@ -1,0 +1,38 @@
+{
+  "full_boot_records": 1691,
+  "full_boot_span_s": 8053.80576,
+  "full_boot_structured_python_levels": {
+    "INFO": 1068,
+    "WARNING": 52,
+    "ERROR": 1,
+    "CRITICAL": 1
+  },
+  "bridge_starts": 18,
+  "manager_starts": 7,
+  "scheduled_automatic_restarts": 0,
+  "historical_real_faults": [
+    "Old worker-stuck exit during deployment stop",
+    "Old BLE timeout/InProgress",
+    "Old auto-rebond removal timeout"
+  ],
+  "historical_faults_scope": "Prior plan076 audit/remediation; retained as real old findings, not declared harmless tests.",
+  "normal_pid10928": {
+    "records": 43,
+    "INFO": 41,
+    "WARNING": 2,
+    "warnings": "Two known plan077 FTP source-policy probes",
+    "unexpected_faults": 0
+  },
+  "candidate_pid12144": {
+    "records": 67,
+    "INFO": 67,
+    "unexpected_faults": 0,
+    "scope": "First30s, kernel button/UI test; not final installed assessment"
+  },
+  "manager_pid10536": {
+    "records": 2,
+    "INFO": 2,
+    "unexpected_faults": 0
+  },
+  "raw_journal": "Kept privately outside Git; clock changed, use boot/PID/monotonic time."
+}

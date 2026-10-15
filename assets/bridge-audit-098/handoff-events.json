@@ -1,0 +1,19 @@
+{
+  "pid": 501,
+  "scope": "Read-only current-boot journal evidence after the last accepted fresh Printer status. Later link loss/automatic discovery observations, not a new reconnect benchmark or physical power-state observation.",
+  "last_accepted_fresh_status_uptime_s": 85.187936,
+  "later_events": [
+    {
+      "uptime_s": 376.065332,
+      "message": "2026-10-14 19:01:33,770 INFO instantlink_bridge.ui.controller ui.printer_disconnect_event name=INSTAX-52006924"
+    },
+    {
+      "uptime_s": 381.732294,
+      "message": "2026-10-14 19:01:39,437 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkPrinterNotFoundError error=connect failed: printer not found stage=0 detail=no Instax printer found setup_drop_streak=0"
+    },
+    {
+      "uptime_s": 381.737974,
+      "message": "2026-10-14 19:01:39,443 INFO instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer is not advertising diagnostics=selected_visible=False candidate_count=0 candidates=none reason=not_advertising stage=None detail=None"
+    }
+  ]
+}

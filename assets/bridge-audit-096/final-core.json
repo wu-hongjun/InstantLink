@@ -1,0 +1,73 @@
+{
+  "uptime_s": 30.84,
+  "pid": 475,
+  "commit": "4049bcd3c491ab32f72af7241d90879e3c45d0a5",
+  "dirty": false,
+  "service_timing": "ExecMainStartTimestampMonotonic=9644300\nActiveEnterTimestampMonotonic=14896378",
+  "governor": "performance",
+  "cpu_khz": 1000000,
+  "label": "final-core",
+  "passed": true,
+  "film_used": 0,
+  "boot_to_ui_s": 13.742491,
+  "boot_to_core_ready_s": 13.756158,
+  "process_boot_marker_s": 13.050178,
+  "boot_to_ftp_s": 13.727682,
+  "boot_to_agent_s": 13.354883,
+  "boot_to_status_s": null,
+  "status_message": null,
+  "input_before_status": [],
+  "warning_error_messages": [],
+  "early_ssh_cpu_samples": [
+    {
+      "uptime_s": 20.65,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 21.92,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 23.22,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 24.47,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 25.72,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 26.99,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 28.28,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 29.54,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 30.84,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    }
+  ],
+  "scope": "Normal installed service reboot; core/UI/FTP timings from kernel monotonic clock, excludes firmware latency. No input injected. Fresh status may be absent if Printer unavailable. SSH CPU sampling begins after SSH availability, not guaranteed during interpreter imports. No image/print/actuator commands.",
+  "boot_to_receive_ready_s": 19.994734,
+  "boot_to_first_discovery_policy_s": 14.035099,
+  "boot_to_ffi_loaded_s": 13.962802,
+  "accepted_configuration": true
+}

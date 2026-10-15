@@ -1,0 +1,41 @@
+{
+  "installed_source_commit": "a24b8b7924442853a6f724588c32718e6607681d",
+  "ffi_sha256": "3c283840887b985c4a21dfabfb0af418f4615516049074fb57ec92d8c205b204",
+  "installed_ffi_status_disconnect_cycles": [
+    {
+      "cycle": 1,
+      "film": 1,
+      "history": 67,
+      "model": "square",
+      "disconnect_rc": 0,
+      "disconnect_duration_s": 1.9867434890002187,
+      "connected_after_disconnect": false
+    },
+    {
+      "cycle": 2,
+      "film": 1,
+      "history": 67,
+      "model": "square",
+      "disconnect_rc": 0,
+      "disconnect_duration_s": 2.1331821339999806,
+      "connected_after_disconnect": false
+    }
+  ],
+  "negotiated_mtu": 247,
+  "production_payload": 236,
+  "conservative": false,
+  "hci_disconnect_complete_events": 2,
+  "no_film": "No Download or PrintImage commands; film1/history67 unchanged",
+  "normal_bridge_after_probe": "Automatically reconnected; fresh film1/battery50 status on normalservice",
+  "validation": {
+    "rust_workspace_tests": 251,
+    "bridge_tests": 1524,
+    "pi_independent_cases": 51,
+    "app_tests": 156,
+    "build_fmt_clippy_header_drift": true,
+    "python_lint_mypy_touched_format": true,
+    "strict_docs": true,
+    "adversarial_review": "no remainingP1/P2",
+    "full_python_format_limit": "16 untouchedbaselinefiles failformat; changedfiles pass"
+  }
+}

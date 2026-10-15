@@ -1,0 +1,109 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "initial_down_no_addresses",
+      "passed": true,
+      "native": {
+        "il078test": [],
+        "missing": []
+      },
+      "assigned": {
+        "il078test": [],
+        "missing": []
+      }
+    },
+    {
+      "case": "down_retains_assigned_but_not_ready",
+      "passed": true,
+      "native": {
+        "il078test": [],
+        "missing": []
+      },
+      "assigned": {
+        "il078test": [
+          "198.18.79.2/25",
+          "198.18.78.1/24",
+          "198.18.80.3/26",
+          "198.18.82.4/32"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "case": "up_multiple_prefix_scope_alias_and_peer",
+      "passed": true,
+      "native": {
+        "il078test": [
+          "198.18.79.2/25",
+          "198.18.78.1/24",
+          "198.18.80.3/26",
+          "198.18.82.4/32"
+        ],
+        "missing": []
+      },
+      "assigned": {
+        "il078test": [
+          "198.18.79.2/25",
+          "198.18.78.1/24",
+          "198.18.80.3/26",
+          "198.18.82.4/32"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "case": "address_removal_is_fresh",
+      "passed": true,
+      "native": {
+        "il078test": [
+          "198.18.79.2/25",
+          "198.18.78.1/24",
+          "198.18.82.4/32"
+        ],
+        "missing": []
+      },
+      "assigned": {
+        "il078test": [
+          "198.18.79.2/25",
+          "198.18.78.1/24",
+          "198.18.82.4/32"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "case": "40_concurrent_private_snapshots",
+      "passed": true
+    },
+    {
+      "case": "admin_down_retained_addresses",
+      "passed": true,
+      "native": {
+        "il078test": [],
+        "missing": []
+      },
+      "assigned": {
+        "il078test": [
+          "198.18.79.2/25",
+          "198.18.78.1/24",
+          "198.18.82.4/32"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "case": "deleted_interface_not_stale",
+      "passed": true,
+      "native": {
+        "il078test": [],
+        "missing": []
+      },
+      "assigned": {
+        "il078test": [],
+        "missing": []
+      }
+    }
+  ],
+  "boundary": "Only owned isolated network namespace/dummy modified; physical interfaces untouched"
+}

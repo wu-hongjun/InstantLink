@@ -1,0 +1,175 @@
+{
+  "source_commit": "4145e771e4c2f46ff4d2fa06c654666b5a3878de",
+  "passed": true,
+  "film_used": 0,
+  "boundary": "Same abstract actions as GPIO through actual productioncontroller/physicalLCD/CPU; buttoncontacts notactuated. Pause/resume withoutimagecommands/film.",
+  "steps": [
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 1
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": true,
+        "presses": 1,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 1,
+        "frame_nonblank": true,
+        "frame_matches": true
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": true,
+        "presses": 2,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 1
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20",
+        "capture": true
+      },
+      "state": {
+        "pid": 47347,
+        "locked": false,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 1000000,
+        "governor": "performance",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 1,
+        "frame_nonblank": true,
+        "frame_matches": true
+      }
+    },
+    {
+      "command": {
+        "command": "press",
+        "action": "back",
+        "button_id": "gpio:20"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 1
+      }
+    },
+    {
+      "command": {
+        "command": "pause_status"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "resume_status"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 0
+      }
+    },
+    {
+      "command": {
+        "command": "state"
+      },
+      "state": {
+        "pid": 47347,
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "fresh": true,
+        "film": 0,
+        "camera_ready": true,
+        "disconnect_watch_count": 1
+      }
+    }
+  ]
+}

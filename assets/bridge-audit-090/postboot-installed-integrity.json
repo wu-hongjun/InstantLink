@@ -1,0 +1,282 @@
+{
+  "runtime_manifest": {
+    "branch": "codex/bridge-battery-day",
+    "commit_sha": "a745c9136882283dc7071fabd1f721e2d6b0b186",
+    "dependencies": {
+      "instantlink_artifacts": {
+        "manifest": "/opt/InstantLinkBridge/.deployment/instantlink-artifacts-manifest.json"
+      },
+      "provision": {
+        "apt_packages": [
+          "bluez",
+          "cargo",
+          "dnsmasq",
+          "build-essential",
+          "heif-thumbnailer",
+          "iproute2",
+          "iw",
+          "libdbus-1-dev",
+          "liblgpio-dev",
+          "libheif-plugin-libde265",
+          "network-manager",
+          "pkg-config",
+          "python3-venv",
+          "rustc",
+          "swig",
+          "tcpdump"
+        ],
+        "script": "scripts/provision-sd.sh",
+        "script_sha256": "f5d22c9a6e94603dd37650b3e351900f60e93309a8a83a71dcc9faaaef089266",
+        "system_fingerprints": [
+          {
+            "path": "config/10-usb0.network",
+            "sha256": "fb2827d8b54526a6ebdd3a9846037a32750c082047b36620ac5fe999fbc2b944"
+          },
+          {
+            "path": "config/99-networkmanager-unmanaged-usb0.conf",
+            "sha256": "f066c6fc9cb0a0b3ad16e775c742e616156e0e0377e954a7f9f63a4306466f50"
+          },
+          {
+            "path": "config/NetworkManager/instantlink-bridge-hotspot.nmconnection",
+            "sha256": "e82267b3aced632a99cfb9aab0710d02d68dffb854d2a2abd4101688ad5c22b3"
+          },
+          {
+            "path": "config/boot-firmware-config.append",
+            "sha256": "7804310ab4ab5a51a09150600b2d8a4a35c2c59204073db5cd72bb4c6a39afe1"
+          },
+          {
+            "path": "config/cmdline-token.txt",
+            "sha256": "447a86dd2b37293bb212e8f9600b829476e1f46573864e921a3e4754e0fe999b"
+          },
+          {
+            "path": "config/config.example.toml",
+            "sha256": "e79e7854599f5696328689905a98a1b9a3fafa954abce5e7562c7edc20041f1a"
+          },
+          {
+            "path": "config/dnsmasq-bridge.conf",
+            "sha256": "a607d807af9a8174f198557e8845401173c4f8f404d34da903c10fca2385ba48"
+          },
+          {
+            "path": "config/g_ether.conf",
+            "sha256": "9dee51ec7198122af9cac586fc37fc37b4d604fcb48c636b1d00746dd4a17e56"
+          },
+          {
+            "path": "config/journald-instantlink-bridge.conf",
+            "sha256": "803568e01925a7b3be7e319067e386b6e3042a7f6727594d904e9ac0c37ec283"
+          },
+          {
+            "path": "config/sudoers-instantlink-bridge-cpu",
+            "sha256": "42dc068671daffb9b945f7d2681bd8ee2e955686824632484e44eef3d4205a37"
+          },
+          {
+            "path": "config/sudoers-instantlink-bridge-power",
+            "sha256": "02589d56bd36832b04ee4de4db7c1587d9d0188cd2b4ee15ec6af29cf7fe38cf"
+          },
+          {
+            "path": "config/sudoers-instantlink-bridge-wifi",
+            "sha256": "5fedfc11d50da531261c1058aa5e89bd0848ab3eee5ba75ec177b9f31a312d2a"
+          },
+          {
+            "path": "scripts/boot-diet.sh",
+            "sha256": "496b4dfe3e6285fbb7ad36767a5a035340c919f7a52abd9db74f3013199647da"
+          },
+          {
+            "path": "scripts/cpu-mode.sh",
+            "sha256": "d2f0afa3d88cfa3b3cb6ccb3444b7fb2757d3b82d768bfea1cef33ffe8b5a684"
+          },
+          {
+            "path": "scripts/install-runtime-deps.sh",
+            "sha256": "559347644f44bc3e3632b5dbba632c7d6782fb2bcb8a1bddacacbc5dad430f20"
+          },
+          {
+            "path": "scripts/poweroff.sh",
+            "sha256": "19b516ea5ce6594acb4b2902aafadf692d40db7aa66bfc0df841fd186130d02d"
+          },
+          {
+            "path": "scripts/provision-sd.sh",
+            "sha256": "f5d22c9a6e94603dd37650b3e351900f60e93309a8a83a71dcc9faaaef089266"
+          },
+          {
+            "path": "scripts/wifi-mode.sh",
+            "sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2"
+          },
+          {
+            "path": "systemd/instantlink-bridge-battery-benchmark.service",
+            "sha256": "a4fb19acd08e7ef81ee8ac98d1328c7c20d7021dc996846ca216ae7b850ec8fa"
+          },
+          {
+            "path": "systemd/instantlink-bridge-boot-splash.service",
+            "sha256": "76248e31325dbcced468dcbb57c5006262662b7f3a753251531f79cc2472ecc7"
+          },
+          {
+            "path": "systemd/instantlink-bridge-manager.service",
+            "sha256": "29291070734ccf00f32badcbdbcf17ba7a5d360278205bbee4b13a6c796fbc9a"
+          },
+          {
+            "path": "systemd/instantlink-bridge-usb0-lost.service",
+            "sha256": "a55ec336545763918560d19e235e06edb33185f2ef1161223d7855e2ca9f9854"
+          },
+          {
+            "path": "systemd/instantlink-bridge-usb0-rearm.service",
+            "sha256": "e881b2e1d5e602276d977fc1130e9c88548ae877b20e43146ed06574e760c01b"
+          },
+          {
+            "path": "systemd/instantlink-bridge.service",
+            "sha256": "b3f8672c9e792fec1bf12806b796d6a30ebf39aa04bb95407255ea2cbbf079ff"
+          },
+          {
+            "path": "udev/60-instantlink-bridge-backlight.rules",
+            "sha256": "a2831fc029ae9c87380f9e1e77711e5edeafa773c086ff5a3d43ffdf0a67a7b9"
+          },
+          {
+            "path": "udev/61-instantlink-bridge-fb1.rules",
+            "sha256": "f9ada2e36c5d61ba7590eb7158eb648e7571c0e748afdc1d686331ffd1e2324d"
+          },
+          {
+            "path": "udev/99-instantlink-bridge-usb0.rules",
+            "sha256": "ff49d731addcaac19ea7a7a75dc3ad993828eb03f80944df99c91b56019aebc5"
+          }
+        ]
+      },
+      "pyproject": {
+        "sha256": "b3eb507c6357e5013f1c02b107f32aa646c0e26b66894a88fc61424ab6f6ab93",
+        "source_path": "pyproject.toml"
+      },
+      "python_constraints": {
+        "sha256": "498ce9788821c65ff77e3ecb93dc1f264ff1b3a71d5a27ba8dcc231d1c9551ef",
+        "source_path": "requirements/constraints.txt",
+        "target_path": "/opt/InstantLinkBridge/requirements/constraints.txt"
+      },
+      "runtime_install": {
+        "apt_packages_artifact": "/opt/InstantLinkBridge/.deployment/runtime-apt-packages.txt",
+        "installed_packages_artifact": "/opt/InstantLinkBridge/.deployment/runtime-installed-packages.txt",
+        "runtime_deps_manifest": "/opt/InstantLinkBridge/.deployment/runtime-deps-manifest.json",
+        "script": "scripts/install-runtime-deps.sh",
+        "script_sha256": "559347644f44bc3e3632b5dbba632c7d6782fb2bcb8a1bddacacbc5dad430f20"
+      }
+    },
+    "deployed_at_utc": "2026-10-14T13:27:47Z",
+    "dirty": false,
+    "remote_url": "https://github.com/wu-hongjun/InstantLink.git",
+    "schema_version": 1,
+    "source_mode": "git-archive"
+  },
+  "source_sha256": {
+    "src/instantlink_bridge/app.py": "9f334b80316bcf29ef19c60c6356ef453823258566f08ae8e9dd53aba1015d09",
+    "src/instantlink_bridge/system_stats.py": "46108bd2f0974553464fd10bb960f73e24df13f0d1322b59f2f56e3a8ee383b5",
+    "src/instantlink_bridge/__init__.py": "b691e9c535665a164f7439bcfbdb26a59fb8f3fe4421cb2fb8e2ac6808b5bcfc",
+    "src/instantlink_bridge/watchdog.py": "8921b10f968b4335767196f9e8b9be89af0e5d9e3db19e571dddc14dec3f2be0",
+    "src/instantlink_bridge/boot_splash.py": "a1b2214824668da28938463910ac19a44b3809fa5ff191a743ea972865904683",
+    "src/instantlink_bridge/config.py": "9607a4e4a18cc46deaab6f1f3c04346c1678fedf7952cb3f0c7de24afe6e267b",
+    "src/instantlink_bridge/system_info.py": "5013f5e190b572106934143b1f89c64cab9a9c8e7991378ad52b2f26103d9ee9",
+    "src/instantlink_bridge/printing.py": "b20c7ad6edd92301e24c671d7d8046ae2e44ace4e62f2a66768eb612eda4aad7",
+    "src/instantlink_bridge/ble/instax.py": "3b5a9370ac64f94ee7f95dadc883c8e701e4372e598137b52e0683b6ae96d725",
+    "src/instantlink_bridge/ble/__init__.py": "dffaee56064c5b8b2f94cc2b5c58f62600ba552d60e5c0ea61b2307fe0678a57",
+    "src/instantlink_bridge/ble/agent.py": "a84a371e646f0dbeb401192b152272376fa64f791dd595c9f76994f505181f01",
+    "src/instantlink_bridge/ble/instantlink.py": "b0f119b4eef2050ad8f133dc38483480714fa078f8b7d51176b22b079fb03bea",
+    "src/instantlink_bridge/ble/commands.py": "b776daeb3d5f2834e9ffc5f26f77140c026897ca0204ff40b4abad3698d8d5fb",
+    "src/instantlink_bridge/ble/models.py": "3e59654cdf08caf37e56ca2a512cc1115e2d8c426ab13423b6d2addf2b1fa147",
+    "src/instantlink_bridge/ble/session.py": "809952fd252d7add653b37e7c6fef45d5278887e924d7cbf5defaf0f690fe845",
+    "src/instantlink_bridge/ble/client.py": "a0c23e4cd301e5374b7a7ba809d8bda9bac40e7610b1fd7567348bedc0ddd37f",
+    "src/instantlink_bridge/ble/protocol.py": "0f4d43dc7a5d466c71402ca11f7880e32eb0a352f0a428cb7a629a32d8104e9d",
+    "src/instantlink_bridge/update/signing.py": "07dcbb300acf4470907c5a6694dfbaed07affe25055111f8f19bf379908be8c9",
+    "src/instantlink_bridge/power/monitor.py": "c4211bc2c4e5c7ec2594aefb2ee14840f220b05742ab33adcffe3ae075e10726",
+    "src/instantlink_bridge/power/pisugar.py": "044558cadabbadeb40575948e709d8be99be7c5faad4bdd761cc8bd504163b65",
+    "src/instantlink_bridge/power/performance.py": "711a81541f37c12ad87bf6e309bca2583588a2731ad8247a357508a2bd9f7315",
+    "src/instantlink_bridge/power/__init__.py": "aac79162f3aec2bd6d1fe34094e7391f357a66b8c8d87a1282735d32a2352747",
+    "src/instantlink_bridge/power/battery_estimator.py": "a2579615500c58d23ef8cb11a2f4b074f2f9b902fc95b176d54479a996278e3a",
+    "src/instantlink_bridge/power/x306.py": "12c6e6c643d8cb2b44e5c7b34a5e32e960b65d9b5afd3eee6100442ba979a498",
+    "src/instantlink_bridge/manager/auth.py": "4d3e3cf136fe8e1f8b56dddf301224409c646abb0c052eca71a6aeda9f4d024f",
+    "src/instantlink_bridge/manager/update_flow.py": "b5d7b90b80611be46cb58901e38b48a4e2d84040674b39d3af0d7fd24720698c",
+    "src/instantlink_bridge/manager/api.py": "54e37d3a7362fdbd6826d2fe5daef636402694a4ff1fbd2184f5a36ec8ce4bc2",
+    "src/instantlink_bridge/manager/__init__.py": "ebf74e8a9d7c57571684a25e1c49d5786723b0058f3b042a6beb9b7168b0e04d",
+    "src/instantlink_bridge/manager/status.py": "3248206f94c9c655146908ab07b530f6a39a495b010b80b816ee8ba41f9903b5",
+    "src/instantlink_bridge/manager/installer.py": "1c67939ce7d4ab03deb5ca9cafc03f4ddf2f70154af008ba0994f27759a0260d",
+    "src/instantlink_bridge/manager/contract.py": "886b44a29af4d462782d41ba2bb425f4f4b77c3d9d8baaf2d4085ce1c868ceab",
+    "src/instantlink_bridge/manager/signing.py": "cfb3bf2a918edd117cac144de0fd117e728dec9997e86384b9c06e1cccadfc08",
+    "src/instantlink_bridge/manager/release_slots.py": "674efec218bf492abcd1702416adebaaaff0b9cb57efed4068d29ed15bdaa811",
+    "src/instantlink_bridge/manager/cli.py": "762ba093f98e58190ebec0f2fb3ff6fae35099b04f066a0b38195b8af515adeb",
+    "src/instantlink_bridge/manager/backup.py": "b1df34f965d8e45352882bcd5945d7801e087b082a8998b286317924162bc735",
+    "src/instantlink_bridge/manager/schema.py": "1fb736999ff6461622250c69db15ac3dad1a36718af368b03bcdd2dfdcbfe5ff",
+    "src/instantlink_bridge/manager/config_payload.py": "2e87a914b150e3679d8a11dabc42df26cc26e23aabc225a7276f4a990699934c",
+    "src/instantlink_bridge/manager/health.py": "30df82a166869bab3ac10d1afd1a437e16a640e0d4568d6a77b7c91be1cd9d1d",
+    "src/instantlink_bridge/manager/diagnostics.py": "87c83ad39105fa4958f9e7733f886da43e7fd920c54497c298c29a79ad90c519",
+    "src/instantlink_bridge/imaging/worker.py": "a7cd2d253378bb05223e6dd0f4c2401b98db6bd867a95eda7f6f1877c60d1de7",
+    "src/instantlink_bridge/imaging/__init__.py": "0902bea5c961d5a1cb4a32f8329c08410f20040c82bbeed0735a4585c0819095",
+    "src/instantlink_bridge/imaging/presets.py": "6f0966f54c9eb10c2073d8b83bbe6c80166f29424435422c4e99c945abf6577a",
+    "src/instantlink_bridge/imaging/pipeline.py": "71055ef4ccf733a28d12b19ad474ac66090992b61cebe6c5cac4aa3a98cdfd7c",
+    "src/instantlink_bridge/imaging/postprocess.py": "7ed7a2d71e462cb36ecce8d1fafddf1f79b7030a0c4efd0c1b3e14125a68cb5c",
+    "src/instantlink_bridge/camera/__init__.py": "5dbb55af86c553a700f4414851d11665c4d9160829653f7488bc8c4140c4c67a",
+    "src/instantlink_bridge/camera/ftp.py": "9df6f2b5c65bd88710c18a19759d143ad95e06bbff694cfd60e0f0b9f2f5f7e6",
+    "src/instantlink_bridge/sync/__init__.py": "cef2158f6a7e290024c5e97550508a85d08216f3d89835e8ea3c4bfaedb6ec7f",
+    "src/instantlink_bridge/sync/server.py": "ae00f47a265810d23e32cb64d5359cc980c6da075992702f9f1bed178f60814f",
+    "src/instantlink_bridge/sync/models.py": "bf8fcc5229ab7e5a4c10d7d442a307db3b41b7013bf1c4d744e61a003de252a9",
+    "src/instantlink_bridge/sync/outbox.py": "720418790ca370ccfade64f354a6fa996be3928153c5fe40d9fa41ddfd72b617",
+    "src/instantlink_bridge/net/__init__.py": "a58ebdf6502048e4c5af8523082be31f7b065ef3537fa284ead4048a81766fb0",
+    "src/instantlink_bridge/net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+    "src/instantlink_bridge/net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+    "src/instantlink_bridge/net/health.py": "9b1ba868a21450621ce492f7725f05a51155f8ba6297d65f40c74386cb47d53e",
+    "src/instantlink_bridge/ui/i18n.py": "22d6511e2fb8579783edacb4e74b89c34550ad5232dabb7fa4cdeec475d07c7f",
+    "src/instantlink_bridge/ui/pairing.py": "2e532bd4cfb6777cfe582a64ac8fdb0a9d43c068f94938c186bb9535a1d44f70",
+    "src/instantlink_bridge/ui/__init__.py": "c93acc0fe799d05e7146a385a2e1e03b3434380389551de0c49c4d9401201917",
+    "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97",
+    "src/instantlink_bridge/ui/status.py": "d435248161f079c0e4f3e58fa26acff970023d74f5f7d8111f85b3c8a0bbb175",
+    "src/instantlink_bridge/ui/settings.py": "44e1c4fc9e9862e0296fa1e4bcfbd6ce7258eff77ab7d88dc27b851b295bcd84",
+    "src/instantlink_bridge/ui/models.py": "9c32f7082bb33e97ba074651c0d88b374f3fff55c76dce1e6868cd2e25ecaf68",
+    "src/instantlink_bridge/ui/input.py": "c26960fad81190dcf7c892346c1d046a073a31532ee3832a223c505911198037",
+    "src/instantlink_bridge/ui/controller.py": "ebe5563d60ae137c0e0936272892449bb94cf94a729ae9e61cf5885e89085240",
+    "src/instantlink_bridge/ui/render.py": "3620d146e35fd1a76045b0834600a61c944a0a59131c508cbfc2d79987e7ea3b",
+    "src/instantlink_bridge/ui/status_indicator.py": "f989740a7ab25a85ee5ac93346d8d18098934797b6f1ae777ef217114c40678e",
+    "src/instantlink_bridge/ui/display.py": "2a451b279dc94a3b7c8746b9b175cc7536b1bfce6f699d661f627f2c550b656b",
+    "src/instantlink_bridge/ui/theme.py": "8a084ad6492b345be240a487bc5a342003179ea7ec766ebb7fa50c3a0d79a84a"
+  },
+  "helper_installed_sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2",
+  "helper_source_sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2",
+  "backport_tool_sha256": "7a1c34ed5a0cacc5c795f2ed6e513731c690eddb03d191fc74fbf476d24966cc",
+  "ffi_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+  "cli_sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e",
+  "module_sha256": "a2b930a1668775132fa9446d69bc33edc7785aed48bfa6fb35873ae6a14a02c7",
+  "loaded_srcversion": "2254D80EF43499080344466",
+  "private_kernel_manifest": {
+    "abi": {
+      "candidate": {
+        "depends": "brcmutil,cfg80211",
+        "license": "Dual BSD/GPL",
+        "name": "brcmfmac",
+        "srcversion": "2254D80EF43499080344466",
+        "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+      },
+      "exported_symbols": 11,
+      "imported_symbols": 254,
+      "stock": {
+        "depends": "brcmutil,cfg80211",
+        "license": "Dual BSD/GPL",
+        "name": "brcmfmac",
+        "srcversion": "FBBF7D1EF3ACBA683834518",
+        "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+      }
+    },
+    "baseline_sha256": "8ff164d9338f552b822528f12d6cf8d75fc173541f8f4a8abbf9b2da45ac18af",
+    "built_at_utc": "2026-10-14T13:19:12.335051+00:00",
+    "compiler": "gcc-14 (Debian 14.2.0-19) 14.2.0",
+    "exports_sha256": "fa79e56aff4104234b3731df5398ab4ddc5416054651b8caa6d72662ca7a4e0f",
+    "headers_config_sha256": "fc9d5fe054e82fa9b7f6883eabe7d17b77470361b3028b2f6082c0dde761c43b",
+    "headers_symvers_sha256": "f67adf230aa3d4fc9770f1c33a896e279ad1912f85e2a99771e648c8a4a06cd8",
+    "kernel": "6.12.47+rpt-rpi-v8",
+    "module_sha256": "a2b930a1668775132fa9446d69bc33edc7785aed48bfa6fb35873ae6a14a02c7",
+    "override_path": "/lib/modules/6.12.47+rpt-rpi-v8/updates/instantlink/brcmfmac.ko",
+    "patch_sha256": "36a55fd0afb9aab74e787843d8e2f5ad16d2f6d38fc16fede0aa50cc451c6970",
+    "schema_version": 1,
+    "source_archive_sha256": "c8431ce04c144c307fedfccd8b5c26b9e69cb3f0d5071e56f82c933478da3b71",
+    "source_commit": "359f37f0faefb712add32a39f98751aea67d5c1f",
+    "state": "installed",
+    "stock_path": "/usr/lib/modules/6.12.47+rpt-rpi-v8/kernel/drivers/net/wireless/broadcom/brcm80211/brcmfmac/brcmfmac.ko.xz",
+    "stock_sha256": "17220c97a914247bdc4a789caac0dee5c2533e897cd3892834402595d3dce1d7",
+    "upstream_commit": "aba23b0a6a0df84b06ed0323ce127bf7257e4025"
+  },
+  "tracing_instance_present": false,
+  "tracefs_control_available": true,
+  "owned_probes_present": false,
+  "film_used": 0,
+  "reboot_persistence_verified": true
+}

@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -2931,7 +2961,9 @@ keys before upload or install.</p>
   assets beside the DMG, CLI zip, and FFI zip.</li>
 </ul>
 <h2 id="local-build">Local Build<a class="headerlink" href="#local-build" title="Permanent link">&para;</a></h2>
-<p>Install <code>zig</code> and <code>cargo-zigbuild</code>, then run:</p>
+<p>Install <code>zig</code>, <code>cargo-zigbuild</code>, CMake and a C compiler, then run. The prepared-JPEG
+validator builds and statically links its bundled libjpeg-turbo; the Pi does not need a new
+shared library. NASM enables SIMD when building for x86; arm64 uses the compiler's NEON support.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cargo<span class="w"> </span>install<span class="w"> </span>cargo-zigbuild<span class="w"> </span>--locked
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>bridge/scripts/build-firmware-bundle.sh<span class="w"> </span><span class="m">0</span>.1.0
 </code></pre></div>

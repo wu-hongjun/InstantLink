@@ -1,0 +1,111 @@
+{
+  "reviewer": "gatt_readiness_adversarial",
+  "result": "pass",
+  "source_commit": "6d61384c064e6a3110bf4f3642b4b941b4690d1f",
+  "source_hashes_unchanged": false,
+  "outstanding_findings": [],
+  "evidence_sha256": {
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/baseline1.json": "4974db7aee2897977d5e8daaf735f9d653e549c9e00e3ca885ef08b3a653f2dd",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/baseline2.json": "dd12ce17b3b0cb43e3628aa12aa7a57d5744de442ebaf8b4911d769a61267577",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/candidate1.json": "6cd67939774a53ef7581eb06ba3184d801e0e7739bbef6d658989063851f97d9",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/candidate2.json": "3c0235e62bc76a9a757b9731c61dff4822f370c0cc0c6adf9a34bfe75f29ad96",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/reconnect.json": "0d0202800cb6d779cfcfe76e53601b41d15005f7e41a491c747578b0627036f5",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/ui.json": "927b6f0464a31a56e2cb85c99689100f680819c00ea195b34b2e42eb40f992fa",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/normal-restart.json": "cd9266a35ec562ce9ddf34d289ff771187da6cddf6b98a2e50b9b6f381f1ce79",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/normal-health.json": "3bab2b8baf18881e3f0a9a3e74e4be2adc53b05d7ebf73ad7cfca9746983f699",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/log-review.json": "7bcb606573444c63d1b1e69519d519a521bd1ea7d7ffcbc0868c2537db2581d9",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/validation.json": "31c44eb3245e22326a745c2d93a9aabc08d13b76904bd66acad961facb71c090"
+  },
+  "private_log_sha256": {
+    "/tmp/instantlink-gatt-full-services-092.jsonl": "8c92193757692d4fd8a966faf72dab7abec54a4ca4b3c89b2eea088859c61ef2",
+    "/tmp/instantlink-gatt-full-kernel-092.jsonl": "93b773cb58937c2491cab613a10d10f9fc4d2641e183c1569690184ed3d44d6c"
+  },
+  "restart_benchmark": {
+    "baseline_s": [
+      16.31413264999992,
+      16.268243535999773
+    ],
+    "candidate_s": [
+      16.12664020200009,
+      16.214776034999886
+    ],
+    "baseline_median_s": 16.291188092999846,
+    "candidate_median_s": 16.170708118499988,
+    "baseline_first_attempt_s": [
+      3.461279581999861,
+      3.603598957000031
+    ],
+    "candidate_first_attempt_s": [
+      3.556097445999967,
+      3.5232260930001758
+    ],
+    "conclusion": "No established speedup from two samples per cohort; first-attempt ranges overlap. All matched restarts passed. Warm observed restart timings are not cold boot."
+  },
+  "locked_reconnect": {
+    "passed": true,
+    "recovered_s": 7.191373643000134,
+    "same_pid": true,
+    "all_samples_locked_600mhz_camera_ready": true,
+    "stale_timestamps_cleared": true,
+    "fresh_single_watch_restored": true,
+    "film_remaining": 0
+  },
+  "ui": {
+    "passed": true,
+    "same_button_triple_unlock": true,
+    "exact_nonblank_lcd_pixels": true,
+    "partial_unlock_timeout_back_to_600mhz": true,
+    "status_watch_pause_resume": true,
+    "boundary": "Shared production abstract input queue and actual LCD/CPU; physical switch contacts not actuated."
+  },
+  "normal_restoration": {
+    "pid": 5618,
+    "first_fresh_from_boot_marker_s": 4.811162,
+    "first_observed_fresh_from_restart_dispatch_s": 7.203645933999724,
+    "normal_exec_start": true,
+    "connected": true,
+    "locked_idle_cpu_khz": 600000,
+    "services_active_zero_restarts": true,
+    "ftp_220_200": true,
+    "no_audit_dropin_socket_or_mockup": true,
+    "no_current_app_warnings_input_or_network_fallback": true
+  },
+  "full_log_review": {
+    "service_records": 945,
+    "historical_service_flags": 6,
+    "current_candidate_normal_flags": 0,
+    "historical_flag_pids": [
+      "637",
+      "2626"
+    ],
+    "kernel_records": 378,
+    "expected_boot_kernel_notices": 10,
+    "vchi_media_unregister_errors": 0,
+    "wifi_vendor_ie_errors": 0
+  },
+  "limits": [
+    "Baseline warm restarts also passed; original intermittent failure was not reproduced in this matched cohort. Source and adversarial tests establish handling of pending/cached GATT races, rather than proving elimination of every future radio failure.",
+    "Normal unobserved restart is a separate acceptance check and is not directly comparable to observed cohort timings.",
+    "Camera readiness and FTP greeting/NOOP continuity passed; no physical camera upload or wireless-airtime throughput measured in this round.",
+    "No image/print/actuator commands or film used.",
+    "Root is completing owned helper cleanup; normal-service dropin/socket absence is already captured."
+  ],
+  "film_used": 0,
+  "reviewer_hardware_mutations": false,
+  "reviewed_source_sha256": {
+    "crates/instantlink-core/src/transport.rs": "a0c0d504fc241848928348181f78dbdf5207e22d879fd3ed435f9e17af05e304",
+    "bridge/src/instantlink_bridge/ble/instantlink.py": "4813bf2b36ad7fd842b7a6ff6a1950703953a8fa3a6065bf27f9869171b61e4e",
+    "bridge/src/instantlink_bridge/ui/status.py": "f82c6128f9e1b4b30ad421cd22e92046d951b1271cec0269230473d179616337",
+    "bridge/tests/test_ui_status.py": "2dc58ff6d27260ae3a982fbdd77ee2cbca61364584f6fe025f10696cce1d749e"
+  },
+  "python_authentication_refinement": {
+    "source_review": "pass",
+    "independent_focused_tests_passed": 66,
+    "failed": 0,
+    "behavior": "Exact canonical BlueZ authentication error in actual native terminal detail can trigger recovery at early connect phase; generic text, token suffix and foreign namespace cannot.",
+    "native_transport_unchanged": true,
+    "live_evidence_boundary": "Captured live evidence is from clean source6d61384 before this Python classifier-only refinement. Root owns deployment and post-refinement normal-service acceptance; no additional native build or film test needed.",
+    "post_refinement_installed_acceptance": "pending"
+  },
+  "source_hash_boundary": "Native and backend unchanged; status classifier and focused tests updated by reviewed final Python refinement; latest frozen hashes are recorded above."
+}

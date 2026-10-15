@@ -1,0 +1,577 @@
+{
+  "live_current_journal_available": false,
+  "filtered_and_overlapping_sources": true,
+  "raw_logs_committed": false,
+  "sources": [
+    {
+      "bytes": 41763,
+      "event_lines": 20,
+      "range": [
+        "2026-10-11 23:05:47",
+        "2026-10-11 23:05:55"
+      ],
+      "top_events": [
+        [
+          "ui.network_status",
+          2
+        ],
+        [
+          "instantlink.connect_progress",
+          2
+        ],
+        [
+          "manager.listening",
+          2
+        ],
+        [
+          "bridge.boot.start",
+          1
+        ],
+        [
+          "power.cpu_mode",
+          1
+        ],
+        [
+          "ftp.server_started",
+          1
+        ],
+        [
+          "bridge.ftp.ready",
+          1
+        ],
+        [
+          "bridge.ui.ready",
+          1
+        ]
+      ],
+      "warnings_errors": [
+        [
+          "instantlink.status_failed_disconnect",
+          1
+        ],
+        [
+          "ui.printer_status_unavailable",
+          1
+        ]
+      ],
+      "source": "instantlink-audit-boot-after-1.txt"
+    },
+    {
+      "bytes": 41760,
+      "event_lines": 20,
+      "range": [
+        "2026-10-11 23:05:51",
+        "2026-10-11 23:05:59"
+      ],
+      "top_events": [
+        [
+          "ui.network_status",
+          2
+        ],
+        [
+          "instantlink.connect_progress",
+          2
+        ],
+        [
+          "manager.listening",
+          2
+        ],
+        [
+          "bridge.boot.start",
+          1
+        ],
+        [
+          "power.cpu_mode",
+          1
+        ],
+        [
+          "ftp.server_started",
+          1
+        ],
+        [
+          "bridge.ftp.ready",
+          1
+        ],
+        [
+          "bridge.ui.ready",
+          1
+        ]
+      ],
+      "warnings_errors": [
+        [
+          "instantlink.status_failed_disconnect",
+          1
+        ],
+        [
+          "ui.printer_status_unavailable",
+          1
+        ]
+      ],
+      "source": "instantlink-audit-boot-after-2.txt"
+    },
+    {
+      "bytes": 134748,
+      "event_lines": 95,
+      "range": [
+        "2026-10-11 22:42:29",
+        "2026-10-11 22:51:36"
+      ],
+      "top_events": [
+        [
+          "instantlink.connect_progress",
+          34
+        ],
+        [
+          "ui.printer_status",
+          31
+        ],
+        [
+          "ui.printer_status_unavailable",
+          6
+        ],
+        [
+          "instantlink.status_failed_disconnect",
+          5
+        ],
+        [
+          "power.cpu_mode",
+          2
+        ],
+        [
+          "ui.network_status",
+          2
+        ],
+        [
+          "bluetooth.agent_authorize",
+          2
+        ],
+        [
+          "bluetooth.agent_registered",
+          1
+        ]
+      ],
+      "warnings_errors": [
+        [
+          "ui.printer_status_unavailable",
+          6
+        ],
+        [
+          "instantlink.status_failed_disconnect",
+          5
+        ],
+        [
+          "instantlink.status_failed_keep_connection",
+          1
+        ],
+        [
+          "instantlink.proactive_bond_reset",
+          1
+        ],
+        [
+          "instantlink.disconnect_failed",
+          1
+        ]
+      ],
+      "source": "instantlink-audit-boot-baseline.jsonl"
+    },
+    {
+      "bytes": 41761,
+      "event_lines": 20,
+      "range": [
+        "2026-10-11 23:35:22",
+        "2026-10-11 23:35:30"
+      ],
+      "top_events": [
+        [
+          "ui.network_status",
+          2
+        ],
+        [
+          "instantlink.connect_progress",
+          2
+        ],
+        [
+          "manager.listening",
+          2
+        ],
+        [
+          "bridge.boot.start",
+          1
+        ],
+        [
+          "power.cpu_mode",
+          1
+        ],
+        [
+          "ftp.server_started",
+          1
+        ],
+        [
+          "bridge.ftp.ready",
+          1
+        ],
+        [
+          "bridge.ui.ready",
+          1
+        ]
+      ],
+      "warnings_errors": [
+        [
+          "instantlink.status_failed_disconnect",
+          1
+        ],
+        [
+          "ui.printer_status_unavailable",
+          1
+        ]
+      ],
+      "source": "instantlink-concurrency-boot.txt"
+    },
+    {
+      "bytes": 1251,
+      "event_lines": 6,
+      "range": [
+        "2026-10-11 23:35:22",
+        "2026-10-11 23:36:22"
+      ],
+      "top_events": [
+        [
+          "power.cpu_mode",
+          2
+        ],
+        [
+          "bridge.ftp.ready",
+          1
+        ],
+        [
+          "bridge.ui.ready",
+          1
+        ],
+        [
+          "bridge.ready",
+          1
+        ],
+        [
+          "bridge.bluetooth.ready",
+          1
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-concurrency-final-health.txt"
+    },
+    {
+      "bytes": 51417,
+      "event_lines": 28,
+      "range": [
+        "2026-10-11 23:35:26",
+        "2026-10-11 23:35:38"
+      ],
+      "top_events": [
+        [
+          "instantlink.connect_progress",
+          10
+        ],
+        [
+          "ui.network_status",
+          2
+        ],
+        [
+          "ui.printer_status",
+          2
+        ],
+        [
+          "manager.listening",
+          2
+        ],
+        [
+          "bridge.boot.start",
+          1
+        ],
+        [
+          "power.cpu_mode",
+          1
+        ],
+        [
+          "ftp.server_started",
+          1
+        ],
+        [
+          "bridge.ftp.ready",
+          1
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-concurrency-printer-boot.txt"
+    },
+    {
+      "bytes": 1937,
+      "event_lines": 2,
+      "range": [
+        "2026-10-12 10:28:43",
+        "2026-10-12 10:28:52"
+      ],
+      "top_events": [
+        [
+          "ui.network_status",
+          1
+        ],
+        [
+          "ui.printer_status",
+          1
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-installed-health-073.txt"
+    },
+    {
+      "bytes": 28712,
+      "event_lines": 5,
+      "range": [
+        "2026-10-12 08:22:31",
+        "2026-10-12 08:23:03"
+      ],
+      "top_events": [
+        [
+          "ftp.image_received",
+          1
+        ],
+        [
+          "bridge.image_dequeued",
+          1
+        ],
+        [
+          "image.prepared",
+          1
+        ],
+        [
+          "bridge.print_start",
+          1
+        ],
+        [
+          "bridge.print_complete",
+          1
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-live-print-analysis-072.json"
+    },
+    {
+      "bytes": 28007,
+      "event_lines": 5,
+      "range": [
+        "2026-10-12 09:25:52",
+        "2026-10-12 09:26:20"
+      ],
+      "top_events": [
+        [
+          "ftp.image_received",
+          1
+        ],
+        [
+          "bridge.image_dequeued",
+          1
+        ],
+        [
+          "image.prepared",
+          1
+        ],
+        [
+          "bridge.print_start",
+          1
+        ],
+        [
+          "bridge.print_complete",
+          1
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-live-print-analysis-073-baseline.json"
+    },
+    {
+      "bytes": 29065,
+      "event_lines": 5,
+      "range": [
+        "2026-10-12 09:28:44",
+        "2026-10-12 09:29:12"
+      ],
+      "top_events": [
+        [
+          "ftp.image_received",
+          1
+        ],
+        [
+          "bridge.image_dequeued",
+          1
+        ],
+        [
+          "image.prepared",
+          1
+        ],
+        [
+          "bridge.print_start",
+          1
+        ],
+        [
+          "bridge.print_complete",
+          1
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-live-print-analysis-073-candidate.json"
+    },
+    {
+      "bytes": 2458,
+      "event_lines": 14,
+      "range": [
+        "2026-10-12 14:41:31",
+        "2026-10-12 14:43:23"
+      ],
+      "top_events": [
+        [
+          "ui.printer_status",
+          10
+        ],
+        [
+          "power.cpu_mode",
+          4
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-pacing-final-status-074.json"
+    },
+    {
+      "bytes": 6040,
+      "event_lines": 31,
+      "range": [
+        "2026-10-12 14:43:03",
+        "2026-10-12 14:47:15"
+      ],
+      "top_events": [
+        [
+          "ui.printer_status",
+          25
+        ],
+        [
+          "power.cpu_mode",
+          1
+        ],
+        [
+          "instantlink.status_failed_keep_connection",
+          1
+        ],
+        [
+          "ui.printer_status_unavailable",
+          1
+        ],
+        [
+          "bluetooth.reset_bond",
+          1
+        ],
+        [
+          "instantlink.proactive_bond_reset",
+          1
+        ],
+        [
+          "instantlink.disconnect_failed",
+          1
+        ]
+      ],
+      "warnings_errors": [
+        [
+          "instantlink.status_failed_keep_connection",
+          1
+        ],
+        [
+          "ui.printer_status_unavailable",
+          1
+        ],
+        [
+          "instantlink.proactive_bond_reset",
+          1
+        ],
+        [
+          "instantlink.disconnect_failed",
+          1
+        ]
+      ],
+      "source": "instantlink-pacing-late-drop-074.json"
+    },
+    {
+      "bytes": 2892,
+      "event_lines": 18,
+      "range": [
+        "2026-10-12 15:32:16",
+        "2026-10-12 15:33:56"
+      ],
+      "top_events": [
+        [
+          "instantlink.connect_progress",
+          16
+        ],
+        [
+          "ui.printer_status",
+          2
+        ]
+      ],
+      "warnings_errors": [],
+      "source": "instantlink-pacing-power-on-events-074.json"
+    },
+    {
+      "bytes": 132145,
+      "event_lines": 42,
+      "range": [
+        "2026-10-11 23:05:51",
+        "2026-10-11 23:07:59"
+      ],
+      "top_events": [
+        [
+          "instantlink.connect_progress",
+          10
+        ],
+        [
+          "ui.network_status",
+          4
+        ],
+        [
+          "manager.listening",
+          4
+        ],
+        [
+          "instantlink.status_failed_disconnect",
+          4
+        ],
+        [
+          "ui.printer_status_unavailable",
+          4
+        ],
+        [
+          "power.cpu_mode",
+          2
+        ],
+        [
+          "bridge.boot.start",
+          1
+        ],
+        [
+          "ftp.server_started",
+          1
+        ]
+      ],
+      "warnings_errors": [
+        [
+          "instantlink.status_failed_disconnect",
+          4
+        ],
+        [
+          "ui.printer_status_unavailable",
+          4
+        ],
+        [
+          "manager.bind_pending",
+          1
+        ]
+      ],
+      "source": "instantlink-recovery-final-log.jsonl"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "duration_s": 36,
+  "native_btleplug_get_managed_objects": 15,
+  "native_prefilter_get_managed_objects": 14,
+  "native_get_all": 0,
+  "other_python_bulk_queries": 1,
+  "tracing_excluded_from_cpu_intervals": true,
+  "no_film": true,
+  "boundary": "Fresh offline discovery window; counts vary with cached peripherals/ambient events. Raw identities retained privately. One extra btleplug bulk query can be outside collection."
+}

@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "independent_review": true,
+  "deployment_blocker": false,
+  "installed_signal_to_fetch_ms": 261.5270829992369,
+  "installed_observed_recovery_s": 12.887793223999324,
+  "baseline_observed_recovery_s": 12.400807548001467,
+  "accepted_samples": "locked600MHz, camera-ready, same runtime PID within each test, film0",
+  "final_health": "final-normal-health.json:13:45UTC/PID25926/connected/source hashes match/no warnings/no observer or GPIOmock",
+  "earlier_health": "instantlink-events-installed-normal-health-081.json is earlier13:29UTC/PID25303/offline capture, retained as earlier state",
+  "caveats": [
+    "No universal total reconnect speedup",
+    "BlueZ installed loss signal delivered1.934s after disconnect request",
+    "Initial wake-confounded baseline excluded and retained",
+    "Radio visibility/setup remain variable"
+  ]
+}

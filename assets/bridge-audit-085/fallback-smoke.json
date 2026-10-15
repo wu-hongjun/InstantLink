@@ -1,0 +1,31 @@
+{
+  "scope": "Audit-only explicit cache invalidation and temporary second watch on actual connected Printer; immediately unsubscribed, no Printer commands from probe",
+  "passed": true,
+  "watch": {
+    "start": 84630.661684998,
+    "name": "INSTAX-52006924",
+    "audit_probe": true,
+    "task": 547547660720,
+    "reads_before": 1,
+    "owner": ":1.5576",
+    "generation": 1,
+    "callbacks": [],
+    "ok": true,
+    "paths": [
+      [
+        "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+      ],
+      [
+        "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64"
+      ]
+    ],
+    "end": 84630.671745518,
+    "reads_after": 2
+  },
+  "duration_ms": 10.060519998660311,
+  "snapshot_reads": 1,
+  "final_watch_count": 1,
+  "fresh": true,
+  "film": 0,
+  "camera_ready": true
+}

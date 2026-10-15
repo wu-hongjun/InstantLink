@@ -1,0 +1,123 @@
+{
+  "baseline_commit": "4c9e28b",
+  "installed_native_commit": "d8cee35",
+  "baseline_ffi_sha256": "fdd47eaddb35f630534b5f250c8810515c5c14ac0ad5a68fa46a83f46f185973",
+  "installed_ffi_sha256": "b67842fed5ce50b8b9389acdf7f55c5d2a7ad8859f30d5ec460307260dcbb06a",
+  "baseline_test_deadline_s": 100,
+  "baseline_test_passed": false,
+  "baseline_eventual_fresh_recovery_s": 104.24224136699922,
+  "baseline_postdeadline_same_pid": true,
+  "baseline_attempts": [
+    {
+      "start_after_disconnect_s": 6.526316768999095,
+      "duration_s": 0.006687239001621492,
+      "online": false
+    },
+    {
+      "start_after_disconnect_s": 9.233477132002008,
+      "duration_s": 0.01118322899856139,
+      "online": false
+    },
+    {
+      "start_after_disconnect_s": 39.23493545399833,
+      "duration_s": 5.318495988001814,
+      "online": false
+    },
+    {
+      "start_after_disconnect_s": 69.236926587997,
+      "duration_s": 5.559617655002512,
+      "online": false
+    },
+    {
+      "start_after_disconnect_s": 99.24045444199874,
+      "duration_s": 5.001786925000488,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 109.24246860400308,
+      "duration_s": 0.09841203199903248,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 119.24398021499655,
+      "duration_s": 0.10273546900134534,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 129.24655739899754,
+      "duration_s": 0.14896343700092984,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 139.24835354099923,
+      "duration_s": 0.09122453100280836,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 149.25078400599887,
+      "duration_s": 0.10877802100003464,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 159.25238217900187,
+      "duration_s": 0.0967794789976324,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 169.25328681099927,
+      "duration_s": 0.10058729100273922,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 179.25518576499599,
+      "duration_s": 0.08922151100705378,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 189.25773977200151,
+      "duration_s": 0.09109562500088941,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 199.25917575800122,
+      "duration_s": 0.0947315619996516,
+      "online": true
+    },
+    {
+      "start_after_disconnect_s": 209.26071752500138,
+      "duration_s": 0.09878822899918305,
+      "online": true
+    }
+  ],
+  "installed_observed_recovery_s": [
+    19.86704441999609,
+    11.610120880999602
+  ],
+  "installed_attempts": [
+    [
+      {
+        "start_after_disconnect_s": 9.848501663000206,
+        "duration_s": 5.21208645599836,
+        "online": false
+      },
+      {
+        "start_after_disconnect_s": 15.947739108996757,
+        "duration_s": 3.8341592689976096,
+        "online": true
+      }
+    ],
+    [
+      {
+        "start_after_disconnect_s": 9.389937183994334,
+        "duration_s": 2.171616614003142,
+        "online": true
+      }
+    ]
+  ],
+  "locked_600mhz_all_samples": true,
+  "film_used": 0,
+  "native_status_result": "Failed status getter remained1 on baseline; became0 on installed. First status won disconnect race on both; failed write2.793ms baseline/6.035ms installed, not a latency improvement or missingACKprobe measurement. Successful status~89ms each.",
+  "retained_setup_failures": "Initialbaseline direct connect -1; retry setup -1 then0; status tests then succeeded. No attribution to firmware defect.",
+  "boundary": "RealPi600MHz/locked, status-only Device1.Disconnect. Different status phases and uncontrolled radio visibility; do not infer universal speedup/energy savings. Candidate firstfreshconnect opportunities9.849s/9.390s vs baseline39.235s; target matched on a later attempt contributing to104s baseline. No image/print command, successful direct status reads showed history68.",
+  "time_definition": "Installed recovered_s includes state reply and a final BlueZ query; use observed by19.867/11.610s. Actual last_status_ok at19.780/11.561s. Baseline104.242s uses first successful attempt completion from postdeadline state."
+}

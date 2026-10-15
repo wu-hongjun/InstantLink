@@ -1,0 +1,50 @@
+{
+  "app_import_s": 1.377007654999943,
+  "samples": [
+    {
+      "case": "jpeg-square",
+      "seconds": 0.5163083329998699,
+      "sha256": "37090f4d30eadff4d4e855ecaf873a76f85bed2004b0626b071eef22ae1291fc",
+      "bytes": 28346,
+      "width": 800,
+      "height": 800,
+      "quality": 100,
+      "fit": "auto",
+      "transport_flip_applied": false
+    },
+    {
+      "case": "hif-square",
+      "seconds": 5.751905414000021,
+      "sha256": "0f49758ad3a144d9fd7801e4fafa196282dc06fcb61ee795373835c8fa763725",
+      "bytes": 98642,
+      "width": 800,
+      "height": 800,
+      "quality": 92,
+      "fit": "auto",
+      "transport_flip_applied": false
+    },
+    {
+      "case": "jpeg-mini3",
+      "seconds": 0.4353548439999031,
+      "sha256": "ef4298120a865a80ba5649843d277f13f2c9cc0af0e8b99206d36533e6b77c58",
+      "bytes": 25037,
+      "width": 600,
+      "height": 800,
+      "quality": 100,
+      "fit": "auto",
+      "transport_flip_applied": true
+    },
+    {
+      "case": "jpeg-wide",
+      "seconds": 0.6231980210000074,
+      "sha256": "2b2d79254c3057aed2a0c08a94f648e07d99688a4c1b6148800f288ef3baeaad",
+      "bytes": 37815,
+      "width": 1260,
+      "height": 840,
+      "quality": 100,
+      "fit": "auto",
+      "transport_flip_applied": false
+    }
+  ],
+  "scope": "Isolated actual Pi image worker, real retained HIF plus asymmetric EXIF-oriented JPEG fixture, no FTP/app consumer/native backend/Printer commands. Pixel/JPEG equality across source trees, not physical film validation or full upload latency."
+}

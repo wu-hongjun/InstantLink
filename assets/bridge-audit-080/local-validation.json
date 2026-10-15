@@ -1,0 +1,25 @@
+{
+  "host_workspace_tests": 291,
+  "host_doctests": 1,
+  "app_tests": 156,
+  "bridge_tests": 1689,
+  "arm_core_tests": 190,
+  "arm_ffi_tests": 39,
+  "strict_linux_production_clippy": "pass",
+  "linux_test_clippy_baseline_allowances": [
+    "new_ret_no_self",
+    "items_after_test_module",
+    "type_complexity",
+    "unnecessary_cast"
+  ],
+  "other_gates": [
+    "hostClippy",
+    "Ruff",
+    "strict mypy67files",
+    "touchedPythonformat",
+    "Rustfmt",
+    "headerdrift",
+    "strictdocs"
+  ],
+  "film_used": 0
+}

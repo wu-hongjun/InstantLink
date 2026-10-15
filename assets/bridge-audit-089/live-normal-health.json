@@ -1,0 +1,29 @@
+{
+  "timestamp_utc": "2026-10-14T11:40:50.904889+00:00",
+  "runtime_commit": "4145e771e4c2f46ff4d2fa06c654666b5a3878de",
+  "dirty": false,
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "temperature_c": 42.932,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "services": "MainPID=47710\nNRestarts=0\nActiveState=active\n\nMainPID=47345\nNRestarts=0\nActiveState=active",
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Wed 2026-10-14 07:39:25 EDT] ; stop_time=[n/a] ; pid=47710 ; code=(null) ; status=0/0 }",
+  "ftp_probe_path": "Pi hotspot address; no wireless airtime or upload measured",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "working_cache_directories": 0,
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false,
+  "input_backend_log": [
+    "2026-10-14 07:39:27,713 INFO instantlink_bridge.ui.input ui.input_edges_started backend=linux_gpio_v2 debounce_ms=50 lines=8"
+  ],
+  "input_failures": [],
+  "normal_app_warning_error_lines": [],
+  "network_fallback_log": [],
+  "printer_connected": true,
+  "film_used_in_this_task": 0,
+  "ffi_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+  "cli_sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e"
+}

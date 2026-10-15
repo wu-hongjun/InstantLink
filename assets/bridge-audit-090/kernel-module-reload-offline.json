@@ -1,0 +1,108 @@
+{
+  "require_connected_printer": false,
+  "film_used": 0,
+  "steps": [
+    {
+      "command": [
+        "nmcli",
+        "radio",
+        "wifi",
+        "off"
+      ],
+      "elapsed_s": 2.143043019983452,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "systemctl",
+        "restart",
+        "wpa_supplicant.service"
+      ],
+      "elapsed_s": 0.3866315619961824,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/sbin/modprobe",
+        "-r",
+        "brcmfmac_wcc",
+        "brcmfmac"
+      ],
+      "elapsed_s": 0.20142015599412844,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/sbin/modprobe",
+        "brcmfmac"
+      ],
+      "elapsed_s": 0.0468607289949432,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "nmcli",
+        "radio",
+        "wifi",
+        "on"
+      ],
+      "elapsed_s": 0.1573518750083167,
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/sbin/instantlink-bridge-wifi-mode",
+        "hotspot"
+      ],
+      "elapsed_s": 3.8883335400023498,
+      "returncode": 0,
+      "stdout": "Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/116)\nHotspot active: SSID=InstantLink-6B79 FTP=192.168.8.1",
+      "stderr": ""
+    }
+  ],
+  "started_monotonic": 134623.35396712,
+  "initial": {
+    "pid": 52250,
+    "locked": true,
+    "unlocking": false,
+    "fresh": false,
+    "film": null,
+    "cpu_khz": 600000,
+    "camera_ready": true,
+    "last_status_ok": null,
+    "disconnect_watch_count": 0,
+    "retired_status_tasks": 0
+  },
+  "initial_printer_connected": false,
+  "usb_before": "../../../../../bus/gadget/drivers/g_ether",
+  "taint_before": "1536",
+  "final": {
+    "pid": 52250,
+    "locked": true,
+    "unlocking": false,
+    "fresh": false,
+    "film": null,
+    "cpu_khz": 600000,
+    "camera_ready": true,
+    "last_status_ok": null,
+    "disconnect_watch_count": 0,
+    "retired_status_tasks": 0
+  },
+  "final_printer_connected": false,
+  "usb_after": "../../../../../bus/gadget/drivers/g_ether",
+  "taint_after": "5632",
+  "loaded_srcversion": "2254D80EF43499080344466",
+  "passed": true,
+  "elapsed_s": 6.955615882994607,
+  "boundary": "Driver reload with Printer offline; cannot establish connected retention. Bridge PID/lock600/camera readiness/USB binding retained. Stock rollback/selection tested before load. Default supplicant restarted to remove temporary P2P diagnostic."
+}

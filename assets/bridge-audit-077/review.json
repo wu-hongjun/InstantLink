@@ -1,0 +1,19 @@
+{
+  "verdict": "passed; no blocking candidate findings",
+  "independent_focused_tests": 68,
+  "independent_checks": [
+    "asyncio descriptor lifecycle",
+    "ABI and controller discovery",
+    "debounce and physical button identity",
+    "bounded draining and overflow recovery",
+    "initialization cleanup and factory ownership",
+    "stale callback suppression"
+  ],
+  "source_sha256": {
+    "input.py": "8414a97a36b6625ed44dca6b2bfd091c58deb0115ba7ed368f35770f8ed5e16c",
+    "gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97"
+  },
+  "resolved_hardware_finding": "Legacy GPIO Zero close/reopen retained a native callback. Detach the public pin callback before closing each owned button. Baseline paired lifecycle rerun applied equivalent callback cleanup; its steady idle CPU was unaffected. Original failing run retained privately.",
+  "inherited_limitation": "The legacy public callback setter does not wait for an already executing callback. Persistent registration/reopening is fixed; all concurrent legacy edge/shutdown interleavings are not proven. Default GPIOv2 avoids this callback thread.",
+  "boundary": "Kernel mockup drives simulated lines only. Physical switch contacts not actuated."
+}

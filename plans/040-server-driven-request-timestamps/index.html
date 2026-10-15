@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3106,7 +3136,7 @@ Mac just ask for it.</p>
 <li>
 <p>Bridge exposes a new unsigned discovery route:
    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>GET /v1/time
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>200 { &quot;epoch&quot;: &lt;int seconds&gt; }
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>200 { "epoch": &lt;int seconds&gt; }
 </code></pre></div>
    No auth, no body, no nonce — equivalent in trust posture to
    <code>/v1/hello</code>. Costs nothing to leak (it's literally <code>time.time()</code>).</p>

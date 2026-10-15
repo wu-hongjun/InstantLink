@@ -1,0 +1,41 @@
+         52085 function calls (51779 primitive calls) in 2.361 seconds
+
+   Ordered by: cumulative time
+   List reduced from 394 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       75    0.012    0.000    2.361    0.031 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:147(render_snapshot)
+      615    0.016    0.000    1.246    0.002 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageDraw.py:545(text)
+      615    0.046    0.000    1.209    0.002 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageDraw.py:600(draw_text)
+      615    0.009    0.000    1.104    0.002 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageFont.py:549(getmask2)
+      615    1.061    0.002    1.090    0.002 {method 'render' of 'Font' objects}
+       60    0.018    0.000    0.962    0.016 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:930(draw_hint_bar)
+     1305    0.015    0.000    0.801    0.001 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageDraw.py:880(textbbox)
+     1305    0.015    0.000    0.780    0.001 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageFont.py:392(getbbox)
+     1305    0.759    0.001    0.759    0.001 {method 'getsize' of 'Font' objects}
+      255    0.006    0.000    0.704    0.003 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:3153(_text)
+      855    0.012    0.000    0.571    0.001 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:3232(_text_width)
+       90    0.002    0.000    0.510    0.006 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:3103(_center_lines)
+       15    0.003    0.000    0.466    0.031 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1793(_settings)
+       15    0.000    0.000    0.460    0.031 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1227(_ready)
+       15    0.001    0.000    0.460    0.031 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1449(_no_film)
+       15    0.001    0.000    0.459    0.031 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1392(_validation)
+       75    0.002    0.000    0.347    0.005 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:634(draw_status_bar)
+       15    0.001    0.000    0.251    0.017 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1197(_unlocking)
+      390    0.002    0.000    0.248    0.001 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:3307(_fit_text_to_width)
+       60    0.003    0.000    0.234    0.004 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:682(_draw_status_bar_pill)
+       15    0.001    0.000    0.232    0.015 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1704(_printing)
+       30    0.002    0.000    0.190    0.006 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:1047(draw_settings_row)
+       60    0.003    0.000    0.176    0.003 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:259(draw_pill)
+       15    0.002    0.000    0.105    0.007 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:719(_draw_status_bar_settings)
+       11    0.001    0.000    0.079    0.007 /opt/InstantLinkBridge/src/instantlink_bridge/ui/render.py:3206(_font)
+       26    0.002    0.000    0.078    0.003 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageFont.py:803(truetype)
+       26    0.000    0.000    0.058    0.002 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageFont.py:876(freetype)
+       26    0.002    0.000    0.058    0.002 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageFont.py:217(__init__)
+      180    0.011    0.000    0.053    0.000 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/ImageDraw.py:400(rounded_rectangle)
+      615    0.050    0.000    0.050    0.000 {method 'draw_bitmap' of 'ImagingDraw' objects}
+      2/1    0.000    0.000    0.044    0.044 <frozen importlib._bootstrap>:1349(_find_and_load)
+      2/1    0.000    0.000    0.044    0.044 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+        2    0.000    0.000    0.041    0.020 <frozen importlib._bootstrap>:911(_load_unlocked)
+       75    0.005    0.000    0.041    0.001 /opt/InstantLinkBridge/.venv/lib/python3.13/site-packages/PIL/Image.py:3068(new)
+        2    0.000    0.000    0.040    0.020 <frozen importlib._bootstrap_external>:1020(exec_module)

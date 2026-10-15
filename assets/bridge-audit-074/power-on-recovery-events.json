@@ -1,0 +1,20 @@
+[
+  "2026-10-12 15:32:16,478 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=scan_started detail=",
+  "2026-10-12 15:32:21,509 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=failed detail=no Instax printer found",
+  "2026-10-12 15:32:46,479 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=scan_started detail=",
+  "2026-10-12 15:32:51,543 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=failed detail=no Instax printer found",
+  "2026-10-12 15:33:16,481 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=scan_started detail=",
+  "2026-10-12 15:33:21,557 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=failed detail=no Instax printer found",
+  "2026-10-12 15:33:46,483 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=scan_started detail=",
+  "2026-10-12 15:33:47,030 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=scan_finished detail=",
+  "2026-10-12 15:33:47,030 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=device_matched detail=INSTAX-52006924 (IOS)",
+  "2026-10-12 15:33:47,316 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=ble_connecting detail=",
+  "2026-10-12 15:33:48,799 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=service_discovery detail=",
+  "2026-10-12 15:33:48,944 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=characteristic_lookup detail=",
+  "2026-10-12 15:33:49,135 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=notification_subscribe detail=",
+  "2026-10-12 15:33:49,705 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=model_detecting detail=",
+  "2026-10-12 15:33:49,817 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=status_fetching detail=",
+  "2026-10-12 15:33:50,237 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=connected detail=INSTAX-52006924 (IOS)",
+  "2026-10-12 15:33:50,764 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 15:33:56,582 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+]

@@ -1,0 +1,40 @@
+{
+  "label": "installed",
+  "library_sha256": "b67842fed5ce50b8b9389acdf7f55c5d2a7ad8859f30d5ec460307260dcbb06a",
+  "initial": {
+    "rc": 0,
+    "elapsed_s": 0.4458055209979648,
+    "cpu_s": 0.004985782000000105,
+    "battery": 20,
+    "film": 0,
+    "charging": 0,
+    "print_count": 68,
+    "is_connected": 1
+  },
+  "rows": [
+    {
+      "trial": 1,
+      "rc": 0,
+      "elapsed_s": 0.08897088599769631,
+      "cpu_s": 0.008278124999999914,
+      "battery": 20,
+      "film": 0,
+      "charging": 0,
+      "print_count": 68,
+      "is_connected": 1
+    },
+    {
+      "trial": 2,
+      "rc": -3,
+      "elapsed_s": 0.006035103993781377,
+      "cpu_s": 0.0022557809999999012,
+      "battery": 0,
+      "film": 0,
+      "charging": 0,
+      "print_count": 0,
+      "is_connected": 0
+    }
+  ],
+  "no_film": true,
+  "boundary": "Standalone FFI, own pairing agent on same system bus, background keepalive disabled only in test process; Device1 disconnect50ms after status starts, then another status. No image/print commands. First status can win the race; retain its result. Not full Bridge reconnect timing."
+}

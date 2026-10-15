@@ -1,0 +1,7 @@
+{
+  "core_source_commit": "f574445968e963ae35231d64d5f784ac1f5a5b28",
+  "source_worktree_dirty_at_build": false,
+  "probe_sha256": "20c2dde965d3f9d24e8338bb7001bd8c9d2448be204a8bc51cdce4a54a592b05",
+  "target": "aarch64-unknown-linux-gnu",
+  "boundary": "Same-source shared-core download-and-cancel probe after deployment; installed FFI separately verified with status/disconnect/reconnect. No FFI print call or physical film used."
+}

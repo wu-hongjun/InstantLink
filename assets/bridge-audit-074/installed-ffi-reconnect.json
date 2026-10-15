@@ -1,0 +1,20 @@
+[
+  {
+    "cycle": 1,
+    "film": 1,
+    "history": 67,
+    "model": "square",
+    "disconnect_rc": 0,
+    "disconnect_duration_s": 2.7687225509980635,
+    "connected_after_disconnect": false
+  },
+  {
+    "cycle": 2,
+    "film": 1,
+    "history": 67,
+    "model": "square",
+    "disconnect_rc": 0,
+    "disconnect_duration_s": 2.205616718001693,
+    "connected_after_disconnect": false
+  }
+]

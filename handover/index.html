@@ -552,6 +552,8 @@
       
         
       
+        
+      
     
     
     
@@ -694,6 +696,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3003,9 +3033,9 @@ the new editor is the only editor. See plan 048 §PR Status for per-PR commit ha
 SSH user <code>hongjunwu</code>. Use <code>-B en10</code> (or <code>BindInterface=en10</code> for <code>scp</code>) — the <code>/22</code> netmask on
 <code>en0</code> collides with <code>192.168.7.x</code> otherwise. Diagnostic recipes:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Inspect the LCD backlight path on the Pi:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ssh<span class="w"> </span>hongjunwu@192.168.7.1<span class="w"> </span><span class="s1">&#39;ls -la /sys/class/backlight/fb_st7789v/&#39;</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>ssh<span class="w"> </span>hongjunwu@192.168.7.1<span class="w"> </span><span class="s1">&#39;cat /sys/kernel/debug/gpio | grep GPIO24&#39;</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>ssh<span class="w"> </span>hongjunwu@192.168.7.1<span class="w"> </span><span class="s1">&#39;sudo cat /etc/InstantLinkBridge/config.toml | grep ^idle_&#39;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ssh<span class="w"> </span>hongjunwu@192.168.7.1<span class="w"> </span><span class="s1">'ls -la /sys/class/backlight/fb_st7789v/'</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>ssh<span class="w"> </span>hongjunwu@192.168.7.1<span class="w"> </span><span class="s1">'cat /sys/kernel/debug/gpio | grep GPIO24'</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>ssh<span class="w"> </span>hongjunwu@192.168.7.1<span class="w"> </span><span class="s1">'sudo cat /etc/InstantLinkBridge/config.toml | grep ^idle_'</span>
 </code></pre></div></p>
 <h3 id="deploy-bridge-code-to-the-pi-when-changing-bridge-code-not-config">Deploy bridge code to the Pi (when changing bridge code, not config)<a class="headerlink" href="#deploy-bridge-code-to-the-pi-when-changing-bridge-code-not-config" title="Permanent link">&para;</a></h3>
 <p>The deploy script needs <code>INSTANTLINK_BRIDGE_HOST</code> / <code>_USER</code> env vars:
@@ -3027,10 +3057,10 @@ No local venv is set up automatically — use whatever Python ≥3.11 you have, 
   truth for what landed in each PR of the editor rebuild).</p>
 <p>If you discover further staleness, fix it in the same PR — don't leave it for next time. The
 audit pattern for this is:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>grep<span class="w"> </span>-rn<span class="w"> </span>--include<span class="o">=</span><span class="s1">&#39;*.md&#39;</span><span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>grep<span class="w"> </span>-rn<span class="w"> </span>--include<span class="o">=</span><span class="s1">'*.md'</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--exclude-dir<span class="o">=</span>.claude<span class="w"> </span>--exclude-dir<span class="o">=</span>references<span class="w"> </span>--exclude-dir<span class="o">=</span>tmp<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--exclude-dir<span class="o">=</span>.pytest_cache<span class="w"> </span>--exclude-dir<span class="o">=</span>plans<span class="w"> </span>--exclude-dir<span class="o">=</span>node_modules<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>-E<span class="w"> </span><span class="s2">&quot;&lt;keyword&gt;&quot;</span><span class="w"> </span>.
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>-E<span class="w"> </span><span class="s2">"&lt;keyword&gt;"</span><span class="w"> </span>.
 </code></pre></div>
 Keywords worth sweeping any time you change a UX string, a config default, or a public symbol.</p>
 <hr />

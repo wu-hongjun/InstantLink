@@ -1,0 +1,42 @@
+{
+  "reviewer": "wifi_adversarial_review",
+  "verdict": "clear_source",
+  "hardware_verified_by_this_reviewer": false,
+  "blocking_findings_remaining": [],
+  "frozen_sha256": {
+    "tool": "7a1c34ed5a0cacc5c795f2ed6e513731c690eddb03d191fc74fbf476d24966cc",
+    "tests": "ac11a9863b61bcd79c251ef961cb6258b0f1a89aefce3c76169ec98395962758",
+    "patch": "36a55fd0afb9aab74e787843d8e2f5ad16d2f6d38fc16fede0aa50cc451c6970"
+  },
+  "kernel": "6.12.47+rpt-rpi-v8",
+  "source_commit": "359f37f0faefb712add32a39f98751aea67d5c1f",
+  "upstream_commit": "aba23b0a6a0df84b06ed0323ce127bf7257e4025",
+  "expected_patched_srcversion": "2254D80EF43499080344466",
+  "validation": {
+    "targeted_tests": 31,
+    "pytest": "passed",
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "independent_actual_filesystem_transactions": [
+      "first depmod failure restores stock selection and removes pending artifact",
+      "wrong depmod selection restores stock selection and removes pending artifact",
+      "successful install then explicit rollback preserves stock and backup",
+      "wrong patch srcversion artifact rejected"
+    ],
+    "transaction_boundary": "Root/platform/kernel ABI and command boundaries were mocked; staging, copy, hash, rename, unlink, manifest publication, backup preservation and cleanup used real temporary files."
+  },
+  "resolved_findings": [
+    "Pin patched candidate srcversion in attestation and installation; ABI alone cannot establish the intended patch.",
+    "Snapshot mutable archive into private SD-backed storage before digest verification and parsing.",
+    "Verify stock depmod selection after automatic rollback, including failed partial installation.",
+    "Permit verified rollback without requiring build headers.",
+    "Validate boot includes/default kernel/initramfs; reject unchecked custom initramfs, kernel, os_prefix and ramfsfile layouts.",
+    "Reject dangling as well as live stock backup symlinks before copy.",
+    "Reject runtime signature enforcement or active kernel lockdown, not only CONFIG_MODULE_SIG_FORCE.",
+    "Live reload fallback unloads a loaded candidate before loading and verifying stock.",
+    "Live reload TERM/HUP handlers route cancellation through owned fallback/finally restoration.",
+    "Live reload connected-mode acceptance requires fresh Printer status, camera readiness, unchanged Bridge PID, lock and 600 MHz, correct watch ownership and no retired status task."
+  ],
+  "installation_boundary": "Tool stages/install/rollback and verifies selected plus loaded module; it never reloads Wi-Fi, touches Bluetooth, edits initramfs/firmware or overwrites the packaged stock module. Root owns separate USB-managed live reload/trace/FTP/reconnect/reboot acceptance.",
+  "evidence_boundary": "Exact upstream diff independently checked against primary source; stock scalar trace and root ABI evidence reviewed. Live hardware acceptance is pending/owned by root and is not claimed here."
+}

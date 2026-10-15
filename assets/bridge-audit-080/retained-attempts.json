@@ -1,0 +1,31 @@
+{
+  "attempts": [
+    {
+      "test": "Baseline live reconnect",
+      "outcome": "Printer not initially ready within100s; nodisconnectissued",
+      "evidence": "instantlink-stale-reconnect-baseline-080.json"
+    },
+    {
+      "test": "Temporary observer startup",
+      "outcome": "Outdatedmethod name AttributeError; eight automatic service restarts before corrected; production unaffected"
+    },
+    {
+      "test": "First candidate UI invocation",
+      "outcome": "Socket absent during service restart; rerun after startup passed11cases"
+    },
+    {
+      "test": "First normal health capture",
+      "outcome": "Expected1000MHz awake at44s;60s idle threshold had not elapsed. Later600MHz health passed"
+    },
+    {
+      "test": "First live baseline direct setup",
+      "outcome": "Single five-second connect returned -1; subsequent retry setup returned -1 then0. Both failed scans retained; cause unproven."
+    },
+    {
+      "test": "Live baseline forceddisconnect",
+      "outcome": "Missed100s deadline, recovered in samePID at104.242s; postdeadline state retained."
+    }
+  ],
+  "live_printer_benchmark": "Completed in subsequent power-on; installed two passes and baseline postdeadline eventual recovery. See live-comparison.json.",
+  "film_used": 0
+}

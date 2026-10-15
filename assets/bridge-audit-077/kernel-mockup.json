@@ -1,0 +1,1008 @@
+{
+  "cleanup": "owned mockup module unloaded in finally",
+  "passed": true,
+  "results": [
+    {
+      "backend": "legacy",
+      "cases": [
+        {
+          "actual": [],
+          "case": "idle_no_actions",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:6"
+          ],
+          "case": "button_6",
+          "expected": [
+            "gpio:6"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:19"
+          ],
+          "case": "button_19",
+          "expected": [
+            "gpio:19"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:5"
+          ],
+          "case": "button_5",
+          "expected": [
+            "gpio:5"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:26"
+          ],
+          "case": "button_26",
+          "expected": [
+            "gpio:26"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:13"
+          ],
+          "case": "button_13",
+          "expected": [
+            "gpio:13"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "button_21",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:20"
+          ],
+          "case": "button_20",
+          "expected": [
+            "gpio:20"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:16"
+          ],
+          "case": "button_16",
+          "expected": [
+            "gpio:16"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "short_bounce_ignored",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "sub_debounce_press_ignored",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "short_stable_press_accepted",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "held_press_once",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21",
+            "gpio:21"
+          ],
+          "case": "double_press",
+          "expected": [
+            "gpio:21",
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21",
+            "gpio:21",
+            "gpio:21"
+          ],
+          "case": "triple_same_button",
+          "expected": [
+            "gpio:21",
+            "gpio:21",
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21",
+            "gpio:13",
+            "gpio:21"
+          ],
+          "case": "distinct_select_identities",
+          "expected": [
+            "gpio:21",
+            "gpio:13",
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:6",
+            "gpio:19",
+            "gpio:5",
+            "gpio:26",
+            "gpio:13",
+            "gpio:21",
+            "gpio:20",
+            "gpio:16"
+          ],
+          "case": "eight_button_burst",
+          "expected": [
+            "gpio:6",
+            "gpio:19",
+            "gpio:5",
+            "gpio:26",
+            "gpio:13",
+            "gpio:21",
+            "gpio:20",
+            "gpio:16"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "closed_no_callbacks",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "restart_initial_no_synthetic_press",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "restart_release_and_press",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:20"
+          ],
+          "case": "restart_button",
+          "expected": [
+            "gpio:20"
+          ],
+          "passed": true
+        }
+      ],
+      "debounce_us": 50000,
+      "events": [
+        {
+          "action": "up",
+          "button_id": "gpio:6",
+          "kernel_stable_ns": 4730131746577,
+          "queue_monotonic_ns": 4730133241785,
+          "stable_to_queue_ms": 1.495208,
+          "stimulus_ns": 4730081171629,
+          "stimulus_to_queue_ms": 52.070156
+        },
+        {
+          "action": "down",
+          "button_id": "gpio:19",
+          "kernel_stable_ns": 4730524989441,
+          "queue_monotonic_ns": 4730526153868,
+          "stable_to_queue_ms": 1.164427,
+          "stimulus_ns": 4730474466785,
+          "stimulus_to_queue_ms": 51.687083
+        },
+        {
+          "action": "left",
+          "button_id": "gpio:5",
+          "kernel_stable_ns": 4730917816941,
+          "queue_monotonic_ns": 4730919154806,
+          "stable_to_queue_ms": 1.337865,
+          "stimulus_ns": 4730867287670,
+          "stimulus_to_queue_ms": 51.867136
+        },
+        {
+          "action": "right",
+          "button_id": "gpio:26",
+          "kernel_stable_ns": 4731310925483,
+          "queue_monotonic_ns": 4731312176941,
+          "stable_to_queue_ms": 1.251458,
+          "stimulus_ns": 4731260403503,
+          "stimulus_to_queue_ms": 51.773438
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:13",
+          "kernel_stable_ns": 4731703842253,
+          "queue_monotonic_ns": 4731705058034,
+          "stable_to_queue_ms": 1.215781,
+          "stimulus_ns": 4731653332409,
+          "stimulus_to_queue_ms": 51.725625
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4732096649441,
+          "queue_monotonic_ns": 4732097774441,
+          "stable_to_queue_ms": 1.125,
+          "stimulus_ns": 4732046117566,
+          "stimulus_to_queue_ms": 51.656875
+        },
+        {
+          "action": "back",
+          "button_id": "gpio:20",
+          "kernel_stable_ns": 4732489399336,
+          "queue_monotonic_ns": 4732490541367,
+          "stable_to_queue_ms": 1.142031,
+          "stimulus_ns": 4732438878711,
+          "stimulus_to_queue_ms": 51.662656
+        },
+        {
+          "action": "help",
+          "button_id": "gpio:16",
+          "kernel_stable_ns": 4732882244076,
+          "queue_monotonic_ns": 4732883444076,
+          "stable_to_queue_ms": 1.2,
+          "stimulus_ns": 4732831678607,
+          "stimulus_to_queue_ms": 51.765469
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4733875880221,
+          "queue_monotonic_ns": 4733877317252,
+          "stable_to_queue_ms": 1.437031,
+          "stimulus_ns": 4733825356211,
+          "stimulus_to_queue_ms": 51.961041
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4734254120429,
+          "queue_monotonic_ns": 4734255525325,
+          "stable_to_queue_ms": 1.404896,
+          "stimulus_ns": 4734203558919,
+          "stimulus_to_queue_ms": 51.966406
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4734958576679,
+          "queue_monotonic_ns": 4734959759856,
+          "stable_to_queue_ms": 1.183177,
+          "stimulus_ns": 4734908057669,
+          "stimulus_to_queue_ms": 51.702187
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4735140691002,
+          "queue_monotonic_ns": 4735141937356,
+          "stable_to_queue_ms": 1.246354,
+          "stimulus_ns": 4735090207773,
+          "stimulus_to_queue_ms": 51.729583
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4735533605221,
+          "queue_monotonic_ns": 4735534774700,
+          "stable_to_queue_ms": 1.169479,
+          "stimulus_ns": 4735483086523,
+          "stimulus_to_queue_ms": 51.688177
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4735716088293,
+          "queue_monotonic_ns": 4735717349491,
+          "stable_to_queue_ms": 1.261198,
+          "stimulus_ns": 4735665518293,
+          "stimulus_to_queue_ms": 51.831198
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4735898236783,
+          "queue_monotonic_ns": 4735899425793,
+          "stable_to_queue_ms": 1.18901,
+          "stimulus_ns": 4735847708397,
+          "stimulus_to_queue_ms": 51.717396
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4736291293710,
+          "queue_monotonic_ns": 4736292666991,
+          "stable_to_queue_ms": 1.373281,
+          "stimulus_ns": 4736240765272,
+          "stimulus_to_queue_ms": 51.901719
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:13",
+          "kernel_stable_ns": 4736473573606,
+          "queue_monotonic_ns": 4736475814283,
+          "stable_to_queue_ms": 2.240677,
+          "stimulus_ns": 4736423080897,
+          "stimulus_to_queue_ms": 52.733386
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4736655887928,
+          "queue_monotonic_ns": 4736657080428,
+          "stable_to_queue_ms": 1.1925,
+          "stimulus_ns": 4736605380741,
+          "stimulus_to_queue_ms": 51.699687
+        },
+        {
+          "action": "up",
+          "button_id": "gpio:6",
+          "kernel_stable_ns": 4737048706835,
+          "queue_monotonic_ns": 4737050008710,
+          "stable_to_queue_ms": 1.301875,
+          "stimulus_ns": 4736998189907,
+          "stimulus_to_queue_ms": 51.818803
+        },
+        {
+          "action": "down",
+          "button_id": "gpio:19",
+          "kernel_stable_ns": 4737049107095,
+          "queue_monotonic_ns": 4737050794126,
+          "stable_to_queue_ms": 1.687031,
+          "stimulus_ns": 4736998788241,
+          "stimulus_to_queue_ms": 52.005885
+        },
+        {
+          "action": "left",
+          "button_id": "gpio:5",
+          "kernel_stable_ns": 4737049427460,
+          "queue_monotonic_ns": 4737050870220,
+          "stable_to_queue_ms": 1.44276,
+          "stimulus_ns": 4736999162564,
+          "stimulus_to_queue_ms": 51.707656
+        },
+        {
+          "action": "right",
+          "button_id": "gpio:26",
+          "kernel_stable_ns": 4737049739543,
+          "queue_monotonic_ns": 4737051609907,
+          "stable_to_queue_ms": 1.870364,
+          "stimulus_ns": 4736999478814,
+          "stimulus_to_queue_ms": 52.131093
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:13",
+          "kernel_stable_ns": 4737050121262,
+          "queue_monotonic_ns": 4737051678345,
+          "stable_to_queue_ms": 1.557083,
+          "stimulus_ns": 4736999793032,
+          "stimulus_to_queue_ms": 51.885313
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4737050500064,
+          "queue_monotonic_ns": 4737052344491,
+          "stable_to_queue_ms": 1.844427,
+          "stimulus_ns": 4737000213553,
+          "stimulus_to_queue_ms": 52.130938
+        },
+        {
+          "action": "back",
+          "button_id": "gpio:20",
+          "kernel_stable_ns": 4737050814282,
+          "queue_monotonic_ns": 4737053026314,
+          "stable_to_queue_ms": 2.212032,
+          "stimulus_ns": 4737000555272,
+          "stimulus_to_queue_ms": 52.471042
+        },
+        {
+          "action": "help",
+          "button_id": "gpio:16",
+          "kernel_stable_ns": 4737051129960,
+          "queue_monotonic_ns": 4737053091574,
+          "stable_to_queue_ms": 1.961614,
+          "stimulus_ns": 4737000870532,
+          "stimulus_to_queue_ms": 52.221042
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4738875227823,
+          "queue_monotonic_ns": 4738876455011,
+          "stable_to_queue_ms": 1.227188,
+          "stimulus_ns": 4738824771209,
+          "stimulus_to_queue_ms": 51.683802
+        },
+        {
+          "action": "back",
+          "button_id": "gpio:20",
+          "kernel_stable_ns": 4739268795532,
+          "queue_monotonic_ns": 4739270043396,
+          "stable_to_queue_ms": 1.247864,
+          "stimulus_ns": 4739218278240,
+          "stimulus_to_queue_ms": 51.765156
+        }
+      ],
+      "idle": {
+        "cpu_percent_one_core": 5.3497561989976665,
+        "cpu_s": 0.8032890000000001,
+        "duration_s": 15.015431921000527,
+        "involuntary_switches": 3,
+        "voluntary_switches": 28072
+      },
+      "kernel_stable_to_queue": {
+        "count": 28,
+        "max_ms": 2.240677,
+        "median_ms": 1.301875,
+        "min_ms": 1.125,
+        "p95_ms": 2.212032
+      },
+      "legacy_cleanup": "Explicit pin.when_changed=None beforeButton.close prevents upstream stalecallback threadcrash; steady-state sampling untouched.",
+      "limits": "Synthetic kernel GPIO interrupts; electrical contacts, actual LCD and production action loop not exercised.",
+      "mock_chip": "gpiochip1",
+      "mock_label": "gpio-mockup-A",
+      "passed": true,
+      "startup_held_limit": "gpio-mockup implements external stimulus through bias; requesting PULL_UP can reset prior low. Held across request not validated; initial no action and subsequent press validated.",
+      "stimulus_to_queue": {
+        "count": 28,
+        "max_ms": 52.733386,
+        "median_ms": 51.818803,
+        "min_ms": 51.656875,
+        "p95_ms": 52.471042
+      }
+    },
+    {
+      "backend": "candidate",
+      "cases": [
+        {
+          "actual": [],
+          "case": "idle_no_actions",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:6"
+          ],
+          "case": "button_6",
+          "expected": [
+            "gpio:6"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:19"
+          ],
+          "case": "button_19",
+          "expected": [
+            "gpio:19"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:5"
+          ],
+          "case": "button_5",
+          "expected": [
+            "gpio:5"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:26"
+          ],
+          "case": "button_26",
+          "expected": [
+            "gpio:26"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:13"
+          ],
+          "case": "button_13",
+          "expected": [
+            "gpio:13"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "button_21",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:20"
+          ],
+          "case": "button_20",
+          "expected": [
+            "gpio:20"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:16"
+          ],
+          "case": "button_16",
+          "expected": [
+            "gpio:16"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "short_bounce_ignored",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "sub_debounce_press_ignored",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "short_stable_press_accepted",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "held_press_once",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21",
+            "gpio:21"
+          ],
+          "case": "double_press",
+          "expected": [
+            "gpio:21",
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21",
+            "gpio:21",
+            "gpio:21"
+          ],
+          "case": "triple_same_button",
+          "expected": [
+            "gpio:21",
+            "gpio:21",
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21",
+            "gpio:13",
+            "gpio:21"
+          ],
+          "case": "distinct_select_identities",
+          "expected": [
+            "gpio:21",
+            "gpio:13",
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:16",
+            "gpio:20",
+            "gpio:21",
+            "gpio:13",
+            "gpio:26",
+            "gpio:5",
+            "gpio:19",
+            "gpio:6"
+          ],
+          "case": "eight_button_burst",
+          "expected": [
+            "gpio:6",
+            "gpio:19",
+            "gpio:5",
+            "gpio:26",
+            "gpio:13",
+            "gpio:21",
+            "gpio:20",
+            "gpio:16"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "closed_no_callbacks",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [],
+          "case": "restart_initial_no_synthetic_press",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:21"
+          ],
+          "case": "restart_release_and_press",
+          "expected": [
+            "gpio:21"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "gpio:20"
+          ],
+          "case": "restart_button",
+          "expected": [
+            "gpio:20"
+          ],
+          "passed": true
+        }
+      ],
+      "debounce_us": 50000,
+      "events": [
+        {
+          "action": "up",
+          "button_id": "gpio:6",
+          "kernel_stable_ns": 4756616044744,
+          "queue_monotonic_ns": 4756616358806,
+          "stable_to_queue_ms": 0.314062,
+          "stimulus_ns": 4756560697452,
+          "stimulus_to_queue_ms": 55.661354
+        },
+        {
+          "action": "down",
+          "button_id": "gpio:19",
+          "kernel_stable_ns": 4757008040316,
+          "queue_monotonic_ns": 4757008351514,
+          "stable_to_queue_ms": 0.311198,
+          "stimulus_ns": 4756954085994,
+          "stimulus_to_queue_ms": 54.26552
+        },
+        {
+          "action": "left",
+          "button_id": "gpio:5",
+          "kernel_stable_ns": 4757404071150,
+          "queue_monotonic_ns": 4757404306462,
+          "stable_to_queue_ms": 0.235312,
+          "stimulus_ns": 4757348054587,
+          "stimulus_to_queue_ms": 56.251875
+        },
+        {
+          "action": "right",
+          "button_id": "gpio:26",
+          "kernel_stable_ns": 4757796058025,
+          "queue_monotonic_ns": 4757796267764,
+          "stable_to_queue_ms": 0.209739,
+          "stimulus_ns": 4757741061150,
+          "stimulus_to_queue_ms": 55.206614
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:13",
+          "kernel_stable_ns": 4758192054379,
+          "queue_monotonic_ns": 4758192257868,
+          "stable_to_queue_ms": 0.203489,
+          "stimulus_ns": 4758135978181,
+          "stimulus_to_queue_ms": 56.279687
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4758584037347,
+          "queue_monotonic_ns": 4758584302295,
+          "stable_to_queue_ms": 0.264948,
+          "stimulus_ns": 4758529122920,
+          "stimulus_to_queue_ms": 55.179375
+        },
+        {
+          "action": "back",
+          "button_id": "gpio:20",
+          "kernel_stable_ns": 4758980052712,
+          "queue_monotonic_ns": 4758980253232,
+          "stable_to_queue_ms": 0.20052,
+          "stimulus_ns": 4758924040264,
+          "stimulus_to_queue_ms": 56.212968
+        },
+        {
+          "action": "help",
+          "button_id": "gpio:16",
+          "kernel_stable_ns": 4759372030159,
+          "queue_monotonic_ns": 4759372238857,
+          "stable_to_queue_ms": 0.208698,
+          "stimulus_ns": 4759317003180,
+          "stimulus_to_queue_ms": 55.235677
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4760368029169,
+          "queue_monotonic_ns": 4760368233857,
+          "stable_to_queue_ms": 0.204688,
+          "stimulus_ns": 4760311850367,
+          "stimulus_to_queue_ms": 56.38349
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4760744058700,
+          "queue_monotonic_ns": 4760744271773,
+          "stable_to_queue_ms": 0.213073,
+          "stimulus_ns": 4760690104586,
+          "stimulus_to_queue_ms": 54.167187
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4761452029690,
+          "queue_monotonic_ns": 4761452236148,
+          "stable_to_queue_ms": 0.206458,
+          "stimulus_ns": 4761396036773,
+          "stimulus_to_queue_ms": 56.199375
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4761632043492,
+          "queue_monotonic_ns": 4761632246877,
+          "stable_to_queue_ms": 0.203385,
+          "stimulus_ns": 4761578471981,
+          "stimulus_to_queue_ms": 53.774896
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4762028062190,
+          "queue_monotonic_ns": 4762028259690,
+          "stable_to_queue_ms": 0.1975,
+          "stimulus_ns": 4761971998700,
+          "stimulus_to_queue_ms": 56.26099
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4762208034898,
+          "queue_monotonic_ns": 4762208254533,
+          "stable_to_queue_ms": 0.219635,
+          "stimulus_ns": 4762154388960,
+          "stimulus_to_queue_ms": 53.865573
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4762392061096,
+          "queue_monotonic_ns": 4762392226512,
+          "stable_to_queue_ms": 0.165416,
+          "stimulus_ns": 4762337396669,
+          "stimulus_to_queue_ms": 54.829843
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4762788063960,
+          "queue_monotonic_ns": 4762788268127,
+          "stable_to_queue_ms": 0.204167,
+          "stimulus_ns": 4762732121929,
+          "stimulus_to_queue_ms": 56.146198
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:13",
+          "kernel_stable_ns": 4762968065939,
+          "queue_monotonic_ns": 4762968257033,
+          "stable_to_queue_ms": 0.191094,
+          "stimulus_ns": 4762914410731,
+          "stimulus_to_queue_ms": 53.846302
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4763152037137,
+          "queue_monotonic_ns": 4763152209012,
+          "stable_to_queue_ms": 0.171875,
+          "stimulus_ns": 4763097385522,
+          "stimulus_to_queue_ms": 54.82349
+        },
+        {
+          "action": "help",
+          "button_id": "gpio:16",
+          "kernel_stable_ns": 4763548067918,
+          "queue_monotonic_ns": 4763548368647,
+          "stable_to_queue_ms": 0.300729,
+          "stimulus_ns": 4763494189481,
+          "stimulus_to_queue_ms": 54.179166
+        },
+        {
+          "action": "back",
+          "button_id": "gpio:20",
+          "kernel_stable_ns": 4763548087449,
+          "queue_monotonic_ns": 4763548455366,
+          "stable_to_queue_ms": 0.367917,
+          "stimulus_ns": 4763493933074,
+          "stimulus_to_queue_ms": 54.522292
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4763548089429,
+          "queue_monotonic_ns": 4763548501876,
+          "stable_to_queue_ms": 0.412447,
+          "stimulus_ns": 4763493674012,
+          "stimulus_to_queue_ms": 54.827864
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:13",
+          "kernel_stable_ns": 4763548091043,
+          "queue_monotonic_ns": 4763548549637,
+          "stable_to_queue_ms": 0.458594,
+          "stimulus_ns": 4763493409793,
+          "stimulus_to_queue_ms": 55.139844
+        },
+        {
+          "action": "right",
+          "button_id": "gpio:26",
+          "kernel_stable_ns": 4763548092606,
+          "queue_monotonic_ns": 4763548592710,
+          "stable_to_queue_ms": 0.500104,
+          "stimulus_ns": 4763493147762,
+          "stimulus_to_queue_ms": 55.444948
+        },
+        {
+          "action": "left",
+          "button_id": "gpio:5",
+          "kernel_stable_ns": 4763548094272,
+          "queue_monotonic_ns": 4763548635574,
+          "stable_to_queue_ms": 0.541302,
+          "stimulus_ns": 4763492892293,
+          "stimulus_to_queue_ms": 55.743281
+        },
+        {
+          "action": "down",
+          "button_id": "gpio:19",
+          "kernel_stable_ns": 4763548095783,
+          "queue_monotonic_ns": 4763548678856,
+          "stable_to_queue_ms": 0.583073,
+          "stimulus_ns": 4763492576668,
+          "stimulus_to_queue_ms": 56.102188
+        },
+        {
+          "action": "up",
+          "button_id": "gpio:6",
+          "kernel_stable_ns": 4763548097137,
+          "queue_monotonic_ns": 4763548724533,
+          "stable_to_queue_ms": 0.627396,
+          "stimulus_ns": 4763491995418,
+          "stimulus_to_queue_ms": 56.729115
+        },
+        {
+          "action": "select",
+          "button_id": "gpio:21",
+          "kernel_stable_ns": 4764704050730,
+          "queue_monotonic_ns": 4764704362241,
+          "stable_to_queue_ms": 0.311511,
+          "stimulus_ns": 4764649962501,
+          "stimulus_to_queue_ms": 54.39974
+        },
+        {
+          "action": "back",
+          "button_id": "gpio:20",
+          "kernel_stable_ns": 4765100097240,
+          "queue_monotonic_ns": 4765100382657,
+          "stable_to_queue_ms": 0.285417,
+          "stimulus_ns": 4765044429011,
+          "stimulus_to_queue_ms": 55.953646
+        }
+      ],
+      "idle": {
+        "cpu_percent_one_core": 0.002603995564920292,
+        "cpu_s": 0.0003909999999999192,
+        "duration_s": 15.015386557000056,
+        "involuntary_switches": 0,
+        "voluntary_switches": 1
+      },
+      "kernel_stable_to_queue": {
+        "count": 28,
+        "max_ms": 0.627396,
+        "median_ms": 0.235312,
+        "min_ms": 0.165416,
+        "p95_ms": 0.583073
+      },
+      "legacy_cleanup": "Explicit pin.when_changed=None beforeButton.close prevents upstream stalecallback threadcrash; steady-state sampling untouched.",
+      "limits": "Synthetic kernel GPIO interrupts; electrical contacts, actual LCD and production action loop not exercised.",
+      "mock_chip": "gpiochip1",
+      "mock_label": "gpio-mockup-A",
+      "passed": true,
+      "startup_held_limit": "gpio-mockup implements external stimulus through bias; requesting PULL_UP can reset prior low. Held across request not validated; initial no action and subsequent press validated.",
+      "stimulus_to_queue": {
+        "count": 28,
+        "max_ms": 56.729115,
+        "median_ms": 55.235677,
+        "min_ms": 53.774896,
+        "p95_ms": 56.38349
+      }
+    }
+  ]
+}

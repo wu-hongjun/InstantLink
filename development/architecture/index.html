@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://instantlink.hongjunwu.com/development/architecture/">
       
       
-        <link rel="prev" href="../../reference/sync-api/">
+        <link rel="prev" href="../../reference/bridge-management/">
       
       
         <link rel="next" href="../bridge-firmware-release/">
@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3015,7 +3045,14 @@
 <h3 id="key-decisions">Key Decisions<a class="headerlink" href="#key-decisions" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Async throughout</strong>: <code>btleplug</code> requires async BLE access, so the core stays async end to end.</li>
-<li><strong>Model-aware behavior</strong>: <code>BlePrinterDevice::new</code> detects the printer model from <code>IMAGE_SUPPORT_INFO</code>, and uses the DIS model hint (<code>FI033</code>) first to distinguish Mini Link 3 from earlier Mini models.</li>
+<li><strong>Model-aware behavior</strong>: <code>BlePrinterDevice::new</code> detects the model from <code>IMAGE_SUPPORT_INFO</code>
+  dimensions. Exact ASCII-trimmed DIS <code>FI033</code> distinguishes Mini Link 3 at <code>600 × 800</code>;
+  exact <code>FI017</code> must agree with Square dimensions. Conflicting or ambiguous known hints fail
+  closed; other unknown hints retain dimension matching.</li>
+<li><strong>Startup query recovery</strong>: the BLE transport can resend the read-only capability query
+  once after a one-second ACK wait, within the original ten-second deadline. One command lock
+  and delivery guard span both attempts. Failed delivery retires the connection; print and
+  image transfer commands retain their existing recovery rules.</li>
 <li><strong>ACK-based transfer</strong>: each image chunk is sent only after the previous chunk is acknowledged.</li>
 <li><strong>Model-specific JPEG limits</strong>: quality reduction targets each model's own image-size cap instead of a single global threshold.</li>
 <li><strong>Transport abstraction</strong>: <code>transport::Transport</code> allows mock transports in tests without requiring hardware.</li>

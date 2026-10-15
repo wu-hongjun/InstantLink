@@ -1,0 +1,56 @@
+{
+  "task": "094 transient Bluetooth warnings investigation",
+  "scope": "Read-only source/evidence investigation; no hardware actions or source edits",
+  "source_head": "5379401",
+  "evidence": "Private full PID9806 journal; public report includes only relevant messages.",
+  "episodes": [
+    {
+      "at": "13:55:56.712",
+      "stage": "characteristic_lookup (5)",
+      "native_detail": "BLE error: BLE link disconnected during GATT setup",
+      "warning_records": 2,
+      "context": "Startup status connection after restore; subsequent not-found before further attempt"
+    },
+    {
+      "at": "13:57:27.941",
+      "stage": "characteristic_lookup (5)",
+      "native_detail": "BLE error: BLE link disconnected during GATT setup",
+      "warning_records": 2,
+      "fresh_status_at": "13:57:59.026"
+    },
+    {
+      "at": "13:58:56.780",
+      "stage": "characteristic_lookup (5)",
+      "native_detail": "BLE error: BLE link disconnected during GATT setup",
+      "warning_records": 2,
+      "context": "External Disconnect13:58:55 then proactive bond removal",
+      "fresh_status_at": "13:59:00.029"
+    }
+  ],
+  "findings": [
+    "Native Connected=false is checked through a fresh bounded ObjectManager snapshot; not a stale cached false bit.",
+    "Three actual setup link drops are rendered as six warning records, duplicated across backend and controller.",
+    "Generic ABI code/error text obscures native callback detail in warning records.",
+    "Native setup failures receive fabricated zero-candidate scan diagnostics in provider despite device_matched phase.",
+    "No evidence of cancellation, authentication failure, print concurrency, or a protocol defect in these episodes.",
+    "Routine selected-printer poweroff is already logged INFO; critical cancellation-worker stalls remain separately observable."
+  ],
+  "recommended_scope": [
+    "Use exact canonical setup-drop native terminal evidence for first transient classification; preserve stage/detail.",
+    "Maintain per-target unresolved transient budget separately from link tear-down failure counter; do not reset budget on disconnect.",
+    "Warn on repeated unresolved failures; clear only after successful fresh status or target change.",
+    "Keep authentication, unknown errors, malformed details and persistent retries observable at warning level.",
+    "Avoid reporting empty scan diagnostics when no native scan results exist.",
+    "Preserve command serialization, generation/freshness guards, two prompt live recovery retries and bounded offline cadence."
+  ],
+  "test_plan": [
+    "First exact setup-drop event INFO; second unresolved setup drop WARN across native disconnect.",
+    "Successful status resets transient budget; different target cannot inherit previous target failure state.",
+    "Unknown BLE codes/details, canonical auth token, foreign-prefix/suffixed text and legacy no-detail failures remain WARN.",
+    "Provider preserves failure detail/classification and does not invent no-candidate scan evidence.",
+    "Controller escalation/rate limiting preserves real persistent failure observability.",
+    "Existing cancel-serialization and stale/auth recovery tests remain green.",
+    "Live status-only startup then external BlueZ Disconnect while600MHz/backlightlow; fresh same-target status, film unchanged, samePID and FTP220/200; retain all warnings in evidence."
+  ],
+  "limits": "No established cause below BlueZ Connected=false; no claimed transport speedup. External Disconnect does not reproduce physical Printer power-cycle or physical button contacts."
+}

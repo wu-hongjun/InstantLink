@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3510,11 +3540,16 @@
 <ol>
 <li>Capture BLE traffic with the official app</li>
 <li>Query Image Support Info — response dimensions identify Mini, Square, and Wide</li>
-<li>For Mini Link 3, prefer the DIS model hint (<code>FI033</code>) before falling back to dimensions</li>
+<li>For Mini Link 3, require exact ASCII-trimmed DIS <code>FI033</code> alongside <code>600x800</code> dimensions.
+   Exact <code>FI017</code> requires <code>800x800</code> Square dimensions. Reject conflicts and ambiguous
+   <code>FI033</code> strings; other unknown hints fall back to dimensions.</li>
 <li>Test with known chunk sizes (900B for mini/wide, 1808B for square)</li>
 <li>If a new model uses different chunk sizes, the DOWNLOAD_START response may contain the requested block size</li>
 <li>Verify JPEG quality limits — they may differ by model</li>
 </ol>
+<p>The native BLE startup path can resend <code>Image Support Info</code> once after a one-second ACK
+wait, within the original ten-second deadline. This is a serialized read-only retry;
+it does not replay failed image or print commands. A failed capability query retires the link.</p>
 <h2 id="community-references">Community References<a class="headerlink" href="#community-references" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://github.com/jpwsutton/instax_api">jpwsutton/instax_api</a> — Original WiFi protocol RE (SP-1/2/3)</li>

@@ -1,0 +1,50 @@
+{
+  "status": "installed validation accepted; normal service cleanup/health pending",
+  "source_commit": "06bbe86",
+  "render_sha256": "df10cadf41ea34c9b3baabcd5edcb08b75764804fda851151a4f6c60ebed7775",
+  "pid": 40333,
+  "blockers": [],
+  "checks": {
+    "18_real_framebuffer_hashes_identical_fixed1000MHz": true,
+    "12_cold_warm_original_rgb_matches": true,
+    "11_kernel_gpio_lock_unlock_cases": true,
+    "fresh_startup_then_periodic_status": true,
+    "automatic_reconnect_locked600_camera_ready_connected": true,
+    "no_warnings_errors_render_input_panic_in_installed_journal": true,
+    "no_film": true
+  },
+  "frame_metrics": {
+    "total_ms": 13.993854001455475,
+    "draw_ms": 2.6628650011844,
+    "cpu_ms": 13.727995499999812,
+    "draw_cpu_ms": 2.680807499999771,
+    "pack_ms": 9.87276049272623,
+    "write_ms": 0.3545834988472052,
+    "backlight_ms": 1.0080210049636662
+  },
+  "max_event_loop_lag_ms": 18.68343700072728,
+  "cold_warm": {
+    "cold": {
+      "candidate_draw_ms": 27.013228995201644,
+      "baseline_draw_ms": 30.262968997703865
+    },
+    "warm": {
+      "candidate_draw_ms": 2.8988019985263236,
+      "baseline_draw_ms": 30.018828001630027
+    }
+  },
+  "startup_successful_attempt_s": 3.909727550999378,
+  "reconnect_s": 6.649696506996406,
+  "reconnect_observations": 15,
+  "installed_journal_messages": 317,
+  "limitations": [
+    "Frame timings end at kernel write return, not panel scanout.",
+    "GPIO edges simulated in kernel; physical button contacts not actuated.",
+    "Cold means added glyph/metric caches cleared with fonts already loaded; no boot or battery-life claim.",
+    "Button queue-to-done spans production task handling; not physical contact-to-photon time. Baseline/candidate/installed action lists differ in count/context, so descriptive medians cannot be causal button speed ratios."
+  ],
+  "remaining": [
+    "Normal productionsourcehash/nativehash verification after observer removal.",
+    "Owned dropin/socket/mockmodule/script/sourcearchive cleanup and normalPID journal/FTP/cpu600 service health."
+  ]
+}

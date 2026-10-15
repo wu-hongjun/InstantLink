@@ -1,0 +1,42 @@
+{
+  "timestamp_utc": "2026-10-14T16:07:21.848794+00:00",
+  "runtime_commit": "6d61384c064e6a3110bf4f3642b4b941b4690d1f",
+  "dirty": false,
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "temperature_c": 46.16,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "services": "MainPID=5618\nNRestarts=0\nActiveState=active\n\nMainPID=637\nNRestarts=0\nActiveState=active",
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Wed 2026-10-14 12:06:17 EDT] ; stop_time=[n/a] ; pid=5618 ; code=(null) ; status=0/0 }",
+  "ftp_probe_path": "Pi hotspot address; no wireless airtime or upload measured",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "ffi_sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175",
+  "cli_sha256": "f1d325ac2fe436ee13b704183cd1ce9bc1490476c0e6080acbd7676d6631b21f",
+  "source_sha256": {
+    "src/instantlink_bridge/ui/render.py": "3620d146e35fd1a76045b0834600a61c944a0a59131c508cbfc2d79987e7ea3b",
+    "src/instantlink_bridge/ui/display.py": "2a451b279dc94a3b7c8746b9b175cc7536b1bfce6f699d661f627f2c550b656b",
+    "src/instantlink_bridge/ui/input.py": "c26960fad81190dcf7c892346c1d046a073a31532ee3832a223c505911198037",
+    "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97",
+    "src/instantlink_bridge/net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+    "src/instantlink_bridge/net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+    "src/instantlink_bridge/ui/pairing.py": "2e532bd4cfb6777cfe582a64ac8fdb0a9d43c068f94938c186bb9535a1d44f70",
+    "src/instantlink_bridge/ble/agent.py": "a84a371e646f0dbeb401192b152272376fa64f791dd595c9f76994f505181f01",
+    "src/instantlink_bridge/app.py": "9f334b80316bcf29ef19c60c6356ef453823258566f08ae8e9dd53aba1015d09",
+    "src/instantlink_bridge/ui/controller.py": "ebe5563d60ae137c0e0936272892449bb94cf94a729ae9e61cf5885e89085240",
+    "src/instantlink_bridge/ble/instantlink.py": "4813bf2b36ad7fd842b7a6ff6a1950703953a8fa3a6065bf27f9869171b61e4e"
+  },
+  "working_cache_directories": 0,
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false,
+  "input_backend_log": [
+    "2026-10-14 12:06:19,893 INFO instantlink_bridge.ui.input ui.input_edges_started backend=linux_gpio_v2 debounce_ms=50 lines=8"
+  ],
+  "input_failures": [],
+  "normal_app_warning_error_lines": [],
+  "network_fallback_log": [],
+  "printer_connected": true,
+  "film_used_in_this_task": 0
+}

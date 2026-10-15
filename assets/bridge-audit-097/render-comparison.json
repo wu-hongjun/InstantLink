@@ -1,0 +1,1020 @@
+{
+  "passed": true,
+  "film_used": 0,
+  "cases": 92,
+  "frames": [
+    {
+      "case": "booting",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "dbd59cbf41dd834398957de72dc96f7ab9ce0f8fa5afdd230fc416388c113206"
+    },
+    {
+      "case": "unlocking",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "f5194590ed9506beeaf6a854cec376a461fb39cf6c492d317e1275a6079c8461"
+    },
+    {
+      "case": "settings",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "b58c902881d536b05e8bef77ce6f097e498b5a0085d0912af43d0aa3e5d730cf"
+    },
+    {
+      "case": "adjustment_edit",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "2064ec9f11373d30db07cc7e78afcc71f231aacccccd03ace1c55fb8acebf9df"
+    },
+    {
+      "case": "needs_pairing",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "ba2796c6aa8891cabf87fc2282ddf7355bf3cbd73930d8d7cb84b827940f4914"
+    },
+    {
+      "case": "pairing",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "fb45ac18c43549ea36c2699528053a639e7afd5f5881fbd6e57e2c8fe470aa37"
+    },
+    {
+      "case": "printer_searching",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "469beec5f22ead209a585029803b24711cf9a55c85d246388ce86f053d8e8b20"
+    },
+    {
+      "case": "printer_offline",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "2935daffd2d5c245fbb9c30423d862f67ce04deee05d091d1087ea4f9ce5099a"
+    },
+    {
+      "case": "validation",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "e2fca41433807223a4f8a93254c563d53312cf9d7cb66fbd6aabe5ec6e6143ca"
+    },
+    {
+      "case": "ready",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "a9585e0fee94f0083d1b8377110e83de821658f3b1992efde5852e20cb1cc4aa"
+    },
+    {
+      "case": "no_film",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "d61ac28bdf5c0f9150c4cf90dfaf78ee0a02106b834c4a0530343cf9294f3f74"
+    },
+    {
+      "case": "image_received",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "dd33a3e3072728a6f91c65dbbf3f5331f953656ca177e84a0213128d0458b6c9"
+    },
+    {
+      "case": "awaiting_confirm",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "56a8efbfd389763d960596053a691fcd9692a15da861327aa77263429d395ae9"
+    },
+    {
+      "case": "printing",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "1387b4746e95968ca7e76b2a574c65ed0f2c2aa53c686cbf38d0404b4515f11d"
+    },
+    {
+      "case": "print_complete",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "7ad69b0160db9201d312716874869acd6b9a633d65b688fff02df8972652c814"
+    },
+    {
+      "case": "pair_failed",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "99747affea393525c5a1d5d36acb495e47e227ebeb29dd5b4e51e88aea32e71b"
+    },
+    {
+      "case": "error",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "9749a56215412f81e068decc00f4052bae507f97c674e1983dca64f6c1d27018"
+    },
+    {
+      "case": "confirmation_dialog",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "df9d456edeff7bba7f44828b49a80a87a2885f478cec63b426ed5e57b21092ad"
+    },
+    {
+      "case": "help_dialog",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "107114b8dc5f65182692a6adb7792e96f3fcf5e1456387f49418ab7131b5c239"
+    },
+    {
+      "case": "sync_pairing",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "5ecb84122556f82bd197eaba155884a4e6a64830866568a64265a97768e558fd"
+    },
+    {
+      "case": "adjust_saturation",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "ef50d58610826f1e29cb3e0d6b540e502a675f580d0a652e72b6155e69da42d5"
+    },
+    {
+      "case": "adjust_datestamp",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "bcfae8085c85cabc82a61209df91299d76f9acb2460dca026ae16e4e6785e77b"
+    },
+    {
+      "case": "adjust_watermark",
+      "language": "en",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "04c9623b02a56aba517338be236c10f99fc9a6371b2c84ea77e07147db4eb14d"
+    },
+    {
+      "case": "booting",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "12f18274d0ae0468658cb2bef14f74f6c4b87e4463c9e6e503c57c45bf46fe0e"
+    },
+    {
+      "case": "unlocking",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "1eb7d3b5fe4f4ea36b0ef7a925845590f6d5121331585bd94ed67673be04f235"
+    },
+    {
+      "case": "settings",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "6d389c034bc07cfcb5adb4bbd2f4c15a282bcb301811e3d943d48188ffa73100"
+    },
+    {
+      "case": "adjustment_edit",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "e036d5db3b458fd827fbb34bce44eea4ef463dc80f20f4b80f435894eb193d90"
+    },
+    {
+      "case": "needs_pairing",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "53878e07914c6f688699249a75d39866cc039b6476bfbb79db0345410bc5c103"
+    },
+    {
+      "case": "pairing",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "eee13711a6bab9f3528f40efcac271c44d52801d9b41d016058641e5ec1dee5b"
+    },
+    {
+      "case": "printer_searching",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "04f3af25a7b5045039f93548896b07d582afb51c6f049e0617d8a87e22257916"
+    },
+    {
+      "case": "printer_offline",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "26786c84dd3a426d4c20ff28608127394444edc0f285f50c9dfd374ee7379a74"
+    },
+    {
+      "case": "validation",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "c37408a376c0bcfb746b989eb558a4d6f906d5e543aace09df2d6af87c3f8920"
+    },
+    {
+      "case": "ready",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "5a0504f0eb6b627df71f624ad7f9539f87759ca4fe204a7b91b49af7c6eebe5b"
+    },
+    {
+      "case": "no_film",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "37f99bdfd51e6b59d051d56fc98a97debd053cb5f5f6cd4ce44dab052d6954b1"
+    },
+    {
+      "case": "image_received",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "dd18da27a4c62d88f280b15e6b0f1bf2eeb020560602163b91b9e751560a869b"
+    },
+    {
+      "case": "awaiting_confirm",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "e4ed8aba0698bf49f874bcc4c5380eeb27bb06fbe3806acfa1064caaa61caf0b"
+    },
+    {
+      "case": "printing",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "a157cd2e6d29e62e328f958ca2464f17b2ee4aea28471e32e1f56aca00e84b5e"
+    },
+    {
+      "case": "print_complete",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "04d38c4ea5cb14376c6c7a0cefd0650c6c9023f76567058fa74a6e05ec2e2820"
+    },
+    {
+      "case": "pair_failed",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "088880ef0de0293be33bb4382d4b136c27b3328d30e64d2cfb14f1963c4ca15e"
+    },
+    {
+      "case": "error",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "b1de584ce3444ad9f815772fa0f650408a7d084f9fb59b06db78c6aeadc4904d"
+    },
+    {
+      "case": "confirmation_dialog",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "ada97b8b0b148cfb05f103f1beb624ed2453420b890bb7a0ae9304af1a6aa84b"
+    },
+    {
+      "case": "help_dialog",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "921e2141ffeb2718933bd0e72cb0e0d8cce75db4b5a55abd28c1aac6b92d6726"
+    },
+    {
+      "case": "sync_pairing",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "2033e7e25f12c2197512a3e27c56e45495dd763f65073a4468f0a2690c78aa8e"
+    },
+    {
+      "case": "adjust_saturation",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "f0847ad79daebe2573ddaa2dc759dc3e2ae86da5160b1f9aff65b2f5de9ea09e"
+    },
+    {
+      "case": "adjust_datestamp",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "e89cea0047b204d510c83cdf9bdcd90e3ef66563f04b577d71d0e9d59d3fdd4b"
+    },
+    {
+      "case": "adjust_watermark",
+      "language": "en",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "018e1de28704f7418bc1829bafa5ea018a26fd80d4311558d5e8b40a322fe546"
+    },
+    {
+      "case": "booting",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "b46c290a7d627986973caf5fc07749cab86cf48b824ff7a6de25aac60d7a3df4"
+    },
+    {
+      "case": "unlocking",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "263a8edef7a904f25957bc262cbffa53c6175b38a0fbdc65d7ad9d932dfb5426"
+    },
+    {
+      "case": "settings",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "8a8df8f09f195dde136d0d8234d380f70c5b9fd8a4e2f7245f24c8da882b2de6"
+    },
+    {
+      "case": "adjustment_edit",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "f1ef5d61c898b3a9a40e6e29763d183052a7b94bdaa09b2c070f8df8a939d517"
+    },
+    {
+      "case": "needs_pairing",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "f9bd87e972ca7dcb021568045dc65fe35729110d1c8f68bfd84992acdbcd3363"
+    },
+    {
+      "case": "pairing",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "a9306a270353de915fe0f5a6f4bc79e3685e4763282194d7c58a2cca5047a78e"
+    },
+    {
+      "case": "printer_searching",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "f6acbf6d99bcde528de321c1d7439f504f122cc7b03e2fa7f9674e23fb111d73"
+    },
+    {
+      "case": "printer_offline",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "4855bba48bee8c85e1ad7da434ff560ce2aeb39e41d85be573f00d8584eb0fca"
+    },
+    {
+      "case": "validation",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "4c467567723b887a4512ee585850081c39f2cf404c9cd692de9839634b77b8d1"
+    },
+    {
+      "case": "ready",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "877dd44b4682917b61ac07b47a98d7b3fbb24efd66bf58f38a8e02c875d8832e"
+    },
+    {
+      "case": "no_film",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "e28d99102d469dd2d07c433b9c26de972688116dad32073c5b094e7fb6bc2244"
+    },
+    {
+      "case": "image_received",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "a8e5ed7a05e472ba2df4d20abf197e368ee1a9aa22d06dda708e24359b45e187"
+    },
+    {
+      "case": "awaiting_confirm",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "96e1cd15b75f3bf6860b89b70370fbf9bf682de7db2c506c9a93d01bf882582b"
+    },
+    {
+      "case": "printing",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "70f388773c138c5a7876138e4d22eac8e117dfda8d97df8c6b0116f3f043b7ba"
+    },
+    {
+      "case": "print_complete",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "854e25f3c4caaf4611cc8b281b23f7868178480c1f88286caea7a2ce16f8a3e4"
+    },
+    {
+      "case": "pair_failed",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "5f28f63cf75a7b58a1872bac4a91e7746cb44e65d8f63670d7f0f78d090a1483"
+    },
+    {
+      "case": "error",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "2b375927cf38694d6031e2ff60c2b09918bd1a3c452937e86c2c6d12a4c4b3ff"
+    },
+    {
+      "case": "confirmation_dialog",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "1b48d5cb381244f1079c94234f1a0c069efa639ea5977dfc7b06d659e6799fde"
+    },
+    {
+      "case": "help_dialog",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "920013aaf9de4265bb759fc53ee42c9316eb54681d27e63732af77ffbd7050f0"
+    },
+    {
+      "case": "sync_pairing",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "c4b378cbfbaa171f2db7dffda481034a8dbb77230d3ec5d5f648e2e5cacc36de"
+    },
+    {
+      "case": "adjust_saturation",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "e73e23466cc388e8ffc536fa315cbe278e1fdd605a415b414806c2ec8784e891"
+    },
+    {
+      "case": "adjust_datestamp",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "9c3e924ea7475faa8bf64d8cc79e30a253cbb0ca31e3614540cc9f3c543e13af"
+    },
+    {
+      "case": "adjust_watermark",
+      "language": "zh",
+      "appearance": "light",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "b1f405815cd39f978aa144fd333f059595310742976ccfb169ea468be60981ac"
+    },
+    {
+      "case": "booting",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "cdfcb837d18c0c30b74b95cd47f30fbc7232107a68230b6c26c781f190e9bc70"
+    },
+    {
+      "case": "unlocking",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "cd3fc875d61c9588e610c22ebeb18df2f09a12ffc42d2d953fa0d328f7f90668"
+    },
+    {
+      "case": "settings",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "335faebb1dc95afd9d9f17393c41bb5f6142ee56a5b1940fadc8beb5c2460138"
+    },
+    {
+      "case": "adjustment_edit",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "6d5ebab839ecf38b6cdbc622dadaf9e236df8421fbaf1f10c1dfc09a613d227a"
+    },
+    {
+      "case": "needs_pairing",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "165f4754939798cb98cbc77d49ae426f9feda71dbe834250c042c3d2865fdd88"
+    },
+    {
+      "case": "pairing",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "a705c14300f265d414f834b357791dff3fbdaa9a0955b2f37285c44e210c921b"
+    },
+    {
+      "case": "printer_searching",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "2b737234c06cb2c403ee59c8e73fd6f4dac168c60a33b96872216e40b14e383c"
+    },
+    {
+      "case": "printer_offline",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "f5331fe023d208476c56af0a9c749654ad5ef7fae161ccb2e5a264762c085808"
+    },
+    {
+      "case": "validation",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "933e94db55350edaa6c8a1b2cd29f0fb022ad69645d402815fe78333bac7875e"
+    },
+    {
+      "case": "ready",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "83b821625deba2fd65cec37f2053ef0e0c01297624257ceaff275bb90fa744b4"
+    },
+    {
+      "case": "no_film",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "a84474cf6a0929bf677296066a55a66a11073bec334d8e24b36d05001605aa17"
+    },
+    {
+      "case": "image_received",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "b84c101741c837aa4567d1f1ca5820456d1b68e954d41e478f161f188a768881"
+    },
+    {
+      "case": "awaiting_confirm",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "59f3d9a9567ef323d76cdfad2a80c547ed2f134877e9c467b111eb7ea1a63a8e"
+    },
+    {
+      "case": "printing",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "8c55964be3ab7b6ad4ff61b9cf8175e38523388d9dcb8f97f5094534ad8bf5bc"
+    },
+    {
+      "case": "print_complete",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "838fa629b3b0aab0c476475aa15df2293e4fb2e3a2e98db365dc7de5243382ae"
+    },
+    {
+      "case": "pair_failed",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "59a80c232f82601d5160073e86476d246fe4e874015635c4b3e0d5f591637c47"
+    },
+    {
+      "case": "error",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "69c536a6af5ea5bae03a313c427b001363140dbd5cfa5186d0ce753341177353"
+    },
+    {
+      "case": "confirmation_dialog",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "78160ae697746ba360477ce5842c0192017d9c77e2c8460c177ec2dedf140283"
+    },
+    {
+      "case": "help_dialog",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "84946060d520f64c4ddda81bf32642a6b370e5b1bd52e508a304cfd17e5115da"
+    },
+    {
+      "case": "sync_pairing",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "15abe2e263ffc0a4630071782179a7e0684c8bc52f43fabd17389d8bf3f3f676"
+    },
+    {
+      "case": "adjust_saturation",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "1afed5191cfbdf400032a196ecf3999f9331414bd6ac782d1116f98504540c10"
+    },
+    {
+      "case": "adjust_datestamp",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "ca274925d1a726bedc2df29dd72431c5c3710ef3fa76574049378734d4b4d96b"
+    },
+    {
+      "case": "adjust_watermark",
+      "language": "zh",
+      "appearance": "dark",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "018d28647b8c9f68994cd77021acc8276412a6a692553e8d1c8f10f1b1efc65f"
+    }
+  ],
+  "scope": "Deterministic offscreen Pi rendering across all UI modes plus saturation/datestamp/watermark editors, English/Chinese and light/dark. Exact RGB bytes vs installed baseline; no framebuffer, button contacts, Printer or device operations."
+}

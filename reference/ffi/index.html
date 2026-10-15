@@ -560,6 +560,8 @@
       
         
       
+        
+      
     
     
     
@@ -874,6 +876,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prepared-jpeg-printing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepared JPEG Printing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#led-control" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -946,6 +959,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3085,6 +3126,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prepared-jpeg-printing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepared JPEG Printing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#led-control" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3324,7 +3376,7 @@
 <a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_reset</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </code></pre></div>
 <ul>
-<li><code>instantlink_is_connected</code> returns <code>1</code> when connected, <code>0</code> when disconnected, or a negative error code</li>
+<li><code>instantlink_is_connected</code> returns <code>1</code> for a cached session not known closed, <code>0</code> for no session or a terminally closed session, or a negative error code. It is a cheap read-only check: it does not poll hardware or guarantee that a physical link is live.</li>
 <li><code>instantlink_connect_named_with_progress</code> is the base entry point for UI-driven reconnect flows; exposes real connection stages</li>
 <li><code>instantlink_connect_named_with_progress_ctx</code> is the preferred variant (used by macOS app) because it accepts an opaque <code>context</code> pointer, allowing per-call state without global side effects. The context is passed unchanged to each callback invocation.</li>
 <li><strong>Context Pointer Contract</strong>: The <code>context</code> pointer is cast to <code>usize</code> internally and back; the FFI does not dereference it. The caller is responsible for ensuring the pointer remains valid for the entire duration of the connect operation and properly life-managing the backing object.</li>
@@ -3374,18 +3426,102 @@
 <li><strong>Callback Invocation</strong>: Progress callbacks are invoked from the tokio runtime thread after each chunk is acknowledged. UI callers must synchronize state updates (e.g., via Grand Central Dispatch).</li>
 <li><strong>Thread Safety</strong>: The context pointer is thread-safe by design since it is passed opaque and unchanged to each callback.</li>
 </ul>
+<h3 id="prepared-jpeg-printing">Prepared JPEG Printing<a class="headerlink" href="#prepared-jpeg-printing" title="Permanent link">&para;</a></h3>
+<p>Callers that already perform model-specific image preparation can send their final JPEG
+without another resize, flip or JPEG encode:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_print_prepared_jpeg</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">data_len</span><span class="p">,</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">                                        </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">expected_model</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">                                        </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">transport_flip_applied</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">                                        </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">print_option</span><span class="p">);</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_print_prepared_jpeg_with_progress</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">                                                      </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">data_len</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">                                                      </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">expected_model</span><span class="p">,</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">                                                      </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">transport_flip_applied</span><span class="p">,</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">                                                      </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">print_option</span><span class="p">,</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">                                                      </span><span class="kt">void</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">progress_cb</span><span class="p">)(</span><span class="kt">uint32_t</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="p">));</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_print_prepared_jpeg_with_progress_ctx</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">                                                          </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">data_len</span><span class="p">,</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">                                                          </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">expected_model</span><span class="p">,</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">                                                          </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">transport_flip_applied</span><span class="p">,</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">                                                          </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">print_option</span><span class="p">,</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">                                                          </span><span class="n">instantlink_print_progress_cb_ctx</span><span class="w"> </span><span class="n">progress_cb</span><span class="p">,</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">                                                          </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">context</span><span class="p">);</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th><code>expected_model</code></th>
+<th>Dimensions</th>
+<th>Maximum bytes</th>
+<th><code>transport_flip_applied</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mini</td>
+<td>0</td>
+<td>600×800</td>
+<td>105,000</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Mini Link 3</td>
+<td>1</td>
+<td>600×800</td>
+<td>55,000</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Square</td>
+<td>2</td>
+<td>800×800</td>
+<td>105,000</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Wide</td>
+<td>3</td>
+<td>1260×840</td>
+<td>225,000</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>The exact detected model must match, including Mini versus Mini Link 3. JPEG data must be a
+complete 8-bit, three-component baseline JPEG with exact dimensions, within the model's byte
+budget and without trailing data. Progressive, grayscale, CMYK, arithmetic/lossless JPEG and
+recognized non-neutral EXIF orientation are rejected. Raw pixel orientation is authoritative.
+Mini Link 3's vertical transport flip must be applied <strong>before encoding</strong>; the native path
+validates the declaration and transmits those bytes unchanged. It cannot infer orientation
+from arbitrary pixel content, so the caller must uphold that declaration.</p>
+<p>The core performs a bounded full decode with warnings treated as errors to detect incomplete
+entropy scans; it discards validation pixels and performs no new encode. Validation failure
+returns <code>-6</code> before any Printer write. Null/empty input, unknown model or flip values outside
+0/1 return <code>-5</code>; no connected device returns <code>-1</code>. No legacy retry occurs after a failed send.</p>
+<p><code>data</code> must remain readable and unchanged for the entire synchronous call. Callbacks/context
+must stay alive until return; callbacks occur after acknowledged chunks and never afterwards.
+The global device mutex is released before callbacks, while the per-Printer operation lock
+serializes the transaction. Callbacks must not synchronously start another serialized Printer
+operation; identity getters are safe. Marshal UI work to the UI thread. All three exports catch
+Rust panics; the existing file-based functions remain available.</p>
+<p>The Bridge detects this optional export in its FFI wrapper. Compatible native builds use an
+in-memory byte buffer and correctly oriented prepared JPEG; older builds use the legacy
+unflipped preparation/file path. Physical and virtual LCD previews reverse the transport flip
+only when rendering. No management or sync API field is added.</p>
 <h3 id="led-control">LED Control<a class="headerlink" href="#led-control" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_set_led</span><span class="p">(</span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">g</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">pattern</span><span class="p">);</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_led_off</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_set_led</span><span class="p">(</span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">g</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">pattern</span><span class="p">);</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_led_off</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </code></pre></div>
 <ul>
 <li><code>pattern</code>: <code>0 = solid</code>, <code>1 = blink</code>, <code>2 = breathe</code></li>
 </ul>
 <h3 id="keepalive">Keepalive<a class="headerlink" href="#keepalive" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_keepalive</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_set_keepalive_interval</span><span class="p">(</span><span class="kt">int32_t</span><span class="w"> </span><span class="n">seconds</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_keepalive</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kt">int32_t</span><span class="w"> </span><span class="nf">instantlink_set_keepalive_interval</span><span class="p">(</span><span class="kt">int32_t</span><span class="w"> </span><span class="n">seconds</span><span class="p">);</span>
 </code></pre></div>
 <ul>
+<li>Missing native replies trigger a bounded link-state check after one second. Confirmed disconnection closes the old session; inconclusive checks retain the original command deadline. Normal acknowledgements and idle sessions add no checks. Commands are never replayed.</li>
 <li><code>instantlink_keepalive</code> sends one status/keepalive request to the connected printer (<code>0</code> on success)</li>
 <li><code>instantlink_set_keepalive_interval</code> configures the background keepalive: <code>0</code> disables it, positive values are seconds; a negative value returns <code>-5</code></li>
 </ul>
@@ -3398,17 +3534,17 @@
 <li>Dispatching FFI calls onto a dedicated serial queue to prevent race conditions</li>
 </ul>
 <p>Example pattern for context-boxed callbacks:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">let</span><span class="w"> </span><span class="nv">boxPtr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">Unmanaged</span><span class="p">.</span><span class="n">passRetained</span><span class="p">(</span><span class="n">CallbackBox</span><span class="p">(</span><span class="n">closure</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}))</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kd">let</span><span class="w"> </span><span class="nv">callback</span><span class="p">:</span><span class="w"> </span><span class="p">@</span><span class="n">convention</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nb">Int32</span><span class="p">,</span><span class="w"> </span><span class="nb">UnsafePointer</span><span class="p">&lt;</span><span class="nb">CChar</span><span class="p">&gt;?,</span><span class="w"> </span><span class="n">UnsafeMutableRawPointer</span><span class="p">?)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Void</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="n">stage</span><span class="p">,</span><span class="w"> </span><span class="n">detail</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="w"> </span><span class="k">in</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="k">guard</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">box</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">Unmanaged</span><span class="p">&lt;</span><span class="n">CallbackBox</span><span class="p">&gt;.</span><span class="n">fromOpaque</span><span class="p">(</span><span class="n">context</span><span class="p">).</span><span class="n">takeUnretainedValue</span><span class="p">()</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="n">box</span><span class="p">.</span><span class="n">closure</span><span class="p">(</span><span class="n">stage</span><span class="p">)</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="p">}</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1">// Call FFI with boxPtr.toOpaque() as context</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="n">boxPtr</span><span class="p">.</span><span class="n">release</span><span class="p">()</span><span class="w">  </span><span class="c1">// when done</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">let</span><span class="w"> </span><span class="nv">boxPtr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">Unmanaged</span><span class="p">.</span><span class="n">passRetained</span><span class="p">(</span><span class="n">CallbackBox</span><span class="p">(</span><span class="n">closure</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}))</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kd">let</span><span class="w"> </span><span class="nv">callback</span><span class="p">:</span><span class="w"> </span><span class="p">@</span><span class="n">convention</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nb">Int32</span><span class="p">,</span><span class="w"> </span><span class="nb">UnsafePointer</span><span class="p">&lt;</span><span class="nb">CChar</span><span class="p">&gt;?,</span><span class="w"> </span><span class="n">UnsafeMutableRawPointer</span><span class="p">?)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Void</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="n">stage</span><span class="p">,</span><span class="w"> </span><span class="n">detail</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="w"> </span><span class="k">in</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="k">guard</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nv">box</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">Unmanaged</span><span class="p">&lt;</span><span class="n">CallbackBox</span><span class="p">&gt;.</span><span class="n">fromOpaque</span><span class="p">(</span><span class="n">context</span><span class="p">).</span><span class="n">takeUnretainedValue</span><span class="p">()</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="n">box</span><span class="p">.</span><span class="n">closure</span><span class="p">(</span><span class="n">stage</span><span class="p">)</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">}</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1">// Call FFI with boxPtr.toOpaque() as context</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="n">boxPtr</span><span class="p">.</span><span class="n">release</span><span class="p">()</span><span class="w">  </span><span class="c1">// when done</span>
 </code></pre></div>
 <h2 id="thread-safety">Thread Safety<a class="headerlink" href="#thread-safety" title="Permanent link">&para;</a></h2>
 <p>The FFI layer owns:</p>

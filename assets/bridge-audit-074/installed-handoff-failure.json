@@ -1,0 +1,8 @@
+{
+  "stage": "before scan or probe start",
+  "error": "bluetoothctl info returned 1 because selected device was absent",
+  "image_commands": 0,
+  "film_consumed": 0,
+  "production_source_changed": false,
+  "temporary_harness_fix": "absent cache permits fresh discovery; connected cache still aborts"
+}

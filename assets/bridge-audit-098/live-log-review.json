@@ -1,0 +1,28 @@
+{
+  "records": 128,
+  "bridge_pid": 501,
+  "bridge_records": 97,
+  "bridge_warning_error_count": 0,
+  "units": [
+    "instantlink-bridge.service",
+    "instantlink-bridge-manager.service",
+    "bluetooth.service",
+    "dbus.service",
+    "dbus.socket"
+  ],
+  "warning_error_records": [
+    {
+      "unit": "bluetooth.service",
+      "message": "bluetooth.service: ConfigurationDirectory 'bluetooth' already exists but the mode is different. (File system: 755 ConfigurationDirectoryMode: 555)"
+    },
+    {
+      "unit": "instantlink-bridge-manager.service",
+      "message": "2026-10-14 18:55:37,261 WARNING instantlink_bridge.manager.cli manager.bind_pending host=192.168.8.1 port=8742 errno=None"
+    },
+    {
+      "unit": "bluetooth.service",
+      "message": "No matching connection for device"
+    }
+  ],
+  "scope": "Full current-boot Bridge, manager, Bluetooth and D-Bus journals, including current Bridge PID. System/kernel logs outside this snapshot. Probe disconnect notices retained; no global warning-free claim."
+}

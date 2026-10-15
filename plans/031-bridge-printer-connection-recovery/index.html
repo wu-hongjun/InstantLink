@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3466,11 +3496,11 @@ deliberately. This document is the source of truth for that design (per <code>CL
 <h2 id="3-the-failure-this-plan-must-fix">3. The failure this plan must fix<a class="headerlink" href="#3-the-failure-this-plan-must-fix" title="Permanent link">&para;</a></h2>
 <p>Observed sequence on a printer power-cycle (journal, 2026-05-27 ~13:3x):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>stage=ble_connecting → service_discovery → characteristic_lookup → notification_subscribe
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  → model_detecting → stage=failed  &quot;BLE error: write failed&quot;     # genuine stale bond (stage 7)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  → model_detecting → stage=failed  "BLE error: write failed"     # genuine stale bond (stage 7)
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>auto_rebond action=remove_bond → done=remove_bond                 # correct: stale bond removed
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>stage=ble_connecting → service_discovery → ble_connecting → failed
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  &quot;connect failed after service discovery retry&quot;                  # re-pair attempt failed
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>stage=failed → &quot;printer not found&quot; (repeats forever)              # printer no longer discoverable
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  "connect failed after service discovery retry"                  # re-pair attempt failed
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>stage=failed → "printer not found" (repeats forever)              # printer no longer discoverable
 </code></pre></div>
 <p>Post-mortem facts gathered live:
 - After the rebond, <code>bluetoothctl info FA:AB:BC:C7:95:64</code> returns <strong>nothing</strong> — the device is gone
@@ -3571,7 +3601,7 @@ of implementation.</p>
 <a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a> │ 2. confirm Connected=no   │
 <a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a> │ 3. settle delay           │
 <a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a> │ 4. bluetoothctl remove    │
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a> │ 5. confirm re-advertising │  ← if not re-advertising within T, surface &quot;Restart printer&quot;
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a> │ 5. confirm re-advertising │  ← if not re-advertising within T, surface "Restart printer"
 <a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a> └──────────────────────────┘
 </code></pre></div>
 <p>Key changes vs. today:

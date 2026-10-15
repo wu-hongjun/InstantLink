@@ -1,0 +1,98 @@
+{
+  "scope": "Warm service restart, Pythonbytecode prebaked andfilesystempagecache warm; exec\u2192firstkernelwrite/backlight complete isnotpower-on boot orscanout. Owned loader startsafter firstpaint.",
+  "variants": {
+    "baseline": {
+      "first_frame": {
+        "mode": "booting",
+        "idle_stage": "active",
+        "path": "/dev/fb1",
+        "cpu_khz": 1000000,
+        "start": 93404.28822118,
+        "packer_backend": "pillow_baseline",
+        "draw_ms": 105.75911399791948,
+        "draw_cpu_ms": 58.82552799999985,
+        "pack_ms": 16.691875003743917,
+        "pack_cpu_ms": 16.714844000000006,
+        "write_ms": 0.34031199174933136,
+        "write_cpu_ms": 0.35265600000000674,
+        "backlight_ms": 5.944791992078535,
+        "backlight_cpu_ms": 5.96229199999998,
+        "end": 93404.41722993,
+        "total_ms": 129.00874999468215,
+        "cpu_ms": 82.03224599999982,
+        "frame_sha256": "571213c6de389e4a365f77044581c358ebf477948f9ae021a4554ffda27e6169"
+      },
+      "exec_to_first_frame_s": 2.7287299299932783,
+      "packer_events": [],
+      "ready_backend": "pillow_baseline"
+    },
+    "candidate": {
+      "first_frame": {
+        "mode": "booting",
+        "idle_stage": "active",
+        "path": "/dev/fb1",
+        "cpu_khz": 1000000,
+        "start": 93508.872457755,
+        "packer_backend": "_rgb565_bytes_pillow",
+        "draw_ms": 104.96916600095574,
+        "draw_cpu_ms": 58.57999400000003,
+        "pack_ms": 19.62062499660533,
+        "pack_cpu_ms": 19.641093999999804,
+        "write_ms": 0.3324999997857958,
+        "write_cpu_ms": 0.34223900000007745,
+        "backlight_ms": 2.8810940129915252,
+        "backlight_cpu_ms": 2.8970320000003547,
+        "end": 93509.000623067,
+        "total_ms": 128.1653119949624,
+        "cpu_ms": 81.73171199999985,
+        "frame_sha256": "571213c6de389e4a365f77044581c358ebf477948f9ae021a4554ffda27e6169"
+      },
+      "exec_to_first_frame_s": 2.7580500670010224,
+      "packer_events": [
+        {
+          "start": 93509.009957182,
+          "backend_before": "_rgb565_bytes_pillow",
+          "end": 93510.495488796,
+          "backend_after": "_rgb565_bytes_numpy",
+          "closed": false
+        }
+      ],
+      "ready_backend": "_rgb565_bytes_numpy"
+    },
+    "installed": {
+      "first_frame": {
+        "mode": "booting",
+        "idle_stage": "active",
+        "path": "/dev/fb1",
+        "cpu_khz": 1000000,
+        "start": 93909.763221404,
+        "packer_backend": "_rgb565_bytes_pillow",
+        "draw_ms": 120.69494801107794,
+        "draw_cpu_ms": 67.48317600000009,
+        "pack_ms": 24.298749995068647,
+        "pack_cpu_ms": 22.518386000000223,
+        "write_ms": 0.39619799645151943,
+        "write_cpu_ms": 0.4117710000000052,
+        "backlight_ms": 3.162292006891221,
+        "backlight_cpu_ms": 3.1801570000000723,
+        "end": 93909.912258279,
+        "total_ms": 149.03687499463558,
+        "cpu_ms": 93.90010400000025,
+        "frame_sha256": "571213c6de389e4a365f77044581c358ebf477948f9ae021a4554ffda27e6169"
+      },
+      "exec_to_first_frame_s": 2.3981672789959703,
+      "packer_events": [
+        {
+          "start": 93909.922592341,
+          "backend_before": "_rgb565_bytes_pillow",
+          "end": 93911.390313018,
+          "backend_after": "_rgb565_bytes_numpy",
+          "closed": false
+        }
+      ],
+      "ready_backend": "_rgb565_bytes_numpy"
+    }
+  },
+  "candidate_paint_finished_before_loader_start": true,
+  "installed_paint_finished_before_loader_start": true
+}

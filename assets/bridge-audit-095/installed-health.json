@@ -1,0 +1,28 @@
+{
+  "pid": 1293,
+  "commit": "92c57e48cfc40c5f653ed6f00cea36225824907e",
+  "dirty": false,
+  "services": "MainPID=1293\nNRestarts=0\nActiveState=active\n\nMainPID=637\nNRestarts=0\nActiveState=active",
+  "cpu_khz": 600000,
+  "governor": "powersave",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "policy_messages": [
+    "2026-10-14 16:50:21,426 INFO instantlink_bridge.ui.controller ui.printer_discovery_policy screen=on scan_window_s=1 interval_s=1.0",
+    "2026-10-14 16:51:49,869 INFO instantlink_bridge.ui.controller ui.printer_discovery_policy screen=off scan_window_s=5 interval_s=30.0"
+  ],
+  "status_messages": [],
+  "warnings": [],
+  "source_sha256": {
+    "ui/controller.py": "9117f57343f5095ad42c1aeecde1c60425a356291e71f0e0b6e6c1b035353f0b",
+    "ui/status.py": "bf202340f5151212a1d1ecd6de0334f4e4e66c6c282271f3cab52dc20a8b367e",
+    "ui/settings.py": "fbb80be2087153042faef8ee647c6888901053a20443c579b8da57e2dfd06baa",
+    "ui/render.py": "2f71c4f09b513f66c657ddab15c14a0adb67f9e51189485891d34fd022745aeb",
+    "ui/i18n.py": "ded515e28c96a3f075b4f8ef42a1485c4d7f8a48377d75701b9723f6e5d62f49"
+  },
+  "film_used": 0,
+  "ffi_sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175",
+  "connected": false,
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "scope": "Normal installed service after controlled probe; on/off policy and healthy dark idle verified. Printer offline; automatic boot-to-connected check pending."
+}

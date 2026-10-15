@@ -1,0 +1,34 @@
+{
+  "pid": 13213,
+  "services": "MainPID=13213\nNRestarts=0\nActiveState=active\n\nMainPID=13211\nNRestarts=0\nActiveState=active",
+  "cpu_khz": 600000,
+  "governor": "powersave",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "throttle": "throttled=0x0",
+  "warning_error_messages": [],
+  "setup_failure_messages": [
+    "2026-10-14 15:54:48,595 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkPrinterNotFoundError error=connect failed: printer not found stage=0 detail=no Instax printer found setup_drop_streak=0",
+    "2026-10-14 15:55:16,083 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed stage=5 detail=BLE error: BLE link disconnected during GATT setup setup_drop_streak=1"
+  ],
+  "runtime_log_records": 132,
+  "status_messages": [
+    "2026-10-14 15:53:45,568 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=True model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+    "2026-10-14 15:54:52,400 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=True model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+    "2026-10-14 15:55:19,446 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=True model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+  ],
+  "socket_active": "active",
+  "source_sha256": {
+    "src/instantlink_bridge/ble/instantlink.py": "c63e54d6e1deff8b13fe2d9ee851c003452a3ce36a59285ebf0c2e63ff902673",
+    "src/instantlink_bridge/ui/status.py": "d63f565057c4002f893040e750501b4e0947155e19d0d72a0af7c7b624c58876",
+    "src/instantlink_bridge/ui/controller.py": "c045cf31684e38857ab54aba213c4bd2e7a29205a629256535db88fa9f803694",
+    "lib/libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+  },
+  "film_used": 0,
+  "printer_connected": true,
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "runtime_commit": "7c312adb51b7d43b29d1c6b3978f32cb33adf9ed",
+  "dirty": false,
+  "live_reconnect_passed": true,
+  "boundary": "Normal installed service; all32reconnect samples600MHz/backlightlow/samePID/FTP220200. Current-PID logcomplete; no physical button contacts or Printer power cycle tested. No film/image/actuator commands. Initial observer timeout retained separately; no matched baseline speedup claim."
+}

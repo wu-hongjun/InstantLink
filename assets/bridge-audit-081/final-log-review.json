@@ -1,0 +1,31 @@
+{
+  "service_records_reviewed": 4300,
+  "scope": "Current boot Bridge/manager journal, including systemd messages; raw journal private; no kernel-log claim",
+  "normal_pids": [
+    25926,
+    25301
+  ],
+  "normal_records": 41,
+  "normal_warning_errors": 0,
+  "historical_warning_errors": 99,
+  "historical_warning_errors_by_pid": {
+    "480": 3,
+    "1221": 25,
+    "2167": 1,
+    "2522": 10,
+    "3395": 2,
+    "3981": 6,
+    "7530": 3,
+    "9040": 1,
+    "10928": 2,
+    "12639": 1,
+    "15365": 26,
+    "16829": 3,
+    "17231": 6,
+    "21212": 1,
+    "22098": 3,
+    "23036": 4,
+    "23767": 2
+  },
+  "classification": "Historical records include prior discovery/stale-link experiments, controlled baseline link losses and temporary harness faults. Current candidate/installed/normal app processes have no WARNING/ERROR; expected failed discovery retries are INFO. See prior audit079/080 for resolved historical faults."
+}

@@ -1,0 +1,1559 @@
+{
+  "scope": "Real warm service starts on Pi Zero2W/InstaxLinkSquare. No image/print commands or film. One disconnect per candidate/installed; radio variation retained. Candidate warm starts did not reproduce missed-first-ACK, so missed-ACK speedup is deterministic paused-time test evidence, not a live measurement.",
+  "startup": {
+    "baseline1": {
+      "pid": 32329,
+      "first_attempt_to_completed_status_s": 3.673100259009516,
+      "original_collection_latency_s": 14.668837182005518,
+      "passed": true,
+      "film_used": 0,
+      "attempts": [
+        {
+          "start": 81778.883629055,
+          "online": true,
+          "end": 81782.556729314,
+          "duration_s": 3.673100259009516,
+          "stages": [
+            {
+              "monotonic": 81778.886488951,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 81779.371806555,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 81779.372054576,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 81779.419300357,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 81780.914221554,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 81780.989763638,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 81781.262674054,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 81781.756965304,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 81781.898804575,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 81782.330323898,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            81781.758088
+          ],
+          "model_query_to_status_s": 0.14183927100384608,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 81781.899632,
+              "selector": 1
+            },
+            {
+              "monotonic": 81781.994037,
+              "selector": 2
+            },
+            {
+              "monotonic": 81782.165791,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 81788.885835093,
+          "online": true,
+          "end": 81788.977473583,
+          "duration_s": 0.09163849000469781,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 81788.886975,
+              "selector": 1
+            },
+            {
+              "monotonic": 81788.916211,
+              "selector": 2
+            },
+            {
+              "monotonic": 81788.945902,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 81798.887893839,
+          "online": true,
+          "end": 81798.98289311,
+          "duration_s": 0.09499927100841887,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 81798.889091,
+              "selector": 1
+            },
+            {
+              "monotonic": 81798.921538,
+              "selector": 2
+            },
+            {
+              "monotonic": 81798.950899,
+              "selector": 3
+            }
+          ]
+        }
+      ],
+      "warning_error_lines": [],
+      "retry_log_lines": [],
+      "last_status_ok": 81798.982248475,
+      "all_sent_packets_are_status_or_capability_queries": true
+    },
+    "baseline2": {
+      "pid": 32501,
+      "first_attempt_to_completed_status_s": 32.270759050996276,
+      "original_collection_latency_s": null,
+      "passed": true,
+      "film_used": 0,
+      "attempts": [
+        {
+          "start": 81840.568582625,
+          "online": false,
+          "end": 81856.247031057,
+          "duration_s": 15.678448432008736,
+          "stages": [
+            {
+              "monotonic": 81840.571286532,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 81841.081669708,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 81841.081961271,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 81841.120691115,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 81842.537255073,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 81842.617652052,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 81842.895548822,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 81843.286044968,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 81856.022636474,
+              "stage": 10,
+              "stage_name": "failed",
+              "detail": "printer response timed out"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            81843.287146
+          ],
+          "model_query_to_status_s": null,
+          "status_command_count": 0,
+          "status_commands": []
+        },
+        {
+          "start": 81870.57162251,
+          "online": true,
+          "end": 81872.839341676,
+          "duration_s": 2.267719165989547,
+          "stages": [
+            {
+              "monotonic": 81870.572748343,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 81871.04398876,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 81871.044178916,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 81871.076224957,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 81871.510577145,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 81871.584341103,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 81871.610058395,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 81871.946843551,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 81872.108219332,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 81872.615643499,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            81871.94788
+          ],
+          "model_query_to_status_s": 0.16137578099733219,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 81872.10913,
+              "selector": 1
+            },
+            {
+              "monotonic": 81872.27078,
+              "selector": 2
+            },
+            {
+              "monotonic": 81872.451124,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 81880.573431568,
+          "online": true,
+          "end": 81880.672080006,
+          "duration_s": 0.09864843799732625,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 81880.574949,
+              "selector": 1
+            },
+            {
+              "monotonic": 81880.61063,
+              "selector": 2
+            },
+            {
+              "monotonic": 81880.640612,
+              "selector": 3
+            }
+          ]
+        }
+      ],
+      "warning_error_lines": [
+        "2026-10-13 18:42:05,776 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=TimeoutError error=connect failed",
+        "2026-10-13 18:42:05,778 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none"
+      ],
+      "retry_log_lines": [],
+      "last_status_ok": 81880.67132485,
+      "all_sent_packets_are_status_or_capability_queries": true
+    },
+    "candidate1": {
+      "pid": 32807,
+      "first_attempt_to_completed_status_s": 3.73413744600839,
+      "original_collection_latency_s": null,
+      "passed": true,
+      "film_used": 0,
+      "attempts": [
+        {
+          "start": 82072.771633631,
+          "online": true,
+          "end": 82076.505771077,
+          "duration_s": 3.73413744600839,
+          "stages": [
+            {
+              "monotonic": 82072.774493891,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82073.223157537,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 82073.237491964,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 82073.277993682,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82074.732684828,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 82074.831151807,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 82075.079872223,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 82075.71697665,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82075.857596025,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 82076.284254619,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            82075.71802
+          ],
+          "model_query_to_status_s": 0.14061937500082422,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82075.858447,
+              "selector": 1
+            },
+            {
+              "monotonic": 82075.953093,
+              "selector": 2
+            },
+            {
+              "monotonic": 82076.119123,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82082.774066804,
+          "online": true,
+          "end": 82082.871647116,
+          "duration_s": 0.09758031199453399,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82082.775205,
+              "selector": 1
+            },
+            {
+              "monotonic": 82082.809846,
+              "selector": 2
+            },
+            {
+              "monotonic": 82082.840819,
+              "selector": 3
+            }
+          ]
+        }
+      ],
+      "warning_error_lines": [],
+      "retry_log_lines": [],
+      "last_status_ok": 82082.870960345,
+      "all_sent_packets_are_status_or_capability_queries": true
+    },
+    "candidate2": {
+      "pid": 33070,
+      "first_attempt_to_completed_status_s": 3.7031505719933193,
+      "original_collection_latency_s": null,
+      "passed": true,
+      "film_used": 0,
+      "attempts": [
+        {
+          "start": 82177.827048538,
+          "online": true,
+          "end": 82181.53019911,
+          "duration_s": 3.7031505719933193,
+          "stages": [
+            {
+              "monotonic": 82177.830277184,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82178.334618017,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 82178.334809007,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 82178.382130413,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82179.755526194,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 82179.846977392,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 82180.10925609,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 82180.74642135,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82180.888215933,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 82181.305915725,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            82180.747526
+          ],
+          "model_query_to_status_s": 0.14179458298895042,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82180.889072,
+              "selector": 1
+            },
+            {
+              "monotonic": 82180.983645,
+              "selector": 2
+            },
+            {
+              "monotonic": 82181.140924,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82187.828249107,
+          "online": true,
+          "end": 82187.922532337,
+          "duration_s": 0.09428323000611272,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82187.829413,
+              "selector": 1
+            },
+            {
+              "monotonic": 82187.860927,
+              "selector": 2
+            },
+            {
+              "monotonic": 82187.892131,
+              "selector": 3
+            }
+          ]
+        }
+      ],
+      "warning_error_lines": [],
+      "retry_log_lines": [],
+      "last_status_ok": 82187.921848066,
+      "all_sent_packets_are_status_or_capability_queries": true
+    },
+    "candidate3": {
+      "pid": 33254,
+      "first_attempt_to_completed_status_s": 3.86596598799224,
+      "original_collection_latency_s": null,
+      "passed": true,
+      "film_used": 0,
+      "attempts": [
+        {
+          "start": 82252.837745697,
+          "online": true,
+          "end": 82256.703711685,
+          "duration_s": 3.86596598799224,
+          "stages": [
+            {
+              "monotonic": 82252.840753458,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82253.281724291,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 82253.281851426,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 82253.303164395,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82254.76771429,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 82254.870080749,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 82255.109326582,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 82255.794572675,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82255.935542415,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 82256.478746738,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            82255.796599
+          ],
+          "model_query_to_status_s": 0.14096973999403417,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82255.936612,
+              "selector": 1
+            },
+            {
+              "monotonic": 82256.080441,
+              "selector": 2
+            },
+            {
+              "monotonic": 82256.313908,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82262.839552256,
+          "online": true,
+          "end": 82262.94540335,
+          "duration_s": 0.1058510939910775,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82262.841031,
+              "selector": 1
+            },
+            {
+              "monotonic": 82262.868822,
+              "selector": 2
+            },
+            {
+              "monotonic": 82262.898947,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82272.840897877,
+          "online": true,
+          "end": 82272.935648815,
+          "duration_s": 0.0947509379911935,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82272.842086,
+              "selector": 1
+            },
+            {
+              "monotonic": 82272.874529,
+              "selector": 2
+            },
+            {
+              "monotonic": 82272.904343,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82282.842029436,
+          "online": true,
+          "end": 82282.941304852,
+          "duration_s": 0.09927541599608958,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82282.842926,
+              "selector": 1
+            },
+            {
+              "monotonic": 82282.879361,
+              "selector": 2
+            },
+            {
+              "monotonic": 82282.909852,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82292.843490213,
+          "online": true,
+          "end": 82292.931207192,
+          "duration_s": 0.0877169790037442,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82292.844423,
+              "selector": 1
+            },
+            {
+              "monotonic": 82292.870431,
+              "selector": 2
+            },
+            {
+              "monotonic": 82292.899935,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82302.844362345,
+          "online": true,
+          "end": 82302.936459949,
+          "duration_s": 0.09209760400699452,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82302.845246,
+              "selector": 1
+            },
+            {
+              "monotonic": 82302.875172,
+              "selector": 2
+            },
+            {
+              "monotonic": 82302.904642,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82312.845713122,
+          "online": true,
+          "end": 82312.942946976,
+          "duration_s": 0.09723385400138795,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82312.846983,
+              "selector": 1
+            },
+            {
+              "monotonic": 82312.881028,
+              "selector": 2
+            },
+            {
+              "monotonic": 82312.91099,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82315.585949267,
+          "online": false,
+          "end": 82320.821115046,
+          "duration_s": 5.235165778998635,
+          "stages": [
+            {
+              "monotonic": 82315.587174892,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82320.813620359,
+              "stage": 10,
+              "stage_name": "failed",
+              "detail": "no Instax printer found"
+            }
+          ],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 0,
+          "status_commands": []
+        },
+        {
+          "start": 82321.072489682,
+          "online": true,
+          "end": 82324.685955878,
+          "duration_s": 3.613466195994988,
+          "stages": [
+            {
+              "monotonic": 82321.073573119,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82321.598141296,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 82321.598291504,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 82321.706574733,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82323.123165514,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 82323.234459472,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 82323.466414108,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 82324.108958535,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82324.248894368,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 82324.681841764,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            82324.110798
+          ],
+          "model_query_to_status_s": 0.1399358329945244,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82324.250161,
+              "selector": 1
+            },
+            {
+              "monotonic": 82324.343248,
+              "selector": 2
+            },
+            {
+              "monotonic": 82324.501904,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82331.073854469,
+          "online": true,
+          "end": 82331.164574522,
+          "duration_s": 0.0907200530054979,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82331.075422,
+              "selector": 1
+            },
+            {
+              "monotonic": 82331.102383,
+              "selector": 2
+            },
+            {
+              "monotonic": 82331.13245,
+              "selector": 3
+            }
+          ]
+        }
+      ],
+      "warning_error_lines": [],
+      "retry_log_lines": [],
+      "last_status_ok": 82331.163628063,
+      "all_sent_packets_are_status_or_capability_queries": true
+    },
+    "installed": {
+      "pid": 34003,
+      "first_attempt_to_completed_status_s": 4.325806299995747,
+      "original_collection_latency_s": null,
+      "passed": true,
+      "film_used": 0,
+      "attempts": [
+        {
+          "start": 82381.10993721,
+          "online": true,
+          "end": 82385.43574351,
+          "duration_s": 4.325806299995747,
+          "stages": [
+            {
+              "monotonic": 82381.115295752,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82381.575561272,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 82381.580903147,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 82381.652903251,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82383.585077938,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 82383.710852469,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 82384.190028198,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 82384.623634344,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82384.719136792,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 82385.212355854,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            82384.625253
+          ],
+          "model_query_to_status_s": 0.09550244800630026,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82384.72017,
+              "selector": 1
+            },
+            {
+              "monotonic": 82384.867601,
+              "selector": 2
+            },
+            {
+              "monotonic": 82385.047637,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82391.111245748,
+          "online": true,
+          "end": 82391.199151894,
+          "duration_s": 0.087906146000023,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82391.112489,
+              "selector": 1
+            },
+            {
+              "monotonic": 82391.137746,
+              "selector": 2
+            },
+            {
+              "monotonic": 82391.167415,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82401.113901577,
+          "online": true,
+          "end": 82401.218829911,
+          "duration_s": 0.10492833399621304,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82401.114781,
+              "selector": 1
+            },
+            {
+              "monotonic": 82401.142242,
+              "selector": 2
+            },
+            {
+              "monotonic": 82401.172374,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82411.115639021,
+          "online": true,
+          "end": 82411.223545167,
+          "duration_s": 0.10790614600409754,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82411.116594,
+              "selector": 1
+            },
+            {
+              "monotonic": 82411.162243,
+              "selector": 2
+            },
+            {
+              "monotonic": 82411.191745,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82421.11693032,
+          "online": true,
+          "end": 82421.214070476,
+          "duration_s": 0.09714015599456616,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82421.118046,
+              "selector": 1
+            },
+            {
+              "monotonic": 82421.152691,
+              "selector": 2
+            },
+            {
+              "monotonic": 82421.182608,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82431.117659639,
+          "online": true,
+          "end": 82431.20423016,
+          "duration_s": 0.08657052100170404,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82431.118753,
+              "selector": 1
+            },
+            {
+              "monotonic": 82431.142815,
+              "selector": 2
+            },
+            {
+              "monotonic": 82431.172443,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82441.120187187,
+          "online": true,
+          "end": 82441.225636458,
+          "duration_s": 0.1054492709954502,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82441.121512,
+              "selector": 1
+            },
+            {
+              "monotonic": 82441.16334,
+              "selector": 2
+            },
+            {
+              "monotonic": 82441.19334,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82451.123033121,
+          "online": true,
+          "end": 82451.214672444,
+          "duration_s": 0.09163932299998123,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82451.124518,
+              "selector": 1
+            },
+            {
+              "monotonic": 82451.152603,
+              "selector": 2
+            },
+            {
+              "monotonic": 82451.182591,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82461.126140721,
+          "online": true,
+          "end": 82461.219190617,
+          "duration_s": 0.09304989600786939,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82461.127444,
+              "selector": 1
+            },
+            {
+              "monotonic": 82461.157045,
+              "selector": 2
+            },
+            {
+              "monotonic": 82461.18733,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82471.128743165,
+          "online": true,
+          "end": 82471.226645665,
+          "duration_s": 0.09790249999787193,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82471.12986,
+              "selector": 1
+            },
+            {
+              "monotonic": 82471.161635,
+              "selector": 2
+            },
+            {
+              "monotonic": 82471.191662,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82481.131812797,
+          "online": true,
+          "end": 82481.249466234,
+          "duration_s": 0.11765343700244557,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82481.133261,
+              "selector": 1
+            },
+            {
+              "monotonic": 82481.167665,
+              "selector": 2
+            },
+            {
+              "monotonic": 82481.212147,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82484.602331702,
+          "online": false,
+          "end": 82489.984442533,
+          "duration_s": 5.382110830993042,
+          "stages": [
+            {
+              "monotonic": 82484.603524098,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82489.978067325,
+              "stage": 10,
+              "stage_name": "failed",
+              "detail": "no Instax printer found"
+            }
+          ],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 0,
+          "status_commands": []
+        },
+        {
+          "start": 82490.23517571,
+          "online": true,
+          "end": 82493.667848573,
+          "duration_s": 3.4326728629966965,
+          "stages": [
+            {
+              "monotonic": 82490.236390762,
+              "stage": 0,
+              "stage_name": "scan_started",
+              "detail": ""
+            },
+            {
+              "monotonic": 82490.699737949,
+              "stage": 1,
+              "stage_name": "scan_finished",
+              "detail": ""
+            },
+            {
+              "monotonic": 82490.699925293,
+              "stage": 2,
+              "stage_name": "device_matched",
+              "detail": "INSTAX-52006924 (IOS)"
+            },
+            {
+              "monotonic": 82490.738404772,
+              "stage": 3,
+              "stage_name": "ble_connecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82492.109042428,
+              "stage": 4,
+              "stage_name": "service_discovery",
+              "detail": ""
+            },
+            {
+              "monotonic": 82492.218289615,
+              "stage": 5,
+              "stage_name": "characteristic_lookup",
+              "detail": ""
+            },
+            {
+              "monotonic": 82492.452334147,
+              "stage": 6,
+              "stage_name": "notification_subscribe",
+              "detail": ""
+            },
+            {
+              "monotonic": 82493.093550865,
+              "stage": 7,
+              "stage_name": "model_detecting",
+              "detail": ""
+            },
+            {
+              "monotonic": 82493.235334563,
+              "stage": 8,
+              "stage_name": "status_fetching",
+              "detail": ""
+            },
+            {
+              "monotonic": 82493.663740604,
+              "stage": 9,
+              "stage_name": "connected",
+              "detail": "INSTAX-52006924 (IOS)"
+            }
+          ],
+          "model_query_write_count": 1,
+          "model_query_write_times": [
+            82493.095047
+          ],
+          "model_query_to_status_s": 0.14178369799628854,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82493.236806,
+              "selector": 1
+            },
+            {
+              "monotonic": 82493.330009,
+              "selector": 2
+            },
+            {
+              "monotonic": 82493.498943,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82500.238081487,
+          "online": true,
+          "end": 82500.326040237,
+          "duration_s": 0.08795875000942033,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82500.239742,
+              "selector": 1
+            },
+            {
+              "monotonic": 82500.263796,
+              "selector": 2
+            },
+            {
+              "monotonic": 82500.295277,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82510.240660181,
+          "online": true,
+          "end": 82510.331033827,
+          "duration_s": 0.09037364598771092,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82510.24228,
+              "selector": 1
+            },
+            {
+              "monotonic": 82510.268987,
+              "selector": 2
+            },
+            {
+              "monotonic": 82510.299479,
+              "selector": 3
+            }
+          ]
+        },
+        {
+          "start": 82518.348830908,
+          "online": true,
+          "end": 82518.445945439,
+          "duration_s": 0.09711453100317158,
+          "stages": [],
+          "model_query_write_count": 0,
+          "model_query_write_times": [],
+          "model_query_to_status_s": null,
+          "status_command_count": 3,
+          "status_commands": [
+            {
+              "monotonic": 82518.350531,
+              "selector": 1
+            },
+            {
+              "monotonic": 82518.383922,
+              "selector": 2
+            },
+            {
+              "monotonic": 82518.413374,
+              "selector": 3
+            }
+          ]
+        }
+      ],
+      "warning_error_lines": [],
+      "retry_log_lines": [],
+      "last_status_ok": 82518.445082887,
+      "all_sent_packets_are_status_or_capability_queries": true
+    }
+  },
+  "reconnect": {
+    "candidate": {
+      "passed": true,
+      "observed_recovery_s": 11.828081401996315,
+      "film_used": 0,
+      "sample_count": 33,
+      "all_locked_600_camera_ready": true,
+      "disconnect_monotonic": 82312.979265414
+    },
+    "installed": {
+      "passed": true,
+      "observed_recovery_s": 12.485591869990458,
+      "film_used": 0,
+      "sample_count": 33,
+      "all_locked_600_camera_ready": true,
+      "disconnect_monotonic": 82481.304784099
+    }
+  },
+  "deterministic_fault_case": {
+    "scope": "Paused Tokio time, dropped first ACK then 140ms model reply after one resend; production transaction helper",
+    "query_completed_s": 1.14,
+    "resend_count": 1,
+    "total_deadline_s": 10,
+    "hardware_measurement": false
+  }
+}

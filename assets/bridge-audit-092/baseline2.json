@@ -1,0 +1,1527 @@
+{
+  "label": "baseline2",
+  "film_used": 0,
+  "boundary": "Warm production service restart under identical read-only observer; BlueZ property/object metadata only, no image/print/actuator commands. Timings include retries/radio availability; not physical boot.",
+  "before": {
+    "Paired": true,
+    "Trusted": false,
+    "Connected": true,
+    "ServicesResolved": true
+  },
+  "restart_monotonic": 2451.031682708,
+  "restart_to_fresh_s": 16.268243535999773,
+  "passed": true,
+  "status_attempts": [
+    {
+      "start": 2463.503270151,
+      "online": true,
+      "end": 2467.106869108
+    },
+    {
+      "start": 2473.504659835,
+      "online": true,
+      "end": 2473.618955408
+    }
+  ],
+  "pid": 3714,
+  "first_attempt_to_fresh_s": 3.603598957000031,
+  "events": [
+    {
+      "monotonic": 2454.019137915,
+      "event": "PropertiesChanged",
+      "data": {
+        "ServicesResolved": false,
+        "Connected": false,
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2462.912502079,
+      "event": "PropertiesChanged",
+      "data": {
+        "Trusted": true,
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.405911974,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0001/char0002/desc0004",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattDescriptor1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.409354683,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0001/char0002",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.411240829,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0001",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattService1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.416381141,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0005/char0006",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.416425099,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0005/char0008",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.417112495,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0005",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattService1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.418899214,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service000a/char000b",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.420766974,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service000a/char000d",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.422521089,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service000a/char000f",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.424340881,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service000a/char0011",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.426000985,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service000a",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattService1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.427743589,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0013/char0014",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.429537599,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0013/char0016/desc0018",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattDescriptor1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.431348329,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0013/char0016",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattCharacteristic1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.433543433,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "/service0013",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.GattService1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.435435099,
+      "event": "InterfacesRemoved",
+      "data": {
+        "path_suffix": "",
+        "interfaces": [
+          "org.freedesktop.DBus.Properties",
+          "org.freedesktop.DBus.Introspectable",
+          "org.bluez.Device1"
+        ]
+      }
+    },
+    {
+      "monotonic": 2463.553135516,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.Device1": {
+            "Paired": false,
+            "Connected": false,
+            "ServicesResolved": false
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2463.564696245,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.600794318,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.619383693,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.650655203,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.700977912,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.748326245,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.805942131,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.821740672,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.855139683,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2463.873449005,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2464.070733485,
+      "event": "PropertiesChanged",
+      "data": {
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2464.18298036,
+      "event": "PropertiesChanged",
+      "data": {
+        "Connected": true,
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2465.604500307,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0001",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattService1": {
+            "UUID": "00001801-0000-1000-8000-00805f9b34fb"
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.606093067,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0001/char0002",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a05-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service0001",
+            "Flags": [
+              "indicate"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.606985828,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0001/char0002/desc0004",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattDescriptor1": {
+            "UUID": "00002902-0000-1000-8000-00805f9b34fb"
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.608119682,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0005",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattService1": {
+            "UUID": "00001800-0000-1000-8000-00805f9b34fb"
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.609148692,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0005/char0006",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a00-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service0005",
+            "Flags": [
+              "read"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.61014114,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0005/char0008",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a01-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service0005",
+            "Flags": [
+              "read"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.611434213,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service000a",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattService1": {
+            "UUID": "0000180a-0000-1000-8000-00805f9b34fb"
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.612634526,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service000a/char000b",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a29-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service000a",
+            "Flags": [
+              "read"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.614670515,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service000a/char000d",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a24-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service000a",
+            "Flags": [
+              "read"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.615206713,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service000a/char000f",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a26-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service000a",
+            "Flags": [
+              "read"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.616310671,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service000a/char0011",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "00002a28-0000-1000-8000-00805f9b34fb",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service000a",
+            "Flags": [
+              "read"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.617561765,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0013",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattService1": {
+            "UUID": "70954782-2d83-473d-9e5f-81e1d02d5273"
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.618211661,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0013/char0014",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "70954783-2d83-473d-9e5f-81e1d02d5273",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service0013",
+            "Flags": [
+              "write-without-response",
+              "write"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.619238015,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0013/char0016",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattCharacteristic1": {
+            "UUID": "70954784-2d83-473d-9e5f-81e1d02d5273",
+            "Service": "/org/bluez/hci0/dev_FA_AB_BC_C7_95_64/service0013",
+            "Flags": [
+              "notify"
+            ]
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.620160515,
+      "event": "InterfacesAdded",
+      "data": {
+        "path_suffix": "/service0013/char0016/desc0018",
+        "interfaces": {
+          "org.freedesktop.DBus.Introspectable": {},
+          "org.bluez.GattDescriptor1": {
+            "UUID": "00002902-0000-1000-8000-00805f9b34fb"
+          },
+          "org.freedesktop.DBus.Properties": {}
+        }
+      }
+    },
+    {
+      "monotonic": 2465.621652599,
+      "event": "PropertiesChanged",
+      "data": {
+        "ServicesResolved": true,
+        "invalidated": []
+      }
+    },
+    {
+      "monotonic": 2466.346643223,
+      "event": "PropertiesChanged",
+      "data": {
+        "Paired": true,
+        "invalidated": []
+      }
+    }
+  ],
+  "rows": [
+    {
+      "pid": 3714,
+      "monotonic": 2462.6543376,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": false,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": false,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2462.694370152
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2463.065186402,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": true,
+        "Trusted": true,
+        "Connected": false,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2463.094534787
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2463.359215516,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "available": false
+      },
+      "observed_monotonic": 2463.437055985
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2463.715270464,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": false,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2463.728922495
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2464.001264266,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": false,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2464.076299526
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2464.36271312,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2464.427150047
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2464.685397026,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2464.697806557
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2464.950219057,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2464.956788068
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2465.209143328,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2465.215581557
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2465.467930411,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": false
+      },
+      "observed_monotonic": 2465.474483849
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2465.727929109,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2465.734548224
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2465.986969838,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2465.99376364
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2466.246584577,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": false,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2466.255269473
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2466.508146452,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2466.518904265
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2466.771705411,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2466.780565463
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2467.033873692,
+      "locked": false,
+      "unlocking": false,
+      "fresh": false,
+      "film": null,
+      "camera_ready": true,
+      "last_status_ok": null,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 0,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2467.040533067
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2467.293030358,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2467.299926244
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2467.552386244,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2467.559331296
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2467.811605202,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2467.818866348
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2468.07126916,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2468.078465566
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2468.330681504,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2468.33770791
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2468.589922233,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2468.597046504
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2468.84927692,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2468.856440618
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2469.108976191,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2469.116126087
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2469.368645826,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2469.375713847
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2469.627924576,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2469.635146347
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2469.887392857,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2469.894817441
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2470.14702718,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2470.154320513
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2470.406506711,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2470.413762857
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2470.665959472,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2470.673286399
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2470.925706607,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2470.933065097
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2471.185301451,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2471.192633274
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2471.444892128,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2471.452260669
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2471.706592857,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2471.71478494
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2471.967379419,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2471.975008169
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2472.227288273,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2472.234755773
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2472.486942908,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2472.494363013
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2472.746657544,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2472.754116763
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2473.006323898,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2473.01384296
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2473.266034419,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2473.273623637
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2473.525957856,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2467.07928989,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2473.533517439
+    },
+    {
+      "pid": 3714,
+      "monotonic": 2473.785915877,
+      "locked": false,
+      "unlocking": false,
+      "fresh": true,
+      "film": 0,
+      "camera_ready": true,
+      "last_status_ok": 2473.618253846,
+      "retired_status_tasks": 0,
+      "cpu_khz": 1000000,
+      "governor": "performance",
+      "input_backend": "gpio_v2",
+      "disconnect_watch_count": 1,
+      "bluez": {
+        "Paired": true,
+        "Trusted": false,
+        "Connected": true,
+        "ServicesResolved": true
+      },
+      "observed_monotonic": 2473.793518585
+    }
+  ],
+  "ffi_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031"
+}

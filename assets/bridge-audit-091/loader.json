@@ -1,0 +1,451 @@
+{
+  "profile_sha256": "7af5254ad22a53189caa21d38c5d0158c0e39cb93f3cec6aafa4446aea35172e",
+  "film_used": 0,
+  "hardware_mutated": false,
+  "boundary": "Temporary effective modprobe configuration; --show-depends reports even already-loaded modules. No module insertion/removal.",
+  "media": {
+    "bcm2835_v4l2": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_vmalloc",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_v4l2"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_vmalloc",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_v4l2"
+        ]
+      }
+    },
+    "bcm2835_codec": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_dma_contig",
+          "v4l2_mem2mem",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_codec"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_dma_contig",
+          "v4l2_mem2mem",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_codec"
+        ]
+      }
+    },
+    "bcm2835_isp": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_dma_contig",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_isp"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_dma_contig",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_isp"
+        ]
+      }
+    },
+    "vc_sm_cma": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "vc_sm_cma"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": [
+          "vc_sm_cma"
+        ]
+      }
+    },
+    "snd_bcm2835": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "snd",
+          "snd_timer",
+          "snd_pcm",
+          "snd_bcm2835"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": [
+          "snd",
+          "snd_timer",
+          "snd_pcm",
+          "snd_bcm2835"
+        ]
+      }
+    },
+    "vchiq:bcm2835-camera": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_vmalloc",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_v4l2"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": []
+      }
+    },
+    "vchiq:bcm2835-codec": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_dma_contig",
+          "v4l2_mem2mem",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_codec"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": []
+      }
+    },
+    "vchiq:bcm2835-isp": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videobuf2_common",
+          "videodev",
+          "videobuf2_v4l2",
+          "videobuf2_memops",
+          "videobuf2_dma_contig",
+          "vc_sm_cma",
+          "bcm2835_mmal_vchiq",
+          "bcm2835_isp"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": []
+      }
+    },
+    "vchiq:bcm2835-audio": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "snd",
+          "snd_timer",
+          "snd_pcm",
+          "snd_bcm2835"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": []
+      }
+    },
+    "vcsm-cma": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "vc_sm_cma"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": []
+      },
+      "candidate_plain": {
+        "returncode": 0,
+        "insert_module_names": []
+      }
+    }
+  },
+  "essential": {
+    "fb_st7789v": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "fbtft",
+          "fb_st7789v"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "fbtft",
+          "fb_st7789v"
+        ]
+      }
+    },
+    "fbtft": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "fbtft"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "fbtft"
+        ]
+      }
+    },
+    "hci_uart": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "libaes",
+          "rfkill",
+          "ecc",
+          "ecdh_generic",
+          "bluetooth",
+          "btbcm",
+          "hci_uart"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "libaes",
+          "rfkill",
+          "ecc",
+          "ecdh_generic",
+          "bluetooth",
+          "btbcm",
+          "hci_uart"
+        ]
+      }
+    },
+    "brcmfmac": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "rfkill",
+          "cfg80211",
+          "brcmutil",
+          "brcmfmac"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "rfkill",
+          "cfg80211",
+          "brcmutil",
+          "brcmfmac"
+        ]
+      }
+    },
+    "g_ether": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "libcomposite",
+          "u_ether",
+          "usb_f_rndis",
+          "g_ether"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "libcomposite",
+          "u_ether",
+          "usb_f_rndis",
+          "g_ether"
+        ]
+      }
+    },
+    "videodev": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videodev"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc",
+          "videodev"
+        ]
+      }
+    },
+    "mc": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "mc"
+        ]
+      }
+    },
+    "drm": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "drm_panel_orientation_quirks",
+          "drm"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "drm_panel_orientation_quirks",
+          "drm"
+        ]
+      }
+    },
+    "spi:st7789v": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "fbtft",
+          "fb_st7789v"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "backlight",
+          "fbtft",
+          "fb_st7789v"
+        ]
+      }
+    },
+    "sdio:c00v02D0dA9A6": {
+      "baseline": {
+        "returncode": 0,
+        "insert_module_names": [
+          "rfkill",
+          "cfg80211",
+          "brcmutil",
+          "brcmfmac"
+        ]
+      },
+      "candidate": {
+        "returncode": 0,
+        "insert_module_names": [
+          "rfkill",
+          "cfg80211",
+          "brcmutil",
+          "brcmfmac"
+        ]
+      }
+    }
+  },
+  "passed": true
+}

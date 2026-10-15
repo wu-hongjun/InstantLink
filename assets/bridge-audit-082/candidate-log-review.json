@@ -1,0 +1,18 @@
+{
+  "line_count": 455,
+  "warning_error_panic_lines": [
+    "2026-10-13 10:33:53,236 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+    "2026-10-13 10:33:53,238 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none",
+    "2026-10-13 10:33:53,239 WARNING instantlink_bridge.ui.controller instantlink.auto_rebond action=remove_bond address=FA:AB:BC:C7:95:64 reason=stale_bond_write_failed",
+    "2026-10-13 10:36:07,946 WARNING instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed",
+    "2026-10-13 10:36:07,948 WARNING instantlink_bridge.ui.controller ui.printer_status_unavailable address=FA:AB:BC:C7:95:64 name=INSTAX-52006924 error=printer status unavailable diagnostics=selected_visible=False candidate_count=0 candidates=none",
+    "2026-10-13 10:36:07,949 WARNING instantlink_bridge.ui.controller instantlink.auto_rebond action=remove_bond address=FA:AB:BC:C7:95:64 reason=stale_bond_write_failed"
+  ],
+  "payload_selection_lines": [
+    "[2026-10-13T14:32:28Z INFO  instantlink_core::transport] BLE write payload selected: device=hci0/dev_FA_AB_BC_C7_95_64 mtu=Some(247) payload=236 conservative=false",
+    "[2026-10-13T14:32:42Z INFO  instantlink_core::transport] BLE write payload selected: device=hci0/dev_FA_AB_BC_C7_95_64 mtu=Some(247) payload=236 conservative=false",
+    "[2026-10-13T14:33:57Z INFO  instantlink_core::transport] BLE write payload selected: device=hci0/dev_FA_AB_BC_C7_95_64 mtu=Some(247) payload=236 conservative=false",
+    "[2026-10-13T14:36:11Z INFO  instantlink_core::transport] BLE write payload selected: device=hci0/dev_FA_AB_BC_C7_95_64 mtu=Some(247) payload=236 conservative=false"
+  ],
+  "scope": "One observedruntimePID; rawjournal private. Candidatewarnings include transient characteristicfailure andautomaticrebond; installedworker-waitwarning from intentionalstatuspause smoke."
+}

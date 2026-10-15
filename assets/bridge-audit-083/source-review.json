@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "source_commit": "ffe637e",
+  "sha256": {
+    "crates/instantlink-core/src/printer.rs": "990607e11a355ff5d84c39295100490215f53bf268793b8264f5662090705c33",
+    "crates/instantlink-ffi/src/lib.rs": "b4bf8f007ce37e137abffd5947bc9ee8d732a6aa1114813709107245bf61b54f",
+    "crates/instantlink-ffi/include/instantlink.h": "572d671b99477f75a38e1194cbabd114b474a4f62e1963d4d553f2d9f08481a6",
+    "bridge/src/instantlink_bridge/ble/instantlink.py": "b539f9702b57e46672ad56bd212727ad309e9e78363fb80e1a5d1d0205f858b5"
+  },
+  "host_Rust_tests": 308,
+  "host_Rust_doctests": 1,
+  "full_Bridge_tests": 1773,
+  "App_tests": 156,
+  "independent_tests": {
+    "Bridge": 55,
+    "FFI": 23,
+    "corePrinter": 23,
+    "cleanupFreshness": 1
+  },
+  "resolved_findings": [
+    "old physicaldisconnect cannot teardown neweradmittedconnection",
+    "caughtpanic doesnotpermanentlypoisonunitadmission",
+    "initialread follows scan cleanup toavoidagingreturnedfields"
+  ],
+  "gates": [
+    "normalhooks",
+    "hostproductionClippy",
+    "Ruff",
+    "strictmypy67",
+    "headerregen/drift",
+    "format",
+    "strictMkDocs"
+  ],
+  "status_policy": "No status cache/TTL; handoffonlyduringfreshconnectrequest. Establishedpolls alwaysreadhardware. Olderlibs fallback. No duplicatefallbackonnewAPIerror. Existingcaller-serializationcontract fornonconnectoperations remains.",
+  "film_used": 0,
+  "hardware": "PASS: baseline/candidate/installed status-only live validation; see live-benchmark.json and installed-ui-smoke.json",
+  "ARM_connect_tests": 23,
+  "ARM_additional_teardown_and_panic_checks": 2,
+  "native_FFI_sha256": "88974b10dd285f4eb3b31a08fc8af68756d3612e5cdf8910a1c719b74e265e82",
+  "native_CLI_sha256": "e720bef273ebfca85b96743d85b9c77bb99dd8fcce13fc91e9d3ba52b15f7d79",
+  "independent_hardware_review": "PASS: exact packet counts, freshness, failed attempts, lock/clock and UI observations verified"
+}

@@ -1,0 +1,81 @@
+{
+  "rows": [
+    {
+      "label": "baseline-1",
+      "passed": true,
+      "observed_recovery_s": 13.141172129995539,
+      "first_fetch_after_request_s": 2.3709709370014025,
+      "failed_attempts": 1,
+      "final_attempt_scan_s": 0.5114315620012349,
+      "final_attempt_ble_connect_s": 1.436007864002022,
+      "final_attempt_notify_to_model_s": 0.7209274990018457,
+      "final_attempt_initial_status_s": 0.4283010419967468,
+      "all_samples_locked600_camera_ready": true,
+      "cli_device_delta": 2,
+      "cli_info_delta": 1
+    },
+    {
+      "label": "baseline-2",
+      "passed": true,
+      "observed_recovery_s": 19.211072441001306,
+      "first_fetch_after_request_s": 2.341380832003779,
+      "failed_attempts": 2,
+      "final_attempt_scan_s": 0.5019556759943953,
+      "final_attempt_ble_connect_s": 1.3273934889948578,
+      "final_attempt_notify_to_model_s": 0.7144700520002516,
+      "final_attempt_initial_status_s": 0.4254626040055882,
+      "all_samples_locked600_camera_ready": true,
+      "cli_device_delta": 2,
+      "cli_info_delta": 2
+    },
+    {
+      "label": "candidate-final-1",
+      "passed": true,
+      "observed_recovery_s": 7.990268173998629,
+      "first_fetch_after_request_s": 3.6173846340025193,
+      "failed_attempts": 0,
+      "final_attempt_scan_s": 0.506832499995653,
+      "final_attempt_ble_connect_s": 1.4120974990000832,
+      "final_attempt_notify_to_model_s": 0.5925796869996702,
+      "final_attempt_initial_status_s": 0.4254187490005279,
+      "all_samples_locked600_camera_ready": true,
+      "cli_device_delta": 1,
+      "cli_info_delta": 0
+    },
+    {
+      "label": "candidate-final-3",
+      "passed": true,
+      "observed_recovery_s": 8.690359579995857,
+      "first_fetch_after_request_s": 2.7627026549962466,
+      "failed_attempts": 1,
+      "final_attempt_scan_s": 0.5152761979989009,
+      "final_attempt_ble_connect_s": 1.5005016659997636,
+      "final_attempt_notify_to_model_s": 0.5407847390015377,
+      "final_attempt_initial_status_s": 0.5419744270038791,
+      "all_samples_locked600_camera_ready": true,
+      "cli_device_delta": 3,
+      "cli_info_delta": 0
+    },
+    {
+      "label": "installed",
+      "passed": true,
+      "observed_recovery_s": 12.632414735002385,
+      "first_fetch_after_request_s": 2.8144521349968272,
+      "failed_attempts": 1,
+      "final_attempt_scan_s": 0.4526112500025192,
+      "final_attempt_ble_connect_s": 1.4743768230036949,
+      "final_attempt_notify_to_model_s": 0.6880374990068958,
+      "final_attempt_initial_status_s": 0.5367840100007015,
+      "all_samples_locked600_camera_ready": true,
+      "cli_device_delta": 1,
+      "cli_info_delta": 0
+    }
+  ],
+  "caveats": [
+    "Small uncontrolled radio sample, no universal speedup",
+    "Candidate-final3 recovered after transient write characteristic not found; complete attempt retained",
+    "First complete candidateJSON survives stdout ENOSPC; secondunusablewriteexcluded and retained asfailure",
+    "Native initialstatus and Bridge callerstatus remain separate, potential nextoptimization"
+  ],
+  "film_used": 0
+}

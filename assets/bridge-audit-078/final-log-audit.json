@@ -1,0 +1,45 @@
+{
+  "service_records": 2016,
+  "added_records": 325,
+  "structured_python_levels": {
+    "INFO": 1263,
+    "WARNING": 52,
+    "ERROR": 2,
+    "CRITICAL": 1
+  },
+  "added_structured_levels": {
+    "INFO": 195,
+    "WARNING": 0,
+    "ERROR": 1,
+    "CRITICAL": 0
+  },
+  "new_production_faults": 0,
+  "new_service_failures_or_automatic_restarts": 0,
+  "retained_observer_error": {
+    "pid": 12639,
+    "monotonic_s": 9232.427151,
+    "error": "Temporary observer writer.drain ConnectionResetError after test client disconnect; missing-argument client invocation is associated setup context.",
+    "scope": "Owned temporary harness; not production source. Observer/socket/drop-in removed; raw trace retained privately."
+  },
+  "installed_validation_pid13410": {
+    "records": 83,
+    "INFO": 83,
+    "WARNING": 0,
+    "ERROR": 0,
+    "span_s": 533.492425
+  },
+  "normal_pid13865": {
+    "records": 28,
+    "INFO": 28,
+    "WARNING": 0,
+    "ERROR": 0,
+    "span_s": 107.1417
+  },
+  "manager_pid13408": {
+    "records": 2,
+    "INFO": 2,
+    "WARNING": 0,
+    "ERROR": 0
+  },
+  "scope": "Bridge and manager service journals only; no kernel journal review claimed. Historical real faults retained in initial-log-audit.json."
+}

@@ -1,0 +1,38 @@
+{
+  "reviewer": "gatt_readiness_adversarial",
+  "result": "Normal restoration and cleanup evidence passed; post-refinement connected confirmation pending",
+  "runtime_commit": "59ef50414a1feef21e122664a5033d1b24a67bb2",
+  "native_transport_commit": "6d61384c064e6a3110bf4f3642b4b941b4690d1f",
+  "native_artifact_hashes_unchanged": true,
+  "normal_pid": 6077,
+  "manager_pid": 637,
+  "services_active_zero_restarts": true,
+  "locked_idle_cpu_khz": 600000,
+  "ftp_220_200": true,
+  "gpio_v2_no_input_or_network_fallback": true,
+  "no_normal_app_warnings": true,
+  "cleanup_owned_files_removed": 23,
+  "observer_dropin_socket_mockup_absent": true,
+  "prior_media_wifi_profiles_retained": true,
+  "captured_source_hashes_matched": 67,
+  "frozen_classifier_host_and_runtime_commit_source_match": true,
+  "classifier_expected_sha256": "f82c6128f9e1b4b30ad421cd22e92046d951b1271cec0269230473d179616337",
+  "classifier_live_content_hash_boundary": "Resolved: root captured all67 installed Python hashes, including changed ui/status.py, and reviewer independently matched them to current frozen host source.",
+  "printer_connected_after_refinement": false,
+  "pending_acceptance": [
+    "Post-refinement Printer fresh connected confirmation after user powers it on; no film required."
+  ],
+  "final_gate_reported_by_root": {
+    "bridge_tests_passed": 2388,
+    "ruff_mypy_passed": true,
+    "mypy_modules": 67
+  },
+  "evidence_sha256": {
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/auth-normal-health.json": "71a25f745f2dd1c890b6b3bf6c398b85869bcd183c39414b7b3e4f24d8174d46",
+    "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/docs/assets/bridge-audit-092/cleanup.json": "f5f4b30bb9ef77e9fa028df7e1d6e1ba4bae7efbc647f2d46cd54b272d076658",
+    "/tmp/instantlink-gatt-auth-integrity-092.json": "f1b6c37cac4d7620876074cb74487954ff8ef4989b14927d2c705ceb44345d7f"
+  },
+  "film_used": 0,
+  "reviewer_hardware_mutations": false,
+  "classifier_live_content_hash_verified": true
+}

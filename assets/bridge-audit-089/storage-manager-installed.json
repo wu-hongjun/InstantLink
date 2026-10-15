@@ -1,0 +1,22 @@
+{
+  "film_used": 0,
+  "storage": {
+    "passed": true,
+    "source_bytes": 420000,
+    "independent_spool": true,
+    "failed_add_and_ack_preserve_index_and_original": true,
+    "legacy_preopen_detach": true,
+    "legacy_reload_detach": true,
+    "checksums_match": true,
+    "boundary": "Installed source on Pi filesystem; synthetic files and isolated receiver reservation, no production uploads or Printer commands."
+  },
+  "manager": {
+    "passed": true,
+    "hello_requests": 8,
+    "time_requests": 15,
+    "hello_median_ms": 326.07609349361155,
+    "time_median_ms": 5.7113540096906945,
+    "time_max_ms": 50.463801992009394,
+    "boundary": "Actual installed unauthenticated hello/time endpoints; no signing/config changes or injected manager delay. Does not measure CPU/energy."
+  }
+}

@@ -1,0 +1,771 @@
+{
+  "backlights": [
+    {
+      "actual_brightness": "0",
+      "bl_power": "4",
+      "brightness": "0",
+      "name": "fb_st7789v"
+    }
+  ],
+  "boot_id": "852e653e-c747-47d4-8418-a6e7c2e17ce5",
+  "current_cpu": {
+    "frequency_khz": "600000",
+    "governor": "powersave",
+    "temperature_millicelsius": "45084",
+    "throttled": "throttled=0x0"
+  },
+  "deployment": {
+    "cli_sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e",
+    "commit_sha": "966b316cf8c206d5a8939c117c4e2e55ba356227",
+    "dirty": false,
+    "ffi_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+    "manifest_sha256": "8b62d168ea83c3b937eade1852dbd534fa8f6bb1c7d66351a85ef6cee2644a2c",
+    "python_source_count": 67,
+    "python_source_sha256": {
+      "src/instantlink_bridge/__init__.py": "b691e9c535665a164f7439bcfbdb26a59fb8f3fe4421cb2fb8e2ac6808b5bcfc",
+      "src/instantlink_bridge/app.py": "9f334b80316bcf29ef19c60c6356ef453823258566f08ae8e9dd53aba1015d09",
+      "src/instantlink_bridge/ble/__init__.py": "dffaee56064c5b8b2f94cc2b5c58f62600ba552d60e5c0ea61b2307fe0678a57",
+      "src/instantlink_bridge/ble/agent.py": "a84a371e646f0dbeb401192b152272376fa64f791dd595c9f76994f505181f01",
+      "src/instantlink_bridge/ble/client.py": "a0c23e4cd301e5374b7a7ba809d8bda9bac40e7610b1fd7567348bedc0ddd37f",
+      "src/instantlink_bridge/ble/commands.py": "b776daeb3d5f2834e9ffc5f26f77140c026897ca0204ff40b4abad3698d8d5fb",
+      "src/instantlink_bridge/ble/instantlink.py": "b0f119b4eef2050ad8f133dc38483480714fa078f8b7d51176b22b079fb03bea",
+      "src/instantlink_bridge/ble/instax.py": "3b5a9370ac64f94ee7f95dadc883c8e701e4372e598137b52e0683b6ae96d725",
+      "src/instantlink_bridge/ble/models.py": "3e59654cdf08caf37e56ca2a512cc1115e2d8c426ab13423b6d2addf2b1fa147",
+      "src/instantlink_bridge/ble/protocol.py": "0f4d43dc7a5d466c71402ca11f7880e32eb0a352f0a428cb7a629a32d8104e9d",
+      "src/instantlink_bridge/ble/session.py": "809952fd252d7add653b37e7c6fef45d5278887e924d7cbf5defaf0f690fe845",
+      "src/instantlink_bridge/boot_splash.py": "a1b2214824668da28938463910ac19a44b3809fa5ff191a743ea972865904683",
+      "src/instantlink_bridge/camera/__init__.py": "5dbb55af86c553a700f4414851d11665c4d9160829653f7488bc8c4140c4c67a",
+      "src/instantlink_bridge/camera/ftp.py": "9df6f2b5c65bd88710c18a19759d143ad95e06bbff694cfd60e0f0b9f2f5f7e6",
+      "src/instantlink_bridge/config.py": "9607a4e4a18cc46deaab6f1f3c04346c1678fedf7952cb3f0c7de24afe6e267b",
+      "src/instantlink_bridge/imaging/__init__.py": "0902bea5c961d5a1cb4a32f8329c08410f20040c82bbeed0735a4585c0819095",
+      "src/instantlink_bridge/imaging/pipeline.py": "71055ef4ccf733a28d12b19ad474ac66090992b61cebe6c5cac4aa3a98cdfd7c",
+      "src/instantlink_bridge/imaging/postprocess.py": "7ed7a2d71e462cb36ecce8d1fafddf1f79b7030a0c4efd0c1b3e14125a68cb5c",
+      "src/instantlink_bridge/imaging/presets.py": "6f0966f54c9eb10c2073d8b83bbe6c80166f29424435422c4e99c945abf6577a",
+      "src/instantlink_bridge/imaging/worker.py": "a7cd2d253378bb05223e6dd0f4c2401b98db6bd867a95eda7f6f1877c60d1de7",
+      "src/instantlink_bridge/manager/__init__.py": "ebf74e8a9d7c57571684a25e1c49d5786723b0058f3b042a6beb9b7168b0e04d",
+      "src/instantlink_bridge/manager/api.py": "54e37d3a7362fdbd6826d2fe5daef636402694a4ff1fbd2184f5a36ec8ce4bc2",
+      "src/instantlink_bridge/manager/auth.py": "4d3e3cf136fe8e1f8b56dddf301224409c646abb0c052eca71a6aeda9f4d024f",
+      "src/instantlink_bridge/manager/backup.py": "b1df34f965d8e45352882bcd5945d7801e087b082a8998b286317924162bc735",
+      "src/instantlink_bridge/manager/cli.py": "762ba093f98e58190ebec0f2fb3ff6fae35099b04f066a0b38195b8af515adeb",
+      "src/instantlink_bridge/manager/config_payload.py": "2e87a914b150e3679d8a11dabc42df26cc26e23aabc225a7276f4a990699934c",
+      "src/instantlink_bridge/manager/contract.py": "886b44a29af4d462782d41ba2bb425f4f4b77c3d9d8baaf2d4085ce1c868ceab",
+      "src/instantlink_bridge/manager/diagnostics.py": "87c83ad39105fa4958f9e7733f886da43e7fd920c54497c298c29a79ad90c519",
+      "src/instantlink_bridge/manager/health.py": "30df82a166869bab3ac10d1afd1a437e16a640e0d4568d6a77b7c91be1cd9d1d",
+      "src/instantlink_bridge/manager/installer.py": "1c67939ce7d4ab03deb5ca9cafc03f4ddf2f70154af008ba0994f27759a0260d",
+      "src/instantlink_bridge/manager/release_slots.py": "674efec218bf492abcd1702416adebaaaff0b9cb57efed4068d29ed15bdaa811",
+      "src/instantlink_bridge/manager/schema.py": "1fb736999ff6461622250c69db15ac3dad1a36718af368b03bcdd2dfdcbfe5ff",
+      "src/instantlink_bridge/manager/signing.py": "cfb3bf2a918edd117cac144de0fd117e728dec9997e86384b9c06e1cccadfc08",
+      "src/instantlink_bridge/manager/status.py": "3248206f94c9c655146908ab07b530f6a39a495b010b80b816ee8ba41f9903b5",
+      "src/instantlink_bridge/manager/update_flow.py": "b5d7b90b80611be46cb58901e38b48a4e2d84040674b39d3af0d7fd24720698c",
+      "src/instantlink_bridge/net/__init__.py": "a58ebdf6502048e4c5af8523082be31f7b065ef3537fa284ead4048a81766fb0",
+      "src/instantlink_bridge/net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+      "src/instantlink_bridge/net/health.py": "9b1ba868a21450621ce492f7725f05a51155f8ba6297d65f40c74386cb47d53e",
+      "src/instantlink_bridge/net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+      "src/instantlink_bridge/power/__init__.py": "aac79162f3aec2bd6d1fe34094e7391f357a66b8c8d87a1282735d32a2352747",
+      "src/instantlink_bridge/power/battery_estimator.py": "a2579615500c58d23ef8cb11a2f4b074f2f9b902fc95b176d54479a996278e3a",
+      "src/instantlink_bridge/power/monitor.py": "c4211bc2c4e5c7ec2594aefb2ee14840f220b05742ab33adcffe3ae075e10726",
+      "src/instantlink_bridge/power/performance.py": "711a81541f37c12ad87bf6e309bca2583588a2731ad8247a357508a2bd9f7315",
+      "src/instantlink_bridge/power/pisugar.py": "044558cadabbadeb40575948e709d8be99be7c5faad4bdd761cc8bd504163b65",
+      "src/instantlink_bridge/power/x306.py": "12c6e6c643d8cb2b44e5c7b34a5e32e960b65d9b5afd3eee6100442ba979a498",
+      "src/instantlink_bridge/printing.py": "b20c7ad6edd92301e24c671d7d8046ae2e44ace4e62f2a66768eb612eda4aad7",
+      "src/instantlink_bridge/sync/__init__.py": "cef2158f6a7e290024c5e97550508a85d08216f3d89835e8ea3c4bfaedb6ec7f",
+      "src/instantlink_bridge/sync/models.py": "bf8fcc5229ab7e5a4c10d7d442a307db3b41b7013bf1c4d744e61a003de252a9",
+      "src/instantlink_bridge/sync/outbox.py": "720418790ca370ccfade64f354a6fa996be3928153c5fe40d9fa41ddfd72b617",
+      "src/instantlink_bridge/sync/server.py": "ae00f47a265810d23e32cb64d5359cc980c6da075992702f9f1bed178f60814f",
+      "src/instantlink_bridge/system_info.py": "5013f5e190b572106934143b1f89c64cab9a9c8e7991378ad52b2f26103d9ee9",
+      "src/instantlink_bridge/system_stats.py": "46108bd2f0974553464fd10bb960f73e24df13f0d1322b59f2f56e3a8ee383b5",
+      "src/instantlink_bridge/ui/__init__.py": "c93acc0fe799d05e7146a385a2e1e03b3434380389551de0c49c4d9401201917",
+      "src/instantlink_bridge/ui/controller.py": "ebe5563d60ae137c0e0936272892449bb94cf94a729ae9e61cf5885e89085240",
+      "src/instantlink_bridge/ui/display.py": "2a451b279dc94a3b7c8746b9b175cc7536b1bfce6f699d661f627f2c550b656b",
+      "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97",
+      "src/instantlink_bridge/ui/i18n.py": "22d6511e2fb8579783edacb4e74b89c34550ad5232dabb7fa4cdeec475d07c7f",
+      "src/instantlink_bridge/ui/input.py": "c26960fad81190dcf7c892346c1d046a073a31532ee3832a223c505911198037",
+      "src/instantlink_bridge/ui/models.py": "9c32f7082bb33e97ba074651c0d88b374f3fff55c76dce1e6868cd2e25ecaf68",
+      "src/instantlink_bridge/ui/pairing.py": "2e532bd4cfb6777cfe582a64ac8fdb0a9d43c068f94938c186bb9535a1d44f70",
+      "src/instantlink_bridge/ui/render.py": "3620d146e35fd1a76045b0834600a61c944a0a59131c508cbfc2d79987e7ea3b",
+      "src/instantlink_bridge/ui/settings.py": "44e1c4fc9e9862e0296fa1e4bcfbd6ce7258eff77ab7d88dc27b851b295bcd84",
+      "src/instantlink_bridge/ui/status.py": "d435248161f079c0e4f3e58fa26acff970023d74f5f7d8111f85b3c8a0bbb175",
+      "src/instantlink_bridge/ui/status_indicator.py": "f989740a7ab25a85ee5ac93346d8d18098934797b6f1ae777ef217114c40678e",
+      "src/instantlink_bridge/ui/theme.py": "8a084ad6492b345be240a487bc5a342003179ea7ec766ebb7fa50c3a0d79a84a",
+      "src/instantlink_bridge/update/signing.py": "07dcbb300acf4470907c5a6694dfbaed07affe25055111f8f19bf379908be8c9",
+      "src/instantlink_bridge/watchdog.py": "8921b10f968b4335767196f9e8b9be89af0e5d9e3db19e571dddc14dec3f2be0"
+    },
+    "source_mode": "git-archive"
+  },
+  "film_commands": 0,
+  "first_boot_app": {
+    "first_service_stop_s": null,
+    "milestones": {
+      "app_boot_start_s": 13.127633,
+      "bridge_ready_s": 13.828224,
+      "first_fresh_printer_status_s": null,
+      "ftp_ready_s": 13.729756,
+      "gpio_edges_ready_s": 13.813278,
+      "hotspot_receive_ready_s": 19.088398,
+      "lcd_ui_ready_s": 13.818549
+    },
+    "pid": "478",
+    "printer_status_availability": "unavailable",
+    "printer_status_within_first_60s": false
+  },
+  "first_st7789_framebuffer_registration_s": 9.256942,
+  "ftp_probe": {
+    "greeting_code": "220",
+    "noop_code": "200",
+    "scope": "Same-Pi hotspot address; no camera airtime/upload measured."
+  },
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "gpu_media_closure": {
+    "mapped_module_bytes": 0,
+    "module_count": 0,
+    "modules": []
+  },
+  "kernel_warning_counts": {
+    "display_staging_notices": 2,
+    "media_null_unregister": 0,
+    "native_wifi_backport_notice": 1,
+    "vchi_service_failures": 0,
+    "wifi_vendor_ie_errors": 0
+  },
+  "label": "candidate-1",
+  "lcd": [
+    {
+      "bits_per_pixel": "16",
+      "device": "fb0",
+      "modes": "U:720x480p-0",
+      "name": "BCM2708 FB",
+      "virtual_size": "720,480"
+    },
+    {
+      "bits_per_pixel": "16",
+      "device": "fb1",
+      "modes": "U:240x240p-0",
+      "name": "fb_st7789v",
+      "virtual_size": "240,240"
+    }
+  ],
+  "loaded_modules": [
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nft_reject_ipv4",
+      "refcount": 2
+    },
+    {
+      "bytes": 16384,
+      "holders": [
+        "nft_reject_ipv4"
+      ],
+      "name": "nf_reject_ipv4",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [
+        "nft_reject_ipv4"
+      ],
+      "name": "nft_reject",
+      "refcount": 1
+    },
+    {
+      "bytes": 20480,
+      "holders": [],
+      "name": "nft_ct",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nft_masq",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nft_chain_nat",
+      "refcount": 1
+    },
+    {
+      "bytes": 282624,
+      "holders": [
+        "nft_reject_ipv4",
+        "nft_reject",
+        "nft_ct",
+        "nft_masq",
+        "nft_chain_nat"
+      ],
+      "name": "nf_tables",
+      "refcount": 29
+    },
+    {
+      "bytes": 16384,
+      "holders": [],
+      "name": "nf_nat_h323",
+      "refcount": 0
+    },
+    {
+      "bytes": 69632,
+      "holders": [
+        "nf_nat_h323"
+      ],
+      "name": "nf_conntrack_h323",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nf_nat_pptp",
+      "refcount": 0
+    },
+    {
+      "bytes": 12288,
+      "holders": [
+        "nf_nat_pptp"
+      ],
+      "name": "nf_conntrack_pptp",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nf_nat_tftp",
+      "refcount": 0
+    },
+    {
+      "bytes": 16384,
+      "holders": [
+        "nf_nat_tftp"
+      ],
+      "name": "nf_conntrack_tftp",
+      "refcount": 1
+    },
+    {
+      "bytes": 16384,
+      "holders": [],
+      "name": "nf_nat_sip",
+      "refcount": 0
+    },
+    {
+      "bytes": 36864,
+      "holders": [
+        "nf_nat_sip"
+      ],
+      "name": "nf_conntrack_sip",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nf_nat_irc",
+      "refcount": 0
+    },
+    {
+      "bytes": 16384,
+      "holders": [
+        "nf_nat_irc"
+      ],
+      "name": "nf_conntrack_irc",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "nf_nat_ftp",
+      "refcount": 0
+    },
+    {
+      "bytes": 16384,
+      "holders": [
+        "nf_nat_ftp"
+      ],
+      "name": "nf_conntrack_ftp",
+      "refcount": 1
+    },
+    {
+      "bytes": 57344,
+      "holders": [
+        "nft_masq",
+        "nft_chain_nat",
+        "nf_nat_h323",
+        "nf_nat_pptp",
+        "nf_nat_tftp",
+        "nf_nat_sip",
+        "nf_nat_irc",
+        "nf_nat_ftp"
+      ],
+      "name": "nf_nat",
+      "refcount": 8
+    },
+    {
+      "bytes": 159744,
+      "holders": [
+        "nft_ct",
+        "nft_masq",
+        "nf_nat_h323",
+        "nf_conntrack_h323",
+        "nf_nat_pptp",
+        "nf_conntrack_pptp",
+        "nf_nat_tftp",
+        "nf_conntrack_tftp",
+        "nf_nat_sip",
+        "nf_conntrack_sip",
+        "nf_nat_irc",
+        "nf_conntrack_irc",
+        "nf_nat_ftp",
+        "nf_conntrack_ftp",
+        "nf_nat"
+      ],
+      "name": "nf_conntrack",
+      "refcount": 15
+    },
+    {
+      "bytes": 20480,
+      "holders": [
+        "nf_conntrack"
+      ],
+      "name": "nf_defrag_ipv6",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [
+        "nf_conntrack"
+      ],
+      "name": "nf_defrag_ipv4",
+      "refcount": 1
+    },
+    {
+      "bytes": 61440,
+      "holders": [],
+      "name": "rfcomm",
+      "refcount": 2
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "cmac",
+      "refcount": 3
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "algif_hash",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "aes_arm64",
+      "refcount": 3
+    },
+    {
+      "bytes": 32768,
+      "holders": [
+        "aes_arm64"
+      ],
+      "name": "aes_generic",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "algif_skcipher",
+      "refcount": 1
+    },
+    {
+      "bytes": 28672,
+      "holders": [
+        "algif_hash",
+        "algif_skcipher"
+      ],
+      "name": "af_alg",
+      "refcount": 6
+    },
+    {
+      "bytes": 24576,
+      "holders": [],
+      "name": "bnep",
+      "refcount": 2
+    },
+    {
+      "bytes": 16384,
+      "holders": [],
+      "name": "binfmt_misc",
+      "refcount": 1
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "fb_st7789v",
+      "refcount": 0
+    },
+    {
+      "bytes": 49152,
+      "holders": [
+        "fb_st7789v"
+      ],
+      "name": "fbtft",
+      "refcount": 1
+    },
+    {
+      "bytes": 24576,
+      "holders": [],
+      "name": "spidev",
+      "refcount": 0
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "brcmfmac_wcc",
+      "refcount": 0
+    },
+    {
+      "bytes": 53248,
+      "holders": [],
+      "name": "hci_uart",
+      "refcount": 0
+    },
+    {
+      "bytes": 24576,
+      "holders": [
+        "hci_uart"
+      ],
+      "name": "btbcm",
+      "refcount": 1
+    },
+    {
+      "bytes": 651264,
+      "holders": [
+        "rfcomm",
+        "bnep",
+        "hci_uart",
+        "btbcm"
+      ],
+      "name": "bluetooth",
+      "refcount": 27
+    },
+    {
+      "bytes": 376832,
+      "holders": [
+        "brcmfmac_wcc"
+      ],
+      "name": "brcmfmac",
+      "refcount": 1
+    },
+    {
+      "bytes": 24576,
+      "holders": [
+        "brcmfmac"
+      ],
+      "name": "brcmutil",
+      "refcount": 1
+    },
+    {
+      "bytes": 16384,
+      "holders": [
+        "bluetooth"
+      ],
+      "name": "ecdh_generic",
+      "refcount": 2
+    },
+    {
+      "bytes": 40960,
+      "holders": [
+        "ecdh_generic"
+      ],
+      "name": "ecc",
+      "refcount": 1
+    },
+    {
+      "bytes": 16384,
+      "holders": [
+        "aes_arm64",
+        "aes_generic",
+        "bluetooth"
+      ],
+      "name": "libaes",
+      "refcount": 3
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "raspberrypi_hwmon",
+      "refcount": 0
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "raspberrypi_gpiomem",
+      "refcount": 0
+    },
+    {
+      "bytes": 20480,
+      "holders": [],
+      "name": "spi_bcm2835",
+      "refcount": 0
+    },
+    {
+      "bytes": 16384,
+      "holders": [],
+      "name": "i2c_bcm2835",
+      "refcount": 0
+    },
+    {
+      "bytes": 1048576,
+      "holders": [
+        "brcmfmac"
+      ],
+      "name": "cfg80211",
+      "refcount": 1
+    },
+    {
+      "bytes": 36864,
+      "holders": [
+        "bluetooth",
+        "cfg80211"
+      ],
+      "name": "rfkill",
+      "refcount": 6
+    },
+    {
+      "bytes": 12288,
+      "holders": [],
+      "name": "uio_pdrv_genirq",
+      "refcount": 0
+    },
+    {
+      "bytes": 20480,
+      "holders": [
+        "uio_pdrv_genirq"
+      ],
+      "name": "uio",
+      "refcount": 1
+    },
+    {
+      "bytes": 24576,
+      "holders": [],
+      "name": "sch_fq_codel",
+      "refcount": 3
+    },
+    {
+      "bytes": 16384,
+      "holders": [],
+      "name": "i2c_dev",
+      "refcount": 0
+    },
+    {
+      "bytes": 40960,
+      "holders": [],
+      "name": "zram",
+      "refcount": 1
+    },
+    {
+      "bytes": 24576,
+      "holders": [
+        "zram"
+      ],
+      "name": "lz4_compress",
+      "refcount": 1
+    },
+    {
+      "bytes": 20480,
+      "holders": [],
+      "name": "usb_f_ecm",
+      "refcount": 1
+    },
+    {
+      "bytes": 16384,
+      "holders": [],
+      "name": "g_ether",
+      "refcount": 0
+    },
+    {
+      "bytes": 32768,
+      "holders": [
+        "g_ether"
+      ],
+      "name": "usb_f_rndis",
+      "refcount": 2
+    },
+    {
+      "bytes": 28672,
+      "holders": [
+        "usb_f_ecm",
+        "g_ether",
+        "usb_f_rndis"
+      ],
+      "name": "u_ether",
+      "refcount": 3
+    },
+    {
+      "bytes": 86016,
+      "holders": [
+        "usb_f_ecm",
+        "g_ether",
+        "usb_f_rndis",
+        "u_ether"
+      ],
+      "name": "libcomposite",
+      "refcount": 4
+    },
+    {
+      "bytes": 675840,
+      "holders": [],
+      "name": "drm",
+      "refcount": 0
+    },
+    {
+      "bytes": 172032,
+      "holders": [],
+      "name": "fuse",
+      "refcount": 1
+    },
+    {
+      "bytes": 28672,
+      "holders": [
+        "drm"
+      ],
+      "name": "drm_panel_orientation_quirks",
+      "refcount": 1
+    },
+    {
+      "bytes": 24576,
+      "holders": [
+        "fbtft",
+        "drm"
+      ],
+      "name": "backlight",
+      "refcount": 2
+    },
+    {
+      "bytes": 20480,
+      "holders": [
+        "nf_tables"
+      ],
+      "name": "nfnetlink",
+      "refcount": 3
+    },
+    {
+      "bytes": 32768,
+      "holders": [],
+      "name": "ip_tables",
+      "refcount": 0
+    },
+    {
+      "bytes": 53248,
+      "holders": [
+        "ip_tables"
+      ],
+      "name": "x_tables",
+      "refcount": 1
+    },
+    {
+      "bytes": 598016,
+      "holders": [
+        "[permanent]"
+      ],
+      "name": "ipv6",
+      "refcount": 30
+    }
+  ],
+  "measurement_origin": "Linux kernel boot monotonic seconds; excludes firmware/power-button latency.",
+  "media_policy_sha256": {
+    "/etc/modprobe.d/instantlink-bridge-unused-media.conf": "7af5254ad22a53189caa21d38c5d0158c0e39cb93f3cec6aafa4446aea35172e"
+  },
+  "module_hashes": {
+    "brcmfmac": {
+      "loaded": true,
+      "note": "On-disk file hash; resident-module provenance requires boot/module verification.",
+      "on_disk_sha256": "a2b930a1668775132fa9446d69bc33edc7785aed48bfa6fb35873ae6a14a02c7",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+    },
+    "fb_st7789v": {
+      "loaded": true,
+      "note": "On-disk file hash; resident-module provenance requires boot/module verification.",
+      "on_disk_sha256": "e87802a0f2d319908e81c63291229137a1f6edb491eed6dabe1c3f031b3fbb35",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+    },
+    "fbtft": {
+      "loaded": true,
+      "note": "On-disk file hash; resident-module provenance requires boot/module verification.",
+      "on_disk_sha256": "987c41700ec6f41549d72d10203aa3d63b008c120f7a49f0f159684accf052e4",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+    },
+    "hci_uart": {
+      "loaded": true,
+      "note": "On-disk file hash; resident-module provenance requires boot/module verification.",
+      "on_disk_sha256": "f739e3cc097ddc6dbaeca410eb86dc660875955518bb3ff334d944fe6bbe75c3",
+      "vermagic": "6.12.47+rpt-rpi-v8 SMP preempt mod_unload modversions aarch64"
+    }
+  },
+  "schema_version": 1,
+  "services": {
+    "NetworkManager.service": {
+      "current": {
+        "ActiveEnterTimestampMonotonic": "15129532",
+        "ActiveState": "active",
+        "ExecMainStartTimestampMonotonic": "9722810",
+        "MainPID": "477",
+        "NRestarts": "0",
+        "SubState": "running"
+      },
+      "current_active_is_first_boot_instance": true,
+      "first_boot_active_s": 15.136215
+    },
+    "bluetooth.service": {
+      "current": {
+        "ActiveEnterTimestampMonotonic": "9748407",
+        "ActiveState": "active",
+        "ExecMainStartTimestampMonotonic": "9190674",
+        "MainPID": "427",
+        "NRestarts": "0",
+        "SubState": "running"
+      },
+      "current_active_is_first_boot_instance": true,
+      "first_boot_active_s": 9.749649
+    },
+    "instantlink-bridge-boot-splash.service": {
+      "current": {
+        "ActiveEnterTimestampMonotonic": "9634358",
+        "ActiveState": "active",
+        "ExecMainStartTimestampMonotonic": "9431216",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "SubState": "exited"
+      },
+      "current_active_is_first_boot_instance": true,
+      "first_boot_active_s": 9.634515
+    },
+    "instantlink-bridge-manager.service": {
+      "current": {
+        "ActiveEnterTimestampMonotonic": "15152283",
+        "ActiveState": "active",
+        "ExecMainStartTimestampMonotonic": "15149782",
+        "MainPID": "630",
+        "NRestarts": "0",
+        "SubState": "running"
+      },
+      "current_active_is_first_boot_instance": true,
+      "first_boot_active_s": 15.159163
+    },
+    "instantlink-bridge.service": {
+      "current": {
+        "ActiveEnterTimestampMonotonic": "14746083",
+        "ActiveState": "active",
+        "ExecMainStartTimestampMonotonic": "9727470",
+        "MainPID": "478",
+        "NRestarts": "0",
+        "SubState": "running"
+      },
+      "current_active_is_first_boot_instance": true,
+      "first_boot_active_s": 14.746344
+    }
+  },
+  "systemd_boot_seconds": {
+    "kernel": 2.627137,
+    "total": 16.879464,
+    "userspace": 14.252327
+  },
+  "timestamp_utc": "2026-10-14T14:45:29.169093+00:00",
+  "uname": "6.12.47+rpt-rpi-v8"
+}

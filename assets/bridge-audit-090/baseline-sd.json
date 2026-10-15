@@ -1,0 +1,137 @@
+{
+  "label": "baseline-sd",
+  "timestamp_utc": "2026-10-14T11:56:01.031276+00:00",
+  "boundary": "Installed isolated FTP receive service on alternate port; same-Pi hotspot IP path, NO wireless airtime. Pacing included in continuity trial; unpaced transfer separate.",
+  "isolated_storage": "/var/tmp (SD)",
+  "film_used": 0,
+  "payload_bytes": 8388608,
+  "payload_sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+  "production_uploads": 0,
+  "uploads": [
+    {
+      "name": "unpaced.jpg",
+      "started_monotonic": 129490.820870537,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.0,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 0.15965692698955536,
+      "MiB_s_including_pacing": 50.10744069077162
+    },
+    {
+      "name": "paced-0.jpg",
+      "started_monotonic": 129490.985478037,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 9.36496291300864,
+      "MiB_s_including_pacing": 0.8542479104628804
+    },
+    {
+      "name": "paced-1.jpg",
+      "started_monotonic": 129500.854650273,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 9.341586298003676,
+      "MiB_s_including_pacing": 0.8563856014164984
+    },
+    {
+      "name": "paced-2.jpg",
+      "started_monotonic": 129510.702992352,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 9.352224631991703,
+      "MiB_s_including_pacing": 0.8554114464524227
+    }
+  ],
+  "helper_calls": [
+    {
+      "start": 129491.235830172,
+      "elapsed_s": 3.822940936006489,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 129501.105755898,
+      "vendor_ie_errors_to_next_call": 2,
+      "kernel_events_to_next_call": [
+        {
+          "monotonic": 129492.744096,
+          "message": "ieee80211 phy0: brcmf_vif_set_mgmt_ie: vndr ie set error : -52",
+          "priority": "3"
+        },
+        {
+          "monotonic": 129492.746084,
+          "message": "ieee80211 phy0: brcmf_vif_set_mgmt_ie: vndr ie set error : -52",
+          "priority": "3"
+        }
+      ]
+    },
+    {
+      "start": 129501.105755898,
+      "elapsed_s": 3.6749327590077883,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 129510.95925329,
+      "vendor_ie_errors_to_next_call": 2,
+      "kernel_events_to_next_call": [
+        {
+          "monotonic": 129502.436068,
+          "message": "ieee80211 phy0: brcmf_vif_set_mgmt_ie: vndr ie set error : -52",
+          "priority": "3"
+        },
+        {
+          "monotonic": 129502.438068,
+          "message": "ieee80211 phy0: brcmf_vif_set_mgmt_ie: vndr ie set error : -52",
+          "priority": "3"
+        }
+      ]
+    },
+    {
+      "start": 129510.95925329,
+      "elapsed_s": 3.741752550005913,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 129521.561790838,
+      "vendor_ie_errors_to_next_call": 2,
+      "kernel_events_to_next_call": [
+        {
+          "monotonic": 129512.292062,
+          "message": "ieee80211 phy0: brcmf_vif_set_mgmt_ie: vndr ie set error : -52",
+          "priority": "3"
+        },
+        {
+          "monotonic": 129512.294003,
+          "message": "ieee80211 phy0: brcmf_vif_set_mgmt_ie: vndr ie set error : -52",
+          "priority": "3"
+        }
+      ]
+    }
+  ],
+  "vendor_ie_errors": 6,
+  "receive_checksums_passed": true,
+  "all_uploads_completed": true,
+  "helper_calls_passed": true,
+  "production_ftp_failures": 9,
+  "printer_connected_samples": 0,
+  "active_connection_snapshots": [
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/100",
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/101",
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/102",
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/103",
+    "110 (deactivating)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/100",
+    "110 (deactivating)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/101",
+    "110 (deactivating)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/102",
+    "30 (disconnected)",
+    "50 (connecting (configuring))\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/101",
+    "50 (connecting (configuring))\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/102",
+    "50 (connecting (configuring))\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/103",
+    "70 (connecting (getting IP configuration))\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/101",
+    "70 (connecting (getting IP configuration))\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/102",
+    "80 (connecting (checking IP connectivity))\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/103"
+  ],
+  "monitor_max_span_s": 0.45286869700066745,
+  "helper_median_s": 3.741752550005913,
+  "samples_count": 54,
+  "printer_limit": "Printer stopped advertising before benchmark; no connected-retention or reconnect claim for this phase."
+}

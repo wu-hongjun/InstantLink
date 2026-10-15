@@ -1,0 +1,65 @@
+{
+  "status": "final independent signoff passed",
+  "blockers": [],
+  "source_commit": "06bbe866ab5eb02b7fa5aa82fb5e24a3fbb33c3e",
+  "render_sha256": "df10cadf41ea34c9b3baabcd5edcb08b75764804fda851151a4f6c60ebed7775",
+  "final_pid": 40805,
+  "checks": {
+    "production_source_hashes_all_match": true,
+    "native_artifact_hashes_unchanged_and_loaded_mapping_live": true,
+    "normal_bridge_and_manager_active_zero_restarts": true,
+    "locked600_powersave_no_throttling_printer_connected": true,
+    "gpio_v2_input_no_failures": true,
+    "hotspot_USB_and_FTP_health_passed": true,
+    "owned17fixtures_removed_dropin_socket_mock_absent": true,
+    "fullboot144historical_matches_retained_and_task087_zero": true,
+    "private_fullboot_journal_mode0600": true,
+    "no_film": true
+  },
+  "running_log_review": {
+    "records": 12949,
+    "matches": 144,
+    "task087_processes": {
+      "baseline": {
+        "pid": "38979",
+        "records": 353,
+        "issues": []
+      },
+      "candidate": {
+        "pid": "39485",
+        "records": 348,
+        "issues": []
+      },
+      "installed": {
+        "pid": "40333",
+        "records": 375,
+        "issues": []
+      },
+      "normal": {
+        "pid": "40805",
+        "records": 34,
+        "issues": []
+      }
+    },
+    "historical_systemd_priority_errors": 8,
+    "historical_panic_episodes": 2,
+    "historical_worker_stuck_critical": 1,
+    "interpretation": "The full current boot includes historical failures; task 087 process scopes have no matched severity messages. INFO diagnostics containing lowercase error fields are not severity messages. The filter uses uppercase severity labels and journald priorities 0\u20133. Kernel journals were not reviewed."
+  },
+  "verified_installed_metrics": {
+    "total_ms": 13.993854001455475,
+    "draw_ms": 2.6628650011844,
+    "cpu_ms": 13.727995499999812,
+    "draw_cpu_ms": 2.680807499999771,
+    "pack_ms": 9.87276049272623,
+    "write_ms": 0.3545834988472052,
+    "backlight_ms": 1.0080210049636662
+  },
+  "limitations": [
+    "Kernel GPIO simulation did not actuate physical button contacts.",
+    "Actual framebuffer timings end at kernel write return, not panel scanout.",
+    "The FTP NOOP probe uses the Pi hotspot address; no camera upload or wireless airtime was measured.",
+    "The pixel cache bound excludes native fonts and Python metadata; battery energy was not measured."
+  ],
+  "remaining": "The parent is finishing the documentation commit and push; hardware validation is complete."
+}

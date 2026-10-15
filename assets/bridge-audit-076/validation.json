@@ -1,0 +1,49 @@
+{
+  "hardware": {
+    "bridge": "Raspberry Pi Zero 2 W Rev1",
+    "lcd": "ST7789 240x240",
+    "battery": "X306 / 2300 mAh",
+    "printer": "Instax Square INSTAX-52006924",
+    "os": "Debian13.2 / kernel6.12.47+rpt-rpi-v8",
+    "python": "3.13.5",
+    "bluez": "5.82"
+  },
+  "source_runtime_commit": "8bbbd88018e7c56054ca7e60441a956462ea6cef",
+  "native_source_commit": "dedfdb26876809420308ee835a3f63f139dd2c91",
+  "native_source_dirty": false,
+  "ffi_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
+  "cli_sha256": "d31908f65fae0293ba30a2ce8b5082de507c40e49fcab992581511e85697c74b",
+  "local_checks": {
+    "bridge_tests": 1551,
+    "rust_tests_including_doctest": 282,
+    "macos_tests": 156,
+    "ruff": true,
+    "strict_mypy_source_files": 65,
+    "rust_build_fmt_clippy": true,
+    "ffi_header_drift": true,
+    "normal_commit_hooks": true,
+    "strict_docs": true
+  },
+  "pi_pytest": "Not run: installed runtime environment has no pytest. No test dependency installed on the appliance.",
+  "quality_boundary": "Captured JPEG and decoded RGB equal same-settings preparation exactly. Square has no transport flip; captured image reviewed upright. Developed film has not been inspected.",
+  "input_boundary": "GPIO-equivalent queue events and real framebuffer, not electrical button contacts.",
+  "timing_boundary": "Same-Pi hotspot-address FTP replay; no camera Wi-Fi airtime or mechanical/development timing. One physical print; no retry.",
+  "battery_discharge_test": false,
+  "combined_wifi_printer_acceptance": {
+    "passed": true,
+    "recovery_s": 32.672213790000114,
+    "locked_khz": 600000,
+    "connected_samples": 31,
+    "status_observations": 4,
+    "max_status_age_s": 9.542704007000339,
+    "film_before_after": [
+      0,
+      0
+    ],
+    "history_before_after": [
+      68,
+      68
+    ],
+    "boundary": "Real runtime with private observer, wlan0 down retained IPv4, normal recovery only; no camera association/airtime test."
+  }
+}

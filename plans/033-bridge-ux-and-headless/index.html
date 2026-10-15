@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3449,7 +3479,7 @@ all already decoupled enough that this plan is mostly <em>wiring</em>, not new c
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   BridgeTransport  (existing) ── adds: getConfig / patchConfig  │
 <a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│                                  adds: openUIStream (WS)         │
 <a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│                                                                  │
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   &quot;Bridge&quot; sidebar                                               │
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   "Bridge" sidebar                                               │
 <a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│     ├── Status (existing)                                        │
 <a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│     ├── Settings  (Phase 2, new — canonical config)              │
 <a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│     └── Remote    (Phase 3, new — virtual display + controls)    │
@@ -3554,8 +3584,8 @@ current menu. Documented in <code>docs/development/bridge-diagnostics.md</code>.
 <code>docs/development/bridge-diagnostics.md</code> (new).</p>
 <h3 id="phase-2-mac-side-settings-as-canonical-config">Phase 2 — Mac-side settings as canonical config<a class="headerlink" href="#phase-2-mac-side-settings-as-canonical-config" title="Permanent link">&para;</a></h3>
 <p>Two new endpoints on the existing aiohttp surface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">GET</span>   <span class="o">/</span><span class="n">v1</span><span class="o">/</span><span class="n">config</span>   <span class="o">-&gt;</span> <span class="p">{</span> <span class="s2">&quot;schema_version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">{</span><span class="err">…</span><span class="p">}</span> <span class="p">}</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">PATCH</span> <span class="o">/</span><span class="n">v1</span><span class="o">/</span><span class="n">config</span>   <span class="o">&lt;-</span> <span class="p">{</span> <span class="s2">&quot;patch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="err">…</span><span class="n">partial</span> <span class="n">config</span><span class="err">…</span><span class="p">}</span> <span class="p">}</span>  <span class="o">-&gt;</span> <span class="mi">200</span> <span class="o">+</span> <span class="n">updated</span> <span class="n">config</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">GET</span>   <span class="o">/</span><span class="n">v1</span><span class="o">/</span><span class="n">config</span>   <span class="o">-&gt;</span> <span class="p">{</span> <span class="s2">"schema_version"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"config"</span><span class="p">:</span> <span class="p">{</span><span class="err">…</span><span class="p">}</span> <span class="p">}</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">PATCH</span> <span class="o">/</span><span class="n">v1</span><span class="o">/</span><span class="n">config</span>   <span class="o">&lt;-</span> <span class="p">{</span> <span class="s2">"patch"</span><span class="p">:</span> <span class="p">{</span><span class="err">…</span><span class="n">partial</span> <span class="n">config</span><span class="err">…</span><span class="p">}</span> <span class="p">}</span>  <span class="o">-&gt;</span> <span class="mi">200</span> <span class="o">+</span> <span class="n">updated</span> <span class="n">config</span>
 </code></pre></div>
 <p>Both are ed25519-signed via the existing middleware. The PATCH handler reuses
 <code>config_with_setting_value</code> and the <code>BridgeConfig</code> <code>replace(...)</code> machinery
@@ -3587,13 +3617,13 @@ it as if pressing the joystick. We add one endpoint:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>WS /v1/ui   (ed25519-signed handshake)
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>server -&gt; client:
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  { &quot;type&quot;: &quot;snapshot&quot;, &quot;snapshot&quot;: { …UiSnapshot serialized… } }
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  { &quot;type&quot;: &quot;preview&quot;,  &quot;snapshot_id&quot;: &quot;…&quot;, &quot;jpeg&quot;: &quot;&lt;base64&gt;&quot; }
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  { &quot;type&quot;: &quot;led&quot;,      &quot;pattern&quot;: &quot;ready&quot; | &quot;scanning&quot; | … }
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  { "type": "snapshot", "snapshot": { …UiSnapshot serialized… } }
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  { "type": "preview",  "snapshot_id": "…", "jpeg": "&lt;base64&gt;" }
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  { "type": "led",      "pattern": "ready" | "scanning" | … }
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>client -&gt; server:
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  { &quot;type&quot;: &quot;action&quot;, &quot;action&quot;: &quot;up&quot;|&quot;down&quot;|&quot;left&quot;|&quot;right&quot;|&quot;select&quot;|&quot;back&quot;|&quot;help&quot;|&quot;pair&quot; }
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  { &quot;type&quot;: &quot;ping&quot; }
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  { "type": "action", "action": "up"|"down"|"left"|"right"|"select"|"back"|"help"|"pair" }
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  { "type": "ping" }
 </code></pre></div>
 <p><strong>Why structured JSON + separate JPEG (D2 → "Hybrid: structured")</strong>: the
 <code>UiSnapshot</code> is small (~1 KB); only <code>preview_image</code> is large. Streaming
@@ -3602,7 +3632,7 @@ keyboard-shortcut-able, accessible). The JPEG sub-resource handles the only
 field SwiftUI can't trivially re-render.</p>
 <p><strong>Server side (<code>bridge/src/instantlink_bridge/ui/network_display.py</code>, new):</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">NetworkDisplay</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Display sink that broadcasts UiSnapshots to subscribed WS clients.&quot;&quot;&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">"""Display sink that broadcasts UiSnapshots to subscribed WS clients."""</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="n">UiSnapshot</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_idle_stage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
@@ -3646,11 +3676,11 @@ around the camera hot-shoe as the power source. The product story is: mount
 to the cold-shoe, wire to hot-shoe, never touch it again.</p>
 <p><strong>Config schema additions:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[ui]</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">surface</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;lcd&quot;</span><span class="w">        </span><span class="c1"># &quot;lcd&quot; | &quot;headless&quot;</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">input</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;gpio&quot;</span><span class="w">       </span><span class="c1"># &quot;gpio&quot; | &quot;none&quot; (auto-implied by surface)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">surface</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"lcd"</span><span class="w">        </span><span class="c1"># "lcd" | "headless"</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">input</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">"gpio"</span><span class="w">       </span><span class="c1"># "gpio" | "none" (auto-implied by surface)</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">[power]</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">source</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;x306&quot;</span><span class="w">       </span><span class="c1"># &quot;x306&quot; | &quot;hotshoe&quot;  (per D5)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">source</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"x306"</span><span class="w">       </span><span class="c1"># "x306" | "hotshoe"  (per D5)</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># hotshoe: no battery telemetry, no idle-poweroff,</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1"># camera off === bridge off; boot is always cold.</span>
 </code></pre></div>
@@ -3726,27 +3756,27 @@ If not, emit a meaningful reply.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">InstantLinkFTPHandler</span><span class="p">(</span><span class="n">FTPHandler</span><span class="p">):</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">bridge_state</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">UiSnapshot</span><span class="p">]</span>   <span class="c1"># injected at server construction</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">ftp_STOR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">):</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">ftp_STOR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">):</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="n">snap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bridge_state</span><span class="p">()</span>                <span class="c1"># bare attribute read of frozen UiSnapshot</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="c1"># Check order matters: BOOTING comes before not-paired because during the first</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="c1"># seconds of boot the paired_printer lookup hasn&#39;t run, and &quot;not paired&quot; would</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="c1"># seconds of boot the paired_printer lookup hasn't run, and "not paired" would</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="c1"># be misleading. (Architect note 2026-05-28.)</span>
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="k">if</span> <span class="n">snap</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="n">UiMode</span><span class="o">.</span><span class="n">BOOTING</span><span class="p">:</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;451 Bridge starting, try again in a moment.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">"451 Bridge starting, try again in a moment."</span><span class="p">)</span>
 <a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>            <span class="k">return</span>
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>        <span class="k">if</span> <span class="n">snap</span><span class="o">.</span><span class="n">paired_printer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;501 Bridge not paired. Pair from the Mac app.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">"501 Bridge not paired. Pair from the Mac app."</span><span class="p">)</span>
 <a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>            <span class="k">return</span>
 <a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">_printer_reachable</span><span class="p">(</span><span class="n">snap</span><span class="p">):</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;451 </span><span class="si">{</span><span class="n">snap</span><span class="o">.</span><span class="n">paired_printer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is offline. Power on the printer.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="sa">f</span><span class="s2">"451 </span><span class="si">{</span><span class="n">snap</span><span class="o">.</span><span class="n">paired_printer</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is offline. Power on the printer."</span><span class="p">)</span>
 <a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>            <span class="k">return</span>
 <a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>        <span class="k">if</span> <span class="p">(</span><span class="n">snap</span><span class="o">.</span><span class="n">film_remaining</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
 <a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>                <span class="ow">and</span> <span class="n">snap</span><span class="o">.</span><span class="n">film_remaining</span> <span class="o">&lt;=</span> <span class="mi">0</span>
 <a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>                <span class="ow">and</span> <span class="ow">not</span> <span class="n">snap</span><span class="o">.</span><span class="n">allow_print_without_film</span><span class="p">):</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;552 No film. Load film and retry.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">"552 No film. Load film and retry."</span><span class="p">)</span>
 <a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>            <span class="k">return</span>
 <a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>        <span class="k">if</span> <span class="n">snap</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="n">UiMode</span><span class="o">.</span><span class="n">PRINTING</span><span class="p">:</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">&quot;450 Printer busy, try again.&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="s2">"450 Printer busy, try again."</span><span class="p">)</span>
 <a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>            <span class="k">return</span>
 <a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">ftp_STOR</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
 </code></pre></div>

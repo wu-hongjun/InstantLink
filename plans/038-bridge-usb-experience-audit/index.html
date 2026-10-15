@@ -558,6 +558,8 @@
       
         
       
+        
+      
     
     
     
@@ -700,6 +702,34 @@
     
   
     Bridge Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/bridge-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge Management
   
 
     
@@ -3205,9 +3235,9 @@ Phases 2-5 (the entire macOS Bridge Control UI) never landed.</strong></p>
   management public-key fingerprint) — anonymous-readable per
   design. Live verification:
   <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ curl http://192.168.7.1:8742/v1/hello
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>{&quot;device&quot;:{&quot;device_id&quot;:&quot;IB-7B4233E7&quot;,&quot;software_version&quot;:&quot;0.1.16&quot;,
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a> &quot;is_paired&quot;:false,&quot;pairing_open&quot;:false,&quot;network_labels&quot;:[
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> &quot;Bridge Wi-Fi&quot;,&quot;USB IP&quot;,&quot;Same-Wi-Fi&quot;]},...}
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>{"device":{"device_id":"IB-7B4233E7","software_version":"0.1.16",
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a> "is_paired":false,"pairing_open":false,"network_labels":[
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> "Bridge Wi-Fi","USB IP","Same-Wi-Fi"]},...}
 </code></pre></div></li>
 <li>Pairing contract: <code>GET /v1/pairing/status</code>, <code>POST /v1/pairing/complete</code>.</li>
 <li>Admin route surface (signed-request auth required):
@@ -3427,9 +3457,9 @@ Keychain).</p>
   <code>viewModel.bridgeCoordinator.snapshot.discovery</code> — passive,
   no input, just a fact.</li>
 <li>Add menu item in <code>InstantLinkApplication.swift</code>:
-  <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CommandMenu</span><span class="p">(</span><span class="s">&quot;Bridge&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">Button</span><span class="p">(</span><span class="s">&quot;Open Bridge Control…&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">…</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="p">.</span><span class="n">keyboardShortcut</span><span class="p">(</span><span class="s">&quot;B&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">modifiers</span><span class="p">:</span><span class="w"> </span><span class="p">[.</span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">shift</span><span class="p">])</span>
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CommandMenu</span><span class="p">(</span><span class="s">"Bridge"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">Button</span><span class="p">(</span><span class="s">"Open Bridge Control…"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">…</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="p">.</span><span class="n">keyboardShortcut</span><span class="p">(</span><span class="s">"B"</span><span class="p">,</span><span class="w"> </span><span class="n">modifiers</span><span class="p">:</span><span class="w"> </span><span class="p">[.</span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">shift</span><span class="p">])</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
 </code></pre></div>
   Or add to the status-bar menu (preferred per plan 029).</li>

@@ -1,0 +1,18 @@
+{
+  "boundary": "Observer monotonic attempt starts captured from real runtime state; Printer absent, not live reconnect timing",
+  "baseline_start_s": [
+    17770.828396653,
+    17801.070765183,
+    17831.072705223,
+    17861.076376775,
+    17891.077918638,
+    17921.080674304
+  ],
+  "candidate_start_s": [
+    17991.325143548,
+    18021.529824995,
+    18051.5330904
+  ],
+  "default_period_s": 30,
+  "result": "Startup absence retained ordinary cadence, no prompt recovery burst"
+}

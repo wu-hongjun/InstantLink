@@ -67,6 +67,7 @@ final class SyncViewModel: ObservableObject {
     private let browser = BridgeBrowser()
     private var client: SyncClient?
     private var pollTask: Task<Void, Never>?
+    private var downloadProgress: DownloadProgressState?
     /// Parsed pairing held across the manual-join detour so the pipeline can
     /// resume at discovery once the user has joined the network themselves.
     private var pendingInfo: PairingInfo?
@@ -272,15 +273,30 @@ final class SyncViewModel: ObservableObject {
     private func transferItem(_ item: PendingPhoto, using client: SyncClient) async {
         upsertTransfer(for: item)
         let stagingURL = Self.stagingURL(for: item)
+        let progress = DownloadProgressState(
+            received: transfers.first(where: { $0.id == item.itemID })?.bytesReceived ?? 0
+        )
+        downloadProgress = progress
+        defer { progress.invalidate() }
         do {
-            updateTransfer(item.itemID) { $0.state = .downloading }
+            updateTransfer(item.itemID) {
+                $0.state = .downloading
+            }
             try await client.downloadPhoto(item, to: stagingURL) { [weak self] received in
+                progress.update(received)
                 Task { @MainActor in
-                    self?.updateTransfer(item.itemID) { $0.bytesReceived = received }
+                    guard let self, let latest = progress.currentIfActive else { return }
+                    self.updateTransfer(item.itemID) {
+                        guard $0.state == .downloading else { return }
+                        $0.bytesReceived = latest
+                    }
                 }
             }
 
-            updateTransfer(item.itemID) { $0.state = .saving }
+            updateTransfer(item.itemID) {
+                $0.bytesReceived = item.sizeBytes
+                $0.state = .saving
+            }
             try await PhotoSaver.save(fileURL: stagingURL, fileName: item.fileName)
             try await client.acknowledge(item.itemID)
 
@@ -293,15 +309,24 @@ final class SyncViewModel: ObservableObject {
             }
         } catch is CancellationError {
             // Partial file stays on disk; the next pass resumes it via Range.
-            updateTransfer(item.itemID) { $0.state = .waiting }
+            updateTransfer(item.itemID) {
+                $0.bytesReceived = progress.latestReceived
+                $0.state = .waiting
+            }
         } catch SyncClientError.checksumMismatch {
             // Corrupt bytes — do not resume from them.
             print("sync.transfer_checksum_mismatch file=\(item.fileName)")
             try? FileManager.default.removeItem(at: stagingURL)
-            updateTransfer(item.itemID) { $0.state = .failed("Integrity check failed; will retry") }
+            updateTransfer(item.itemID) {
+                $0.bytesReceived = progress.latestReceived
+                $0.state = .failed("Integrity check failed; will retry")
+            }
         } catch {
             print("sync.transfer_failed file=\(item.fileName) error=\(String(describing: error))")
-            updateTransfer(item.itemID) { $0.state = .failed(error.localizedDescription) }
+            updateTransfer(item.itemID) {
+                $0.bytesReceived = progress.latestReceived
+                $0.state = .failed(error.localizedDescription)
+            }
         }
     }
 
@@ -309,6 +334,7 @@ final class SyncViewModel: ObservableObject {
 
     func forgetBridge() {
         pauseAutoSync()
+        downloadProgress?.invalidate()
         if let ssid = pairing?.ssid {
             hotspotJoiner.forget(ssid: ssid)
         }

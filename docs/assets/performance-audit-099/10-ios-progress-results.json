@@ -1,0 +1,29 @@
+[
+  {
+    "baseline_callbacks" : 1600,
+    "callback_reduction_percent" : 98.9375,
+    "chunk_bytes" : 65536,
+    "chunk_count" : 1600,
+    "final_bytes" : 104857600,
+    "optimized_callbacks" : 17,
+    "simulated_chunk_spacing_ms" : 1
+  },
+  {
+    "baseline_callbacks" : 1600,
+    "callback_reduction_percent" : 89.9375,
+    "chunk_bytes" : 65536,
+    "chunk_count" : 1600,
+    "final_bytes" : 104857600,
+    "optimized_callbacks" : 161,
+    "simulated_chunk_spacing_ms" : 10
+  },
+  {
+    "baseline_callbacks" : 1600,
+    "callback_reduction_percent" : -0.06250000000000977,
+    "chunk_bytes" : 65536,
+    "chunk_count" : 1600,
+    "final_bytes" : 104857600,
+    "optimized_callbacks" : 1601,
+    "simulated_chunk_spacing_ms" : 200
+  }
+]

@@ -158,6 +158,13 @@ final class SyncClient {
 
         var received = offset
         do {
+            var reporter = DownloadProgressReporter(report: progress)
+            // Flush the last successfully written bytes even if disk I/O or
+            // the network fails, or cancellation ends the chunk stream.
+            defer { reporter.finish() }
+            // Only an accepted response establishes whether existing bytes
+            // are resumed (206) or discarded (200).
+            reporter.update(offset)
             let handle = try FileHandle(forWritingTo: destination)
             defer { try? handle.close() }
             try handle.seekToEnd()
@@ -166,7 +173,7 @@ final class SyncClient {
                 try handle.write(contentsOf: chunk)
                 received += Int64(chunk.count)
                 delegate.consumed(byteCount: chunk.count)
-                progress(received)
+                reporter.update(received)
             }
         }
 

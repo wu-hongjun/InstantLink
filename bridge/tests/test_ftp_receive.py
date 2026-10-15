@@ -132,6 +132,7 @@ async def test_ftp_handoff_drops_file_when_queue_is_full(tmp_path: Path) -> None
         ),
     )
 
+    service._pin_received_image(image_path)
     service._handoff_received_image(image_path, "192.168.7.11")
     await asyncio.sleep(0)
 
@@ -165,6 +166,7 @@ async def test_ftp_handoff_still_drops_file_when_overflow_callback_fails(
         queue_overflow_callback=failing_callback,
     )
 
+    service._pin_received_image(image_path)
     service._handoff_received_image(image_path, "192.168.7.11")
     await asyncio.sleep(0)
 
@@ -362,3 +364,53 @@ def test_ftp_home_exposes_incoming_as_camera_directory(tmp_path: Path) -> None:
     incoming_dir = tmp_path / "incoming"
 
     assert ftp_home_dir_for_incoming(incoming_dir) == tmp_path
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owners", [0, 1, 2])
+async def test_overflow_cleanup_only_deletes_its_last_owned_source(
+    tmp_path: Path, owners: int
+) -> None:
+    queue: asyncio.Queue[ReceivedImage] = asyncio.Queue(maxsize=1)
+    queue.put_nowait(ReceivedImage(tmp_path / "queued.jpg", "camera"))
+    source = tmp_path / "overflow.jpg"
+    source.write_bytes(b"original")
+    service = FtpReceiveService(FtpConfig(incoming_dir=tmp_path), queue, asyncio.get_running_loop())
+    for _ in range(owners):
+        service._pin_received_image(source)
+    service._handoff_received_image(source, "192.168.7.11")
+    await asyncio.sleep(0)
+    assert source.exists() is (owners != 1)
+    assert service._pending_paths.get(source.resolve(), 0) == max(0, owners - 1)
+    if owners == 2:
+        assert not service._reserve_upload(source, object())
+        assert source.read_bytes() == b"original"
+        service.release_received_image(source)
+    owner = object()
+    assert service._reserve_upload(source, owner)
+    service._release_upload(source, owner)
+
+
+@pytest.mark.asyncio
+async def test_failed_overflow_delete_logs_and_releases_pin_for_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    queue: asyncio.Queue[ReceivedImage] = asyncio.Queue(maxsize=1)
+    queue.put_nowait(ReceivedImage(tmp_path / "queued.jpg", "camera"))
+    source = tmp_path / "overflow.jpg"
+    source.write_bytes(b"original")
+    service = FtpReceiveService(FtpConfig(incoming_dir=tmp_path), queue, asyncio.get_running_loop())
+    service._pin_received_image(source)
+
+    def fail_unlink(_path: Path, *, missing_ok: bool = False) -> None:
+        raise OSError("disk unavailable")
+
+    monkeypatch.setattr(Path, "unlink", fail_unlink)
+    service._handoff_received_image(source, "192.168.7.11")
+    await asyncio.sleep(0)
+    assert source.read_bytes() == b"original"
+    assert not service._pending_paths
+    assert "ftp.queue_full_cleanup_failed" in caplog.text
+    owner = object()
+    assert service._reserve_upload(source, owner)
+    service._release_upload(source, owner)

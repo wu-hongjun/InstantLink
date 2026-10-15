@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable, Coroutine
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -20,6 +21,7 @@ from instantlink_bridge.config import (
     PrinterConfig,
     SyncConfig,
     SyncDestination,
+    UiConfig,
     WorkflowConfig,
     load_config,
 )
@@ -43,9 +45,10 @@ from instantlink_bridge.printing import PrintProgress, PrintStage
 from instantlink_bridge.system_info import SystemInfo
 from instantlink_bridge.ui.controller import (
     MIN_OFFLINE_SEARCH_GAP_S,
+    MIN_PRINTER_RECOVERY_GAP_S,
     OFFLINE_MESSAGE_AFTER_MISSES,
+    PRINTER_RECOVERY_RETRY_COUNT,
     RENDER_TICK_S,
-    RESTART_PRINTER_RETRY_S,
     SILENT_LINK_RECOVERY_COOLDOWN_S,
     SYNC_CLIENT_RECENT_TTL_S,
     BridgeUi,
@@ -226,7 +229,10 @@ def test_camera_health_messages_honor_selected_ftp_receive_mode() -> None:
         camera_transport_message_for_health(health, FtpReceiveMode.PEER)
         == "Same Wi-Fi adv 192.168.5.149"
     )
-    assert camera_status_message_for_health(health, FtpReceiveMode.HOTSPOT) == "Bridge Wi-Fi off"
+    assert (
+        camera_status_message_for_health(health, FtpReceiveMode.HOTSPOT)
+        == "Bridge Wi-Fi unavailable"
+    )
 
 
 def test_wired_ftp_mode_does_not_disable_wifi() -> None:
@@ -538,10 +544,13 @@ async def test_late_preview_rebuild_cannot_overwrite_printing(
     action_task = asyncio.create_task(ui._handle_action(UiAction.UP))
     await asyncio.wait_for(rebuild_started.wait(), timeout=0.5)
 
-    assert await asyncio.wait_for(task, timeout=0.5) == PrintEdit(zoom=1.25)
-
+    # Confirmation waits for edited bytes. An externally superseding print
+    # state must still prevent this worker from publishing a stale frame/error.
+    await ui._handle_action(UiAction.SELECT)
+    assert not task.done()
     await ui.printing_started(received)
     release_rebuild.set()
+    assert await asyncio.wait_for(task, timeout=0.5) is None
     await asyncio.wait_for(action_task, timeout=0.5)
 
     assert display.snapshots[-1].mode is UiMode.PRINTING
@@ -593,13 +602,15 @@ async def test_late_preview_rebuild_cannot_overwrite_newer_preview(
     old_action_task = asyncio.create_task(ui._handle_action(UiAction.UP))
     await asyncio.wait_for(old_rebuild_started.wait(), timeout=0.5)
 
-    assert await asyncio.wait_for(first_task, timeout=0.5) == PrintEdit(zoom=1.25)
+    await ui._handle_action(UiAction.SELECT)
+    assert not first_task.done()
 
     second_task = asyncio.create_task(ui.await_print_confirmation(second_received, timeout_s=None))
     await _wait_for_preview_image_name(display, "second.jpg")
     assert display.snapshots[-1].preview_image is second_image
 
     release_old_rebuild.set()
+    assert await asyncio.wait_for(first_task, timeout=0.5) is None
     await asyncio.wait_for(old_action_task, timeout=0.5)
 
     assert display.snapshots[-1].last_image_name == "second.jpg"
@@ -964,7 +975,7 @@ async def test_repeated_absent_printer_status_keeps_auto_searching() -> None:
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "No printer signal"
     # No backoff: the offline retry stays at the configured search period even past the threshold.
-    assert ui._printer_status_retry_delay(False) == ui._config.printer.search_interval_s
+    assert ui._printer_status_retry_delay(False) == 1.0
 
     # Even far past the threshold an absent (non-stale) printer keeps auto-searching.
     for _ in range(20):
@@ -999,7 +1010,7 @@ async def test_stale_selected_printer_offers_manual_repair() -> None:
         assert not await ui._refresh_printer_status_in_background(printer)
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_OFFLINE
-    assert display.snapshots[-1].printer_status_message == "Hold K3 to re-pair"
+    assert display.snapshots[-1].printer_status_message == "Check saved Printer"
 
 
 @pytest.mark.asyncio
@@ -1065,7 +1076,7 @@ async def test_searching_text_keeps_updating_across_repeated_misses() -> None:
     assert all(mode is UiMode.PRINTER_SEARCHING for mode in (display.snapshots[-1].mode,))
     assert messages[0] == "Printer seen; connecting"
     assert messages[-1] == "Restart printer"
-    assert "Hold K3 to re-pair" not in messages
+    assert "Check saved Printer" not in messages
 
 
 @pytest.mark.asyncio
@@ -1156,6 +1167,8 @@ def test_offline_status_retry_delay_uses_configured_search_period_without_backof
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
+    ui._idle_stage = IdleStage.SCREEN_OFF
+
     # The retry delay is the total cadence PERIOD (the poll loop subtracts each attempt's elapsed
     # time). It equals the configured search interval with no backoff, regardless of miss count.
     for misses in (0, OFFLINE_MESSAGE_AFTER_MISSES, OFFLINE_MESSAGE_AFTER_MISSES + 50):
@@ -1186,7 +1199,715 @@ def test_retry_delay_is_immediate_right_after_a_connected_drop() -> None:
 
     # Once searching (no longer "was online"), fall back to the configured search period.
     ui._printer_was_online = False
-    assert ui._printer_status_retry_delay(False) == 30.0
+    assert ui._printer_status_retry_delay(False) == 1.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("outcomes", "attempt_s", "expected_starts"),
+    [
+        ([True, False, False, False], 1.0, [0.0, 10.0, 11.25, 12.5, 42.5]),
+        ([False, False], 1.0, [0.0, 30.0, 60.0]),
+        (
+            [PrinterStatusUnavailableReason.LINK_DROPPED] * 4,
+            1.0,
+            [0.0, 1.25, 2.5, 32.5, 62.5],
+        ),
+        (
+            [
+                PrinterStatusUnavailableReason.LINK_DROPPED,
+                False,
+                PrinterStatusUnavailableReason.LINK_DROPPED,
+                False,
+            ],
+            1.0,
+            [0.0, 1.25, 2.5, 32.5, 62.5],
+        ),
+        ([True, False, True, False, False, False], 1.0, [0, 10, 11.25, 21.25, 22.5, 23.75, 53.75]),
+        ([True, False, False, False], 10.0, [0, 12, 22.25, 32.5, 62.5]),
+    ],
+)
+async def test_poll_recovery_retries_are_bounded_and_restore_normal_cadence(
+    monkeypatch: pytest.MonkeyPatch,
+    outcomes: list[bool | PrinterStatusUnavailableReason],
+    attempt_s: float,
+    expected_starts: list[float],
+) -> None:
+    clock = [0.0]
+    starts: list[float] = []
+    gaps: list[float] = []
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+
+    class SequencedProvider(_FakeStatusProvider):
+        async def fetch(self, _printer: PairedPrinter) -> PrinterStatusSnapshot:
+            starts.append(clock[0])
+            if self.fetch_calls == len(outcomes):
+                raise asyncio.CancelledError
+            online = outcomes[self.fetch_calls]
+            self.fetch_calls += 1
+            clock[0] += attempt_s
+            if not online or isinstance(online, PrinterStatusUnavailableReason):
+                raise PrinterStatusUnavailableError(
+                    "not advertising",
+                    reason=online
+                    if isinstance(online, PrinterStatusUnavailableReason)
+                    else PrinterStatusUnavailableReason.NOT_ADVERTISING,
+                )
+            return PrinterStatusSnapshot(3, 90, False, PrinterModel.SQUARE)
+
+    async def sleep(delay: float) -> None:
+        gaps.append(delay)
+        clock[0] += delay
+
+    async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
+        waiter.close()
+        clock[0] += duration_s
+        raise TimeoutError
+
+    provider = SequencedProvider()
+    pairer = _FakePairer([printer])
+    ui = BridgeUi(
+        BridgeConfig(printer=PrinterConfig(search_interval_s=30.0)),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=pairer,
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+    monkeypatch.setattr(ui, "_monotonic", lambda: clock[0])
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(asyncio, "wait_for", wait_for)
+
+    ui._idle_stage = IdleStage.SCREEN_OFF
+    with pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(printer, ui._status_generation)
+
+    assert starts == expected_starts
+    assert all(gap in (MIN_OFFLINE_SEARCH_GAP_S, MIN_PRINTER_RECOVERY_GAP_S) for gap in gaps)
+    assert pairer.removed_bonds == []  # Single status failures cannot reset a live bond.
+    assert provider.close_calls == 1
+    assert PRINTER_RECOVERY_RETRY_COUNT == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("superseded", [False, True])
+async def test_poll_waits_for_silent_link_recovery_before_fetching(
+    superseded: bool,
+) -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    recovery_started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def recover() -> None:
+        recovery_started.set()
+        await release.wait()
+        if superseded:
+            ui._status_generation += 1
+
+    ui._silent_link_recovery_task = asyncio.create_task(recover())
+    await recovery_started.wait()
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await asyncio.sleep(0)
+        assert provider.fetch_calls == 0
+        release.set()
+        if superseded:
+            await asyncio.wait_for(poll, 1)
+            assert provider.fetch_calls == 0
+        else:
+            await asyncio.wait_for(provider.fetch_started.wait(), 1)
+            assert provider.fetch_calls == 1
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+        await ui._silent_link_recovery_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owner_attribute", ["_auto_rebond_task", "_silent_link_recovery_task"])
+async def test_cancelled_poll_does_not_cancel_shared_link_recovery(owner_attribute: str) -> None:
+    printer = PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678")
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+    )
+    release = asyncio.Event()
+
+    async def recover() -> None:
+        await release.wait()
+
+    owner = asyncio.create_task(recover())
+    setattr(ui, owner_attribute, owner)
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await asyncio.sleep(0)
+        assert provider.fetch_calls == 0
+        poll.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await poll
+        assert not owner.done()
+        assert provider.close_calls == 1
+    finally:
+        release.set()
+        await owner
+
+
+class _DisconnectWatcher:
+    def __init__(self) -> None:
+        self.callbacks: list[Callable[[], None]] = []
+        self.names: list[str] = []
+        self.disarmed: list[int] = []
+        self.armed = asyncio.Event()
+
+    async def watch(self, name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        index = len(self.callbacks)
+        self.names.append(name)
+        self.callbacks.append(callback)
+        self.armed.set()
+        return lambda: self.disarmed.append(index)
+
+
+def _disconnect_test_ui(provider: _FakeStatusProvider, watcher: _DisconnectWatcher) -> BridgeUi:
+    printer = PairedPrinter(address="INSTANTLINK:INSTAX-12345678", name="INSTAX-12345678")
+    ui = BridgeUi(
+        BridgeConfig(),
+        display=_FakeDisplay(),
+        input_device=NullInput(),
+        pairer=_FakePairer([printer]),
+        status_provider=provider,
+        wifi_mode_setter=_unused_wifi_mode_setter,
+        printer_disconnect_watcher=watcher.watch,
+    )
+    ui._snapshot = ui._build_snapshot(mode=UiMode.READY, paired_printer=printer)
+    return ui
+
+
+@pytest.mark.asyncio
+async def test_failed_disconnect_watch_arms_once_per_connected_episode(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    clock = [0.0]
+    attempted: list[int] = []
+    outcomes = [True, True, True, False, True, True, True]
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls == len(outcomes):
+                raise asyncio.CancelledError
+            online = outcomes[self.fetch_calls]
+            self.fetch_calls += 1
+            if not online:
+                raise PrinterStatusUnavailableError("not advertising")
+            return PrinterStatusSnapshot(3, 90, False)
+
+    provider = Provider()
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+
+    async def unavailable_watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        assert name == "INSTAX-12345678"
+        attempted.append(provider.fetch_calls)
+        raise RuntimeError("snapshot unavailable")
+
+    async def sleep(delay: float) -> None:
+        clock[0] += delay
+
+    async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
+        waiter.close()
+        clock[0] += duration_s
+        raise TimeoutError
+
+    ui._printer_disconnect_watcher = unavailable_watch
+    monkeypatch.setattr(ui, "_monotonic", lambda: clock[0])
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(asyncio, "wait_for", wait_for)
+    assert ui.snapshot.paired_printer is not None
+    with caplog.at_level(logging.WARNING), pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+
+    assert attempted == [1, 5]
+    warnings = [
+        record
+        for record in caplog.records
+        if "ui.printer_disconnect_watch_failed" in record.message
+    ]
+    assert len(warnings) == 2
+    assert provider.fetch_calls == 7  # Periodic status remains operational throughout.
+    assert ui._printer_disconnect_unsubscribe is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kick_during_gap", [True, False])
+async def test_disconnect_event_poll_preserves_bounded_retries_with_fake_clock(
+    monkeypatch: pytest.MonkeyPatch, kick_during_gap: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    clock = [0.0]
+    starts: list[float] = []
+    kicked = False
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            starts.append(clock[0])
+            if self.fetch_calls == 4:
+                raise asyncio.CancelledError
+            self.fetch_calls += 1
+            if self.fetch_calls > 1:
+                # A delayed duplicate callback cannot reset the recovery budget.
+                watcher.callbacks[0]()
+                raise PrinterStatusUnavailableError("not advertising")
+            return PrinterStatusSnapshot(3, 90, False)
+
+    provider = Provider()
+    ui = _disconnect_test_ui(provider, watcher)
+    ui._idle_stage = IdleStage.SCREEN_OFF
+
+    async def sleep(delay: float) -> None:
+        clock[0] += delay
+
+    async def wait_for(waiter: Coroutine[object, object, bool], duration_s: float) -> bool:
+        nonlocal kicked
+        waiter.close()
+        if not kicked:
+            clock[0] += 0.1 if kick_during_gap else 2.1
+            watcher.callbacks[0]()
+            kicked = True
+            return True
+        clock[0] += duration_s
+        raise TimeoutError
+
+    monkeypatch.setattr(ui, "_monotonic", lambda: clock[0])
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(asyncio, "wait_for", wait_for)
+    assert ui.snapshot.paired_printer is not None
+    with pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+
+    first_retry = 0.35 if kick_during_gap else 2.35
+    assert starts == pytest.approx(
+        [0.0, first_retry, first_retry + 0.25, first_retry + 0.5, first_retry + 30.5]
+    )
+    assert provider.close_cached_calls == 1
+    assert watcher.disarmed == [0]
+    assert not ui._printer_disconnect_pending
+    assert isinstance(ui._pairer, _FakePairer)
+    # One startup gate and one event gate. The failed first reconnect must not
+    # repeat cleanup, and duplicate signals cannot expand the recovery budget.
+    assert len(ui._pairer.reset_bond_calls) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("locked", [False, True])
+async def test_disconnect_event_interrupts_online_gap_and_closes_before_next_status(
+    locked: bool,
+) -> None:
+    watcher = _DisconnectWatcher()
+    second_fetch = asyncio.Event()
+    release = asyncio.Event()
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls:
+                assert self.close_cached_calls == 1
+                second_fetch.set()
+                await release.wait()
+            return await super().fetch(printer)
+
+    provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    ui._screen_locked = locked
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(watcher.armed.wait(), 1)
+        assert provider.fetch_calls == 1
+        assert ui.live_snapshot.printer_status_fresh
+        ui._render_tick_reschedule.clear()
+        watcher.callbacks[0]()
+        watcher.callbacks[0]()  # Duplicate signals cannot grow a retry budget or schedule work.
+        # Published state must change synchronously, even while rendering is
+        # dark and the serialized reconnect has not yet started.
+        assert not ui.live_snapshot.printer_status_fresh
+        assert ui._render_tick_reschedule.is_set()
+        assert ui._screen_locked is locked
+        assert provider.close_cached_calls == 0
+        await asyncio.wait_for(second_fetch.wait(), 0.5)
+        assert not ui._printer_status_is_fresh()
+        assert not ui.live_snapshot.printer_status_fresh
+        assert watcher.disarmed == [0]
+        assert watcher.names == ["INSTAX-12345678"]
+    finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("link_still_connected", [False, True])
+async def test_disconnect_event_checks_bond_after_close_before_first_reconnect(
+    monkeypatch: pytest.MonkeyPatch, link_still_connected: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    order: list[str] = []
+
+    class Provider(_FakeStatusProvider):
+        async def close_cached_session(self) -> None:
+            order.append("close")
+            await super().close_cached_session()
+
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            order.append("fetch")
+            assert order == ["close", "gate", "fetch"]
+            raise asyncio.CancelledError
+
+    class Pairer(_FakePairer):
+        async def reset_bond_if_disconnected(self, printer: PairedPrinter) -> bool:
+            order.append("gate")
+            assert order == ["close", "gate"]
+            return await super().reset_bond_if_disconnected(printer)
+
+    async def sleep(_delay: float) -> None:
+        return
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    provider = Provider()
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    pairer = Pairer([printer])
+    pairer.link_is_connected = link_still_connected
+    ui._pairer = pairer
+    ui._printer_was_online = True
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    watcher.callbacks[0]()
+    with pytest.raises(asyncio.CancelledError):
+        await ui._poll_printer_status(printer, ui._status_generation)
+    assert pairer.reset_bond_calls == [printer]
+    assert pairer.removed_bonds == ([] if link_still_connected else [printer])
+    assert ui.snapshot.paired_printer == printer
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("superseded", [False, True])
+async def test_disconnect_event_bond_gate_cancellation_or_generation_change_prevents_fetch(
+    monkeypatch: pytest.MonkeyPatch, superseded: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    class Pairer(_FakePairer):
+        async def reset_bond_if_disconnected(self, printer: PairedPrinter) -> bool:
+            assert provider.close_cached_calls == 1
+            entered.set()
+            await release.wait()
+            ui._status_generation += 1
+            return False
+
+    async def sleep(_delay: float) -> None:
+        return
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    ui._pairer = Pairer([printer])
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    watcher.callbacks[0]()
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await entered.wait()
+        assert provider.fetch_calls == 0
+        if superseded:
+            release.set()
+            await poll
+        else:
+            poll.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await poll
+            assert ui._proactive_bond_reset_task is not None
+            assert ui._proactive_bond_reset_task.cancelled()
+        assert provider.fetch_calls == 0
+        assert provider.close_calls == 1
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+
+
+@pytest.mark.asyncio
+async def test_disconnect_during_status_fetch_preserves_event_and_serializes_cleanup() -> None:
+    watcher = _DisconnectWatcher()
+    release = asyncio.Event()
+    second_started = asyncio.Event()
+    third_started = asyncio.Event()
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls == 1:
+                second_started.set()
+                await release.wait()
+                assert self.close_cached_calls == 0
+            if self.fetch_calls == 2:
+                assert self.close_cached_calls == 1
+                assert not ui._printer_status_is_fresh()
+                assert not ui.live_snapshot.printer_status_fresh
+                third_started.set()
+                await asyncio.Event().wait()
+            return await super().fetch(printer)
+
+    provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    ui._printer_keepalive_interval_s = 2.0
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(watcher.armed.wait(), 1)
+        # A requested check interrupts the connected wait without dispatching another worker.
+        ui._printer_check_requested.set()
+        await asyncio.wait_for(second_started.wait(), 0.5)
+        watcher.callbacks[0]()
+        assert not ui.live_snapshot.printer_status_fresh
+        await asyncio.sleep(0)
+        assert provider.close_cached_calls == 0
+        release.set()
+        await asyncio.wait_for(third_started.wait(), 0.5)
+        assert len(watcher.callbacks) == 1  # No rearm from the ACK racing the drop.
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+
+
+@pytest.mark.asyncio
+async def test_disconnect_watch_keeps_one_subscription_across_successful_status_checks() -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(watcher.armed.wait(), 1)
+        for expected in range(2, 5):
+            provider.fetch_started.clear()
+            ui._printer_check_requested.set()
+            await asyncio.wait_for(provider.fetch_started.wait(), 0.5)
+            assert provider.fetch_calls == expected
+        assert len(watcher.callbacks) == 1
+        assert provider.close_cached_calls == 0
+    finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+    assert watcher.disarmed == [0]
+    watcher.callbacks[0]()
+    assert not ui._printer_disconnect_pending
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["pause", "name", "address", "stop"])
+async def test_disconnect_callback_cannot_poison_paused_replaced_or_stopped_poll(
+    change: str,
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    assert ui.snapshot.paired_printer is not None
+    await ui._arm_printer_disconnect_watch(ui.snapshot.paired_printer, ui._status_generation)
+    if change == "pause":
+        await ui.pause_printer_status()
+        assert watcher.disarmed == [0]
+    elif change in {"name", "address"}:
+        selected = ui.snapshot.paired_printer
+        ui._snapshot = replace(
+            ui.snapshot,
+            paired_printer=replace(
+                selected,
+                name="INSTAX-87654321" if change == "name" else selected.name,
+                address="OTHER" if change == "address" else selected.address,
+            ),
+        )
+    else:
+        ui._stopping = True
+    published = ui.live_snapshot
+    signature = ("unchanged existing status",)
+    ui._last_printer_status_log_signature = signature
+    watcher.callbacks[0]()
+    assert not ui._printer_disconnect_pending
+    assert ui.live_snapshot is published
+    assert ui._last_printer_status_log_signature is signature
+    assert not ui._printer_check_requested.is_set()
+    assert provider.close_cached_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_disconnect_watch_survives_detected_model_metadata_update() -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None and printer.model is None
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    ui._apply_printer_status(printer, PrinterStatusSnapshot(3, 90, False, PrinterModel.SQUARE))
+    assert ui.snapshot.paired_printer is not None
+    assert ui.snapshot.paired_printer.model is PrinterModel.SQUARE
+    assert ui.snapshot.paired_printer != printer
+    watcher.callbacks[0]()
+    assert ui._printer_disconnect_pending
+    assert ui._printer_check_requested.is_set()
+    assert not ui._printer_status_is_fresh()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["disarm", "pause", "print", "name", "address", "stop"])
+async def test_delayed_disconnect_registration_cannot_retain_replaced_watch(
+    tmp_path: Path, change: str
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delayed_watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        unsubscribe = await watcher.watch(name, callback)
+        entered.set()
+        await release.wait()
+        return unsubscribe
+
+    ui._printer_disconnect_watcher = delayed_watch
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    arming = asyncio.create_task(ui._arm_printer_disconnect_watch(printer, ui._status_generation))
+    try:
+        await entered.wait()
+        if change == "disarm":
+            ui._disarm_printer_disconnect_watch()
+        elif change == "pause":
+            await ui.pause_printer_status()
+        elif change == "print":
+            await ui.printing_started(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.2"))
+        elif change in {"name", "address"}:
+            ui._snapshot = replace(
+                ui.snapshot,
+                paired_printer=replace(
+                    printer,
+                    name="INSTAX-87654321" if change == "name" else printer.name,
+                    address="OTHER" if change == "address" else printer.address,
+                ),
+            )
+        else:
+            await ui.stop()
+        release.set()
+        await arming
+        assert watcher.disarmed == [0]
+        assert ui._printer_disconnect_unsubscribe is None
+        assert ui._printer_disconnect_watch_token is None
+        watcher.callbacks[0]()
+        assert not ui._printer_disconnect_pending
+        assert provider.fetch_calls == 0
+    finally:
+        release.set()
+        await arming
+
+
+@pytest.mark.asyncio
+async def test_delayed_disconnect_registration_cannot_replace_new_same_generation_watch() -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delayed_first_watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        unsubscribe = await watcher.watch(name, callback)
+        if len(watcher.callbacks) == 1:
+            entered.set()
+            await release.wait()
+        return unsubscribe
+
+    ui._printer_disconnect_watcher = delayed_first_watch
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    arming = asyncio.create_task(ui._arm_printer_disconnect_watch(printer, ui._status_generation))
+    try:
+        await entered.wait()
+        ui._disarm_printer_disconnect_watch()
+        await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+        release.set()
+        await arming
+        assert watcher.disarmed == [0]
+        watcher.callbacks[0]()
+        assert not ui._printer_disconnect_pending
+        watcher.callbacks[1]()
+        assert ui._printer_disconnect_pending
+        ui._disarm_printer_disconnect_watch()
+        assert watcher.disarmed == [0, 1]
+        assert provider.fetch_calls == 0
+    finally:
+        release.set()
+        await arming
+
+
+@pytest.mark.asyncio
+async def test_disconnect_while_arming_survives_first_success_and_uses_recovery_budget() -> None:
+    watcher = _DisconnectWatcher()
+
+    async def watch(name: str, callback: Callable[[], None]) -> Callable[[], None]:
+        callback()  # The seeding snapshot found a drop after the successful status ACK.
+        return await watcher.watch(name, callback)
+
+    failed = asyncio.Event()
+
+    class Provider(_FakeStatusProvider):
+        async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
+            if self.fetch_calls:
+                failed.set()
+                assert ui._printer_was_online
+                assert self.close_cached_calls == 1
+                await asyncio.Event().wait()
+            return await super().fetch(printer)
+
+    provider = Provider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    ui._printer_disconnect_watcher = watch
+    assert ui.snapshot.paired_printer is not None
+    poll = asyncio.create_task(
+        ui._poll_printer_status(ui.snapshot.paired_printer, ui._status_generation)
+    )
+    try:
+        await asyncio.wait_for(failed.wait(), 0.5)
+        assert not ui._printer_status_is_fresh()
+        assert not ui.live_snapshot.printer_status_fresh
+    finally:
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
 
 
 def test_offline_status_retry_delay_preserves_restart_special_case() -> None:
@@ -1207,7 +1928,7 @@ def test_offline_status_retry_delay_preserves_restart_special_case() -> None:
     ui._printer_status_misses = OFFLINE_MESSAGE_AFTER_MISSES + 20
 
     # Restart-printer recovery copy keeps its dedicated cadence regardless of miss count.
-    assert ui._printer_status_retry_delay(False) == RESTART_PRINTER_RETRY_S
+    assert ui._printer_status_retry_delay(False) == 1.0
 
 
 def test_min_offline_search_gap_guarantees_event_loop_breathing_room() -> None:
@@ -1216,7 +1937,7 @@ def test_min_offline_search_gap_guarantees_event_loop_breathing_room() -> None:
     to service the LCD render and other tasks.
 
     Regression guard: a previous build used `max(0.0, period - elapsed)` in
-    the post-attempt sleep. With the default `search_interval_s == 5.0` and a
+    the post-attempt sleep. With the fastest `search_interval_s == 5.0` and a
     typical 5s BLE scan, that produced 0s sleeps and pegged one core at
     ~88% CPU, starving the UI render and making the LCD look frozen. The
     floor must be > 1s so each cycle yields visibly to other tasks.
@@ -1281,7 +2002,7 @@ async def test_repeated_visible_printer_connect_failures_ask_for_restart() -> No
 
     assert display.snapshots[-1].mode is UiMode.PRINTER_SEARCHING
     assert display.snapshots[-1].printer_status_message == "Restart printer"
-    assert ui._printer_status_retry_delay(False) == 5.0
+    assert ui._printer_status_retry_delay(False) == 1.0
 
 
 def test_printer_search_retry_keeps_specific_diagnostic_message() -> None:
@@ -1324,12 +2045,9 @@ async def test_settings_menu_persists_adjusted_image_fit(tmp_path: Path) -> None
     # MAIN: Print (0), Network (1), System (2), Accessibility (3).
     # 0 DOWNs lands on Print; SELECT enters the Print hub.
     await ui._handle_action(UiAction.SELECT)
-    # Print hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print.
-    # Navigate into Transform (row 2) where Image fit lives.
-    # Option B: navigate directly to Transform sub-page for row content test.
-    ui._show_settings(page=SettingsPage.TRANSFORM)
-    # TRANSFORM: 0 Image fit  1 JPEG quality.
-    # 0 DOWNs lands on Image fit (already selected at index 0).
+    keys = ui._visible_keys_for_page(SettingsPage.PRINT)
+    while keys[ui.snapshot.selected_index] is not SettingKey.IMAGE_FIT:
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     assert _printer_fit(ui) is FitMode.CROP
     assert display.snapshots[-1].settings_title == "Image fit"
@@ -1375,9 +2093,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     # is that a config-write failure keeps the runtime value intact, not that
     # the navigation path to Keepalive is exercised.
     ui._show_settings(page=SettingsPage.AUTO_PRINT)
-    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
-    # Three DOWN presses from Auto print lands on Keepalive (index 3).
-    for _ in range(3):
+    keys = ui._visible_keys_for_page(SettingsPage.AUTO_PRINT)
+    while keys[ui.snapshot.selected_index] is not SettingKey.KEEPALIVE:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.RIGHT)
@@ -1386,8 +2103,8 @@ async def test_settings_save_failure_keeps_runtime_config(
     assert ui.config.printer.keepalive_interval_s == 10.0
     assert load_config(config_path).printer.keepalive_interval_s == 10.0
     assert display.snapshots[-1].settings_message == "Config not writable"
-    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[3].value == "10s"
+    assert display.snapshots[-1].settings_rows[1].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[1].value == "10s"
 
 
 @pytest.mark.asyncio
@@ -1424,18 +2141,11 @@ async def test_upload_ftp_help_describes_sender_wifi() -> None:
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-    # NETWORK row 0 = Wi-Fi Mode; row 1 = SSID ("Bridge Wi-Fi name to join from camera").
-    # 1 DOWN moves to SSID before pressing HELP.
-    await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.NETWORK_HOTSPOT_SSID_INFO)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Network"
-    assert display.snapshots[-1].settings_message == "Bridge Wi-Fi name to join from camera"
+    assert display.snapshots[-1].settings_title == "Wi-Fi"
+    assert display.snapshots[-1].help_dialog_body == "Bridge Wi-Fi name to join from camera"
 
 
 @pytest.mark.asyncio
@@ -1459,13 +2169,14 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     await ui._handle_action(UiAction.SELECT)
 
-    # MAIN: Print (0), Network (1), System (2). Accessibility folded into
+    # MAIN: Print (0), Network (1), System (2), Mode (3). Accessibility folded into
     # System after plan 035 phase 1 follow-up — Appearance / Text size /
     # Language now sit under System next to the bridge-state rows.
     assert [row.label for row in display.snapshots[-1].settings_rows] == [
         "Print",
         "Network",
         "System",
+        "Mode",
     ]
 
     # 1 DOWN lands on Network; SELECT enters it.
@@ -1475,7 +2186,8 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
     #   4 FTP user  5 FTP PIN  6 Bluetooth  7 Same Wi-Fi adv  8 USB IP
     #   9 Reset sync token  10 Reset credentials.
     # Camera link is at row 0; RIGHT opens the picker immediately.
-    await ui._handle_action(UiAction.RIGHT)
+    await ui._handle_action(UiAction.RIGHT)  # Network → FTP
+    await ui._handle_action(UiAction.RIGHT)  # FTP → Camera link
 
     assert calls == []
     assert _ftp_mode(ui) is FtpReceiveMode.WIRED
@@ -1491,13 +2203,13 @@ async def test_settings_ftp_receive_mode_selects_bridge_wifi_from_advanced_mode(
 
     assert calls == [WifiMode.HOTSPOT]
     assert _ftp_mode(ui) is FtpReceiveMode.HOTSPOT
-    assert display.snapshots[-1].settings_title == "Network"
-    assert display.snapshots[-1].settings_rows[1].label == "SSID"
-    assert display.snapshots[-1].settings_rows[3].label == "FTP host"
-    assert display.snapshots[-1].settings_rows[3].value == "192.168.8.1"
-    assert display.snapshots[-1].settings_rows[4].label == "FTP user"
-    assert display.snapshots[-1].settings_rows[5].label == "FTP PIN"
-    assert display.snapshots[-1].settings_rows[0].label == "Camera link"
+    assert display.snapshots[-1].settings_title == "FTP"
+    rows = display.snapshots[-1].settings_rows
+    assert rows[0].label == "Camera link"
+    assert rows[1].label == "FTP host"
+    assert rows[1].value == "192.168.8.1"
+    assert rows[2].label == "FTP user"
+    assert rows[3].label == "FTP PIN"
     # The "Bridge Wi-Fi ready" status string lives in the runtime-health
     # transport-message channel and is intentionally NOT renamed alongside
     # the picker/row labels — it describes a network state, not the menu.
@@ -1522,14 +2234,12 @@ async def test_settings_rows_show_action_specific_hints() -> None:
 
     # Option B: navigate directly to AUTO_PRINT sub-page to check
     # Keepalive's hint — the test intent is the hint value, not the path.
-    # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
     ui._show_settings(page=SettingsPage.AUTO_PRINT)
-    # Three DOWN presses lands on Keepalive (index 3, an adjustable picker row).
-    for _ in range(3):
+    keys = ui._visible_keys_for_page(SettingsPage.AUTO_PRINT)
+    while keys[ui.snapshot.selected_index] is not SettingKey.KEEPALIVE:
         await ui._handle_action(UiAction.DOWN)
-
-    assert display.snapshots[-1].settings_rows[3].label == "Keepalive"
-    assert display.snapshots[-1].settings_rows[3].hint == "Right/KEY1 choose"
+    assert display.snapshots[-1].settings_rows[1].label == "Keepalive"
+    assert display.snapshots[-1].settings_rows[1].hint == "Right/KEY1 choose"
 
 
 @pytest.mark.asyncio
@@ -1547,7 +2257,8 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
 
     assert display.snapshots[-1].settings_title == "Settings"
     assert display.snapshots[-1].settings_message is None
-    assert all(row.value == "" for row in display.snapshots[-1].settings_rows)
+    assert all(row.value == "" for row in display.snapshots[-1].settings_rows[:3])
+    assert display.snapshots[-1].settings_rows[3].value == "Print"
     # MAIN row 0 = Print; help text describes pairing and print options.
     assert display.snapshots[-1].settings_rows[0].help == "Pairing and photo/print options"
 
@@ -1562,7 +2273,8 @@ async def test_settings_main_page_uses_stable_category_prompt() -> None:
 
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_message == "KEY1 opens category"
+    assert display.snapshots[-1].mode is UiMode.HELP_DIALOG
+    assert "KEY1 opens category" in (display.snapshots[-1].help_dialog_body or "")
 
 
 @pytest.mark.asyncio
@@ -1579,7 +2291,8 @@ async def test_settings_main_help_message_uses_physical_controls() -> None:
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_message == "KEY1 opens category"
+    assert display.snapshots[-1].mode is UiMode.HELP_DIALOG
+    assert "KEY1 opens category" in (display.snapshots[-1].help_dialog_body or "")
 
 
 @pytest.mark.asyncio
@@ -1605,9 +2318,9 @@ async def test_key3_help_explains_selected_settings_row() -> None:
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_title == "Transform"
-    assert display.snapshots[-1].settings_rows[1].label == "JPEG quality"
-    assert display.snapshots[-1].settings_message == (
+    assert display.snapshots[-1].settings_title == "Image quality"
+    assert display.snapshots[-1].settings_rows[0].label == "JPEG quality"
+    assert display.snapshots[-1].help_dialog_body == (
         "Trade-off: higher = bigger, sharper. Current: 100"
     )
 
@@ -1626,8 +2339,8 @@ async def test_key3_hold_in_settings_shows_help_not_pairing() -> None:
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.PAIR)
 
-    assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_message == "KEY1 opens category"
+    assert display.snapshots[-1].mode is UiMode.HELP_DIALOG
+    assert "KEY1 opens category" in (display.snapshots[-1].help_dialog_body or "")
 
 
 @pytest.mark.asyncio
@@ -1692,18 +2405,12 @@ async def test_settings_menu_shows_ftp_credentials() -> None:
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN ...
+    await _walk_to_network_row(ui, SettingKey.FTP_USERNAME_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[4].label == "FTP user"
-    assert rows[4].value == "ib"
-    assert rows[5].label == "FTP PIN"
-    assert rows[5].value == "12345678"
+    assert rows[2].label == "FTP user"
+    assert rows[2].value == "ib"
+    assert rows[3].label == "FTP PIN"
+    assert rows[3].value == "12345678"
 
 
 @pytest.mark.asyncio
@@ -1727,20 +2434,12 @@ async def test_settings_menu_shows_hotspot_pin(
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host ...
+    await _walk_to_network_row(ui, SettingKey.NETWORK_HOTSPOT_SSID_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[1].label == "SSID"
-    assert rows[1].value == "InstantLink-T123"
-    assert rows[2].label == "Wi-Fi PIN"
-    assert rows[2].value == "12345678"
-    assert rows[3].label == "FTP host"
-    assert rows[3].value == "192.168.8.1"
+    assert rows[0].label == "SSID"
+    assert rows[0].value == "InstantLink-T123"
+    assert rows[1].label == "Wi-Fi PIN"
+    assert rows[1].value == "12345678"
 
 
 @pytest.mark.asyncio
@@ -1762,8 +2461,7 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     # No-film test — the test intent is toggling the value, not the path.
     # AUTO_PRINT: 0 Auto print  1 No-film test  2 Advanced  3 Keepalive  4 Search rate.
     ui._show_settings(page=SettingsPage.AUTO_PRINT)
-    # 1 DOWN lands on No-film test (index 1).
-    await ui._handle_action(UiAction.DOWN)
+    # No-film test is first on the advanced Printer options page.
     await ui._handle_action(UiAction.RIGHT)
     assert not ui.config.workflow.allow_print_without_film
     assert display.snapshots[-1].settings_title == "No-film test"
@@ -1771,8 +2469,8 @@ async def test_settings_print_page_can_toggle_no_film_test() -> None:
     await ui._handle_action(UiAction.SELECT)
 
     assert ui.config.workflow.allow_print_without_film
-    assert display.snapshots[-1].settings_rows[1].label == "No-film test"
-    assert display.snapshots[-1].settings_rows[1].value == "On"
+    assert display.snapshots[-1].settings_rows[0].label == "No-film test"
+    assert display.snapshots[-1].settings_rows[0].value == "On"
 
 
 @pytest.mark.asyncio
@@ -1798,27 +2496,14 @@ async def test_settings_network_page_shows_connection_info() -> None:
         film_remaining=3,
     )
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user
-    #   5 FTP PIN  6 iPhone pairing  7 Diagnostics  8 Bluetooth
-    #   9 Same Wi-Fi adv  10 USB IP  11 Reset sync token  12 Reset
-    # credentials. The Diagnostics
-    # divider separates the camera-setup credentials block from the
-    # read-only status rows (plan 034 item 9); iPhone pairing (plan 050)
-    # sits with the setup block just above it.
+    await _walk_to_network_row(ui, SettingKey.NETWORK_BLUETOOTH_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[6].label == "iPhone pairing"
-    assert rows[8].label == "Bluetooth"
-    assert rows[8].value == "connected"
-    assert rows[9].label == "Same Wi-Fi adv"
-    assert rows[9].value == "192.168.5.149"
-    assert rows[10].label == "USB IP"
-    assert rows[10].value == "192.168.7.1"
+    assert rows[0].label == "Bluetooth"
+    assert rows[0].value == "connected"
+    assert rows[1].label == "USB IP"
+    assert rows[1].value == "192.168.7.1"
+    await _walk_to_network_row(ui, SettingKey.NETWORK_WIFI_INFO)
+    assert ui.snapshot.settings_rows[2].value == "192.168.5.149"
 
 
 @pytest.mark.asyncio
@@ -1834,19 +2519,10 @@ async def test_settings_network_page_reports_admin_usb_without_camera_wording() 
     ui._usb_connected = True
     ui._camera_transport_message = "USB IP missing"
 
-    await ui._handle_action(UiAction.SELECT)
-    # MAIN: Print (0), Network (1), System (2), Accessibility (3).
-    # 1 DOWN lands on Network; SELECT enters it.
-    await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.SELECT)
-
-    # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
-    #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
-    #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
-    #   10 USB IP  11 Reset sync token  12 Reset credentials.
+    await _walk_to_network_row(ui, SettingKey.NETWORK_ETHERNET_INFO)
     rows = display.snapshots[-1].settings_rows
-    assert rows[10].label == "USB IP"
-    assert rows[10].value == "no IP"
+    assert rows[1].label == "USB IP"
+    assert rows[1].value == "no IP"
 
 
 @pytest.mark.asyncio
@@ -1873,6 +2549,8 @@ async def test_settings_system_refresh_stays_in_settings() -> None:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
 
+    assert ui._settings_status_task is not None
+    await ui._settings_status_task
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "System"
     assert display.snapshots[-1].settings_message == "No printer saved"
@@ -1912,6 +2590,9 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     # MAIN: Print (row 0). SELECT enters the Print hub.
     await ui._handle_action(UiAction.SELECT)
     # Print hub: Printer (row 0). SELECT enters the Printer sub-page.
+    # Printer is the last row after daily Post, Transform and Workflow.
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     # PRINTER (paired): 0 Serial  1 Pair/Re-pair  2 Reconnect  3 Forget  4 Printer type.
     # Two DOWN presses lands on Reconnect (RESET_PRINTER_LINK, index 2).
@@ -1937,6 +2618,8 @@ async def test_settings_printer_reset_ble_link_stays_in_printer_settings() -> No
     assert display.snapshots[-1].mode is UiMode.SETTINGS
     assert display.snapshots[-1].settings_title == "Printer"
     assert display.snapshots[-1].settings_message == "BLE link reset"
+    # Startup now awaits the disconnected-bond guard before its first fetch.
+    await asyncio.wait_for(status_provider.fetch_started.wait(), 1)
     assert display.snapshots[-1].paired_printer == replace(printer, model=PrinterModel.SQUARE)
     await ui._cancel_status_refresh()
 
@@ -1978,7 +2661,8 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     # 0 Idle poweroff  1 Refresh status  [skip 2 Personalisation header]
     # 3 Appearance  4 Text size  5 Language  6 About. Five DOWNs lands on
     # About (header is skipped, so the visited indices are 1,3,4,5,6).
-    for _ in range(5):
+    keys = ui._visible_keys_for_page(SettingsPage.SYSTEM)
+    while keys[ui._snapshot.selected_index] is not SettingKey.OPEN_ABOUT:
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     assert display.snapshots[-1].settings_title == "About"
@@ -1987,7 +2671,7 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     # CPU/RAM/Storage/SoC live stats sit between identity and version blocks.
     assert [row.label for row in rows[:9]] == [
         "Device ID",
-        "App version",
+        "Bridge version",
         "CPU",
         "Memory",
         "Storage",
@@ -2002,9 +2686,10 @@ async def test_settings_about_page_shows_device_and_versions() -> None:
     assert rows[7].value == "5.82"
 
     await ui._handle_action(UiAction.HELP)
-    assert display.snapshots[-1].settings_message == "Unique ID; used by the desktop app"
+    assert display.snapshots[-1].help_dialog_body == "Unique ID; used by the desktop app"
 
-    # BACK from About goes to its parent (System), not all the way to MAIN.
+    # First dismiss Help, then BACK returns About to its parent System.
+    await ui._handle_action(UiAction.BACK)
     await ui._handle_action(UiAction.BACK)
     assert display.snapshots[-1].settings_title == "System"
 
@@ -2055,6 +2740,9 @@ async def test_system_stats_row_renders_cpu_percent(monkeypatch: pytest.MonkeyPa
         ),
     )
 
+    ui._system_stats_snapshot()
+    assert ui._about_load_task is not None
+    await ui._about_load_task
     row = ui._settings_row_for_key(SettingKey.SYSTEM_CPU, "")
     assert row.label == "CPU"
     assert row.value == "23%"
@@ -2102,6 +2790,9 @@ async def test_system_stats_snapshot_is_cached_for_three_seconds(
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
+    ui._system_stats_snapshot()
+    assert ui._about_load_task is not None
+    await ui._about_load_task
     first = ui._system_stats_snapshot()
     second = ui._system_stats_snapshot()
     # Same call, same cache window → same object reference, only one read.
@@ -2226,11 +2917,11 @@ async def test_settings_system_page_can_toggle_idle_poweroff(tmp_path: Path) -> 
 
     assert ui.config.power.idle_poweroff_enabled
     assert load_config(config_path).power.idle_poweroff_enabled
-    # Plan 037 phase 1, #2: the row value now reads "After 10 min" / "Off"
+    # Plan 037 phase 1, #2: the row value now reads "After 30min" / "Off"
     # rather than the generic On/Off picker label so it tells the user how
     # long the idle window actually is.
     assert display.snapshots[-1].settings_rows[display.snapshots[-1].selected_index].value == (
-        "After 10 min"
+        "After 30min"
     )
 
 
@@ -2255,6 +2946,9 @@ async def test_forget_printer_requires_second_confirmation() -> None:
     # Print page.
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
+    # Printer is the last row after daily Post, Transform and Workflow.
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     # PRINTER sub-page (paired): 0 SERIAL  1 RE-PAIR  2 RECONNECT  3 FORGET
     #                            4 PRINTER TYPE. Three DOWNs lands on FORGET.
@@ -2312,6 +3006,9 @@ async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None
     # state-aware pair/re-pair row).
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.SELECT)
+    # Printer is the last row after daily Post, Transform and Workflow.
+    for _ in range(3):
+        await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
     await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.SELECT)
@@ -2342,8 +3039,8 @@ async def test_forget_and_repair_confirms_then_forgets_and_starts_scan() -> None
     await ui._handle_action(UiAction.BACK)
     await ui._handle_action(UiAction.PAIR)
 
-    assert display.snapshots == []
     assert ui._snapshot.mode is UiMode.PRINTING
+    assert ui._snapshot.idle_stage == "active"
 
 
 @pytest.mark.asyncio
@@ -2422,14 +3119,14 @@ async def test_bluetooth_settings_do_not_claim_connected_while_searching() -> No
         printer_status_message="No printer signal",
     )
 
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.CONNECTIONS)
 
     # NETWORK (with iPhone pairing at 6 and the Diagnostics divider at 7):
     #   0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN
     #   6 iPhone pairing  7 Diagnostics  8 Bluetooth  9 Same Wi-Fi adv
     #   10 USB IP  11 Reset sync token  12 Reset credentials.
-    assert display.snapshots[-1].settings_rows[8].label == "Bluetooth"
-    assert display.snapshots[-1].settings_rows[8].value == "searching"
+    assert display.snapshots[-1].settings_rows[0].label == "Bluetooth"
+    assert display.snapshots[-1].settings_rows[0].value == "searching"
 
 
 @pytest.mark.asyncio
@@ -2535,16 +3232,8 @@ async def test_key3_press_with_paired_printer_opens_upload_ftp_credentials() -> 
     await ui._handle_action(UiAction.HELP)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
-    assert display.snapshots[-1].settings_message == "Wi-Fi + FTP credentials"
-    # NETWORK: 0 Wi-Fi Mode  1 SSID  2 Wi-Fi PIN  3 FTP host  4 FTP user  5 FTP PIN ...
-    assert [row.label for row in display.snapshots[-1].settings_rows[1:6]] == [
-        "SSID",
-        "Wi-Fi PIN",
-        "FTP host",
-        "FTP user",
-        "FTP PIN",
-    ]
+    assert ui._settings_page is SettingsPage.POST
+    assert display.snapshots[-1].settings_message is None
 
 
 @pytest.mark.asyncio
@@ -2572,7 +3261,7 @@ async def test_first_printer_pairing_opens_upload_ftp_credentials() -> None:
     await ui._pair_in_background(previous_printer=None)
 
     assert display.snapshots[-1].mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "FTP"
     assert display.snapshots[-1].settings_message == "Enter these on sender"
     await ui._cancel_status_refresh()
 
@@ -2971,11 +3660,195 @@ async def test_proactive_bond_reset_guard_prevents_overlap() -> None:
     ui._proactive_bond_reset_task = asyncio.create_task(_blocking_reset())
     await started.wait()
 
-    await ui._maybe_reset_bond_on_drop(printer)
+    joiner = asyncio.create_task(ui._maybe_reset_bond_on_drop(printer))
+    await asyncio.sleep(0)
+    assert not joiner.done()
     assert pairer.reset_bond_calls == []
 
     release.set()
+    await joiner
     await ui._proactive_bond_reset_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancel_child", [False, True])
+@pytest.mark.parametrize(
+    "owner_attribute",
+    ["_proactive_bond_reset_task", "_auto_rebond_task", "_silent_link_recovery_task"],
+)
+async def test_replacement_poll_joins_old_bond_cleanup_before_fetch(
+    cancel_child: bool, owner_attribute: str
+) -> None:
+    printer = PairedPrinter(address="INSTANTLINK:1N034655", name="INSTAX-1N034655")
+    pairer = _FakePairer([printer])
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _make_auto_rebond_ui(printer, pairer, provider)
+    started = asyncio.Event()
+    cleanup_started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def old_reset() -> None:
+        started.set()
+        try:
+            await asyncio.Future[None]()
+        except asyncio.CancelledError:
+            cleanup_started.set()
+            await release.wait()
+            if cancel_child:
+                raise
+
+    old = asyncio.create_task(old_reset())
+    setattr(ui, owner_attribute, old)
+    await started.wait()
+    old.cancel()
+    await cleanup_started.wait()
+    poll = asyncio.create_task(ui._poll_printer_status(printer, ui._status_generation))
+    try:
+        await asyncio.sleep(0)
+        assert provider.fetch_calls == 0
+        release.set()
+        await asyncio.wait_for(provider.fetch_started.wait(), 1)
+        assert old.done()
+        fresh_gate = cancel_child or owner_attribute != "_proactive_bond_reset_task"
+        assert pairer.reset_bond_calls == ([printer] if fresh_gate else [])
+    finally:
+        release.set()
+        poll.cancel()
+        with suppress(asyncio.CancelledError):
+            await poll
+        with suppress(asyncio.CancelledError):
+            await old
+
+
+@pytest.mark.asyncio
+async def test_cancelled_bond_gate_waiter_preserves_existing_recovery_owner() -> None:
+    printer = PairedPrinter(address="INSTANTLINK:1N034655", name="INSTAX-1N034655")
+    pairer = _FakePairer([printer])
+    ui = _make_auto_rebond_ui(printer, pairer, _FakeStatusProvider())
+    release = asyncio.Event()
+    started = asyncio.Event()
+
+    async def recover() -> None:
+        started.set()
+        await release.wait()
+
+    owner = asyncio.create_task(recover())
+    ui._proactive_bond_reset_task = owner
+    await started.wait()
+    waiter = asyncio.create_task(ui._maybe_reset_bond_on_drop(printer))
+    try:
+        await asyncio.sleep(0)
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        assert not owner.done()
+        assert pairer.reset_bond_calls == []
+    finally:
+        release.set()
+        await owner
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "owner_attribute",
+    ["_proactive_bond_reset_task", "_auto_rebond_task", "_silent_link_recovery_task"],
+)
+@pytest.mark.parametrize("cancel_print", [False, True])
+async def test_print_handoff_joins_mutating_recovery_cleanup(
+    tmp_path: Path, owner_attribute: str, cancel_print: bool
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def mutate() -> None:
+        started.set()
+        try:
+            await asyncio.Future[None]()
+        except asyncio.CancelledError:
+            cleaning.set()
+            await release.wait()
+            raise
+
+    owner = asyncio.create_task(mutate())
+    setattr(ui, owner_attribute, owner)
+    await started.wait()
+    printing = asyncio.create_task(
+        ui.printing_started(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.2"))
+    )
+    try:
+        await cleaning.wait()
+        assert not printing.done()
+        assert ui.snapshot.mode is not UiMode.PRINTING
+        watcher.callbacks[0]()
+        assert not ui._printer_disconnect_pending
+        if cancel_print:
+            printing.cancel()
+            await asyncio.sleep(0)
+            printing.cancel()
+            await asyncio.sleep(0)
+            assert not printing.done()
+            assert not owner.done()
+        release.set()
+        if cancel_print:
+            with pytest.raises(asyncio.CancelledError):
+                await printing
+            assert ui.snapshot.mode is not UiMode.PRINTING
+        else:
+            await printing
+            assert ui.snapshot.mode is UiMode.PRINTING
+        assert owner.done()
+    finally:
+        release.set()
+        printing.cancel()
+        with suppress(asyncio.CancelledError):
+            await printing
+        with suppress(asyncio.CancelledError):
+            await owner
+
+
+@pytest.mark.asyncio
+async def test_print_handoff_cleanup_timeout_aborts_print_and_retains_mutator(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from instantlink_bridge.ui import controller
+
+    monkeypatch.setattr(controller, "UI_TASK_CANCEL_BUDGET_S", 0.001)
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def mutate() -> None:
+        started.set()
+        try:
+            await asyncio.Future[None]()
+        except asyncio.CancelledError:
+            cleaning.set()
+            await release.wait()
+            raise
+
+    owner = asyncio.create_task(mutate())
+    ui._proactive_bond_reset_task = owner
+    await started.wait()
+    try:
+        with pytest.raises(TimeoutError, match="Printer recovery cleanup timed out"):
+            await ui.printing_started(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.2"))
+        assert cleaning.is_set()
+        assert ui.snapshot.mode is not UiMode.PRINTING
+        assert not owner.done()
+        assert ui._proactive_bond_reset_task is owner
+    finally:
+        release.set()
+        with suppress(asyncio.CancelledError):
+            await owner
 
 
 @pytest.mark.asyncio
@@ -3406,25 +4279,7 @@ async def test_reset_credentials_requires_confirmation(
         pairer=_FakePairer([]),
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
-    # Navigate to Upload FTP page and select the Reset credentials row (last row)
-    await ui._handle_action(UiAction.SELECT)  # open settings
-    await ui._handle_action(UiAction.DOWN)  # move to Upload FTP
-    await ui._handle_action(UiAction.SELECT)  # open Upload FTP page
-
-    # Scroll to the last row (Reset credentials)
-    from instantlink_bridge.ui.settings import (
-        SECTION_HEADER_KEYS,
-        SETTINGS_BY_PAGE,
-        SettingsPage,
-    )
-
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
-    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
-    # press shorter per header that sits between the start and the end.
-    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
-    for _ in range(len(camera_keys) - 1 - header_count):
-        await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.RESET_CREDENTIALS)
 
     # First SELECT opens the confirmation dialog overlay (plan 040), not execute.
     await ui._handle_action(UiAction.SELECT)
@@ -3471,24 +4326,7 @@ async def test_reset_credentials_second_select_executes(
     )
     monkeypatch.setattr(ui, "_restart_hotspot_for_credentials", fake_hotspot_restart)
 
-    # Navigate to Upload FTP page and go to Reset credentials row
-    await ui._handle_action(UiAction.SELECT)  # open settings
-    await ui._handle_action(UiAction.DOWN)  # Upload FTP
-    await ui._handle_action(UiAction.SELECT)  # open page
-
-    from instantlink_bridge.ui.settings import (
-        SECTION_HEADER_KEYS,
-        SETTINGS_BY_PAGE,
-        SettingsPage,
-    )
-
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
-    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
-    # press shorter per header that sits between the start and the end.
-    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
-    for _ in range(len(camera_keys) - 1 - header_count):
-        await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.RESET_CREDENTIALS)
 
     # First SELECT opens the confirmation dialog (plan 040).
     await ui._handle_action(UiAction.SELECT)
@@ -3535,24 +4373,7 @@ async def test_reset_credentials_other_key_cancels(
         wifi_mode_setter=_unused_wifi_mode_setter,
     )
 
-    # Navigate to Upload FTP page and Reset credentials row
-    await ui._handle_action(UiAction.SELECT)  # open settings
-    await ui._handle_action(UiAction.DOWN)  # Upload FTP
-    await ui._handle_action(UiAction.SELECT)  # open page
-
-    from instantlink_bridge.ui.settings import (
-        SECTION_HEADER_KEYS,
-        SETTINGS_BY_PAGE,
-        SettingsPage,
-    )
-
-    camera_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    # Plan 037 phase 1: NETWORK_DIAGNOSTICS_HEADER is non-selectable and the
-    # UP/DOWN nav skips over it, so the loop to walk to the last row is one
-    # press shorter per header that sits between the start and the end.
-    header_count = sum(1 for k in camera_keys if k in SECTION_HEADER_KEYS)
-    for _ in range(len(camera_keys) - 1 - header_count):
-        await ui._handle_action(UiAction.DOWN)
+    await _walk_to_network_row(ui, SettingKey.RESET_CREDENTIALS)
 
     # First SELECT opens the confirmation dialog (plan 040).
     await ui._handle_action(UiAction.SELECT)
@@ -4219,7 +5040,7 @@ async def test_long_press_on_builtin_preset_shows_toast(tmp_path: Path) -> None:
     assert ui._snapshot.settings_title == "Preset"
 
     # Focus row 0 = Default (built-in); long-press.
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.RIGHT)
 
     # No sub-menu; still in the picker; toast displayed.
     assert ui._preset_submenu_slot is None
@@ -4256,7 +5077,7 @@ async def test_long_press_on_user_preset_opens_submenu(tmp_path: Path) -> None:
         await ui._handle_action(UiAction.DOWN)
 
     # Long-press on Custom1.
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.RIGHT)
 
     # Sub-menu opened.
     assert ui._preset_submenu_slot == "Custom1"
@@ -4291,7 +5112,7 @@ async def test_overwrite_preset_two_press_confirm(tmp_path: Path) -> None:
     for _ in range(5):
         await ui._handle_action(UiAction.DOWN)
     # Long-press to open sub-menu.
-    await ui._handle_action(UiAction.HELP)
+    await ui._handle_action(UiAction.RIGHT)
     assert ui._preset_submenu_slot == "Custom1"
 
     import unittest.mock
@@ -4338,7 +5159,7 @@ async def test_delete_preset_two_press_confirm(tmp_path: Path) -> None:
     # Navigate to Custom1 (index 5).
     for _ in range(5):
         await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.HELP)  # open sub-menu
+    await ui._handle_action(UiAction.RIGHT)  # open sub-menu
 
     # Navigate to Delete row (index 1).
     await ui._handle_action(UiAction.DOWN)
@@ -4616,8 +5437,8 @@ def test_user_preset_picker_hint_specifies_key3_hold(tmp_path: Path) -> None:
     rows = ui._preset_picker_rows(options, "Default")
     # Custom1 is at index 5 (after 5 built-ins).
     custom1_hint = rows[5].hint
-    assert "K3" in custom1_hint, f"Hint must mention K3, got: {custom1_hint!r}"
-    assert "hold" in custom1_hint.lower(), f"Hint must mention hold, got: {custom1_hint!r}"
+    assert "Right" in custom1_hint, f"Hint must mention Right, got: {custom1_hint!r}"
+    assert "manage" in custom1_hint.lower()
 
 
 @pytest.mark.asyncio
@@ -4655,7 +5476,7 @@ async def test_slots_full_toast_mentions_overwrite_path(tmp_path: Path) -> None:
         await ui._handle_action(UiAction.SELECT)
 
     msg = ui._snapshot.settings_message or ""
-    assert "K3" in msg, f"Slots-full toast must mention K3, got: {msg!r}"
+    assert "Right" in msg, f"Slots-full toast must mention Right, got: {msg!r}"
     assert "overwrite" in msg.lower(), f"Slots-full toast must mention overwrite, got: {msg!r}"
 
 
@@ -4664,8 +5485,8 @@ def test_save_preset_help_text_mentions_management(tmp_path: Path) -> None:
     from instantlink_bridge.ui.settings import SettingKey, setting_help_text
 
     text = setting_help_text(SettingKey.ADJUST_SAVE_CUSTOM)
-    assert "K3" in text, f"Help text must mention K3, got: {text!r}"
-    assert "hold" in text.lower(), f"Help text must mention hold, got: {text!r}"
+    assert "Right" in text, f"Help text must mention Right, got: {text!r}"
+    assert "manage" in text.lower()
 
 
 # -----------------------------------------------------------------------------
@@ -4735,13 +5556,13 @@ def test_idle_poweroff_row_value_off() -> None:
 def test_idle_poweroff_row_value_after_10_min() -> None:
     """Plan 037 #2: enabled idle poweroff renders the timeout explicitly."""
 
-    config = BridgeConfig(power=PowerConfig(idle_poweroff_enabled=True))
+    config = BridgeConfig(power=PowerConfig(idle_poweroff_enabled=True, idle_poweroff_after_s=600))
     ui, _ = _make_settings_ui(config)
 
     row = ui._settings_row_for_key(SettingKey.SYSTEM_IDLE_POWEROFF, "")
 
     assert row.label == "Idle poweroff"
-    assert row.value == "After 10 min"
+    assert row.value == "After 10min"
 
 
 def test_system_idle_info_enum_removed() -> None:
@@ -4779,18 +5600,18 @@ async def test_nav_skips_section_header_forward() -> None:
 
     ui, _display = _make_settings_ui(BridgeConfig())
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.PRINT)
     # NETWORK rows: 6 = SYNC_PAIRING, 7 = NETWORK_DIAGNOSTICS_HEADER,
     # 8 = NETWORK_BLUETOOTH_INFO. Position the cursor at 6 and press DOWN.
-    ui._settings_indices[SettingsPage.NETWORK] = 6
-    ui._snapshot = replace(ui._snapshot, selected_index=6)
+    ui._settings_indices[SettingsPage.PRINT] = 3
+    ui._snapshot = replace(ui._snapshot, selected_index=3)
 
     await ui._handle_settings_action(UiAction.DOWN)
 
-    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    keys = ui._visible_keys_for_page(SettingsPage.PRINT)
     new_index = ui._snapshot.selected_index
-    assert keys[new_index] is SettingKey.NETWORK_BLUETOOTH_INFO
-    assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
+    assert keys[new_index] is SettingKey.OPEN_TRANSFORM
+    assert keys[new_index] is not SettingKey.PRINT_ADVANCED_HEADER
 
 
 @pytest.mark.asyncio
@@ -4798,17 +5619,17 @@ async def test_nav_skips_section_header_backward() -> None:
     """Plan 037 #3 + #4: UP over a header lands on the row before it."""
 
     ui, _ = _make_settings_ui(BridgeConfig())
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.PRINT)
     # Start on the row after the divider (NETWORK_BLUETOOTH_INFO, index 8).
-    ui._settings_indices[SettingsPage.NETWORK] = 8
-    ui._snapshot = replace(ui._snapshot, selected_index=8)
+    ui._settings_indices[SettingsPage.PRINT] = 5
+    ui._snapshot = replace(ui._snapshot, selected_index=5)
 
     await ui._handle_settings_action(UiAction.UP)
 
-    keys = ui._visible_keys_for_page(SettingsPage.NETWORK)
+    keys = ui._visible_keys_for_page(SettingsPage.PRINT)
     new_index = ui._snapshot.selected_index
-    assert keys[new_index] is SettingKey.SYNC_PAIRING
-    assert keys[new_index] is not SettingKey.NETWORK_DIAGNOSTICS_HEADER
+    assert keys[new_index] is SettingKey.OPEN_PRINTER
+    assert keys[new_index] is not SettingKey.PRINT_ADVANCED_HEADER
 
 
 @pytest.mark.asyncio
@@ -4831,16 +5652,16 @@ async def test_initial_selection_skips_persisted_header() -> None:
     """Plan 037 #3 + #4: persisted header index advances to the next non-header."""
 
     ui, _display = _make_settings_ui(BridgeConfig())
-    network_keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
-    header_index = network_keys.index(SettingKey.NETWORK_DIAGNOSTICS_HEADER)
-    ui._settings_indices[SettingsPage.NETWORK] = header_index
+    network_keys = SETTINGS_BY_PAGE[SettingsPage.PRINT]
+    header_index = network_keys.index(SettingKey.PRINT_ADVANCED_HEADER)
+    ui._settings_indices[SettingsPage.PRINT] = header_index
 
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.PRINT)
 
     landed_key = network_keys[ui._snapshot.selected_index]
     assert landed_key not in SECTION_HEADER_KEYS
     # Forward-only advance: should land on the row immediately after.
-    assert landed_key is SettingKey.NETWORK_BLUETOOTH_INFO
+    assert landed_key is SettingKey.OPEN_TRANSFORM
 
 
 # -----------------------------------------------------------------------------
@@ -5351,7 +6172,7 @@ async def test_preset_overwrite_dialog_includes_slot_name_in_title(tmp_path: Pat
     # Built-ins occupy indices 0..4; Custom1 is at 5, Custom3 at 7.
     for _ in range(7):
         await ui._handle_action(UiAction.DOWN)
-    await ui._handle_action(UiAction.HELP)  # open sub-menu on Custom3
+    await ui._handle_action(UiAction.RIGHT)  # open sub-menu on Custom3
 
     # SELECT on the Overwrite row opens the dialog.
     await ui._handle_action(UiAction.SELECT)
@@ -5417,13 +6238,12 @@ def _test_system_info() -> SystemInfo:
 @pytest.mark.asyncio
 async def test_mode_row_opens_picker_with_two_explicit_options() -> None:
     ui, display = _make_settings_ui(BridgeConfig())
-    ui._show_settings(page=SettingsPage.PRINT)
+    ui._show_settings(page=SettingsPage.MAIN)
 
-    # PRINT hub: 0 Printer  1 Adjustments  2 Transform  3 Auto print
-    #   4 Mode (plan 055).
-    assert display.snapshots[-1].settings_rows[4].label == "Mode"
-    assert display.snapshots[-1].settings_rows[4].value == "Print"
-    for _ in range(4):
+    # Mode is a top-level Settings row after the three category links.
+    assert display.snapshots[-1].settings_rows[3].label == "Mode"
+    assert display.snapshots[-1].settings_rows[3].value == "Print"
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
 
@@ -5452,8 +6272,8 @@ async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path:
     )
     assert ui._snapshot.sync_destination == "print"
 
-    ui._show_settings(page=SettingsPage.PRINT)
-    for _ in range(4):
+    ui._show_settings(page=SettingsPage.MAIN)
+    for _ in range(3):
         await ui._handle_action(UiAction.DOWN)
     await ui._handle_action(UiAction.RIGHT)
     # Picker opens on the current value (Print, index 0); one DOWN → Sync.
@@ -5465,8 +6285,8 @@ async def test_mode_picker_persists_fires_callback_and_stamps_snapshot(tmp_path:
     assert applied_sync == [ui.config.sync]
     assert ui._snapshot.sync_destination == "iphone"
     assert display.snapshots[-1].settings_message == "Saved"
-    # The row value reflects the new destination back on the Print hub.
-    assert display.snapshots[-1].settings_rows[4].value == "Sync"
+    # The row value reflects the new destination on the main Settings page.
+    assert display.snapshots[-1].settings_rows[3].value == "Sync"
 
 
 @pytest.mark.asyncio
@@ -5488,7 +6308,7 @@ async def test_iphone_pairing_row_enters_qr_mode_with_payload(tmp_path: Path) ->
     # and omit the hotspot join credentials.
     ui._wifi_host = "192.168.5.149"
     ui._hotspot_host = None
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -5533,7 +6353,7 @@ async def test_iphone_pairing_payload_carries_urlencoded_hotspot_credentials(
     await ui.sync_service_state_changed(True)
     ui._hotspot_host = "192.168.8.1"
     ui._wifi_host = "192.168.5.149"
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -5563,7 +6383,7 @@ async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> 
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
 
@@ -5574,7 +6394,7 @@ async def test_sync_pairing_back_returns_to_network_settings(tmp_path: Path) -> 
     await ui._handle_action(UiAction.BACK)
 
     assert ui._snapshot.mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "iPhone"
     assert ui._snapshot.sync_qr_payload is None
 
 
@@ -5593,7 +6413,7 @@ async def test_sync_pairing_token_failure_shows_settings_toast(tmp_path: Path) -
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -5728,7 +6548,7 @@ async def test_image_received_does_not_clobber_sync_pairing_qr(tmp_path: Path) -
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
 
@@ -5771,7 +6591,7 @@ async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     await ui.image_received(ReceivedImage(tmp_path / "photo.jpg", "192.168.8.20"))
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
@@ -5779,7 +6599,7 @@ async def test_sync_pairing_back_after_deferred_image_returns_to_settings(
     await ui._handle_action(UiAction.BACK)
 
     assert ui._snapshot.mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_title == "Network"
+    assert display.snapshots[-1].settings_title == "iPhone"
     assert ui._snapshot.sync_qr_payload is None
     assert ui._image_reset_task is None
 
@@ -5830,7 +6650,7 @@ async def test_sync_pairing_screen_is_exempt_from_idle_dim_and_screen_off(
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
     activity_calls["n"] = 0
@@ -5863,7 +6683,7 @@ async def test_leaving_sync_pairing_restores_normal_idle_behavior(tmp_path: Path
         system_info=_test_system_info(),
     )
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     await ui.apply_power_event(_idle_event(IdleStage.DIM, 30.0))
     assert display.idle_stages == []
@@ -5944,7 +6764,7 @@ async def test_destination_change_resets_sync_service_state_to_starting() -> Non
 async def test_sync_pairing_row_blocked_when_destination_print(tmp_path: Path) -> None:
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.PRINT, token_path=tmp_path / "sync.token")
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -5958,7 +6778,7 @@ async def test_sync_pairing_row_blocked_while_service_unavailable(tmp_path: Path
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
     await ui.sync_service_state_changed(False)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -5971,7 +6791,7 @@ async def test_sync_pairing_row_blocked_while_service_unavailable(tmp_path: Path
 async def test_sync_pairing_row_blocked_while_service_starting(tmp_path: Path) -> None:
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
 
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
 
@@ -6020,7 +6840,7 @@ async def test_hold_key3_opens_iphone_pairing_in_iphone_only_mode(tmp_path: Path
 
 
 @pytest.mark.asyncio
-async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) -> None:
+async def test_key2_locks_no_printer_home_without_switching_mode(tmp_path: Path) -> None:
     display = _FakeDisplay()
     config_path = tmp_path / "config.toml"
     config_path.write_text("", encoding="utf-8")
@@ -6038,20 +6858,24 @@ async def test_key2_switches_print_to_sync_from_no_printer_home(tmp_path: Path) 
 
     await ui._handle_action(UiAction.BACK)
 
-    assert ui.config.sync.destination is SyncDestination.IPHONE
-    assert load_config(config_path).sync.destination is SyncDestination.IPHONE
-    assert applied == [ui.config.sync]
-    assert ui._snapshot.mode is UiMode.READY
-    assert ui._snapshot.sync_destination == "iphone"
+    assert ui.config.sync.destination is SyncDestination.PRINT
+    assert load_config(config_path).sync.destination is SyncDestination.PRINT
+    assert applied == []
+    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
+    assert ui._snapshot.idle_stage == "screen_off"
+    assert display.idle_stages[-1] == "screen_off"
 
 
 @pytest.mark.asyncio
-async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
+async def test_key2_locks_sync_home_and_first_key_only_wakes_display() -> None:
     display = _FakeDisplay()
     pairer = _FakePairer([])
     applied: list[SyncConfig] = []
     ui = BridgeUi(
-        BridgeConfig(sync=SyncConfig(destination=SyncDestination.IPHONE)),
+        BridgeConfig(
+            sync=SyncConfig(destination=SyncDestination.IPHONE),
+            ui=UiConfig(unlock_requires_three_presses=False),
+        ),
         display=display,
         input_device=NullInput(),
         pairer=pairer,
@@ -6062,11 +6886,37 @@ async def test_key2_switches_sync_to_print_and_refreshes_printer_home() -> None:
 
     await ui._handle_action(UiAction.BACK)
 
-    assert ui.config.sync.destination is SyncDestination.PRINT
-    assert applied == [ui.config.sync]
-    assert pairer.list_calls == 1
-    assert ui._snapshot.mode is UiMode.NEEDS_PAIRING
-    assert ui._snapshot.sync_destination == "print"
+    assert ui.config.sync.destination is SyncDestination.IPHONE
+    assert applied == []
+    assert pairer.list_calls == 0
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.idle_stage == "screen_off"
+
+    # FTP or printer events may reset the idle timer, but a manual lock keeps
+    # the physical LCD dark until a key is pressed.
+    rendered_before = len(display.snapshots)
+    ui._apply_idle_stage(IdleStage.ACTIVE)
+    ui._snapshot = replace(ui._snapshot, message="background update")
+    ui._render()
+    assert ui._snapshot.idle_stage == "screen_off"
+    assert display.idle_stages[-1] == "screen_off"
+    assert len(display.snapshots) == rendered_before
+
+    await ui._handle_action(UiAction.SELECT)
+    assert ui._snapshot.mode is UiMode.READY
+    assert ui._snapshot.idle_stage == "active"
+    assert display.idle_stages[-1] == "active"
+    assert len(display.snapshots) == rendered_before + 1
+
+
+def test_screen_off_uses_slower_network_status_poll() -> None:
+    ui, _ = _make_settings_ui(BridgeConfig())
+    assert ui._network_status_poll_interval_s() == 1.0
+    ui._apply_idle_stage(IdleStage.SCREEN_OFF)
+    assert ui._network_status_poll_interval_s() == 5.0
+    ui._apply_idle_stage(IdleStage.ACTIVE)
+    ui._lock_screen()
+    assert ui._network_status_poll_interval_s() == 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -6085,7 +6935,7 @@ async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
     display = _FakeDisplay()
     ui = _sync_ui(display, destination=SyncDestination.IPHONE, token_path=tmp_path / "sync.token")
     await ui.sync_service_state_changed(True)
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     assert ui._snapshot.mode is UiMode.SYNC_PAIRING
 
@@ -6112,11 +6962,11 @@ async def test_auto_print_confirmation_defers_while_sync_pairing_qr_is_up(
 def test_sync_settings_rows_cross_reference_each_other() -> None:
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_DESTINATION]
-        == "Print or sync received photos · Pair iPhone: Network page"
+        == "Print or sync received photos · Pair iPhone: Network > iPhone"
     )
     assert (
         SETTING_HELP_TEXT[SettingKey.SYNC_PAIRING]
-        == "Show a QR code to pair your iPhone · Mode: Print page"
+        == "Show a QR code to pair your iPhone · Mode: Settings page"
     )
 
 
@@ -6140,7 +6990,7 @@ async def test_sync_client_seen_sets_ever_seen_bit() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Plan 051 P3.11 — sync-token rotation. "Reset sync token" is an action row
+# Plan 051 P3.11 — sync-token rotation. "Unpair iPhones" is an action row
 # on Settings ▸ Network mirroring the Reset-credentials pattern: destructive
 # confirmation dialog, file rotation, then an app-side service restart so
 # the running SyncService re-reads the token ("starting" → "listening").
@@ -6173,11 +7023,19 @@ def _sync_token_ui(
 
 
 async def _walk_to_network_row(ui: BridgeUi, key: SettingKey) -> None:
-    """Enter Settings ▸ Network and move the selection onto ``key``."""
+    """Navigate the real Network submenu path to a settings row."""
+    from instantlink_bridge.ui.settings import PAGE_FOR_OPEN_KEY, SETTINGS_PARENT_PAGE
 
     ui._show_settings(page=SettingsPage.NETWORK)
-    selectable = [k for k in SETTINGS_BY_PAGE[SettingsPage.NETWORK] if k not in SECTION_HEADER_KEYS]
-    for _ in range(selectable.index(key)):
+    page = next(page for page, keys in SETTINGS_BY_PAGE.items() if key in keys)
+    assert SETTINGS_PARENT_PAGE[page] is SettingsPage.NETWORK
+    opener = next(k for k, target in PAGE_FOR_OPEN_KEY.items() if target is page)
+    keys = SETTINGS_BY_PAGE[SettingsPage.NETWORK]
+    for _ in range((keys.index(opener) - ui.snapshot.selected_index) % len(keys)):
+        await ui._handle_action(UiAction.DOWN)
+    await ui._handle_action(UiAction.SELECT)
+    keys = SETTINGS_BY_PAGE[page]
+    for _ in range((keys.index(key) - ui.snapshot.selected_index) % len(keys)):
         await ui._handle_action(UiAction.DOWN)
 
 
@@ -6188,14 +7046,14 @@ async def test_reset_sync_token_row_requires_confirmation(tmp_path: Path) -> Non
 
     await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
     rows = display.snapshots[-1].settings_rows
-    assert rows[display.snapshots[-1].selected_index].label == "Reset sync token"
+    assert rows[display.snapshots[-1].selected_index].label == "Unpair iPhones"
 
     # First SELECT opens the destructive confirmation dialog, not execute.
     await ui._handle_action(UiAction.SELECT)
 
     assert display.snapshots[-1].mode is UiMode.CONFIRMATION_DIALOG
-    assert display.snapshots[-1].confirmation_title == "Reset sync token?"
-    assert display.snapshots[-1].confirmation_confirm_label == "Reset"
+    assert display.snapshots[-1].confirmation_title == "Unpair iPhones?"
+    assert display.snapshots[-1].confirmation_confirm_label == "Unpair"
     assert display.snapshots[-1].confirmation_destructive is True
     assert display.snapshots[-1].confirmation_focus == "cancel"
     assert ui._snapshot.confirmation_action_key == "reset_sync_token"
@@ -6230,7 +7088,7 @@ async def test_reset_sync_token_confirm_rotates_file_and_requests_restart(
     # concludes) instead of a stale "listening" claim with the old token.
     assert ui._snapshot.sync_service_state == "starting"
     assert ui._snapshot.mode is UiMode.SETTINGS
-    assert display.snapshots[-1].settings_message == "Sync token reset"
+    assert display.snapshots[-1].settings_message == "iPhones unpaired"
 
 
 @pytest.mark.asyncio
@@ -6266,7 +7124,7 @@ async def test_reset_sync_token_failure_shows_toast_and_skips_restart(
     await ui._handle_action(UiAction.RIGHT)
     await ui._handle_action(UiAction.SELECT)
 
-    assert display.snapshots[-1].settings_message == "Token reset failed"
+    assert display.snapshots[-1].settings_message == "Unpair failed"
     assert rotations == []
     # No restart requested — the state must not drop to "starting".
     assert ui._snapshot.sync_service_state == "listening"
@@ -6299,7 +7157,7 @@ async def test_reset_sync_token_while_sync_disabled_rotates_without_starting_cla
     # No restart window is claimed: nothing is about to start while sync
     # stays disabled, so the state is left untouched.
     assert ui._snapshot.sync_service_state == "unavailable"
-    assert display.snapshots[-1].settings_message == "Sync token reset"
+    assert display.snapshots[-1].settings_message == "iPhones unpaired"
 
 
 @pytest.mark.asyncio
@@ -6309,7 +7167,9 @@ async def test_reset_sync_token_key3_help(tmp_path: Path) -> None:
     await _walk_to_network_row(ui, SettingKey.RESET_SYNC_TOKEN)
     await ui._handle_action(UiAction.HELP)
 
-    assert display.snapshots[-1].settings_message == ("New pairing token; unpairs all iPhones")
+    assert display.snapshots[-1].help_dialog_body == (
+        "Paired iPhones will need to scan a new QR code."
+    )
 
 
 @pytest.mark.asyncio
@@ -6324,7 +7184,7 @@ async def test_sync_pairing_qr_payload_reflects_rotated_token(tmp_path: Path) ->
     await ui.sync_service_state_changed(True)
     ui._wifi_host = "192.168.5.149"
 
-    ui._show_settings(page=SettingsPage.NETWORK)
+    ui._show_settings(page=SettingsPage.IPHONE)
     await ui._activate_setting(SettingKey.SYNC_PAIRING)
     payload = ui._snapshot.sync_qr_payload
     assert payload is not None and f"&token={old_token}" in payload
@@ -6403,3 +7263,120 @@ async def test_injected_actions_respect_startup_settle_window(
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+
+
+@pytest.mark.asyncio
+async def test_status_failure_reason_does_not_survive_success_or_unclassified_failure() -> None:
+    provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "setup dropped", reason=PrinterStatusUnavailableReason.LINK_DROPPED
+        ),
+        snapshot=PrinterStatusSnapshot(3, 90, False),
+    )
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    assert not await ui._refresh_printer_status_in_background(printer)
+    assert ui._last_printer_status_failure_reason is PrinterStatusUnavailableReason.LINK_DROPPED
+    provider._error = None
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui._last_printer_status_failure_reason is None
+    for error in (TimeoutError("late response"), RuntimeError("unexpected")):
+        ui._last_printer_status_failure_reason = PrinterStatusUnavailableReason.LINK_DROPPED
+        provider._error = error
+        assert not await ui._refresh_printer_status_in_background(printer)
+        assert ui._last_printer_status_failure_reason is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reported", [False, True])
+async def test_native_status_warning_has_one_explicit_owner(
+    reported: bool,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "printer status unavailable",
+            reason=PrinterStatusUnavailableReason.BLE_FAILURE,
+            native_stage=3,
+            native_detail="BLE error: org.bluez.Error.AuthenticationFailed",
+            failure_reported=reported,
+        )
+    )
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    caplog.set_level(logging.DEBUG, logger="instantlink_bridge.ui.controller")
+    assert not await ui._refresh_printer_status_in_background(printer)
+    records = [
+        r for r in caplog.records if r.getMessage().startswith("ui.printer_status_unavailable")
+    ]
+    assert len(records) == 1
+    assert records[0].levelno == (logging.DEBUG if reported else logging.WARNING)
+    assert "AuthenticationFailed" in records[0].getMessage()
+    assert "selected_visible=False" not in records[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_confirmed_disconnect_owns_failure_recovery_until_serialized_poll_cleanup() -> None:
+    provider = _FakeStatusProvider(
+        error=PrinterStatusUnavailableError(
+            "printer status unavailable",
+            stale_bond_suspected=True,
+            printer_not_found=True,
+        )
+    )
+    ui = _disconnect_test_ui(provider, _DisconnectWatcher())
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    ui._printer_disconnect_pending = True
+    ui._last_printer_status_ok_at = float("-inf")
+    assert not await ui._refresh_printer_status_in_background(printer)
+    assert ui._printer_disconnect_pending
+    assert ui._auto_rebond_task is None
+    assert ui._silent_link_recovery_task is None
+    assert not ui.live_snapshot.printer_status_fresh
+    assert provider.close_cached_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_identical_status_logs_once_after_confirmed_disconnect_recovery(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    watcher = _DisconnectWatcher()
+    provider = _FakeStatusProvider(snapshot=PrinterStatusSnapshot(3, 90, False))
+    ui = _disconnect_test_ui(provider, watcher)
+    printer = ui.snapshot.paired_printer
+    assert printer is not None
+    caplog.set_level(logging.DEBUG, logger="instantlink_bridge.ui.controller")
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert await ui._refresh_printer_status_in_background(printer)
+    await ui._arm_printer_disconnect_watch(printer, ui._status_generation)
+    watcher.callbacks[0]()
+    assert ui._last_printer_status_log_signature is None
+    assert not ui.live_snapshot.printer_status_fresh
+    # A status whose ACK races the confirmed drop cannot publish or log recovery.
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui._last_printer_status_log_signature is None
+    assert not ui.live_snapshot.printer_status_fresh
+    before = [r for r in caplog.records if r.getMessage().startswith("ui.printer_status ")]
+    assert [r.levelno for r in before] == [logging.INFO, logging.DEBUG]
+    # Model the poll's serialized cleanup before its next accepted fresh response.
+    ui._printer_disconnect_pending = False
+    ui._disarm_printer_disconnect_watch()
+    await ui._close_cached_printer_session()
+    assert await ui._refresh_printer_status_in_background(printer)
+    assert ui.live_snapshot.printer_status_fresh
+    signature = ui._last_printer_status_log_signature
+    assert await ui._refresh_printer_status_in_background(printer)
+    records = [r for r in caplog.records if r.getMessage().startswith("ui.printer_status ")]
+    assert [r.levelno for r in records] == [
+        logging.INFO,
+        logging.DEBUG,
+        logging.INFO,
+        logging.DEBUG,
+    ]
+    # An obsolete subscription cannot force a second recovery announcement.
+    watcher.callbacks[0]()
+    assert ui._last_printer_status_log_signature == signature
+    assert not ui._printer_disconnect_pending

@@ -2,44 +2,71 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import shutil
 import subprocess
-from dataclasses import dataclass
-from enum import StrEnum
+import time
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Thread
 from typing import Any, Protocol, cast
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from instantlink_bridge.ble.models import PrinterModel, spec_for
+from instantlink_bridge.imaging.models import (
+    DEFAULT_WORKING_EDGE as DEFAULT_WORKING_EDGE,
+)
+from instantlink_bridge.imaging.models import (
+    HEIF_SUFFIXES as HEIF_SUFFIXES,
+)
+from instantlink_bridge.imaging.models import (
+    MINI_WORKING_EDGE as MINI_WORKING_EDGE,
+)
+from instantlink_bridge.imaging.models import (
+    FitMode as FitMode,
+)
+from instantlink_bridge.imaging.models import (
+    ImagePipelineError as ImagePipelineError,
+)
+from instantlink_bridge.imaging.models import (
+    ImageTooLargeError as ImageTooLargeError,
+)
+from instantlink_bridge.imaging.models import (
+    PreparedImage as PreparedImage,
+)
+from instantlink_bridge.imaging.models import (
+    PrintEdit as PrintEdit,
+)
+from instantlink_bridge.imaging.models import (
+    SourceIdentity as SourceIdentity,
+)
+from instantlink_bridge.imaging.models import (
+    UnsupportedImageError as UnsupportedImageError,
+)
+from instantlink_bridge.imaging.models import (
+    WorkingImageCache as WorkingImageCache,
+)
+from instantlink_bridge.imaging.models import (
+    _working_size_for_model as _working_size_for_model,
+)
+from instantlink_bridge.imaging.models import (
+    parse_fit_mode as parse_fit_mode,
+)
+from instantlink_bridge.imaging.models import (
+    source_identity as source_identity,
+)
 from instantlink_bridge.imaging.postprocess import (
     AdjustmentProfile,
+    CorrectionProfile,
+    apply_correction,
     apply_post_fit_adjustments,
     apply_pre_fit_adjustments,
 )
 
-
-class ImagePipelineError(RuntimeError):
-    """Base image pipeline error."""
-
-
-class UnsupportedImageError(ImagePipelineError):
-    """Raised when the source is not a supported camera still image."""
-
-
-class ImageTooLargeError(ImagePipelineError):
-    """Raised when an image exceeds an encoded or decoded safety limit."""
-
-    def __init__(self, size: int, maximum: int, unit: str = "bytes") -> None:
-        super().__init__(f"image too large: {size} {unit} (max {maximum} {unit})")
-        self.size = size
-        self.maximum = maximum
-        self.unit = unit
-
-    def __reduce__(self) -> tuple[type[ImageTooLargeError], tuple[int, int, str]]:
-        return (self.__class__, (self.size, self.maximum, self.unit))
+LOGGER = logging.getLogger(__name__)
 
 
 IMAGE_DECODE_ERRORS = (
@@ -48,37 +75,6 @@ IMAGE_DECODE_ERRORS = (
     OSError,
     ValueError,
 )
-
-
-class FitMode(StrEnum):
-    """How to fit source pixels to the printer aspect ratio."""
-
-    AUTO = "auto"
-    CROP = "crop"
-    CONTAIN = "contain"
-    STRETCH = "stretch"
-
-
-@dataclass(frozen=True, slots=True)
-class PrintEdit:
-    """Per-photo preview edits chosen on the LCD before printing."""
-
-    rotate_degrees: int = 0
-    zoom: float = 1.0
-    offset_x: float = 0.0
-    offset_y: float = 0.0
-
-
-@dataclass(frozen=True, slots=True)
-class PreparedImage:
-    """Prepared JPEG for a specific Instax printer model."""
-
-    data: bytes
-    model: PrinterModel
-    width: int
-    height: int
-    quality: int
-    fit: FitMode
 
 
 class _RawThumbnail(Protocol):
@@ -103,17 +99,6 @@ class _RawPyModule(Protocol):
     ThumbFormat: _RawThumbFormat
 
 
-def parse_fit_mode(value: str) -> FitMode:
-    """Parse a user/config fit mode value."""
-
-    normalized = value.strip().lower()
-    try:
-        return FitMode(normalized)
-    except ValueError as error:
-        supported = ", ".join(mode.value for mode in FitMode)
-        raise ValueError(f"unsupported fit mode {value!r}; expected one of {supported}") from error
-
-
 def prepare_for_instax(
     source_path: Path,
     model: PrinterModel,
@@ -122,6 +107,8 @@ def prepare_for_instax(
     quality: int = 100,
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
 ) -> PreparedImage:
     """Convert a camera still image into a model-specific Instax JPEG."""
 
@@ -132,6 +119,8 @@ def prepare_for_instax(
         quality=quality,
         edit=edit,
         adjustments=adjustments,
+        correction=correction,
+        working_cache=working_cache,
         apply_model_flip=True,
     )
 
@@ -144,13 +133,15 @@ def prepare_for_instantlink_backend(
     quality: int = 100,
     edit: PrintEdit | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
+    apply_model_flip: bool = False,
 ) -> PreparedImage:
     """Prepare an edited, model-sized JPEG for InstantLink to send.
 
-    InstantLink applies model-specific transport transforms itself. In particular,
-    Mini Link 3 output is vertically flipped inside InstantLink before upload, so
-    this helper deliberately leaves that flip unapplied and the caller must pass
-    the result to InstantLink with fit mode ``stretch``.
+    Legacy native libraries apply the transport flip while re-encoding. New
+    libraries accept exact prepared bytes, so their callers request the flip
+    here before the one final JPEG encode.
     """
 
     return _prepare_for_model(
@@ -160,7 +151,9 @@ def prepare_for_instantlink_backend(
         quality=quality,
         edit=edit,
         adjustments=adjustments,
-        apply_model_flip=False,
+        correction=correction,
+        working_cache=working_cache,
+        apply_model_flip=apply_model_flip,
     )
 
 
@@ -172,6 +165,8 @@ def _prepare_for_model(
     quality: int,
     edit: PrintEdit | None,
     adjustments: AdjustmentProfile | None,
+    correction: CorrectionProfile | None,
+    working_cache: WorkingImageCache | None,
     apply_model_flip: bool,
 ) -> PreparedImage:
     """Prepare a source image for the given printer model.
@@ -182,22 +177,28 @@ def _prepare_for_model(
     2. ``Image.draft`` hint for JPEG sources
     3. ``ImageOps.exif_transpose`` — correct camera orientation
     4. ``convert("RGB")`` — normalise colour space
-    5. ``apply_pre_fit_adjustments`` — sharpness / vignette / overlays, which
+    5. ``apply_pre_fit_adjustments`` — hue / sharpness / vignette / overlays, which
        must run at working resolution because they are convolutions or have
        frame-relative geometry
     6. ``_apply_print_edit`` — per-photo interactive rotate / zoom / offset
     7. ``_fit_image`` — model-aware crop / contain / stretch to print size
-    8. ``apply_post_fit_adjustments`` — hue / saturation / exposure. These are
-       pointwise, so they give the same pixels here as at working resolution
-       for a fraction of the cost (plan 056 T2.1)
-    9. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
+    8. ``apply_post_fit_adjustments`` — saturation / exposure at print resolution,
+       avoiding the cost of processing the full working image (plan 056 T2.1)
+    9. ``apply_correction`` — independent Printer output compensation at print size
+    10. ``_encode_jpeg_with_size_limit`` — final JPEG at model chunk budget
     """
     spec = spec_for(model)
     working_size = _working_size_for_model(spec.width, spec.height)
     minimum_source_edge = max(spec.width, spec.height)
     image: Image.Image | None = None
+    cache_writer: Thread | None = None
+    preparation_started = time.perf_counter()
     try:
-        image = _open_source_image(source_path, working_size, minimum_source_edge)
+        cache = working_cache if _cache_matches(source_path, model, working_cache) else None
+        image = _read_working_cache(cache, working_size)
+        cache_hit = image is not None
+        if image is None:
+            image = _open_source_image(source_path, working_size, minimum_source_edge)
         if image.format == "JPEG":
             image.draft("RGB", working_size)
         if not _is_supported_source_format(source_path, image):
@@ -214,6 +215,12 @@ def _prepare_for_model(
         # object and never aliases the buffer closed in the `finally` below.
         transposed = _exif_transposed(image)
         prepared = transposed if transposed.mode == "RGB" else transposed.convert("RGB")
+        # Materialize lazy decoders before recording the source stage or
+        # sharing the normalized pixels with the cache writer.
+        prepared.load()
+        if not cache_hit:
+            cache_writer = _write_working_cache_in_background(prepared, cache, working_size)
+        source_done = time.perf_counter()
         profile = adjustments if adjustments is not None else AdjustmentProfile()
         prepared = apply_pre_fit_adjustments(prepared, profile)
         prepared = _apply_print_edit(prepared, edit)
@@ -221,16 +228,34 @@ def _prepare_for_model(
         # Pointwise colour work belongs at print resolution, not working
         # resolution: same pixels, ~17x less of them (plan 056 T2.1).
         fitted = apply_post_fit_adjustments(fitted, profile)
+        fitted = apply_correction(fitted, correction)
     except IMAGE_DECODE_ERRORS as error:
         raise UnsupportedImageError("unsupported or corrupt image file") from error
     finally:
+        if cache_writer is not None:
+            cache_writer.join()
         if image is not None:
             image.close()
 
     if apply_model_flip and spec.flip_vertical:
         fitted = ImageOps.flip(fitted)
 
+    transforms_done = time.perf_counter()
     data, final_quality = _encode_jpeg_with_size_limit(fitted, quality, spec.max_image_size)
+    finished = time.perf_counter()
+    LOGGER.info(
+        "image.prepared path=%s model=%s cache_hit=%s source_ms=%.1f "
+        "transform_ms=%.1f jpeg_ms=%.1f total_ms=%.1f bytes=%s quality=%s",
+        source_path,
+        model.value,
+        cache_hit,
+        (source_done - preparation_started) * 1000,
+        (transforms_done - source_done) * 1000,
+        (finished - transforms_done) * 1000,
+        (finished - preparation_started) * 1000,
+        len(data),
+        final_quality,
+    )
     return PreparedImage(
         data=data,
         model=model,
@@ -238,7 +263,85 @@ def _prepare_for_model(
         height=spec.height,
         quality=final_quality,
         fit=fit,
+        transport_flip_applied=apply_model_flip and spec.flip_vertical,
     )
+
+
+def _cache_matches(source: Path, model: PrinterModel, cache: WorkingImageCache | None) -> bool:
+    if cache is None or cache.model is not model or source.suffix.lower() not in HEIF_SUFFIXES:
+        return False
+    try:
+        return source_identity(source) == cache.source_identity
+    except OSError:
+        return False
+
+
+def _read_working_cache(
+    cache: WorkingImageCache | None, working_size: tuple[int, int]
+) -> Image.Image | None:
+    if cache is None or not cache.path.exists():
+        return None
+    image: Image.Image | None = None
+    try:
+        # Only our bounded RGB BMP is trusted. Incomplete writes use a separate
+        # name and never become a cache hit.
+        if cache.path.stat().st_size > working_size[0] * working_size[1] * 4 + 1024:
+            return None
+        image = Image.open(cache.path)
+        if (
+            image.format != "BMP"
+            or image.mode != "RGB"
+            or image.width > working_size[0]
+            or image.height > working_size[1]
+        ):
+            image.close()
+            return None
+        image.load()
+        return image
+    except IMAGE_DECODE_ERRORS:
+        if image is not None:
+            image.close()
+        LOGGER.debug("image.working_cache_read_failed", exc_info=True)
+        return None
+
+
+def _write_working_cache_in_background(
+    image: Image.Image, cache: WorkingImageCache | None, working_size: tuple[int, int]
+) -> Thread | None:
+    if cache is None or image.width > working_size[0] or image.height > working_size[1]:
+        return None
+
+    # Pillow's HEIF fallback can still be lazy after RGB/orientation no-ops.
+    # Finish its stateful decode before save() and the foreground fit both
+    # access the same pixels. This is a no-op for materialized thumbnailer RGB.
+    image.load()
+
+    def write() -> None:
+        pending = cache.path.with_suffix(".pending")
+        try:
+            # A BMP stores exactly these normalized RGB pixels. It avoids a
+            # second lossy encode and expensive PNG compression. The writer
+            # overlaps Look/edit/fit work, which never mutates this input.
+            image.save(pending, format="BMP")
+            if source_identity(Path(cache.source_identity[0])) == cache.source_identity:
+                os.replace(pending, cache.path)
+        except (OSError, ValueError):
+            LOGGER.debug("image.working_cache_write_failed", exc_info=True)
+        finally:
+            try:
+                pending.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    thread = Thread(target=write, name="image-working-cache", daemon=True)
+    try:
+        thread.start()
+    except RuntimeError:
+        # This optimization must not make an otherwise printable photo fail
+        # when the OS cannot allocate another writer thread.
+        LOGGER.debug("image.working_cache_writer_unavailable", exc_info=True)
+        return None
+    return thread
 
 
 def create_preview_image(
@@ -288,7 +391,10 @@ def create_preview_from_prepared(
     """Create an LCD film preview from an already prepared printer JPEG."""
 
     with Image.open(BytesIO(prepared.data)) as image:
-        return _film_preview_for_model(image.convert("RGB"), prepared.model, max_size)
+        logical = image.convert("RGB")
+        if prepared.transport_flip_applied:
+            logical = ImageOps.flip(logical)
+        return _film_preview_for_model(logical, prepared.model, max_size)
 
 
 def chunk_image_data(data: bytes, model: PrinterModel) -> list[bytes]:
@@ -413,12 +519,6 @@ def _auto_orient_for_target(image: Image.Image, width: int, height: int) -> Imag
     return image.transpose(Image.Transpose.ROTATE_90)
 
 
-def _working_size_for_model(width: int, height: int) -> tuple[int, int]:
-    if (width, height) == (600, 800):
-        return (MINI_WORKING_EDGE, MINI_WORKING_EDGE)
-    return (max(width, DEFAULT_WORKING_EDGE), max(height, DEFAULT_WORKING_EDGE))
-
-
 def _encode_jpeg_with_size_limit(
     image: Image.Image,
     initial_quality: int,
@@ -457,14 +557,11 @@ def _encode_jpeg(image: Image.Image, quality: int) -> bytes:
     return output.getvalue()
 
 
-HEIF_SUFFIXES = {".hif", ".heif", ".heic"}
 RAW_SUFFIXES = {".arw", ".raw", ".dng"}
 # EXIF orientation tag. A missing tag, or a value of 1, means the pixels are
 # already upright and no transpose is required.
 _EXIF_ORIENTATION_TAG = 0x0112
 
-MINI_WORKING_EDGE = 1200
-DEFAULT_WORKING_EDGE = 1600
 MAX_FALLBACK_DECODE_PIXELS = 24_000_000
 MAX_FALLBACK_DECODE_EDGE = 8_000
 
@@ -478,7 +575,9 @@ def _open_source_image(
 ) -> Image.Image:
     suffix = source_path.suffix.lower()
     if suffix in HEIF_SUFFIXES:
-        return _open_heif_image(source_path, _heif_thumbnail_edge(working_size))
+        return _open_heif_image(
+            source_path, _heif_thumbnail_edge(working_size), minimum_source_edge
+        )
     if suffix in RAW_SUFFIXES:
         return _open_raw_image(source_path, working_size, minimum_source_edge)
     return Image.open(source_path)
@@ -512,22 +611,41 @@ def _heif_thumbnail_edge(working_size: tuple[int, int]) -> int:
     return max(DEFAULT_WORKING_EDGE, *working_size)
 
 
-def _open_heif_image(source_path: Path, thumbnail_edge: int) -> Image.Image:
+def _open_heif_image(
+    source_path: Path, thumbnail_edge: int, minimum_source_edge: int
+) -> Image.Image:
     thumbnailer = shutil.which("heif-thumbnailer")
     if thumbnailer is not None:
-        return _open_heif_thumbnail(source_path, thumbnailer, thumbnail_edge)
+        image = _open_heif_thumbnail(source_path, thumbnailer, thumbnail_edge)
+        if max(image.size) >= minimum_source_edge:
+            return image
+        # The decoder selects the first embedded thumbnail and never upscales.
+        # A small embedded thumbnail must not replace the larger primary image
+        # for a full-size print. Retry only once, through the same bounded CLI.
+        LOGGER.info(
+            "image.heif_thumbnail_undersized path=%s size=%s minimum_edge=%s",
+            source_path,
+            image.size,
+            minimum_source_edge,
+        )
+        image.close()
+        return _open_heif_thumbnail(source_path, thumbnailer, thumbnail_edge, primary_only=True)
     _register_heif_opener()
     image = Image.open(source_path)
     _ensure_fallback_decode_size(image.size)
     return image
 
 
-def _open_heif_thumbnail(source_path: Path, thumbnailer: str, size: int) -> Image.Image:
+def _open_heif_thumbnail(
+    source_path: Path, thumbnailer: str, size: int, *, primary_only: bool = False
+) -> Image.Image:
     with TemporaryDirectory(prefix="instantlink-bridge-heif-") as temp_dir:
         output_path = Path(temp_dir) / "thumbnail.png"
         try:
             subprocess.run(
-                [thumbnailer, "-s", str(size), str(source_path), str(output_path)],
+                [thumbnailer, "-s", str(size)]
+                + (["-p"] if primary_only else [])
+                + [str(source_path), str(output_path)],
                 check=True,
                 capture_output=True,
                 timeout=30,

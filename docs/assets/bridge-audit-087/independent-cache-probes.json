@@ -1,0 +1,25 @@
+{
+  "checks": 453,
+  "failures": [],
+  "candidate_sha256": "df10cadf41ea34c9b3baabcd5edcb08b75764804fda851151a4f6c60ebed7775",
+  "cache_info": {
+    "_cached_text_bbox": {
+      "hits": 0,
+      "misses": 900,
+      "maxsize": 512,
+      "currsize": 512
+    },
+    "_cached_text_mask": {
+      "hits": 0,
+      "misses": 900,
+      "maxsize": 256,
+      "currsize": 256
+    },
+    "_has_font_variations": {
+      "hits": 1799,
+      "misses": 1,
+      "maxsize": 32,
+      "currsize": 1
+    }
+  }
+}

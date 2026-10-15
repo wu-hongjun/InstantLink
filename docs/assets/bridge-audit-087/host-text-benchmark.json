@@ -1,0 +1,1134 @@
+{
+  "scope": "host six modes, identical frames, no hardware or film",
+  "cold_first_cycle_median_ms": {
+    "baseline_ms": 3.7572085,
+    "candidate_ms": 2.4341875
+  },
+  "warm_median_ms": {
+    "baseline_ms": 3.758833,
+    "candidate_ms": 0.123541
+  },
+  "cache_info": {
+    "_cached_text_bbox": "CacheInfo(hits=3436, misses=36, maxsize=512, currsize=36)",
+    "_cached_text_mask": "CacheInfo(hits=1575, misses=37, maxsize=256, currsize=37)",
+    "_has_font_variations": "CacheInfo(hits=5080, misses=4, maxsize=32, currsize=4)"
+  },
+  "rows": [
+    {
+      "iteration": 0,
+      "mode": "ready",
+      "baseline_ms": 4.084125,
+      "candidate_ms": 3.264833
+    },
+    {
+      "iteration": 0,
+      "mode": "no_film",
+      "baseline_ms": 4.206333,
+      "candidate_ms": 2.166667
+    },
+    {
+      "iteration": 0,
+      "mode": "settings",
+      "baseline_ms": 4.08725,
+      "candidate_ms": 2.701708
+    },
+    {
+      "iteration": 0,
+      "mode": "unlocking",
+      "baseline_ms": 2.950625,
+      "candidate_ms": 3.11575
+    },
+    {
+      "iteration": 0,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.430292,
+      "candidate_ms": 1.733542
+    },
+    {
+      "iteration": 0,
+      "mode": "printing",
+      "baseline_ms": 2.122,
+      "candidate_ms": 1.462167
+    },
+    {
+      "iteration": 1,
+      "mode": "ready",
+      "baseline_ms": 3.9635,
+      "candidate_ms": 0.117959
+    },
+    {
+      "iteration": 1,
+      "mode": "no_film",
+      "baseline_ms": 4.254292,
+      "candidate_ms": 0.106792
+    },
+    {
+      "iteration": 1,
+      "mode": "settings",
+      "baseline_ms": 4.102417,
+      "candidate_ms": 0.152667
+    },
+    {
+      "iteration": 1,
+      "mode": "unlocking",
+      "baseline_ms": 2.95,
+      "candidate_ms": 0.076917
+    },
+    {
+      "iteration": 1,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.348125,
+      "candidate_ms": 0.188292
+    },
+    {
+      "iteration": 1,
+      "mode": "printing",
+      "baseline_ms": 2.047708,
+      "candidate_ms": 0.120625
+    },
+    {
+      "iteration": 2,
+      "mode": "ready",
+      "baseline_ms": 3.9695,
+      "candidate_ms": 0.138958
+    },
+    {
+      "iteration": 2,
+      "mode": "no_film",
+      "baseline_ms": 4.253292,
+      "candidate_ms": 0.119834
+    },
+    {
+      "iteration": 2,
+      "mode": "settings",
+      "baseline_ms": 4.1945,
+      "candidate_ms": 0.136334
+    },
+    {
+      "iteration": 2,
+      "mode": "unlocking",
+      "baseline_ms": 2.901917,
+      "candidate_ms": 0.077042
+    },
+    {
+      "iteration": 2,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.364125,
+      "candidate_ms": 0.215167
+    },
+    {
+      "iteration": 2,
+      "mode": "printing",
+      "baseline_ms": 2.095959,
+      "candidate_ms": 0.11825
+    },
+    {
+      "iteration": 3,
+      "mode": "ready",
+      "baseline_ms": 3.856584,
+      "candidate_ms": 0.114417
+    },
+    {
+      "iteration": 3,
+      "mode": "no_film",
+      "baseline_ms": 4.183125,
+      "candidate_ms": 0.149
+    },
+    {
+      "iteration": 3,
+      "mode": "settings",
+      "baseline_ms": 4.111041,
+      "candidate_ms": 0.140584
+    },
+    {
+      "iteration": 3,
+      "mode": "unlocking",
+      "baseline_ms": 3.010458,
+      "candidate_ms": 0.1195
+    },
+    {
+      "iteration": 3,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.505959,
+      "candidate_ms": 0.20475
+    },
+    {
+      "iteration": 3,
+      "mode": "printing",
+      "baseline_ms": 2.079417,
+      "candidate_ms": 0.11325
+    },
+    {
+      "iteration": 4,
+      "mode": "ready",
+      "baseline_ms": 3.934875,
+      "candidate_ms": 0.116625
+    },
+    {
+      "iteration": 4,
+      "mode": "no_film",
+      "baseline_ms": 4.260958,
+      "candidate_ms": 0.111417
+    },
+    {
+      "iteration": 4,
+      "mode": "settings",
+      "baseline_ms": 4.211709,
+      "candidate_ms": 0.161708
+    },
+    {
+      "iteration": 4,
+      "mode": "unlocking",
+      "baseline_ms": 2.944917,
+      "candidate_ms": 0.083625
+    },
+    {
+      "iteration": 4,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.256458,
+      "candidate_ms": 0.192791
+    },
+    {
+      "iteration": 4,
+      "mode": "printing",
+      "baseline_ms": 2.103166,
+      "candidate_ms": 0.122542
+    },
+    {
+      "iteration": 5,
+      "mode": "ready",
+      "baseline_ms": 3.938583,
+      "candidate_ms": 0.123083
+    },
+    {
+      "iteration": 5,
+      "mode": "no_film",
+      "baseline_ms": 4.167791,
+      "candidate_ms": 0.095875
+    },
+    {
+      "iteration": 5,
+      "mode": "settings",
+      "baseline_ms": 3.984875,
+      "candidate_ms": 0.133
+    },
+    {
+      "iteration": 5,
+      "mode": "unlocking",
+      "baseline_ms": 2.895875,
+      "candidate_ms": 0.073166
+    },
+    {
+      "iteration": 5,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.295125,
+      "candidate_ms": 0.180666
+    },
+    {
+      "iteration": 5,
+      "mode": "printing",
+      "baseline_ms": 2.1005,
+      "candidate_ms": 0.11925
+    },
+    {
+      "iteration": 6,
+      "mode": "ready",
+      "baseline_ms": 3.883625,
+      "candidate_ms": 0.116292
+    },
+    {
+      "iteration": 6,
+      "mode": "no_film",
+      "baseline_ms": 4.219042,
+      "candidate_ms": 0.108208
+    },
+    {
+      "iteration": 6,
+      "mode": "settings",
+      "baseline_ms": 4.180333,
+      "candidate_ms": 0.1515
+    },
+    {
+      "iteration": 6,
+      "mode": "unlocking",
+      "baseline_ms": 2.976375,
+      "candidate_ms": 0.083125
+    },
+    {
+      "iteration": 6,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.314458,
+      "candidate_ms": 0.180125
+    },
+    {
+      "iteration": 6,
+      "mode": "printing",
+      "baseline_ms": 2.046458,
+      "candidate_ms": 0.108083
+    },
+    {
+      "iteration": 7,
+      "mode": "ready",
+      "baseline_ms": 3.878375,
+      "candidate_ms": 0.120125
+    },
+    {
+      "iteration": 7,
+      "mode": "no_film",
+      "baseline_ms": 4.315958,
+      "candidate_ms": 0.118125
+    },
+    {
+      "iteration": 7,
+      "mode": "settings",
+      "baseline_ms": 4.163709,
+      "candidate_ms": 0.150584
+    },
+    {
+      "iteration": 7,
+      "mode": "unlocking",
+      "baseline_ms": 2.979042,
+      "candidate_ms": 0.075417
+    },
+    {
+      "iteration": 7,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.403,
+      "candidate_ms": 0.205375
+    },
+    {
+      "iteration": 7,
+      "mode": "printing",
+      "baseline_ms": 2.155667,
+      "candidate_ms": 0.128
+    },
+    {
+      "iteration": 8,
+      "mode": "ready",
+      "baseline_ms": 4.062125,
+      "candidate_ms": 0.135625
+    },
+    {
+      "iteration": 8,
+      "mode": "no_film",
+      "baseline_ms": 4.298542,
+      "candidate_ms": 0.113583
+    },
+    {
+      "iteration": 8,
+      "mode": "settings",
+      "baseline_ms": 4.179334,
+      "candidate_ms": 0.158916
+    },
+    {
+      "iteration": 8,
+      "mode": "unlocking",
+      "baseline_ms": 2.895458,
+      "candidate_ms": 0.0765
+    },
+    {
+      "iteration": 8,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.429583,
+      "candidate_ms": 0.239791
+    },
+    {
+      "iteration": 8,
+      "mode": "printing",
+      "baseline_ms": 2.181667,
+      "candidate_ms": 0.133375
+    },
+    {
+      "iteration": 9,
+      "mode": "ready",
+      "baseline_ms": 4.425958,
+      "candidate_ms": 0.169333
+    },
+    {
+      "iteration": 9,
+      "mode": "no_film",
+      "baseline_ms": 4.267083,
+      "candidate_ms": 0.106
+    },
+    {
+      "iteration": 9,
+      "mode": "settings",
+      "baseline_ms": 4.276334,
+      "candidate_ms": 0.152667
+    },
+    {
+      "iteration": 9,
+      "mode": "unlocking",
+      "baseline_ms": 3.013334,
+      "candidate_ms": 0.085709
+    },
+    {
+      "iteration": 9,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.556583,
+      "candidate_ms": 0.266834
+    },
+    {
+      "iteration": 9,
+      "mode": "printing",
+      "baseline_ms": 2.305209,
+      "candidate_ms": 0.15225
+    },
+    {
+      "iteration": 10,
+      "mode": "ready",
+      "baseline_ms": 4.050416,
+      "candidate_ms": 0.15375
+    },
+    {
+      "iteration": 10,
+      "mode": "no_film",
+      "baseline_ms": 4.427833,
+      "candidate_ms": 0.1065
+    },
+    {
+      "iteration": 10,
+      "mode": "settings",
+      "baseline_ms": 4.272042,
+      "candidate_ms": 0.143958
+    },
+    {
+      "iteration": 10,
+      "mode": "unlocking",
+      "baseline_ms": 2.997875,
+      "candidate_ms": 0.072
+    },
+    {
+      "iteration": 10,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.385708,
+      "candidate_ms": 0.190875
+    },
+    {
+      "iteration": 10,
+      "mode": "printing",
+      "baseline_ms": 2.039791,
+      "candidate_ms": 0.107625
+    },
+    {
+      "iteration": 11,
+      "mode": "ready",
+      "baseline_ms": 3.9165,
+      "candidate_ms": 0.114542
+    },
+    {
+      "iteration": 11,
+      "mode": "no_film",
+      "baseline_ms": 4.168958,
+      "candidate_ms": 0.109625
+    },
+    {
+      "iteration": 11,
+      "mode": "settings",
+      "baseline_ms": 4.274833,
+      "candidate_ms": 0.129833
+    },
+    {
+      "iteration": 11,
+      "mode": "unlocking",
+      "baseline_ms": 2.928792,
+      "candidate_ms": 0.068625
+    },
+    {
+      "iteration": 11,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.26525,
+      "candidate_ms": 0.189625
+    },
+    {
+      "iteration": 11,
+      "mode": "printing",
+      "baseline_ms": 1.973417,
+      "candidate_ms": 0.105708
+    },
+    {
+      "iteration": 12,
+      "mode": "ready",
+      "baseline_ms": 3.776916,
+      "candidate_ms": 0.115709
+    },
+    {
+      "iteration": 12,
+      "mode": "no_film",
+      "baseline_ms": 4.142667,
+      "candidate_ms": 0.097709
+    },
+    {
+      "iteration": 12,
+      "mode": "settings",
+      "baseline_ms": 4.370292,
+      "candidate_ms": 0.196833
+    },
+    {
+      "iteration": 12,
+      "mode": "unlocking",
+      "baseline_ms": 3.004,
+      "candidate_ms": 0.087959
+    },
+    {
+      "iteration": 12,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.418916,
+      "candidate_ms": 0.221791
+    },
+    {
+      "iteration": 12,
+      "mode": "printing",
+      "baseline_ms": 2.111208,
+      "candidate_ms": 0.129834
+    },
+    {
+      "iteration": 13,
+      "mode": "ready",
+      "baseline_ms": 3.975542,
+      "candidate_ms": 0.128959
+    },
+    {
+      "iteration": 13,
+      "mode": "no_film",
+      "baseline_ms": 4.257833,
+      "candidate_ms": 0.117
+    },
+    {
+      "iteration": 13,
+      "mode": "settings",
+      "baseline_ms": 4.182375,
+      "candidate_ms": 0.160083
+    },
+    {
+      "iteration": 13,
+      "mode": "unlocking",
+      "baseline_ms": 2.901875,
+      "candidate_ms": 0.080583
+    },
+    {
+      "iteration": 13,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.407167,
+      "candidate_ms": 0.205375
+    },
+    {
+      "iteration": 13,
+      "mode": "printing",
+      "baseline_ms": 2.144625,
+      "candidate_ms": 0.129958
+    },
+    {
+      "iteration": 14,
+      "mode": "ready",
+      "baseline_ms": 4.167833,
+      "candidate_ms": 0.147208
+    },
+    {
+      "iteration": 14,
+      "mode": "no_film",
+      "baseline_ms": 4.231416,
+      "candidate_ms": 0.102375
+    },
+    {
+      "iteration": 14,
+      "mode": "settings",
+      "baseline_ms": 4.184917,
+      "candidate_ms": 0.155333
+    },
+    {
+      "iteration": 14,
+      "mode": "unlocking",
+      "baseline_ms": 3.063416,
+      "candidate_ms": 0.110583
+    },
+    {
+      "iteration": 14,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.438625,
+      "candidate_ms": 0.197875
+    },
+    {
+      "iteration": 14,
+      "mode": "printing",
+      "baseline_ms": 2.137417,
+      "candidate_ms": 0.135333
+    },
+    {
+      "iteration": 15,
+      "mode": "ready",
+      "baseline_ms": 4.235583,
+      "candidate_ms": 0.14725
+    },
+    {
+      "iteration": 15,
+      "mode": "no_film",
+      "baseline_ms": 4.244959,
+      "candidate_ms": 0.105292
+    },
+    {
+      "iteration": 15,
+      "mode": "settings",
+      "baseline_ms": 4.073625,
+      "candidate_ms": 0.151958
+    },
+    {
+      "iteration": 15,
+      "mode": "unlocking",
+      "baseline_ms": 3.060333,
+      "candidate_ms": 0.083916
+    },
+    {
+      "iteration": 15,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.295875,
+      "candidate_ms": 0.214375
+    },
+    {
+      "iteration": 15,
+      "mode": "printing",
+      "baseline_ms": 2.114083,
+      "candidate_ms": 0.114375
+    },
+    {
+      "iteration": 16,
+      "mode": "ready",
+      "baseline_ms": 3.834708,
+      "candidate_ms": 0.11025
+    },
+    {
+      "iteration": 16,
+      "mode": "no_film",
+      "baseline_ms": 4.126416,
+      "candidate_ms": 0.09925
+    },
+    {
+      "iteration": 16,
+      "mode": "settings",
+      "baseline_ms": 4.025209,
+      "candidate_ms": 0.1325
+    },
+    {
+      "iteration": 16,
+      "mode": "unlocking",
+      "baseline_ms": 2.843166,
+      "candidate_ms": 0.067708
+    },
+    {
+      "iteration": 16,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.220583,
+      "candidate_ms": 0.17925
+    },
+    {
+      "iteration": 16,
+      "mode": "printing",
+      "baseline_ms": 2.054875,
+      "candidate_ms": 0.119084
+    },
+    {
+      "iteration": 17,
+      "mode": "ready",
+      "baseline_ms": 3.850709,
+      "candidate_ms": 0.111208
+    },
+    {
+      "iteration": 17,
+      "mode": "no_film",
+      "baseline_ms": 4.213375,
+      "candidate_ms": 0.121166
+    },
+    {
+      "iteration": 17,
+      "mode": "settings",
+      "baseline_ms": 4.136917,
+      "candidate_ms": 0.154208
+    },
+    {
+      "iteration": 17,
+      "mode": "unlocking",
+      "baseline_ms": 2.895375,
+      "candidate_ms": 0.078208
+    },
+    {
+      "iteration": 17,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.250917,
+      "candidate_ms": 0.198625
+    },
+    {
+      "iteration": 17,
+      "mode": "printing",
+      "baseline_ms": 2.244291,
+      "candidate_ms": 0.190542
+    },
+    {
+      "iteration": 18,
+      "mode": "ready",
+      "baseline_ms": 4.064208,
+      "candidate_ms": 0.1545
+    },
+    {
+      "iteration": 18,
+      "mode": "no_film",
+      "baseline_ms": 4.315125,
+      "candidate_ms": 0.115458
+    },
+    {
+      "iteration": 18,
+      "mode": "settings",
+      "baseline_ms": 4.15075,
+      "candidate_ms": 0.148959
+    },
+    {
+      "iteration": 18,
+      "mode": "unlocking",
+      "baseline_ms": 2.950584,
+      "candidate_ms": 0.079125
+    },
+    {
+      "iteration": 18,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.584792,
+      "candidate_ms": 0.24325
+    },
+    {
+      "iteration": 18,
+      "mode": "printing",
+      "baseline_ms": 2.209125,
+      "candidate_ms": 0.122375
+    },
+    {
+      "iteration": 19,
+      "mode": "ready",
+      "baseline_ms": 4.099416,
+      "candidate_ms": 0.123916
+    },
+    {
+      "iteration": 19,
+      "mode": "no_film",
+      "baseline_ms": 4.245542,
+      "candidate_ms": 0.1025
+    },
+    {
+      "iteration": 19,
+      "mode": "settings",
+      "baseline_ms": 4.194334,
+      "candidate_ms": 0.161958
+    },
+    {
+      "iteration": 19,
+      "mode": "unlocking",
+      "baseline_ms": 3.07925,
+      "candidate_ms": 0.083292
+    },
+    {
+      "iteration": 19,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.643791,
+      "candidate_ms": 0.209125
+    },
+    {
+      "iteration": 19,
+      "mode": "printing",
+      "baseline_ms": 2.037167,
+      "candidate_ms": 0.11275
+    },
+    {
+      "iteration": 20,
+      "mode": "ready",
+      "baseline_ms": 3.756958,
+      "candidate_ms": 0.104958
+    },
+    {
+      "iteration": 20,
+      "mode": "no_film",
+      "baseline_ms": 4.6615,
+      "candidate_ms": 0.184917
+    },
+    {
+      "iteration": 20,
+      "mode": "settings",
+      "baseline_ms": 4.176792,
+      "candidate_ms": 0.178917
+    },
+    {
+      "iteration": 20,
+      "mode": "unlocking",
+      "baseline_ms": 2.926959,
+      "candidate_ms": 0.076292
+    },
+    {
+      "iteration": 20,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.347958,
+      "candidate_ms": 0.208833
+    },
+    {
+      "iteration": 20,
+      "mode": "printing",
+      "baseline_ms": 2.035584,
+      "candidate_ms": 0.126375
+    },
+    {
+      "iteration": 21,
+      "mode": "ready",
+      "baseline_ms": 3.858,
+      "candidate_ms": 0.120542
+    },
+    {
+      "iteration": 21,
+      "mode": "no_film",
+      "baseline_ms": 4.185875,
+      "candidate_ms": 0.100542
+    },
+    {
+      "iteration": 21,
+      "mode": "settings",
+      "baseline_ms": 4.077791,
+      "candidate_ms": 0.159542
+    },
+    {
+      "iteration": 21,
+      "mode": "unlocking",
+      "baseline_ms": 3.000209,
+      "candidate_ms": 0.076792
+    },
+    {
+      "iteration": 21,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.282125,
+      "candidate_ms": 0.178709
+    },
+    {
+      "iteration": 21,
+      "mode": "printing",
+      "baseline_ms": 2.051875,
+      "candidate_ms": 0.119875
+    },
+    {
+      "iteration": 22,
+      "mode": "ready",
+      "baseline_ms": 3.819792,
+      "candidate_ms": 0.109541
+    },
+    {
+      "iteration": 22,
+      "mode": "no_film",
+      "baseline_ms": 4.266417,
+      "candidate_ms": 0.115459
+    },
+    {
+      "iteration": 22,
+      "mode": "settings",
+      "baseline_ms": 4.165833,
+      "candidate_ms": 0.184083
+    },
+    {
+      "iteration": 22,
+      "mode": "unlocking",
+      "baseline_ms": 3.237625,
+      "candidate_ms": 0.123166
+    },
+    {
+      "iteration": 22,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.47575,
+      "candidate_ms": 0.226417
+    },
+    {
+      "iteration": 22,
+      "mode": "printing",
+      "baseline_ms": 2.249625,
+      "candidate_ms": 0.129583
+    },
+    {
+      "iteration": 23,
+      "mode": "ready",
+      "baseline_ms": 4.098333,
+      "candidate_ms": 0.115125
+    },
+    {
+      "iteration": 23,
+      "mode": "no_film",
+      "baseline_ms": 4.078875,
+      "candidate_ms": 0.09825
+    },
+    {
+      "iteration": 23,
+      "mode": "settings",
+      "baseline_ms": 4.159667,
+      "candidate_ms": 0.193667
+    },
+    {
+      "iteration": 23,
+      "mode": "unlocking",
+      "baseline_ms": 2.983083,
+      "candidate_ms": 0.092666
+    },
+    {
+      "iteration": 23,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.606917,
+      "candidate_ms": 0.248083
+    },
+    {
+      "iteration": 23,
+      "mode": "printing",
+      "baseline_ms": 2.241416,
+      "candidate_ms": 0.148917
+    },
+    {
+      "iteration": 24,
+      "mode": "ready",
+      "baseline_ms": 4.2625,
+      "candidate_ms": 0.155917
+    },
+    {
+      "iteration": 24,
+      "mode": "no_film",
+      "baseline_ms": 4.508291,
+      "candidate_ms": 0.1445
+    },
+    {
+      "iteration": 24,
+      "mode": "settings",
+      "baseline_ms": 4.319167,
+      "candidate_ms": 0.209959
+    },
+    {
+      "iteration": 24,
+      "mode": "unlocking",
+      "baseline_ms": 2.949416,
+      "candidate_ms": 0.084375
+    },
+    {
+      "iteration": 24,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.217709,
+      "candidate_ms": 0.179291
+    },
+    {
+      "iteration": 24,
+      "mode": "printing",
+      "baseline_ms": 2.324958,
+      "candidate_ms": 0.124292
+    },
+    {
+      "iteration": 25,
+      "mode": "ready",
+      "baseline_ms": 3.812334,
+      "candidate_ms": 0.10825
+    },
+    {
+      "iteration": 25,
+      "mode": "no_film",
+      "baseline_ms": 4.131916,
+      "candidate_ms": 0.098875
+    },
+    {
+      "iteration": 25,
+      "mode": "settings",
+      "baseline_ms": 4.551125,
+      "candidate_ms": 0.201959
+    },
+    {
+      "iteration": 25,
+      "mode": "unlocking",
+      "baseline_ms": 3.042959,
+      "candidate_ms": 0.093833
+    },
+    {
+      "iteration": 25,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.308541,
+      "candidate_ms": 0.205458
+    },
+    {
+      "iteration": 25,
+      "mode": "printing",
+      "baseline_ms": 2.311167,
+      "candidate_ms": 0.120042
+    },
+    {
+      "iteration": 26,
+      "mode": "ready",
+      "baseline_ms": 3.760708,
+      "candidate_ms": 0.1025
+    },
+    {
+      "iteration": 26,
+      "mode": "no_film",
+      "baseline_ms": 4.155959,
+      "candidate_ms": 0.194042
+    },
+    {
+      "iteration": 26,
+      "mode": "settings",
+      "baseline_ms": 4.460542,
+      "candidate_ms": 0.283917
+    },
+    {
+      "iteration": 26,
+      "mode": "unlocking",
+      "baseline_ms": 2.817083,
+      "candidate_ms": 0.076
+    },
+    {
+      "iteration": 26,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.62125,
+      "candidate_ms": 0.306333
+    },
+    {
+      "iteration": 26,
+      "mode": "printing",
+      "baseline_ms": 2.279958,
+      "candidate_ms": 0.129458
+    },
+    {
+      "iteration": 27,
+      "mode": "ready",
+      "baseline_ms": 4.259166,
+      "candidate_ms": 0.216917
+    },
+    {
+      "iteration": 27,
+      "mode": "no_film",
+      "baseline_ms": 4.352458,
+      "candidate_ms": 0.104333
+    },
+    {
+      "iteration": 27,
+      "mode": "settings",
+      "baseline_ms": 3.929375,
+      "candidate_ms": 0.1275
+    },
+    {
+      "iteration": 27,
+      "mode": "unlocking",
+      "baseline_ms": 3.021875,
+      "candidate_ms": 0.173041
+    },
+    {
+      "iteration": 27,
+      "mode": "adjustment_edit",
+      "baseline_ms": 4.062708,
+      "candidate_ms": 0.194792
+    },
+    {
+      "iteration": 27,
+      "mode": "printing",
+      "baseline_ms": 2.124667,
+      "candidate_ms": 0.122167
+    },
+    {
+      "iteration": 28,
+      "mode": "ready",
+      "baseline_ms": 4.3525,
+      "candidate_ms": 0.139625
+    },
+    {
+      "iteration": 28,
+      "mode": "no_film",
+      "baseline_ms": 4.366709,
+      "candidate_ms": 0.121
+    },
+    {
+      "iteration": 28,
+      "mode": "settings",
+      "baseline_ms": 4.39825,
+      "candidate_ms": 0.221167
+    },
+    {
+      "iteration": 28,
+      "mode": "unlocking",
+      "baseline_ms": 3.192,
+      "candidate_ms": 0.108458
+    },
+    {
+      "iteration": 28,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.300417,
+      "candidate_ms": 0.198333
+    },
+    {
+      "iteration": 28,
+      "mode": "printing",
+      "baseline_ms": 2.328584,
+      "candidate_ms": 0.135042
+    },
+    {
+      "iteration": 29,
+      "mode": "ready",
+      "baseline_ms": 3.950292,
+      "candidate_ms": 0.12025
+    },
+    {
+      "iteration": 29,
+      "mode": "no_film",
+      "baseline_ms": 4.23075,
+      "candidate_ms": 0.106
+    },
+    {
+      "iteration": 29,
+      "mode": "settings",
+      "baseline_ms": 4.6025,
+      "candidate_ms": 0.178666
+    },
+    {
+      "iteration": 29,
+      "mode": "unlocking",
+      "baseline_ms": 2.9785,
+      "candidate_ms": 0.0765
+    },
+    {
+      "iteration": 29,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.441875,
+      "candidate_ms": 0.191625
+    },
+    {
+      "iteration": 29,
+      "mode": "printing",
+      "baseline_ms": 2.05375,
+      "candidate_ms": 0.117084
+    },
+    {
+      "iteration": 30,
+      "mode": "ready",
+      "baseline_ms": 3.906083,
+      "candidate_ms": 0.118333
+    },
+    {
+      "iteration": 30,
+      "mode": "no_film",
+      "baseline_ms": 4.194541,
+      "candidate_ms": 0.105166
+    },
+    {
+      "iteration": 30,
+      "mode": "settings",
+      "baseline_ms": 4.098791,
+      "candidate_ms": 0.1435
+    },
+    {
+      "iteration": 30,
+      "mode": "unlocking",
+      "baseline_ms": 3.026583,
+      "candidate_ms": 0.088208
+    },
+    {
+      "iteration": 30,
+      "mode": "adjustment_edit",
+      "baseline_ms": 3.739667,
+      "candidate_ms": 0.206583
+    },
+    {
+      "iteration": 30,
+      "mode": "printing",
+      "baseline_ms": 2.069083,
+      "candidate_ms": 0.117625
+    }
+  ]
+}

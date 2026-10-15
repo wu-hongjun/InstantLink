@@ -15,6 +15,7 @@ from instantlink_bridge.ui.theme import theme_for
 # Use light theme for pixel assertions (colours are well-defined).
 THEME = theme_for("light")
 
+
 # Helper: pixel at (px, py) in a fresh image rendered by draw_slider.
 def _render(
     value: int,

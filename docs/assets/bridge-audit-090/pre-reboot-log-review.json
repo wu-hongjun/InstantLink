@@ -1,0 +1,16 @@
+{
+  "all_current_boot_service_records": 23968,
+  "all_current_boot_kernel_records": 679,
+  "installed_bridge_pid": 57509,
+  "installed_bridge_fault_flags": 0,
+  "patched_load_monotonic_us": 134626176203,
+  "kernel_records_since_patch_load": 9,
+  "kernel_vendor_ie_errors_since_patch_load": 0,
+  "post_patch_kernel_warning_errors": [
+    {
+      "priority": "4",
+      "message": "brcmfmac: loading out-of-tree module taints kernel."
+    }
+  ],
+  "boundary": "Complete available pre-reboot boot journals retained privately; installed current runtime and kernel-after-actual-patch-load scopes reviewed separately from historical diagnostic faults."
+}

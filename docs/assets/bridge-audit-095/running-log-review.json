@@ -1,0 +1,109 @@
+{
+  "scope": "Current boot Bridge/manager/Bluetooth logs plus system warning-priority records. Platform warnings are retained; no global warning-free claim. External Disconnect test used no film.",
+  "service_log_records": 108,
+  "service_warning_error_records": [
+    {
+      "unit": "bluetooth.service",
+      "message": "bluetooth.service: ConfigurationDirectory 'bluetooth' already exists but the mode is different. (File system: 755 ConfigurationDirectoryMode: 555)"
+    },
+    {
+      "unit": "instantlink-bridge-manager.service",
+      "message": "2026-10-14 17:05:41,598 WARNING instantlink_bridge.manager.cli manager.bind_pending host=192.168.8.1 port=8742 errno=None"
+    },
+    {
+      "unit": "bluetooth.service",
+      "message": "No matching connection for device"
+    }
+  ],
+  "system_warning_records": [
+    {
+      "unit": "kernel",
+      "message": "dwc2 3f980000.usb: supply vusb_d not found, using dummy regulator"
+    },
+    {
+      "unit": "kernel",
+      "message": "dwc2 3f980000.usb: supply vusb_a not found, using dummy regulator"
+    },
+    {
+      "unit": "kernel",
+      "message": "mmc0: host does not support reading read-only switch, assuming write-enable"
+    },
+    {
+      "unit": "systemd-udevd.service",
+      "message": "/usr/lib/udev/rules.d/90-alsa-restore.rules:18 GOTO=\"alsa_restore_std\" has no matching label, ignoring."
+    },
+    {
+      "unit": "systemd-udevd.service",
+      "message": "/usr/lib/udev/rules.d/90-alsa-restore.rules:18 The line has no effect any more, dropping."
+    },
+    {
+      "unit": "systemd-udevd.service",
+      "message": "/usr/lib/udev/rules.d/90-alsa-restore.rules:22 GOTO=\"alsa_restore_std\" has no matching label, ignoring."
+    },
+    {
+      "unit": "systemd-udevd.service",
+      "message": "/usr/lib/udev/rules.d/90-alsa-restore.rules:22 The line has no effect any more, dropping."
+    },
+    {
+      "unit": "systemd-networkd.service",
+      "message": "usb0: Found matching .network file, based on potentially unpredictable interface name: /etc/systemd/network/10-usb0.network"
+    },
+    {
+      "unit": "systemd-networkd.service",
+      "message": "usb0: Found matching .network file, based on potentially unpredictable interface name: /etc/systemd/network/10-usb0.network"
+    },
+    {
+      "unit": "kernel",
+      "message": "brcmfmac: loading out-of-tree module taints kernel."
+    },
+    {
+      "unit": "kernel",
+      "message": "hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator"
+    },
+    {
+      "unit": "kernel",
+      "message": "hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator"
+    },
+    {
+      "unit": "kernel",
+      "message": "fbtft: module is from the staging directory, the quality is unknown, you have been warned."
+    },
+    {
+      "unit": "kernel",
+      "message": "fb_st7789v: module is from the staging directory, the quality is unknown, you have been warned."
+    },
+    {
+      "unit": "kernel",
+      "message": "SPI driver fb_st7789v has no spi_device_id for sitronix,st7789v"
+    },
+    {
+      "unit": "kernel",
+      "message": "SPI driver fb_st7789v has no spi_device_id for fbtft,minipitft13"
+    },
+    {
+      "unit": "bluetooth.service",
+      "message": "bluetooth.service: ConfigurationDirectory 'bluetooth' already exists but the mode is different. (File system: 755 ConfigurationDirectoryMode: 555)"
+    },
+    {
+      "unit": "systemd-backlight@backlight:fb_st7789v.service",
+      "message": "fb_st7789v: Maximum brightness is 0, ignoring device."
+    },
+    {
+      "unit": "wpa_supplicant.service",
+      "message": "nl80211: kernel reports: Registration to specific type not supported"
+    },
+    {
+      "unit": "dnsmasq.service",
+      "message": "no servers found in /etc/resolv.conf, will retry"
+    },
+    {
+      "unit": "NetworkManager.service",
+      "message": "no servers found in /etc/resolv.conf, will retry"
+    },
+    {
+      "unit": "bluetooth.service",
+      "message": "No matching connection for device"
+    }
+  ],
+  "system_warning_count": 22
+}

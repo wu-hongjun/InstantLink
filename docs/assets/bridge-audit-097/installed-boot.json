@@ -1,0 +1,88 @@
+{
+  "pid": 482,
+  "service_timing": "ExecMainStartTimestampMonotonic=9697784\nActiveEnterTimestampMonotonic=14921471",
+  "commit": "079af5a37503ff82191ff6c3d8e75f37871e2660",
+  "dirty": false,
+  "passed": true,
+  "label": "097-installed-boot",
+  "film_used": 0,
+  "film_before": 10,
+  "film_after": 10,
+  "boot_to_ui_s": 13.665273,
+  "boot_to_status_s": 18.961773,
+  "boot_to_core_ready_s": 13.676337,
+  "process_boot_marker_s": 12.930785,
+  "stages": [
+    {
+      "uptime_s": 12.930785,
+      "message": "2026-10-14 18:24:48,447 INFO instantlink_bridge.app bridge.boot.start"
+    },
+    {
+      "uptime_s": 13.267016,
+      "message": "2026-10-14 18:24:48,779 INFO instantlink_bridge.app bridge.bluetooth.ready agent_registered=True"
+    },
+    {
+      "uptime_s": 13.6524,
+      "message": "2026-10-14 18:24:49,168 INFO instantlink_bridge.app bridge.ftp.ready bind_host=0.0.0.0 port=21"
+    },
+    {
+      "uptime_s": 13.665273,
+      "message": "2026-10-14 18:24:49,181 INFO instantlink_bridge.ui.controller bridge.ui.ready surface=lcd"
+    },
+    {
+      "uptime_s": 13.907239,
+      "message": "2026-10-14 18:24:49,423 INFO instantlink_bridge.ble.instantlink instantlink.library_loaded path=/opt/InstantLinkBridge/lib/libinstantlink_ffi.so"
+    },
+    {
+      "uptime_s": 13.923396,
+      "message": "2026-10-14 18:24:49,439 INFO instantlink_bridge.ui.pairing bluetooth.trust_selected_cache address=FA:AB:BC:C7:95:64 selected_address=FA:AB:BC:C7:95:64 selected_name=INSTAX-52006924"
+    },
+    {
+      "uptime_s": 14.713417,
+      "message": "2026-10-14 18:24:50,229 INFO instantlink_bridge.ui.controller instantlink.proactive_bond_reset done=remove_bond address=FA:AB:BC:C7:95:64 reason=startup_disconnected"
+    },
+    {
+      "uptime_s": 14.716969,
+      "message": "2026-10-14 18:24:50,233 INFO instantlink_bridge.ui.controller ui.printer_discovery_policy screen=on scan_window_s=1 interval_s=1.0"
+    },
+    {
+      "uptime_s": 15.29244,
+      "message": "2026-10-14 18:24:50,808 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=device_matched detail=INSTAX-52006924 (IOS)"
+    },
+    {
+      "uptime_s": 15.396196,
+      "message": "2026-10-14 18:24:50,905 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=ble_connecting detail="
+    },
+    {
+      "uptime_s": 17.280813,
+      "message": "2026-10-14 18:24:52,796 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=service_discovery detail="
+    },
+    {
+      "uptime_s": 17.455614,
+      "message": "2026-10-14 18:24:52,972 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=characteristic_lookup detail="
+    },
+    {
+      "uptime_s": 17.874514,
+      "message": "2026-10-14 18:24:53,390 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=notification_subscribe detail="
+    },
+    {
+      "uptime_s": 18.260335,
+      "message": "2026-10-14 18:24:53,776 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=model_detecting detail="
+    },
+    {
+      "uptime_s": 18.4832,
+      "message": "2026-10-14 18:24:53,999 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=status_fetching detail="
+    },
+    {
+      "uptime_s": 18.958182,
+      "message": "2026-10-14 18:24:54,474 INFO instantlink_bridge.ble.instantlink instantlink.connect_progress target=INSTAX-52006924 stage=connected detail=INSTAX-52006924 (IOS)"
+    },
+    {
+      "uptime_s": 18.961773,
+      "message": "2026-10-14 18:24:54,478 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=80 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+    }
+  ],
+  "warning_error_messages": [],
+  "input_before_status": [],
+  "scope": "Normal installed service, automatic reboot connection without button input; kernel monotonic clock excludes firmware time. Printer already powered on. No image/print/actuator commands."
+}

@@ -39,6 +39,40 @@ The upload setup values are visible together on `Settings -> Upload FTP`: `Bridg
 `Wi-Fi PIN`, `FTP host`, `FTP user`, and `FTP pass`. `Settings -> Network` remains a diagnostics
 page for checking whether the hotspot is actually active.
 
+In Bridge Wi-Fi mode, the runtime retries a missing hotspot after a 30-second startup/healthy
+grace period, with retry delays of 30, 60, 120 and then 300 seconds. Recovery runs separately
+from screen polling and defers during photo preparation, printing and recent FTP activity
+on other transports. A past camera login on the failed hotspot does not delay its recovery.
+It preserves the saved SSID/PIN and skips an administratively disabled radio. Changing FTP
+mode or stopping the Bridge cancels recovery; Wired, Auto and Same Wi-Fi do not trigger it.
+The runtime rechecks saved configuration before activation, preserving network changes from
+the App even while its own runtime configuration awaits a restart.
+
+The root helper retains a healthy hotspot after verifying its selected profile, saved/applied
+settings and live address. A private per-boot activation stamp under
+`/run/InstantLinkBridge-wifi` also binds the PIN digest to the NetworkManager owner, activation
+and applied version. A first apply, changed credentials/settings, stale state or failed probe
+uses normal activation; a matching repeat avoids disconnecting camera clients. Root mode
+changes are serialized, and cancellation releases the owned command/lock. Diagnostic non-root
+calls retain the privileged activation path. Administrators can override the runtime directory
+with `INSTANTLINK_BRIDGE_WIFI_STATE_DIR`; it must be root-owned and private.
+
+WPS enrollment advertisement is disabled. Cameras continue to join using the saved SSID and
+8-digit WPA2 password; no camera settings change is required. This avoids the observed paired
+vendor-IE cleanup errors on subsequent AP transitions. A separate kernel defect can still
+produce one error after a radio cycle: the installed 6.12.47 driver clears station probe-request
+IEs when stopping an AP. The audited Pi uses the exact upstream AP cleanup backport described
+in `bridge/patches/README.md`, with matching-kernel ABI checks and explicit rollback. It keeps
+P2P/MBO and the existing Wi-Fi firmware. Application firmware deployment does not automatically
+install this kernel-specific override; assess it again when changing the kernel. See plan 090
+for the measured scope and remaining limits.
+
+The root Wi-Fi helper also handles a Pi SDIO firmware initialization failure: if `wlan0` is
+missing, it reloads `brcmfmac` and waits up to 10 seconds for the interface. A present interface
+is never reloaded. USB administration and Bluetooth are not restarted by this recovery.
+Missing hotspot readiness is shown as `Bridge Wi-Fi unavailable`; uploads remain blocked until
+the expected hotspot address is present. Persistent hardware faults can still require repair.
+
 If the LCD reports a Wi-Fi switch failure and the journal shows `sudo: unable to change to root
 gid`, verify `/etc/systemd/system/instantlink-bridge.service` does not set `CapabilityBoundingSet=`.
 That systemd sandbox strips the setgid capability that `sudo` needs before it can run the

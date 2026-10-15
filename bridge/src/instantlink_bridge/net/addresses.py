@@ -5,11 +5,59 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+from collections.abc import Iterable
 from ipaddress import IPv4Interface
 from pathlib import Path
 from typing import Any
 
+from instantlink_bridge.net.linux_snapshot import read_ipv4_interfaces
+
 LOGGER = logging.getLogger(__name__)
+
+
+def detect_ipv4_interfaces_by_interface(
+    interfaces: Iterable[str],
+) -> dict[str, list[IPv4Interface]]:
+    """Read assigned addresses on admin-up interfaces from one bounded snapshot."""
+
+    names = tuple(dict.fromkeys(interfaces))
+    addresses: dict[str, list[IPv4Interface]] = {name: [] for name in names}
+    if not names:
+        return addresses
+    try:
+        return read_ipv4_interfaces(names)
+    except OSError:
+        LOGGER.debug("network.native_snapshot_unavailable", exc_info=True)
+    try:
+        result = subprocess.run(
+            ["ip", "-j", "-4", "addr", "show"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=1.5,
+        )
+        if result.returncode != 0:
+            return addresses
+        data = json.loads(result.stdout)
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        LOGGER.debug("network.ip_snapshot_failed", exc_info=True)
+        return addresses
+    if not isinstance(data, list):
+        return addresses
+    for interface in data:
+        if not isinstance(interface, dict):
+            continue
+        # Linux keeps assigned addresses after `ip link set ... down`.
+        # They cannot prove receive readiness or advertise a usable endpoint.
+        # Only admin state matters here: dormant APs/USB links need not have
+        # carrier yet. Legacy snapshots without flags retain prior behavior.
+        flags = interface.get("flags")
+        if isinstance(flags, list) and "UP" not in flags:
+            continue
+        name = interface.get("ifname")
+        if isinstance(name, str) and name in addresses:
+            addresses[name].extend(ipv4_interfaces_from_ip_json([interface]))
+    return addresses
 
 
 def detect_ipv4_for_interface(interface: str = "wlan0") -> str | None:
@@ -26,8 +74,16 @@ def detect_ipv4_addresses_for_interface(interface: str = "wlan0") -> list[str]:
 
 
 def detect_ipv4_interfaces_for_interface(interface: str = "wlan0") -> list[IPv4Interface]:
-    """Return non-host IPv4 interface addresses assigned to an interface."""
+    """Return assigned non-host addresses, including admin-down interfaces.
 
+    The single-interface helper retains its existing compatibility semantics;
+    receive readiness and advertisement use the admin-up batched helper.
+    """
+
+    try:
+        return read_ipv4_interfaces((interface,), require_up=False)[interface]
+    except OSError:
+        LOGGER.debug("network.native_lookup_unavailable interface=%s", interface, exc_info=True)
     try:
         result = subprocess.run(
             ["ip", "-j", "-4", "addr", "show", "dev", interface],

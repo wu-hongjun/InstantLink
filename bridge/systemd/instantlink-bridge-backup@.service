@@ -1,0 +1,17 @@
+[Unit]
+Description=InstantLink Bridge private backup operation
+
+[Service]
+Type=exec
+User=root
+Group=root
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/instantlink-bridge-backup/broker.py
+StandardInput=socket
+StandardOutput=null
+StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+UMask=0077
+TimeoutStartSec=180
+RuntimeMaxSec=600

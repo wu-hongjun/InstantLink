@@ -44,7 +44,7 @@ struct BridgeRecoveryView: View {
             icon: "exclamationmark.triangle.fill",
             tint: .orange,
             title: L("Bridge management service unavailable."),
-            body: L("Automatic restart will be available in a future Bridge release. For now, restart by power-cycling the Bridge or pressing KEY3-hold on the LCD."),
+            body: L("To restart the Bridge, turn it off and back on with the X306 power button."),
             buttons: HStack(spacing: 8) {
                 Button(L("Show LCD instructions")) {
                     showLCDInstructions = true

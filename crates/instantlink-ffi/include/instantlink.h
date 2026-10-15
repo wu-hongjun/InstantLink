@@ -81,6 +81,30 @@ int32_t instantlink_connect_named_with_progress(const char *name,
                                                 instantlink_connect_stage_cb progress_cb);
 
 /**
+ * Connect to a named Printer and return the freshly queried initial status in one operation.
+ *
+ * Uses the same progress stages as `instantlink_connect_named_with_progress`. No subsequent
+ * status request is needed to obtain this connection's initial battery, film, charging or print
+ * count. Later `instantlink_status` calls still query the Printer. Outputs are untouched on error.
+ * Existing-session replacement and concurrent-disconnect semantics match the named connect APIs;
+ * callers must serialize operations when they require the returned session to remain connected.
+ *
+ * # Safety
+ *
+ * `name` must be a valid, non-null, null-terminated UTF-8 C string. Each output must point to a
+ * distinct writable i32 slot for the duration of this call. `progress_cb` may be null, and callback
+ * detail is valid only during its invocation. Concurrent or reentrant connect returns -11; a callback
+ * disconnect invalidates this connection attempt, which then returns -3 without publishing it.
+ */
+int32_t instantlink_connect_named_with_status(const char *name,
+                                              int32_t duration_secs,
+                                              instantlink_connect_stage_cb progress_cb,
+                                              int32_t *out_battery,
+                                              int32_t *out_film,
+                                              int32_t *out_charging,
+                                              int32_t *out_print_count);
+
+/**
  * Connect to a specific printer by name with configurable scan duration and progress callback
  * plus an opaque context pointer.
  *
@@ -227,6 +251,62 @@ int32_t instantlink_print_with_progress_ctx(const char *path,
                                             void *context);
 
 /**
+ * Send a printer-oriented prepared JPEG unchanged. Returns 0 or a negative error code.
+ *
+ * Model codes: 0 Mini, 1 Mini Link 3, 2 Square, 3 Wide. The exact detected model,
+ * baseline 8-bit three-component JPEG integrity/dimensions/size, and flip declaration
+ * are checked before any Printer writes. `transport_flip_applied` is strictly 0/1
+ * and must equal the model's required vertical flip (1 only for Mini Link 3).
+ * Raw pixel orientation is authoritative; recognized non-neutral EXIF orientation
+ * is rejected. No resize, flip, colour adjustment or re-encode occurs.
+ *
+ * # Safety
+ *
+ * `data` must point to `data_len` readable bytes that remain unchanged until return.
+ */
+int32_t instantlink_print_prepared_jpeg(const uint8_t *data,
+                                        uint32_t data_len,
+                                        uint8_t expected_model,
+                                        uint8_t transport_flip_applied,
+                                        uint8_t print_option);
+
+/**
+ * Send a prepared JPEG unchanged with an ACK progress callback.
+ * Uses the same model, integrity and orientation contract as `instantlink_print_prepared_jpeg`.
+ * The callback is invoked synchronously during the call, never after return.
+ *
+ * # Safety
+ *
+ * `data` must point to `data_len` readable bytes that remain unchanged until return.
+ * `progress_cb` may be null. It must not synchronously start another serialized
+ * Printer operation (status/print/disconnect); read-only identity getters are safe.
+ */
+int32_t instantlink_print_prepared_jpeg_with_progress(const uint8_t *data,
+                                                      uint32_t data_len,
+                                                      uint8_t expected_model,
+                                                      uint8_t transport_flip_applied,
+                                                      uint8_t print_option,
+                                                      void (*progress_cb)(uint32_t, uint32_t));
+
+/**
+ * Send a prepared JPEG unchanged with an ACK progress callback and opaque context.
+ * Uses the same model, integrity, orientation and callback contract as the legacy callback form.
+ *
+ * # Safety
+ *
+ * `data` must point to `data_len` readable bytes that remain unchanged until return.
+ * `progress_cb` may be null. `context` must remain valid for every callback during
+ * this call. Callbacks must not synchronously start another serialized Printer operation.
+ */
+int32_t instantlink_print_prepared_jpeg_with_progress_ctx(const uint8_t *data,
+                                                          uint32_t data_len,
+                                                          uint8_t expected_model,
+                                                          uint8_t transport_flip_applied,
+                                                          uint8_t print_option,
+                                                          instantlink_print_progress_cb_ctx progress_cb,
+                                                          void *context);
+
+/**
  * Set LED color and pattern.
  */
 int32_t instantlink_set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t pattern);
@@ -237,7 +317,9 @@ int32_t instantlink_set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t pattern);
 int32_t instantlink_led_off(void);
 
 /**
- * Check if a printer is currently connected.
+ * Check whether a cached printer session exists and has not been closed.
+ * This is a cheap, read-only check; it does not poll hardware or guarantee
+ * that the physical link is live before the next Printer operation.
  * Returns 1 if connected, 0 if not, -3 on error.
  */
 int32_t instantlink_is_connected(void);

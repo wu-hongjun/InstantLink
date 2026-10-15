@@ -1,0 +1,30 @@
+{
+  "scope": "Python status diagnostics and bounded setup-drop recovery only; no Rust/protocol/image changes",
+  "implementation": [
+    "Exact ERROR_BLE native terminal detail BLE error: BLE link disconnected during GATT setup is the only routine setup-drop classification",
+    "First two unresolved setup drops emit INFO; third emits WARNING; streak survives disconnect and intervening same-target absence/unknown failures, clearing only fresh status or selected-target change",
+    "Native status logs preserve connect stage/detail and deduplicate by actual evidence and severity; explicit exception ownership prevents a second generic controller warning",
+    "Unknown transport/protocol errors, authentication failures, readiness uncertainty and malformed detail remain warning-level",
+    "Provider forwards reason/detail/stage without inventing an empty scan result for failed BLE setup",
+    "An initial confirmed setup drop gets at most two prompt retries before configured offline cadence; absence and repeated drops cannot replenish the burst before fresh status",
+    "A pending disconnect event owns serialized recovery; the returning failed fetch cannot start competing rebond/silent-link tasks",
+    "Accepted disconnect callback resets status log signature so identical post-recovery fresh status logs INFO exactly once; stale callbacks and pending late ACKs cannot consume or reset the marker"
+  ],
+  "validation": {
+    "affected_tests": {
+      "command": "python -m pytest -q tests/test_ui_status.py tests/test_ui_controller.py tests/test_instantlink_initial_status.py",
+      "passed": 353,
+      "elapsed_seconds": 8.14
+    },
+    "ruff": "passed all five changed Python files",
+    "mypy": "passed all 68 source files",
+    "review_corrections": [
+      "Independent reviewer caught failure-reason reset initially inserted into the preview path; moved to background fetch start and added explicit stale-reason regression tests",
+      "First affected run350passed/onefailed fixture expected coalesced logs while its absent connection probe alternated teardown policies; fixed fixture to use authoritative is_connected()==0 matching the native dropped-link case",
+      "Root review required setup-drop escalation budget to survive intervening same-target absence/unknown failures; added case-insensitive target identity and alternating-failure regression",
+      "Live matched external disconnect revealed silent identical-status recovery; accepted disconnect callback now resets status signature, with pending-late-response and stale-callback regressions"
+    ]
+  },
+  "hardware": "Not operated by implementation agent; root owns hardware acceptance",
+  "film_used": 0
+}

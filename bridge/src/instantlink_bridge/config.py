@@ -15,7 +15,7 @@ from math import isfinite
 from pathlib import Path
 
 from instantlink_bridge.ble.models import PrinterModel, parse_printer_model
-from instantlink_bridge.imaging.pipeline import FitMode, parse_fit_mode
+from instantlink_bridge.imaging.models import FitMode, parse_fit_mode
 
 DEFAULT_CONFIG_PATH = Path("/etc/InstantLinkBridge/config.toml")
 FTP_SUBNET_PREFIX_LEN = 24
@@ -305,18 +305,16 @@ class PrinterConfig:
     print_option: int = 0
     device_name: str | None = None
     keepalive_interval_s: float = 10.0
-    # Total scan period, in seconds, while searching for the offline selected printer: the active
-    # scan window plus any idle gap. The minimum (5s) equals the scan window, so the bridge scans
-    # continuously; larger values add an idle gap to save power. User-selectable in Settings; no
-    # exponential backoff, so reconnection stays prompt when the printer powers on.
-    search_interval_s: float = 5.0
+    # Total offline search period while the screen is dark. Awake discovery uses
+    # one-second scans/retries; the default dark period saves radio/CPU time.
+    search_interval_s: float = 30.0
 
 
 @dataclass(frozen=True, slots=True)
 class WorkflowConfig:
     """Image receive and print workflow configuration."""
 
-    auto_print_delay_s: float | None = 5.0
+    auto_print_delay_s: float | None = 1.0
     allow_print_without_film: bool = False
 
 
@@ -397,6 +395,11 @@ class UiConfig:
     status_sink: StatusSinkKind = StatusSinkKind.LCD
     language: UiLanguage = UiLanguage.EN
     appearance: UiAppearance = UiAppearance.LIGHT
+    unlock_requires_three_presses: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.unlock_requires_three_presses, bool):
+            raise ValueError("[ui].unlock_requires_three_presses must be a boolean")
 
 
 @dataclass(frozen=True, slots=True)
@@ -507,6 +510,17 @@ class AdjustmentsConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class CorrectionConfig:
+    """Persistent Printer output compensation, independent of creative Looks."""
+
+    saturation: int = 0
+
+    def __post_init__(self) -> None:
+        if type(self.saturation) is not int or not -100 <= self.saturation <= 100:
+            raise ValueError("[correction].saturation must be an integer in [-100, 100]")
+
+
+@dataclass(frozen=True, slots=True)
 class BridgeConfig:
     """Top-level bridge configuration."""
 
@@ -517,6 +531,7 @@ class BridgeConfig:
     firmware: FirmwareUpdateConfig = FirmwareUpdateConfig()
     ui: UiConfig = UiConfig()
     adjustments: AdjustmentsConfig = AdjustmentsConfig()
+    correction: CorrectionConfig = CorrectionConfig()
     sync: SyncConfig = SyncConfig()
 
 
@@ -534,6 +549,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BridgeConfig:
         firmware=_load_firmware_config(data.get("firmware", {})),
         ui=_load_ui_config(data.get("ui", {})),
         adjustments=_load_adjustments_config(data.get("adjustments", {})),
+        correction=_load_correction_config(data.get("correction", {})),
         sync=_load_sync_config(data.get("sync", {})),
     )
 
@@ -631,6 +647,8 @@ def render_config(config: BridgeConfig) -> str:
             f"status_sink = {_toml_string(config.ui.status_sink.value)}",
             f"language = {_toml_string(config.ui.language.value)}",
             f"appearance = {_toml_string(config.ui.appearance.value)}",
+            "unlock_requires_three_presses = "
+            f"{_toml_bool(config.ui.unlock_requires_three_presses)}",
             "",
             "[adjustments]",
             f"preset = {_toml_string(config.adjustments.preset)}",
@@ -643,6 +661,9 @@ def render_config(config: BridgeConfig) -> str:
             f"watermark = {_toml_bool(config.adjustments.watermark)}",
             f"watermark_text = {_toml_string(config.adjustments.watermark_text)}",
             f"vignette = {config.adjustments.vignette}",
+            "",
+            "[correction]",
+            f"saturation = {config.correction.saturation}",
             "",
             "[sync]",
             f"destination = {_toml_string(config.sync.destination.value)}",
@@ -702,7 +723,7 @@ def _load_printer_config(data: object) -> PrinterConfig:
     keepalive_interval_s = float(data.get("keepalive_interval_s", 10.0))
     if not isfinite(keepalive_interval_s) or keepalive_interval_s <= 0:
         raise ValueError("[printer].keepalive_interval_s must be a finite value greater than 0")
-    search_interval_s = float(data.get("search_interval_s", 5.0))
+    search_interval_s = float(data.get("search_interval_s", 30.0))
     if not isfinite(search_interval_s) or search_interval_s <= 0:
         raise ValueError("[printer].search_interval_s must be a finite value greater than 0")
     return PrinterConfig(
@@ -719,7 +740,7 @@ def _load_printer_config(data: object) -> PrinterConfig:
 def _load_workflow_config(data: object) -> WorkflowConfig:
     if not isinstance(data, dict):
         raise ValueError("[workflow] must be a TOML table")
-    auto_print_delay_s = _parse_auto_print_delay(data.get("auto_print_delay_s", 5.0))
+    auto_print_delay_s = _parse_auto_print_delay(data.get("auto_print_delay_s", 1.0))
     allow_print_without_film = _parse_bool(
         data.get("allow_print_without_film", False),
         "[workflow].allow_print_without_film",
@@ -796,6 +817,12 @@ def _load_firmware_config(data: object) -> FirmwareUpdateConfig:
     return FirmwareUpdateConfig(trusted_public_keys=tuple(records))
 
 
+def _load_correction_config(data: object) -> CorrectionConfig:
+    if not isinstance(data, dict):
+        raise ValueError("[correction] must be a TOML table")
+    return CorrectionConfig(saturation=data.get("saturation", 0))
+
+
 def _load_adjustments_config(data: object) -> AdjustmentsConfig:
     if not isinstance(data, dict):
         raise ValueError("[adjustments] must be a TOML table")
@@ -852,6 +879,7 @@ def _load_ui_config(data: object) -> UiConfig:
         status_sink=parse_status_sink(data.get("status_sink", StatusSinkKind.LCD.value)),
         language=parse_ui_language(data.get("language", UiLanguage.EN.value)),
         appearance=parse_ui_appearance(data.get("appearance", UiAppearance.LIGHT.value)),
+        unlock_requires_three_presses=data.get("unlock_requires_three_presses", True),
     )
 
 
@@ -1073,14 +1101,14 @@ def _format_auto_print_delay(value: float | None) -> str:
 def _parse_auto_print_delay(value: object) -> float | None:
     if isinstance(value, str) and value.strip().lower() in {"off", "false", "none"}:
         return None
-    if not isinstance(value, str | int | float):
-        raise ValueError("[workflow].auto_print_delay_s must be off, 0, or 5")
+    if isinstance(value, bool) or not isinstance(value, str | int | float):
+        raise ValueError("[workflow].auto_print_delay_s must be off, 0, 1, or 5")
     auto_print_delay_s = float(value)
     if not isfinite(auto_print_delay_s) or auto_print_delay_s < 0:
-        raise ValueError("[workflow].auto_print_delay_s must be off, 0, or 5")
-    if auto_print_delay_s == 0 or auto_print_delay_s == 5:
+        raise ValueError("[workflow].auto_print_delay_s must be off, 0, 1, or 5")
+    if auto_print_delay_s in {0.0, 1.0, 5.0}:
         return auto_print_delay_s
-    return 5.0
+    return 1.0
 
 
 def _positive_float(value: object, field_name: str) -> float:

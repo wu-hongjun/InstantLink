@@ -1,0 +1,26 @@
+{
+  "scope": "Status-only startup/periodic freshness and automatic recovery from Device1.Disconnect; no image or print commands. No baseline reconnect comparison for this LCD-only change.",
+  "film_used": 0,
+  "variants": {
+    "candidate": {
+      "startup_passed": true,
+      "first_attempt_to_ready_s": 3.4924613000039244,
+      "periodic_fresh": true,
+      "reconnect_passed": true,
+      "recovered_s": 12.134571141999913,
+      "observations": 31,
+      "all_locked600": true,
+      "all_camera_ready": true
+    },
+    "installed": {
+      "startup_passed": true,
+      "first_attempt_to_ready_s": 3.8150305199960712,
+      "periodic_fresh": true,
+      "reconnect_passed": true,
+      "recovered_s": 6.465819320990704,
+      "observations": 15,
+      "all_locked600": true,
+      "all_camera_ready": true
+    }
+  }
+}

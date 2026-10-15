@@ -512,7 +512,7 @@ def decode_base64url(value: str) -> bytes:
         padded = value + ("=" * (-len(value) % 4))
         return base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
     except (binascii.Error, ValueError) as exc:
-            raise ManagementAuthError("invalid base64url encoding") from exc
+        raise ManagementAuthError("invalid base64url encoding") from exc
 
 
 def generate_confirmation_code() -> str:

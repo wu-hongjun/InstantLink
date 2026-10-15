@@ -41,6 +41,10 @@ Missing/invalid token → `401 {"error": "unauthorized"}` with
 `OutboxItem` fields: `item_id` (hex), `file_name`, `size_bytes`, `sha256`,
 `received_at` (epoch seconds), `source_remote_ip`.
 
+Queued originals retain their own bytes and checksum when a camera reuses the same upload
+filename. New spool files use independent inodes; upgrades detach older shared files before
+they can be changed by a subsequent FTP write.
+
 Unknown id → `404 {"error": "unknown_item", "item_id": …}`.
 
 Typical pull loop: `GET /v1/queue` → for each item `GET /v1/photos/{id}`
@@ -64,10 +68,32 @@ drives the physical LCD.
 the same action queue as the physical joystick/keys, so all input handling
 (settle window, power activity) applies.
 
+When the LCD is locked or automatically dark, repeat the **same action three consecutive times**
+to unlock it by default. For example, three separate `{"action": "select"}` requests progress
+through `1 / 3`, `2 / 3` and the restored live screen. A different action resets progress to
+`1 / 3` for that action. All inputs are consumed until unlocking completes.
+
+The first input wakes the prompt and starts the awake CPU tier. An incomplete sequence expires
+10 seconds after its last accepted input. Every accepted action restarts this inactivity timer,
+including an action change that resets the count. Rejected input requests and screen polling do
+not restart the unlock timer. Remote actions
+use internal `remote:<action>` identities, distinct from physical GPIO buttons, so remote and
+physical inputs cannot combine to finish a sequence. No new request field is required. Physical
+unlock likewise requires the same physical button three consecutive times: KEY1 and joystick
+press have separate identities even though both normally produce Select.
+
+The Bridge's `ui.unlock_requires_three_presses` setting can restore single-action wake, which
+consumes that action without executing it. The screen endpoint renders the shared unlock prompt;
+receiving photos and Printer operations retain their live state.
+
 Errors: `remote_ui = false` → `404 {"error": "remote_ui_disabled"}`; no
 snapshot/injector wired → `404 {"error": "remote_ui_unavailable"}`; bad
 action → `400 {"error": "invalid_action", "allowed": [...]}`; queue full →
 `400 {"error": "input_rejected"}`; render failure → `500`.
+
+A full shared input queue discards its uncertain buffered actions and resets an incomplete
+unlock attempt. Kernel event loss or input-backend recovery does the same. Subsequent accepted
+input starts a new sequence; no wire action or field is added.
 
 `/v1/screen` is CPU-guarded on the Pi Zero 2 W: frames are memoized by
 snapshot identity and re-rendered at most every ~0.3 s, so a fast-polling
@@ -79,3 +105,16 @@ The WPA2 hotspot provides L2 encryption and the bearer token gates access;
 TLS with a pinned self-signed cert is a v1.5 hardening item. See
 `docs/plans/050-iphone-auto-sync.md` and `051-sync-ux-audit.md` for the
 threat model and token-rotation story.
+
+## Outbox concurrency
+
+Copying and checksumming a new camera file does not block status/queue reads, existing-photo
+lookup or acknowledgements. Additions remain ordered; a new item becomes visible only after
+its checksum is complete and its metadata commit is protected by the index lock. Existing
+range/download and authentication contracts are unchanged. Cancellation of the receive task
+joins the filesystem transaction before runtime teardown (plan 068).
+
+Index publication precedes the visible queue update and deletion of evicted/acknowledged
+originals. If publication fails, the committed queue and its originals remain available;
+unpublished arrivals are cleaned up. Readers continue using the committed snapshot while
+publication runs.

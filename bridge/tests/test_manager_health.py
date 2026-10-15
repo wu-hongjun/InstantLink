@@ -108,8 +108,7 @@ def test_stale_lcd_heartbeat_fails_required_gate() -> None:
     )
     assert decision.action is UpdateHealthAction.ROLLBACK_RECOMMENDED
     assert (
-        decision.reason
-        == "health_gate_failed:lcd_heartbeat_fresh_or_disabled:lcd_heartbeat_stale"
+        decision.reason == "health_gate_failed:lcd_heartbeat_fresh_or_disabled:lcd_heartbeat_stale"
     )
 
 

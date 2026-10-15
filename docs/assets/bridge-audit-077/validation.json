@@ -1,0 +1,21 @@
+{
+  "bridge_tests": 1571,
+  "focused_tests": 68,
+  "ruff": "passed src/tests",
+  "mypy": "passed, 66 source files",
+  "touched_format": "passed",
+  "host": "macOS, Python 3.13.9",
+  "hardware": "Pi Zero 2 W Rev 1, ST7789 LCD, X306 2300mAh",
+  "pi_os": "Debian 13.2, Linux 6.12.47+rpt-rpi-v8, Python 3.13.5, lgpio 0.2.2.0",
+  "film_used": 0,
+  "rejected_setup_attempts": [
+    "Candidate CPU interval began during 10s unlock warmup; rejected because clock was not consistently 600MHz.",
+    "Initial UI assertion queried before asynchronous wake completed; harness now waits for resulting state.",
+    "Recreated simulated GPIO chip was temporarily root-only; harness grants access only to the verified, test-owned mockup chip and removes the module afterward.",
+    "Final health probes to localhost and Mac USB were rejected by the saved hotspot/USB-admin-only receive policy. Health succeeded through the Pi hotspot address; no receive configuration changed."
+  ],
+  "deployment": "Clean 2ccdfa6 installed; source hashes match review; all11 kernel-to-UI cases passed on installed source; 3x30s installed CPU accepted.",
+  "normal_precommit": "passed Ruff, mypy66 and1571tests",
+  "strict_docs": "passed",
+  "normal_service": "Restored, both services active/NRestarts0, kernelGPIOv2, no input failures; controlled FTP source rejects explained in normal-health.json; all owned temporary resources removed."
+}

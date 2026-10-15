@@ -1,0 +1,21 @@
+{
+  "measurement": "actual Bridge process CPU, percent of one core",
+  "sample_design": "baseline / candidate / forced legacy / installed candidate, 3x30s each; 600MHz, Printer offline throughout; no tracing during intervals",
+  "means_percent_one_core": {
+    "baseline": 10.012331648001274,
+    "candidate": 1.7095446993958152,
+    "legacy_repeat": 10.90039508146769,
+    "installed": 1.8982536705422264
+  },
+  "installed_reduction_vs_original_baseline_percent": 81.04084305955678,
+  "installed_reduction_vs_forced_legacy_repeat_percent": 82.58545991814972,
+  "limits": [
+    "CPU counters do not measure energy or battery runtime.",
+    "Matched dark/offline conditions; connected/printing workloads not benchmarked for this GPIO change.",
+    "Temporary private observer present in candidate, forced legacy and installed trials; original baseline uses normal service.",
+    "Kernel mockup tests stimulate virtual GPIO only; physical switch contacts not actuated."
+  ],
+  "runtime_commit": "2ccdfa64b09c213bab21837a4b39e92b3cd53ef6",
+  "native_ffi_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
+  "film_used": 0
+}

@@ -1,0 +1,955 @@
+{
+  "date": "2026-10-12",
+  "hardware": {
+    "bridge": "Raspberry Pi Zero 2 W Rev 1.0",
+    "lcd": "Waveshare ST7789 240x240",
+    "battery": "X306 2300 mAh",
+    "os": "Debian 13.2",
+    "kernel": "6.12.47+rpt-rpi-v8",
+    "python": "3.13.5",
+    "bluez": "5.82",
+    "saved_printer": "Instax Square INSTAX-52006924",
+    "camera_profile": "Sony a7C II"
+  },
+  "baseline_runtime": "473a62c",
+  "deployed_runtime": "738a088594f2fceb70004b78268d98313bba4caf",
+  "limits": [
+    "Printer off/not advertising: no physical BLE send or film ejection.",
+    "FTP replay runs on the same Pi hotspot address: no Sony Wi-Fi airtime.",
+    "Seeded Square identity/status and observer sender in replay.",
+    "Software clocks do not measure power or battery runtime.",
+    "Mixed-clock preliminary dataset excluded from timing results."
+  ],
+  "baseline_stage_profile": {
+    "source_size": 11255808,
+    "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+    "settings": {
+      "model": "square",
+      "fit": "auto",
+      "quality": 100,
+      "resolved_adjustments": {
+        "saturation": 1.5,
+        "exposure": 1.0,
+        "sharpness": 1.0,
+        "hue": 0,
+        "vignette": 0,
+        "datestamp": false,
+        "watermark": false,
+        "datestamp_text": "",
+        "watermark_text": ""
+      },
+      "correction": {
+        "saturation": 0
+      },
+      "edit": {
+        "rotate_degrees": 0,
+        "zoom": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      }
+    },
+    "inline_profile": {
+      "seconds": 5.725477497999691,
+      "stages": [
+        {
+          "stage": "external_heif_decoder_png_write",
+          "seconds": 4.793118280000272
+        },
+        {
+          "stage": "_open_heif_thumbnail",
+          "seconds": 5.114775309999914,
+          "dimensions": [
+            1600,
+            1069
+          ]
+        },
+        {
+          "stage": "_open_source_image",
+          "seconds": 5.115339373000097,
+          "dimensions": [
+            1600,
+            1069
+          ]
+        },
+        {
+          "stage": "_exif_transposed",
+          "seconds": 0.00010322900016035419,
+          "dimensions": [
+            1600,
+            1069
+          ]
+        },
+        {
+          "stage": "apply_pre_fit_adjustments",
+          "seconds": 1.4166999790177215e-05,
+          "dimensions": [
+            1600,
+            1069
+          ]
+        },
+        {
+          "stage": "_apply_print_edit",
+          "seconds": 2.3334000161412405e-05,
+          "dimensions": [
+            1600,
+            1069
+          ]
+        },
+        {
+          "stage": "_fit_image",
+          "seconds": 0.1941549479997775,
+          "dimensions": [
+            800,
+            800
+          ]
+        },
+        {
+          "stage": "apply_post_fit_adjustments",
+          "seconds": 0.087911406999865,
+          "dimensions": [
+            800,
+            800
+          ]
+        },
+        {
+          "stage": "apply_correction",
+          "seconds": 1.0104000011779135e-05,
+          "dimensions": [
+            800,
+            800
+          ]
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.0629792190002263,
+          "quality": 100,
+          "bytes": 465759
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.034929218999877776,
+          "quality": 50,
+          "bytes": 67648
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.03722984399973939,
+          "quality": 75,
+          "bytes": 99999
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.040017448000071454,
+          "quality": 87,
+          "bytes": 142678
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.038534323000021686,
+          "quality": 81,
+          "bytes": 117419
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.037874219000059384,
+          "quality": 78,
+          "bytes": 108648
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.03744885400010389,
+          "quality": 76,
+          "bytes": 102303
+        },
+        {
+          "stage": "_encode_jpeg",
+          "seconds": 0.03811359400015135,
+          "quality": 77,
+          "bytes": 105823
+        }
+      ],
+      "output": {
+        "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+        "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+        "width": 800,
+        "height": 800,
+        "quality": 76,
+        "bytes": 102303
+      },
+      "python_peak_rss_kib": 44928,
+      "decoder_peak_rss_kib": 38996
+    },
+    "worker_runs": [
+      {
+        "seconds": 5.891546873000152,
+        "output": {
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+          "width": 800,
+          "height": 800,
+          "quality": 76,
+          "bytes": 102303
+        }
+      },
+      {
+        "seconds": 5.784502132999933,
+        "output": {
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+          "width": 800,
+          "height": 800,
+          "quality": 76,
+          "bytes": 102303
+        }
+      },
+      {
+        "seconds": 5.797656821000146,
+        "output": {
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+          "width": 800,
+          "height": 800,
+          "quality": 76,
+          "bytes": 102303
+        }
+      }
+    ],
+    "cpu_khz": 1000000,
+    "temperature_c": 47.236,
+    "throttled": "throttled=0x0"
+  },
+  "baseline_flow_replay": {
+    "source_bytes": 11255808,
+    "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+    "boundary": "Isolated same-Pi hotspot-address FTP replay (local-route, no Wi-Fi airtime) + real controller/HIF worker/review; seeded Square identity/status; observer sender, no physical BLE send or Sony Wi-Fi transfer",
+    "rows": [
+      {
+        "ftp_upload_s": 0.11668593800004601,
+        "hif_and_preview_s": 5.944979060000151,
+        "review_and_lookup_s": 1.0050254159996257,
+        "upload_start_to_backend_boundary_s": 7.068596090999563,
+        "prepare_count": 1,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8"
+        }
+      },
+      {
+        "ftp_upload_s": 0.12590895900029864,
+        "hif_and_preview_s": 5.899810361999698,
+        "review_and_lookup_s": 1.005146665999746,
+        "upload_start_to_backend_boundary_s": 7.032651663999786,
+        "prepare_count": 1,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8"
+        }
+      },
+      {
+        "ftp_upload_s": 0.14114640599927952,
+        "hif_and_preview_s": 5.858398122999461,
+        "review_and_lookup_s": 1.0047891659996822,
+        "upload_start_to_backend_boundary_s": 7.006021038999279,
+        "prepare_count": 1,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8"
+        }
+      }
+    ]
+  },
+  "candidate_interleaved_ab": {
+    "source_bytes": 11255808,
+    "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+    "cpu_khz": 1000000,
+    "temperature_c": 47.774,
+    "throttled": "throttled=0x0",
+    "trials": [
+      {
+        "mode": "uncached",
+        "rows": [
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.0,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.933499372999904,
+            "bytes": 102303,
+            "quality": 76,
+            "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+            "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+            "cache_bytes": 0
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.1,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.782150882999304,
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2",
+            "cache_bytes": 0
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.2,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.752571872999397,
+            "bytes": 102340,
+            "quality": 79,
+            "jpeg_sha256": "b88bb6c3c6cc8104fabe59377328cd6f4ca6257aa209fa94865998ebc8fb7230",
+            "rgb_sha256": "b4799c81908643460523e2c40097890800865ee4722497771751cfdd5f844f02",
+            "cache_bytes": 0
+          }
+        ]
+      },
+      {
+        "mode": "cached",
+        "rows": [
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.0,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.795467393000763,
+            "bytes": 102303,
+            "quality": 76,
+            "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+            "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+            "cache_bytes": 5131254
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.1,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 0.6657778119997602,
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2",
+            "cache_bytes": 5131254
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.2,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 0.6761580210004468,
+            "bytes": 102340,
+            "quality": 79,
+            "jpeg_sha256": "b88bb6c3c6cc8104fabe59377328cd6f4ca6257aa209fa94865998ebc8fb7230",
+            "rgb_sha256": "b4799c81908643460523e2c40097890800865ee4722497771751cfdd5f844f02",
+            "cache_bytes": 5131254
+          }
+        ]
+      },
+      {
+        "mode": "cached",
+        "rows": [
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.0,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.784266820999619,
+            "bytes": 102303,
+            "quality": 76,
+            "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+            "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+            "cache_bytes": 5131254
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.1,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 0.6670629159998498,
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2",
+            "cache_bytes": 5131254
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.2,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 0.6758206250005969,
+            "bytes": 102340,
+            "quality": 79,
+            "jpeg_sha256": "b88bb6c3c6cc8104fabe59377328cd6f4ca6257aa209fa94865998ebc8fb7230",
+            "rgb_sha256": "b4799c81908643460523e2c40097890800865ee4722497771751cfdd5f844f02",
+            "cache_bytes": 5131254
+          }
+        ]
+      },
+      {
+        "mode": "uncached",
+        "rows": [
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.0,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.901430363000145,
+            "bytes": 102303,
+            "quality": 76,
+            "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+            "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9",
+            "cache_bytes": 0
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.1,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.752021299000262,
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2",
+            "cache_bytes": 0
+          },
+          {
+            "edit": {
+              "rotate_degrees": 0,
+              "zoom": 1.2,
+              "offset_x": 0.0,
+              "offset_y": 0.0
+            },
+            "seconds": 5.804525206000108,
+            "bytes": 102340,
+            "quality": 79,
+            "jpeg_sha256": "b88bb6c3c6cc8104fabe59377328cd6f4ca6257aa209fa94865998ebc8fb7230",
+            "rgb_sha256": "b4799c81908643460523e2c40097890800865ee4722497771751cfdd5f844f02",
+            "cache_bytes": 0
+          }
+        ]
+      }
+    ],
+    "all_output_hashes_equal_per_edit": true
+  },
+  "deployed_dataset": {
+    "boundary": "Real saved camera HIFs; production worker, Square model and saved adjustments; no Printer send",
+    "rows": [
+      {
+        "source_bytes": 11255808,
+        "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+        "date_metadata_s": 0.24756984299983742,
+        "date_present": true,
+        "first": {
+          "seconds": 5.801635934999467,
+          "output": {
+            "bytes": 102303,
+            "quality": 76,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+            "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 59
+        },
+        "cached_edit": {
+          "seconds": 0.6704250000002503,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 5.874522393999541,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 59
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 5131254,
+        "cache_cleaned_on_close": true
+      },
+      {
+        "source_bytes": 3186688,
+        "source_sha256": "db6a243439566ff56366ed13389d6b8c3036497a31fac7e4f38f1e6ad75cd566",
+        "date_metadata_s": 0.01718916700065165,
+        "date_present": true,
+        "first": {
+          "seconds": 3.1028319260003627,
+          "output": {
+            "bytes": 101222,
+            "quality": 90,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "fd8416482e2847379c55122f2d24c1091ded651416832876be87680532418950",
+            "rgb_sha256": "17fd95a1b37dff3f1ce95be928f160dce72bcbb9ef97bce142c9aff2ed486036"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 32
+        },
+        "cached_edit": {
+          "seconds": 0.6492525000003297,
+          "output": {
+            "bytes": 103779,
+            "quality": 90,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "a0212d1b3e03ea59b322c5316394bf0c7fe8d38130c8f412d96774c23171d37e",
+            "rgb_sha256": "307ab73f826aae1a2180df990c05c16d3b72fd97c9d3934435955e07a3530057"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 3.145835050999267,
+          "output": {
+            "bytes": 103779,
+            "quality": 90,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "a0212d1b3e03ea59b322c5316394bf0c7fe8d38130c8f412d96774c23171d37e",
+            "rgb_sha256": "307ab73f826aae1a2180df990c05c16d3b72fd97c9d3934435955e07a3530057"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 32
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 3551286,
+        "cache_cleaned_on_close": true
+      },
+      {
+        "source_bytes": 3207168,
+        "source_sha256": "6e9ec8dbe1c8b0b2df75036064ec338af039470d367d0644fcab9e7d7235a93f",
+        "date_metadata_s": 0.016884740000023157,
+        "date_present": true,
+        "first": {
+          "seconds": 3.3636892169997736,
+          "output": {
+            "bytes": 101945,
+            "quality": 92,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "b0e319ed164739a752d6e598283b26eef99cb8c3f4c90c55e4aa7f3bac72d541",
+            "rgb_sha256": "a06719bec7f1da8a3b27ce195c1050b233641c30230f0c316290cc0e80fcd59f"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 35
+        },
+        "cached_edit": {
+          "seconds": 0.6820293219998348,
+          "output": {
+            "bytes": 103964,
+            "quality": 92,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "5232cb510699b9d86fe316e4e207813d4b922b35c8f0dcd5a5430cded4189978",
+            "rgb_sha256": "de78c470bda9d401e7e8eb25828ecafa9fcb020bb2d718536ce5bbfb699520b0"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 3.3221883839996735,
+          "output": {
+            "bytes": 103964,
+            "quality": 92,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "5232cb510699b9d86fe316e4e207813d4b922b35c8f0dcd5a5430cded4189978",
+            "rgb_sha256": "de78c470bda9d401e7e8eb25828ecafa9fcb020bb2d718536ce5bbfb699520b0"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 34
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 3551286,
+        "cache_cleaned_on_close": true
+      },
+      {
+        "source_bytes": 6201344,
+        "source_sha256": "901bc100ad06a26a4712e04153a8a0b5f667d9cb70132c13052225b853a87f85",
+        "date_metadata_s": 0.028126666999924055,
+        "date_present": true,
+        "first": {
+          "seconds": 4.372009634000278,
+          "output": {
+            "bytes": 104637,
+            "quality": 81,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "7bc400a3c9ae54034363fa0a5062b36c963c4ac49fcfbc2c9882466c3e5ae30f",
+            "rgb_sha256": "47c0b8ed9a9ed8bbdd1f88c37a98ff8815b036709266ce36c3b39a4d40409fdf"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 45
+        },
+        "cached_edit": {
+          "seconds": 0.703292238999893,
+          "output": {
+            "bytes": 102384,
+            "quality": 82,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "52b33e72fcf1052949b1b231576942cc6a22e7c92c1ac0ad4622cf91e87b4453",
+            "rgb_sha256": "51cc455154d32480b5674acb512026e52048e8e5bb8ab9e2be4bfe70ae0fe672"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 4.41087468600017,
+          "output": {
+            "bytes": 102384,
+            "quality": 82,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "52b33e72fcf1052949b1b231576942cc6a22e7c92c1ac0ad4622cf91e87b4453",
+            "rgb_sha256": "51cc455154d32480b5674acb512026e52048e8e5bb8ab9e2be4bfe70ae0fe672"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 45
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 3551286,
+        "cache_cleaned_on_close": true
+      },
+      {
+        "source_bytes": 4853760,
+        "source_sha256": "ecb17de431069ca7ad5bb038ddd76685fe8d5d9844ee8cf50ac662a9971feb26",
+        "date_metadata_s": 0.024858386000232713,
+        "date_present": true,
+        "first": {
+          "seconds": 3.585963019000701,
+          "output": {
+            "bytes": 99709,
+            "quality": 89,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "59118b6dcdd8191fd8022205d813b72508103964aa0d058dff2186847d9c319d",
+            "rgb_sha256": "a7ef96786e07fb2b3401d27d04d1db4e9f5b9a7412c2d6c7f8a9447180eb2a0b"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 37
+        },
+        "cached_edit": {
+          "seconds": 0.691110208000282,
+          "output": {
+            "bytes": 102533,
+            "quality": 89,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "67c4a198868b1a8c0d656c416e03f1de69236b9579e22d68db352032041bd090",
+            "rgb_sha256": "2278338a4833b78522bbfb2dbd81d54960b7dfc5de97a8450ee4eb91ae576bfa"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 3.5760316659998352,
+          "output": {
+            "bytes": 102533,
+            "quality": 89,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "67c4a198868b1a8c0d656c416e03f1de69236b9579e22d68db352032041bd090",
+            "rgb_sha256": "2278338a4833b78522bbfb2dbd81d54960b7dfc5de97a8450ee4eb91ae576bfa"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 37
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 3551286,
+        "cache_cleaned_on_close": true
+      },
+      {
+        "source_bytes": 6381568,
+        "source_sha256": "bed484876f84ecec86d71c268a8c4f8cc1a85166d476044b6a34f8357757c6fa",
+        "date_metadata_s": 0.02874041699942609,
+        "date_present": true,
+        "first": {
+          "seconds": 3.947799372999725,
+          "output": {
+            "bytes": 98459,
+            "quality": 93,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "7d3bd92b23b7420247a1aa6e40bbc7c01ab920ce0788b5cd3d890da007cf70c3",
+            "rgb_sha256": "6e197e3cf44466c601cc0f7b7afa44cf676de87ebfed5aebfaea6e6229e6553c"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 40
+        },
+        "cached_edit": {
+          "seconds": 0.6556056250001348,
+          "output": {
+            "bytes": 97501,
+            "quality": 93,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "fea14e703c2795c75479b3c16ac8f6bc204faa43f9cd841f703400e8d38ddb14",
+            "rgb_sha256": "979807a848e5cba5ca5428ed51476357acfa63ece1dc1eeb971685a5c3e2835b"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 3.9073781760007478,
+          "output": {
+            "bytes": 97501,
+            "quality": 93,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "fea14e703c2795c75479b3c16ac8f6bc204faa43f9cd841f703400e8d38ddb14",
+            "rgb_sha256": "979807a848e5cba5ca5428ed51476357acfa63ece1dc1eeb971685a5c3e2835b"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 40
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 5131254,
+        "cache_cleaned_on_close": true
+      },
+      {
+        "source_bytes": 4423680,
+        "source_sha256": "d758a2b9d3a5ade673a3f43f11d22df7fcd5bc936eeda49a1223087304869abd",
+        "date_metadata_s": 0.022823281999990286,
+        "date_present": true,
+        "first": {
+          "seconds": 3.4059647389995007,
+          "output": {
+            "bytes": 101600,
+            "quality": 89,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "c2782f591aa955a57a89a05541bcf88d7938aeab004ec2a03b448bdc3d4fb20d",
+            "rgb_sha256": "a7710f3f062198449df2b05262e4fb0ccd876793bea035fef0df1805d4289e2b"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 35
+        },
+        "cached_edit": {
+          "seconds": 0.68077927000013,
+          "output": {
+            "bytes": 100890,
+            "quality": 89,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "2ac7690522da2abdebdef7598faa84f5db20fed519b42930ddb36044e624d1dc",
+            "rgb_sha256": "12c1ce01ee87cdde12056e2d65d6fcba10ce49a833ccbd6ede8c951203fd52c3"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8
+        },
+        "uncached_edit": {
+          "seconds": 3.390016456999547,
+          "output": {
+            "bytes": 100890,
+            "quality": 89,
+            "width": 800,
+            "height": 800,
+            "jpeg_sha256": "2ac7690522da2abdebdef7598faa84f5db20fed519b42930ddb36044e624d1dc",
+            "rgb_sha256": "12c1ce01ee87cdde12056e2d65d6fcba10ce49a833ccbd6ede8c951203fd52c3"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 35
+        },
+        "edit_output_equal": true,
+        "cache_bytes": 3551286,
+        "cache_cleaned_on_close": true
+      }
+    ],
+    "cpu_khz": 1000000,
+    "temperature_c": 48.85,
+    "throttled": "throttled=0x0"
+  },
+  "deployed_flow_replay": {
+    "source_bytes": 11255808,
+    "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+    "boundary": "Isolated same-Pi hotspot-address FTP replay (local-route, no Wi-Fi airtime) + real controller/HIF worker/review; seeded Square identity/status; observer sender, no physical BLE send or Sony Wi-Fi transfer",
+    "rows": [
+      {
+        "ftp_upload_s": 0.12334338500022568,
+        "hif_and_preview_s": 5.976774163999835,
+        "review_and_lookup_s": 1.0039142710002125,
+        "upload_start_to_backend_boundary_s": 7.105877966000662,
+        "prepare_count": 1,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 71
+      },
+      {
+        "ftp_upload_s": 0.1336202599995886,
+        "hif_and_preview_s": 5.896583590999398,
+        "review_and_lookup_s": 1.0054114060003485,
+        "upload_start_to_backend_boundary_s": 7.037508381999942,
+        "prepare_count": 1,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 70
+      },
+      {
+        "ftp_upload_s": 0.12684765599988168,
+        "hif_and_preview_s": 5.902038487000027,
+        "review_and_lookup_s": 1.0045344789996307,
+        "upload_start_to_backend_boundary_s": 7.035125465999954,
+        "prepare_count": 1,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 70
+      }
+    ]
+  },
+  "deployed_ftp_ownership_smoke": {
+    "real_pi_ftp": true,
+    "root_and_incoming_overlap_rejected": true,
+    "queued_bytes_preserved": true,
+    "interrupted_retry": true,
+    "shutdown_stor_rejected": true,
+    "pins_and_reservations_cleared": true
+  },
+  "final_health": {
+    "runtime_commit": "738a088594f2fceb70004b78268d98313bba4caf",
+    "dirty": false,
+    "cpu_governor": "powersave",
+    "cpu_khz": 600000,
+    "temperature_c": 45.084,
+    "throttled": "throttled=0x0",
+    "gpio24": "24: op -- -- | lo // GPIO24 = output",
+    "services": "MainPID=3529\nNRestarts=0\nActiveState=active\n\nMainPID=3527\nNRestarts=0\nActiveState=active\n",
+    "ftp_greeting_code": "220",
+    "ftp_noop_code": "200",
+    "ffi_sha256": "a974372ec276fdd3e21eab28fdf5f769b68e5216c5bcdec6f63bec9568e1cc96",
+    "packages": {
+      "Pillow": "11.3.0",
+      "pillow-heif": "1.3.0",
+      "pyftpdlib": "2.2.0",
+      "instantlink-bridge": "0.1.17"
+    },
+    "working_cache_directories": 0,
+    "addresses": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \nusb0             UP             192.168.7.1/24 \nwlan0            UP             192.168.8.1/24 \n",
+    "printer_connected": false
+  },
+  "system_codec_packages": {
+    "heif-thumbnailer": "1.19.8-1",
+    "libheif1": "1.19.8-1"
+  },
+  "local_checks": {
+    "bridge_tests_passed": 1448,
+    "ruff": true,
+    "touched_file_format": true,
+    "strict_mypy_source_files": 65,
+    "whitespace": true,
+    "strict_mkdocs": true,
+    "normal_precommit": true
+  },
+  "adversarial_review": {
+    "independent": true,
+    "remaining_p1_p2": 0,
+    "lazy_decoder_race_fixed": true,
+    "overlapping_stor_fixed": true,
+    "late_enqueue_shutdown_cleanup_fixed": true,
+    "post_dequeue_cleanup_fixed": true,
+    "timing_boundary_fixed": true
+  }
+}

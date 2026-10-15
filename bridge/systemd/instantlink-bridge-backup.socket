@@ -1,0 +1,13 @@
+[Unit]
+Description=InstantLink Bridge local backup socket
+
+[Socket]
+ListenStream=/run/instantlink-bridge-backup.sock
+SocketUser=root
+SocketGroup=ib
+SocketMode=0660
+Accept=yes
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

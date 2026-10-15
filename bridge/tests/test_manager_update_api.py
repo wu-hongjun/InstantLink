@@ -361,16 +361,37 @@ async def test_preflight_rejects_wrong_target(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_install_creates_backup_and_pending_state(tmp_path: Path) -> None:
+@pytest.mark.parametrize("private_broker", [False, True])
+async def test_install_creates_backup_and_pending_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, private_broker: bool
+) -> None:
     private_key = _private_key()
     install_root, runner = _stage_install_bundle(tmp_path)
     backups_dir = tmp_path / "backups"
     env = ManagerEnvironment(
         install_root=install_root,
         backups_dir=backups_dir,
+        private_backup_broker=private_broker,
         privileged_runner=runner,
         now=lambda: "2026-05-26T15:30:00Z",
     )
+    if private_broker:
+        from instantlink_bridge.manager import update_flow
+        from instantlink_bridge.manager.backup import create_backup_archive
+
+        def request(action: str, *, version: str | None = None) -> dict[str, object]:
+            assert action == "create"
+            created = create_backup_archive(backups_dir, root=install_root, version=version)
+            return {
+                "backup": {
+                    "backup_id": created.manifest.backup_id,
+                    "manifest_path": str(created.manifest_path),
+                    "archive_sha256": created.archive_sha256,
+                    "verified": True,
+                }
+            }
+
+        monkeypatch.setattr(update_flow, "request_private_backup", request)
     # The backup reads from install_root; ensure a backup-able file exists there.
     app = _make_app(tmp_path, private_key, env, request_id="req-install")
 

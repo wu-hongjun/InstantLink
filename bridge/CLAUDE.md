@@ -146,8 +146,11 @@ state in v1.
 - KEY1 / joystick press opens Settings from normal status screens. Settings persists
   `/etc/InstantLinkBridge/config.toml` and covers printer pairing/forget, Wi-Fi mode, printer type,
   fit, JPEG quality, auto-print mode/delay, keepalive, and the delivery mode
-  (`[sync].destination` — `Mode`: Print / Sync, plan 055). KEY2 switches between those modes
-  directly from normal home/status surfaces. The remaining `[sync]`
+  (`[sync].destination` — `Mode`: Print / Sync on the main Settings page). KEY2 locks the LCD
+  from normal home/status surfaces and during printing. `[ui].unlock_requires_three_presses`
+  defaults to `true` and is editable at System > `Unlock: 3 presses`; unlocking requires three
+  consecutive presses of the same physical button, and all unlock inputs are consumed. With it
+  disabled, the first input wakes only. The remaining `[sync]`
   fields (`port`, `outbox_dir`, `outbox_budget_mb`, `token_path`, `remote_ui`) are
   provisioning-level and not editable from the LCD.
 - `workflow.allow_print_without_film` is a testing-only escape hatch exposed as `No-film test`.
@@ -183,8 +186,12 @@ state in v1.
   the BLE transfer and show `No Film Left`.
 - Sync mode ignores Printer and film state entirely; uploads spool to the sync outbox and never
   enter the print pipeline.
-- Delivery-mode footer (plan 055): Print home surfaces advertise `KEY2 Sync`; Sync home surfaces
-  advertise `KEY2 Print`. KEY2 persists the new mode and refreshes the home state immediately.
+- Home footer (plan 057): Print and Sync surfaces advertise `KEY2 Lock`. A deliberate screen lock
+  persists through FTP and status activity, while the runtime and automatic Printer reconnect stay active.
+  The shared physical/virtual unlock prompt needs three consecutive presses of the same control
+  by default. The first wakes the display and CPU; a different control resets progress to one.
+  An incomplete sequence expires 10 seconds after its last accepted press. Every accepted press,
+  including a control change, restarts that inactivity timer without cancelling work.
   In Sync mode short and hold KEY3 both open the iPhone pairing QR, and BACK from that QR returns
   home.
 - iPhone pairing QR (plan 051): never show a QR while nothing listens on the sync port — the
@@ -261,3 +268,45 @@ state in v1.
 - Do not build cloud sync.
 - Do not build photo editing beyond deterministic auto-rotate, resize/crop, and color-safe
   preparation for Instax.
+
+## Current LCD interaction
+
+KEY1 opens Settings, including without a Printer. KEY2 locks home and printing screens. By default,
+three consecutive presses of the same physical button unlock: the first shows a prompt and
+starts the awake CPU tier, the second advances the count, and the third restores the latest live
+screen. A different button starts a new count at one. Every accepted button press restarts the
+10-second inactivity timeout, whether it advances or resets the counter.
+Every input is consumed until unlocking completes.
+System > `Unlock: 3 presses` can disable the gate for one-press wake without a normal action.
+KEY3 uses its visible action: Post when ready, Reconnect when the saved
+Printer is offline, Pair when unpaired, and iPhone status/QR in Sync mode. Hold has no hidden
+re-pair action. Settings uses KEY3 Help and saved-preset management uses RIGHT.
+
+Settings → Print → Post separates creative Looks from persistent Printer Correction. Correction
+saturation is stored independently, defaults to zero and is applied at print resolution after
+Looks; Sync originals are untouched. Review countdown begins after preview preparation, and
+editing switches to explicit confirmation. See docs/ux-flows.md and plan 060.
+
+
+### Unlock implementation requirements (plans 061/062/063)
+
+- The incomplete sequence times out 10 seconds after its last accepted button press, returns to
+  a dark locked display and resets its count. Restart the timer on every accepted press, including
+  different-button resets; FTP, status updates and screen polling must not extend it. Idle CPU
+  uses the lowest supported clock; active preparation or
+  printing stays boosted. GPIO uses press-only callbacks with 50 ms debounce and no held-key
+  or autorepeat events; holding a physical button counts once, with release required before
+  another press. Preserve the physical GPIO identity: KEY1 and joystick SELECT must not count
+  as the same button. Remote actions use separate `remote:<action>` identities; a remote request
+  and a physical press cannot complete each other's sequence. The remote `{"action": ...}`
+  contract is unchanged, with three repeated identical actions required to unlock.
+- Keep unlock presentation separate from live operational state: `ui.snapshot` contains the
+  shared `UNLOCKING` overlay, while `ui.live_snapshot` supplies FTP readiness and photo dispatch.
+  Incoming status, photos, Settings and working edits must survive the overlay.
+- Wake always forces a redraw. Framebuffer screen-off may write black while the controller's
+  last active snapshot remains cached; equality alone must not suppress repaint. The framebuffer
+  restores its retained frame before enabling its backlight, and the controller invalidates its
+  render cache when applying a dark stage and when unlocking, including one-press opt-out.
+- Local regression tests cover the controller, power transition and framebuffer restoration.
+  Record actual hardware acceptance in `docs/current-context.md`; passing local tests alone does
+  not establish GPIO, LCD or battery-runtime results.

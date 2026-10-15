@@ -42,8 +42,7 @@ def _preset_options() -> list[JsonValue]:
     """
 
     return [
-        {"value": name, "label": name}
-        for name in (*BUILTIN_PRESET_NAMES, *USER_PRESET_SLOT_NAMES)
+        {"value": name, "label": name} for name in (*BUILTIN_PRESET_NAMES, *USER_PRESET_SLOT_NAMES)
     ]
 
 
@@ -54,10 +53,7 @@ def _datestamp_format_options() -> list[JsonValue]:
     so adding a new preset on the bridge auto-extends the Mac picker.
     """
 
-    return [
-        {"value": fmt.value, "label": _DATESTAMP_FORMAT_LABELS[fmt]}
-        for fmt in DatestampFormat
-    ]
+    return [{"value": fmt.value, "label": _DATESTAMP_FORMAT_LABELS[fmt]} for fmt in DatestampFormat]
 
 
 def build_adjustments_schema() -> JsonObject:

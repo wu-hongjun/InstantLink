@@ -62,6 +62,71 @@ _ZH_HANS: dict[str, str] = {
     "Attention": "注意",
     "Connected": "已连接",
     "Disconnected": "已断开",
+    "KEY3 Tool": "KEY3 工具",
+    "Press KEY3 to pair": "按KEY3配对",
+    "KEY1 load · Right manage": "KEY1载入 · 按右管理",
+    "6 custom slots full · Right on a slot to manage": "预设已满 · 按右管理槽位",
+    "KEY1 apply. Joystick RIGHT manages a saved slot. KEY2 returns.": (
+        "KEY1载入；按右管理已保存槽位；KEY2返回。"
+    ),
+    "Up/Dn ±10": "上/下 ±10",
+    "Up/Dn ±25": "上/下 ±25",
+    "Same button once more": "同一按键再按一次",
+    "Same button twice more": "同一按键再按两次",
+    "Locked": "已锁定",
+    "Press same button": "连按同一按键",
+    "3 times to unlock": "3次以解锁",
+    "{n} more presses": "再按{n}次",
+    "Unlock: 3 presses": "按三次解锁",
+    "Press the same button three times to avoid accidental unlock": "连按同一按键三次以防误触",
+    "Post": "后期",
+    "Image quality": "图像质量",
+    "Printer options": "打印机选项",
+    "Bridge version": "桥接版本",
+    "Screen, lock and shutdown settings": "屏幕、锁屏和关机设置",
+    "After {time}": "{time}后",
+    "Shuts down after {time} idle": "空闲{time}后关机",
+    "JPEG encoding quality": "JPEG 编码质量",
+    "No-film testing and connection intervals": "无相纸测试与连接间隔",
+    "Looks": "风格",
+    "Correction": "校正",
+    "Look": "风格",
+    "Workflow": "流程",
+    "Confirmation": "打印确认",
+    "Printer battery": "打印机电量",
+    "Print complete": "打印完成",
+    "Printed": "已打印",
+    "Preparing": "准备中",
+    "Updating": "更新中",
+    "Sending": "发送中",
+    "Finishing": "完成中",
+    "Still printing": "仍在打印",
+    "Print stalled": "打印无响应",
+    "Restarting": "重启中",
+    "Up/Down: Zoom": "上下：缩放",
+    "Joystick: Crop": "摇杆：裁剪",
+    "Left/Right: Rotate": "左右：旋转",
+    "Photo sent to Printer": "照片已发送至打印机",
+    "Complete": "完成",
+    "Confirm each": "逐张确认",
+    "Print immediately": "立即打印",
+    "Review 1s": "预览1秒",
+    "Review 5s": "预览5秒",
+    "KEY1 Settings": "KEY1 设置",
+    "KEY3 Post": "KEY3 后期",
+    "KEY3 Check": "KEY3 检查",
+    "KEY3 Reconnect": "KEY3 重连",
+    "KEY3 Status": "KEY3 状态",
+    "iPhone active": "iPhone 活跃",
+    "Check saved Printer": "检查已保存打印机",
+    "Looks and independent Printer correction": "风格与独立打印机校正",
+    "Compensate film colour without changing Looks": "补偿相纸色彩，保留风格",
+    "Printer output compensation; independent of Looks": "打印色彩补偿，独立于风格",
+    "Creative colour and overlay adjustments": "创意色彩与叠加调整",
+    "Review starts when preview is ready. Editing waits for KEY1.": (
+        "预览就绪后开始倒计时；编辑后按KEY1打印。"
+    ),
+    "Save as preset. Right on a saved slot to manage.": "保存为预设。在已保存槽位按右管理。",
     "Ejecting": "退出中",
     "Error": "错误",
     "Finding": "查找中",
@@ -154,8 +219,7 @@ _ZH_HANS: dict[str, str] = {
     "KEY1 Setting": "KEY1 设置",
     "KEY2 Back": "KEY2 返回",
     "KEY2 Cancel": "KEY2 取消",
-    "KEY2 Print": "KEY2 打印",
-    "KEY2 Sync": "KEY2 同步",
+    "KEY2 Lock": "KEY2 锁屏",
     "KEY3 Network": "KEY3 网络",
     "KEY3 Help": "KEY3 帮助",
     "KEY3 Retry": "KEY3 重试",
@@ -167,7 +231,7 @@ _ZH_HANS: dict[str, str] = {
     "Up/Dn Edit": "上/下 编辑",
     "Up/Dn ±10 · K1 OK · K2/Left Cancel": "上下 ±10 · K1 确认 · K2/左 取消",
     # Footer of the read-only help-dialog overlay (any key dismisses).
-    "Press any key": "按任意键关闭",
+    "Press any key to close": "按任意键关闭",
     "KEY1 commit · KEY2 cancel": "按键1 确认 · 按键2 取消",
     # --- Body action / status copy ---------------------------------------
     "Blocked": "已阻止",
@@ -179,6 +243,7 @@ _ZH_HANS: dict[str, str] = {
     "Close phone app if it fails": "失败时请关闭手机 App",
     "Close phone app or phone BT": "请关闭手机 App 或手机蓝牙",
     "Connecting": "正在连接",
+    "Starting Bluetooth": "正在启动蓝牙",
     "Do not power off": "请勿断电",
     "FTP and printer ready": "FTP 与打印机已就绪",
     "Failed": "失败",
@@ -194,7 +259,31 @@ _ZH_HANS: dict[str, str] = {
     "No printer found": "未找到打印机",
     "No printer signal": "无打印机信号",
     "No settings available": "暂无可用设置",
-    "No-film test is in Settings": "无相纸测试在设置中",
+    "No film is left in the Printer.": "打印机内已无相纸。",
+    "Load a new film pack.": "请装入新的相纸盒。",
+    "FTP": "FTP",
+    "Connections": "连接状态",
+    "Screen": "屏幕",
+    "Unlock guard": "解锁保护",
+    "Joined Wi-Fi": "已连接 Wi-Fi",
+    "Unpair iPhones": "取消 iPhone 配对",
+    "Unpair iPhones?": "取消 iPhone 配对？",
+    "Unpair": "取消配对",
+    "Paired iPhones will need to scan a new QR code.": "已配对的 iPhone 需要重新扫码。",
+    "iPhones unpaired": "iPhone 配对已取消",
+    "Unpair failed": "取消配对失败",
+    "Appearance, text and unlock settings": "外观、文字与解锁设置",
+    "Print or sync received photos · Pair iPhone: Network > iPhone": (
+        "打印或同步收到的照片 · 配对 iPhone：网络 > iPhone"
+    ),
+    "Camera uploads and FTP credentials": "相机上传与 FTP 凭据",
+    "Bridge Wi-Fi credentials and joined network": "桥接 Wi-Fi 凭据与已连接网络",
+    "Pair and manage iPhone access": "配对与管理 iPhone 访问",
+    "Bluetooth and USB status": "蓝牙与 USB 状态",
+    "Screen-off search": "熄屏搜索间隔",
+    "Searches every 1s with screen on; every {n}s with screen off": (
+        "亮屏时每秒搜索，熄屏时每 {n} 秒搜索"
+    ),
     "Next action": "下一步操作",
     "Opening Bluetooth session": "正在打开蓝牙会话",
     "Phone Bluetooth may grab it": "手机蓝牙可能占用",
@@ -202,7 +291,7 @@ _ZH_HANS: dict[str, str] = {
     "Preparing preview": "正在准备预览",
     "Press K1": "请按 K1",
     "Press K2 to cancel": "按 K2 取消",
-    "Print in {n}s": "{n} 秒后打印",  # informational; not actually queried
+    "Print in {n}s": "{n} 秒后打印",
     "Printer not found nearby": "附近未发现打印机",
     "Printer off": "打印机已关闭",
     "Printer offline": "打印机离线",
@@ -339,6 +428,7 @@ _ZH_HANS: dict[str, str] = {
     "Bridge Wi-Fi name": "桥接 Wi-Fi 名称",
     "Bridge Wi-Fi PIN": "桥接 Wi-Fi 密码",
     "Bridge Wi-Fi off": "桥接 Wi-Fi 已关闭",
+    "Bridge Wi-Fi unavailable": "桥接 Wi-Fi 不可用",
     "Bridge Wi-Fi ready": "桥接 Wi-Fi 已就绪",
     "Bridge Wi-Fi selected": "已选择桥接 Wi-Fi",
     "Bridge Wi-Fi starting": "桥接 Wi-Fi 启动中",
@@ -601,6 +691,7 @@ _ZH_HANS: dict[str, str] = {
     # Sync-service honesty causes/notes/toasts, the sync-ready footer chips,
     # and the discoverability nudges + settings cross-links.
     "Sync starting": "同步启动中",
+    "Sync unavailable": "同步不可用",
     "Sync failed · restart bridge": "同步失败 · 请重启桥接",
     "Sync starting · try again": "同步启动中 · 请稍后再试",
     "Switch to Sync mode first": "请先切换到同步模式",
@@ -611,8 +702,8 @@ _ZH_HANS: dict[str, str] = {
     "Print or sync received photos · Pair iPhone: Network page": (
         "打印或同步接收的照片 · 配对 iPhone：网络页"
     ),
-    "Show a QR code to pair your iPhone · Mode: Print page": (
-        "显示二维码以配对 iPhone · 模式：打印页"
+    "Show a QR code to pair your iPhone · Mode: Settings page": (
+        "显示二维码以配对 iPhone · 模式：设置页"
     ),
     # --- iPhone sync pass 3 (plan 051 P3.11): token rotation ---------------
     # "Reset sync token" mirrors the Reset-credentials vocabulary (还原);
@@ -648,6 +739,21 @@ def t(text: str, language: Language | str = Language.EN) -> str:
             return text
     if language is Language.EN:
         return text
+    translations = _TRANSLATIONS.get(language, {})
+    if text in translations:
+        return translations[text]
+    if text.startswith("After "):
+        return t("After {time}", language).format(time=text[6:])
+    if text.startswith("Shuts down after ") and text.endswith(" idle"):
+        return t("Shuts down after {time} idle", language).format(time=text[17:-5])
+    prefix = "Searches every 1s with screen on; every "
+    suffix = "s with screen off"
+    if text.startswith(prefix) and text.endswith(suffix):
+        interval = text[len(prefix) : -len(suffix)]
+        if interval.isdigit():
+            return t(
+                "Searches every 1s with screen on; every {n}s with screen off", language
+            ).format(n=interval)
     return _TRANSLATIONS.get(language, {}).get(text, text)
 
 

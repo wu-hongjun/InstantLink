@@ -1,0 +1,43 @@
+{
+  "scope": "Status-only successful hardware attempt + subsequent fresh periodic poll and automatic Device1.Disconnect recovery. No manual Reconnect or image/print commands. Advertising/setup variation prevents attributing recovery differences to LCD.",
+  "film_used": 0,
+  "variants": {
+    "baseline": {
+      "status_passed": true,
+      "successful_status_attempt_s": 3.7492271340015577,
+      "first_retained_attempt_to_ready_s": 123.75973505699949,
+      "printer_availability_affected": true,
+      "periodic_fresh": true,
+      "reconnect_passed": true,
+      "recovered_s": 8.847844944000826,
+      "observations": 21,
+      "all_locked600": true,
+      "all_camera_ready": true
+    },
+    "candidate": {
+      "status_passed": true,
+      "successful_status_attempt_s": 3.534007811002084,
+      "first_retained_attempt_to_ready_s": 3.534007811002084,
+      "printer_availability_affected": false,
+      "periodic_fresh": true,
+      "reconnect_passed": true,
+      "recovered_s": 12.463238433003426,
+      "observations": 32,
+      "all_locked600": true,
+      "all_camera_ready": true
+    },
+    "installed": {
+      "status_passed": true,
+      "successful_status_attempt_s": 3.909727550999378,
+      "first_retained_attempt_to_ready_s": 3.909727550999378,
+      "printer_availability_affected": false,
+      "periodic_fresh": true,
+      "reconnect_passed": true,
+      "recovered_s": 6.649696506996406,
+      "observations": 15,
+      "all_locked600": true,
+      "all_camera_ready": true
+    }
+  },
+  "baseline_timing_caveat": "Printer initially off; first-retained-attempt to ready123.760s includes availability wait and is not a startup/connect benchmark. Successful online attempt is reported separately."
+}

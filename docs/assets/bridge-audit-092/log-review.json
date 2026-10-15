@@ -1,0 +1,26 @@
+{
+  "boundary": "Full available current-boot service/kernel logs retained privately; current candidate/normal scopes classified separately from historical scopes.",
+  "service": {
+    "records": 945,
+    "flagged_records": 6,
+    "current_candidate_normal_flagged": []
+  },
+  "kernel": {
+    "records": 378,
+    "flagged_records": 10,
+    "current_candidate_normal_flagged": [],
+    "messages": [
+      "dwc2 3f980000.usb: supply vusb_d not found, using dummy regulator",
+      "dwc2 3f980000.usb: supply vusb_a not found, using dummy regulator",
+      "mmc0: host does not support reading read-only switch, assuming write-enable",
+      "brcmfmac: loading out-of-tree module taints kernel.",
+      "hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator",
+      "hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator",
+      "fbtft: module is from the staging directory, the quality is unknown, you have been warned.",
+      "fb_st7789v: module is from the staging directory, the quality is unknown, you have been warned.",
+      "SPI driver fb_st7789v has no spi_device_id for sitronix,st7789v",
+      "SPI driver fb_st7789v has no spi_device_id for fbtft,minipitft13"
+    ],
+    "wifi_vendor_ie_errors": 0
+  }
+}

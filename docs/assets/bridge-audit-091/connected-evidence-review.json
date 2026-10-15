@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent media_adversarial_review subagent",
+  "timestamp_utc": "2026-10-14T15:08:46.627408+00:00",
+  "evidence_sha256": {
+    "reconnect.json": "0aa1a5669970b9030b2817b43cb46e40fbe70b7868624222eed30a7fe898a711",
+    "ui-connected.json": "d6bb01108433153fdbbf46597f283024f40d840f01687c763270289c23dbd06f",
+    "ftp-connected.json": "ab9a30b59552048546d7c380a86c43c92c44ee8dd12fff45df276482790c7a71",
+    "printer-unavailable.json": "447f973d35e607c7a365de131877154121b1d57d3f87f9bebf849a4c700b35c3"
+  },
+  "private_ftp_raw_sha256": "70ebbc5fa1ed0b282d22369e82e9d8c21df78cf065f97942db0e6fbe2fe1370c",
+  "findings": [],
+  "connected_evidence_review_passed": true,
+  "pending": [
+    "Normal service restoration, audit fixture removal, final deployment integrity and running-log checks by root."
+  ],
+  "reconnect": {
+    "recovered_s": 6.268712758999982,
+    "same_runtime_pid": 2138,
+    "all_samples_locked_600mhz_camera_ready": true,
+    "stale_timestamp_publication_consistent": true,
+    "fresh_status_timestamp_after_disconnect": true,
+    "final_watch_count": 1,
+    "final_retired_tasks": 0,
+    "boundary": "External BlueZ Disconnect then automatic recovery; uncontrolled advertising and sequential sampling do not establish worst-case timing or continuous state between samples."
+  },
+  "connected_ui": "Same GPIO20 tripleunlock has exact nonblank framebufferbytes; unlock1000MHz/relock600MHz/10sabandonment passed. Pause removeswatch; resumedfinalwatch1/fresh/retired0. Abstractqueue exercised, physical contacts not actuated.",
+  "connected_ftp": "Private raw report independently verifies all17samples Printerconnected+fresh+locked600MHz+cameraReady+samePID2138/watch1/retired0, productionFTP220/200, zero vendorIEerrors. Two8MiB checksums identical. Isolated alternate-port receive/samePi hotspotIP; no physical camera airtime or production print dispatch.",
+  "retained_unavailable_trial": "Earlier100s Printer-off readiness timeout retained as failed/unavailable; no Disconnect/reconnect benchmark dispatched then. Successful connected validation is separate.",
+  "film_used": 0,
+  "hardware_mutated_by_reviewer": false
+}

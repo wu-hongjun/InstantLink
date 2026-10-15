@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "pid": 17914,
+  "elapsed_s": 1.0820703120007238,
+  "before_owner": "s \":1.2525\"",
+  "after_owner": ":1.2552",
+  "registered_event": "2026-10-13 00:10:58,451 INFO instantlink_bridge.ble.agent bluetooth.agent_registered path=/com/instantlink_bridge/agent adapter=/org/bluez/hci0 owner=:1.2552",
+  "cpu_khz_values": [
+    600000
+  ],
+  "cpu_samples": 22,
+  "same_bridge_pid": true,
+  "agent_source_sha256": "7f4c9dfb8864a457c6273d9082755841aa8615c0e4ce51b908fb8068b25e9b33",
+  "no_film": true,
+  "boundary": "Installed normal service, one real Bluetooth daemon restart; registration and dark600MHz preserved. Does not claim Printer reconnect while Printer absent."
+}

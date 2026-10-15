@@ -36,7 +36,14 @@ image.rs       ← Load, resize, encode, chunk
 ### Key Decisions
 
 - **Async throughout**: `btleplug` requires async BLE access, so the core stays async end to end.
-- **Model-aware behavior**: `BlePrinterDevice::new` detects the printer model from `IMAGE_SUPPORT_INFO`, and uses the DIS model hint (`FI033`) first to distinguish Mini Link 3 from earlier Mini models.
+- **Model-aware behavior**: `BlePrinterDevice::new` detects the model from `IMAGE_SUPPORT_INFO`
+  dimensions. Exact ASCII-trimmed DIS `FI033` distinguishes Mini Link 3 at `600 × 800`;
+  exact `FI017` must agree with Square dimensions. Conflicting or ambiguous known hints fail
+  closed; other unknown hints retain dimension matching.
+- **Startup query recovery**: the BLE transport can resend the read-only capability query
+  once after a one-second ACK wait, within the original ten-second deadline. One command lock
+  and delivery guard span both attempts. Failed delivery retires the connection; print and
+  image transfer commands retain their existing recovery rules.
 - **ACK-based transfer**: each image chunk is sent only after the previous chunk is acknowledged.
 - **Model-specific JPEG limits**: quality reduction targets each model's own image-size cap instead of a single global threshold.
 - **Transport abstraction**: `transport::Transport` allows mock transports in tests without requiring hardware.

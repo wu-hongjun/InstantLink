@@ -1,0 +1,90 @@
+{
+  "retained_records": 12693,
+  "retained_boot_count": 8,
+  "retained_units": {
+    "init.scope": 506,
+    "bluetooth.service": 215,
+    "NetworkManager.service": 2516,
+    "instantlink-bridge.service": 8982,
+    "dnsmasq.service": 341,
+    "instantlink-bridge-manager.service": 133
+  },
+  "current_boot_service_records_at_review": 1477,
+  "current_kernel_records": 403,
+  "kernel_warning_or_error_records": 21,
+  "ordering": "boot ID, PID and monotonic timestamps; initial clock behind and deployment clock sync crossed midnight UTC",
+  "raw_journals_committed": false,
+  "classifications": [
+    {
+      "finding": "Inactive known-only BlueZ record caused long connection/shutdown grace expiry",
+      "status": "Fixed Linux scan evidence guard; offline native no longer matches cache without RSSI/connected evidence; retained RSSI still not proof of liveness."
+    },
+    {
+      "finding": "Startup has no online-to-offline edge to remove stale saved bond",
+      "status": "Fixed guarded initial reset; first final startup connect succeeded."
+    },
+    {
+      "finding": "Reactive bond removal overlapped another status connect",
+      "status": "Fixed poll awaiting active recovery; regression failed before fix."
+    },
+    {
+      "finding": "wlan0 down retains IP, reporting false receive-ready and suppressing recovery",
+      "status": "Fixed admin-UP filtering; live fault repeated successfully with Printer offline."
+    },
+    {
+      "finding": "Old hotspot failures / agent-unregister errors / shutdown task deadlines",
+      "status": "Historical boots or controlled shutdowns, separated from new final runtime."
+    },
+    {
+      "finding": "Warnings on forced Bluetooth disconnect and later Printer disappearance",
+      "status": "Intentional injected outage / observed idle loss; recovery passed, not suppressed."
+    },
+    {
+      "finding": "Kernel unclean-journal rename at boot",
+      "status": "Observed after unplug/cutoff; current service logs retained. Not attributed to current application code."
+    },
+    {
+      "finding": "Optional MMAL/VCHI, staging modules, dummy regulators, LCD SPI IDs",
+      "status": "Boot initialization diagnostics. Additional runtime driver records were reviewed separately below; no shared driver disabled."
+    },
+    {
+      "finding": "Bluetooth config directory mode warning and dnsmasq no upstream DNS",
+      "status": "Existing service configuration diagnostics; local AP/FTP works. Internet connectivity not claimed."
+    },
+    {
+      "finding": "Native GPIO 500us poll cost",
+      "status": "Measured remaining idle CPU target; no unvalidated timer/dependency change."
+    },
+    {
+      "finding": "23 brcmfmac vendor-IE -52 diagnostics after initial capture",
+      "status": "Observed at Bridge startup/AP reconfiguration and deliberate wlan0-down. AP/FTP restored and remained available; no claim that driver warnings are fixed. Driver/firmware maintenance follow-up."
+    },
+    {
+      "finding": "One kernel hci_conn_timeout WARN at monotonic1553.025s",
+      "status": "00:23:43 UTC during the pre-startup-bond/rebond-wait fix runtime; not repeated in subsequent captured tests. Application stayed active and later connected. Kernel root cause not established or claimed fixed."
+    }
+  ],
+  "final_candidate_processes": {
+    "5127": {
+      "structured_info": 31,
+      "warnings_errors_critical": 0
+    },
+    "5644": {
+      "structured_info": 30,
+      "warnings_errors_critical": 0
+    }
+  },
+  "limit": "Finite retained journal/live observation; no guarantee of absence of all future faults. Printing tested at811d51f; final8bbbd88 changes only address snapshot. Connected Wi-Fi repeat subsequently passed; see wifi-recovery-connected.json.",
+  "final_current_boot_service_records": 1577,
+  "final_kernel_records": 458,
+  "normal_bridge_pid": 6248,
+  "normal_bridge_records": 29,
+  "normal_bridge_warning_error_critical_count": 0,
+  "new_kernel_warning_error_count": 49,
+  "connected_wifi_acceptance": {
+    "bridge_pid": 7032,
+    "connected_samples": 31,
+    "status_updates": 4,
+    "no_film_used": true
+  }
+}

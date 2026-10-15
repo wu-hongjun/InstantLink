@@ -1,0 +1,827 @@
+{
+  "boundary": "real kernel mockup edges + production action queue + real LCD/CPU/FTP/BLE; physical button contacts not actuated",
+  "cases": [
+    {
+      "case": "key2_lock_low_tier",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 600000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "fresh": false,
+        "governor": "powersave",
+        "idle_stage": "screen_off",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "printer_searching",
+        "monotonic": 17796.34216508,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 27,
+          "native_errors": 0,
+          "native_ms_total": 72.99151498591527
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    },
+    {
+      "case": "short_bounce_does_not_wake",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 600000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "fresh": false,
+        "governor": "powersave",
+        "idle_stage": "screen_off",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "printer_searching",
+        "monotonic": 17796.564477476,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 27,
+          "native_errors": 0,
+          "native_ms_total": 72.99151498591527
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    },
+    {
+      "case": "sub_50ms_press_does_not_wake",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 600000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "fresh": false,
+        "governor": "powersave",
+        "idle_stage": "screen_off",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "printer_searching",
+        "monotonic": 17796.704210341,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 28,
+          "native_errors": 0,
+          "native_ms_total": 77.52297298793565
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    },
+    {
+      "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": "gpio:21",
+        "camera_ready": true,
+        "cpu_khz": 1000000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "frame_matches": true,
+        "frame_nonblank": true,
+        "frame_sha256": "3baf064a9f149053cfdcdd1829048092302cf6bdc72d561c0df2d40b1a56d05c",
+        "fresh": false,
+        "governor": "performance",
+        "idle_stage": "active",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "unlocking",
+        "monotonic": 17797.530853622,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 28,
+          "native_errors": 0,
+          "native_ms_total": 77.52297298793565
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 1,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": true
+      }
+    },
+    {
+      "case": "held_key1_counts_once",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": "gpio:21",
+        "camera_ready": true,
+        "cpu_khz": 1000000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "frame_matches": true,
+        "frame_nonblank": true,
+        "frame_sha256": "0bb2d1152ac2bfebc320f3ff6dd85f28d606c1a504c3681b80ea417723492e1e",
+        "fresh": false,
+        "governor": "performance",
+        "idle_stage": "active",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "unlocking",
+        "monotonic": 17798.157408986,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 28,
+          "native_errors": 0,
+          "native_ms_total": 77.52297298793565
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 2,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": true
+      }
+    },
+    {
+      "case": "joystick_select_resets_same_action_different_button",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": "gpio:13",
+        "camera_ready": true,
+        "cpu_khz": 1000000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "fresh": false,
+        "governor": "performance",
+        "idle_stage": "active",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "unlocking",
+        "monotonic": 17798.754131694,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 28,
+          "native_errors": 0,
+          "native_ms_total": 77.52297298793565
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 1,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": true
+      }
+    },
+    {
+      "case": "key1_resets_joystick_sequence",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": "gpio:21",
+        "camera_ready": true,
+        "cpu_khz": 1000000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "fresh": false,
+        "governor": "performance",
+        "idle_stage": "active",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "unlocking",
+        "monotonic": 17798.945601798,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 28,
+          "native_errors": 0,
+          "native_ms_total": 77.52297298793565
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 1,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": true
+      }
+    },
+    {
+      "case": "three_same_joystick_presses_unlock_home",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 1000000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "frame_matches": true,
+        "frame_nonblank": true,
+        "frame_sha256": "e5058e26adfb52400b3c80fca62ae1c5dd0f710ed4a0c967bab40a36555899bc",
+        "fresh": false,
+        "governor": "performance",
+        "idle_stage": "active",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": false,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "printer_searching",
+        "monotonic": 17800.21492586,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 28,
+          "native_errors": 0,
+          "native_ms_total": 77.52297298793565
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    },
+    {
+      "case": "10s_without_press_returns_dark_low_tier",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 600000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "frame_matches": false,
+        "frame_nonblank": false,
+        "frame_sha256": "d8b443032200e143b1c49820b6d78c32d519553a3f63a38f48e8bc31da084f0a",
+        "fresh": false,
+        "governor": "powersave",
+        "idle_stage": "screen_off",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "printer_searching",
+        "monotonic": 17812.155923095,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 39,
+          "native_errors": 0,
+          "native_ms_total": 107.6621419924777
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "observed_wait_s": 11.105077390999213,
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          },
+          {
+            "end": 17806.145381639,
+            "online": false,
+            "start": 17801.070765183
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    },
+    {
+      "case": "rapid_75ms_triple_key1_unlocks",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 1000000,
+        "display": "FramebufferDisplay",
+        "fd_count": 23,
+        "film": null,
+        "frame_matches": true,
+        "frame_nonblank": true,
+        "frame_sha256": "e5058e26adfb52400b3c80fca62ae1c5dd0f710ed4a0c967bab40a36555899bc",
+        "fresh": false,
+        "governor": "performance",
+        "idle_stage": "active",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": false,
+        "mock_attached": true,
+        "mock_event_fd": 22,
+        "mode": "printer_searching",
+        "monotonic": 17813.660380126,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 39,
+          "native_errors": 0,
+          "native_ms_total": 107.6621419924777
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          },
+          {
+            "end": 17806.145381639,
+            "online": false,
+            "start": 17801.070765183
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    },
+    {
+      "case": "detached_mock_has_no_callbacks_real_input_remains",
+      "passed": true,
+      "state": {
+        "bluetooth_forced_cli": false,
+        "bluetooth_probe_counts": {
+          "cli_devices": 3,
+          "cli_info": 1,
+          "cli_mutations": 2,
+          "dbus_calls": 1,
+          "dbus_errors": 0
+        },
+        "button": null,
+        "camera_ready": true,
+        "cpu_khz": 600000,
+        "display": "FramebufferDisplay",
+        "fd_count": 22,
+        "film": null,
+        "fresh": false,
+        "governor": "powersave",
+        "idle_stage": "screen_off",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "last_status_ok": null,
+        "legacy_button_count": 0,
+        "live_mode": "printer_searching",
+        "locked": true,
+        "mock_attached": false,
+        "mock_event_fd": null,
+        "mode": "printer_searching",
+        "monotonic": 17814.409573771,
+        "network_forced_ip": false,
+        "network_probe_counts": {
+          "ip_calls": 0,
+          "native_calls": 39,
+          "native_errors": 0,
+          "native_ms_total": 107.6621419924777
+        },
+        "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+        "pairing_agent": {
+          "bus_unique": ":1.2636",
+          "generation": 1,
+          "owned_registration_tasks": 0,
+          "owner": ":1.2552",
+          "registered": true,
+          "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+        },
+        "pid": 18894,
+        "presses": 0,
+        "retired_status_tasks": 0,
+        "status_attempts": [
+          {
+            "end": 17776.487968265,
+            "online": false,
+            "start": 17770.828396653
+          },
+          {
+            "end": 17806.145381639,
+            "online": false,
+            "start": 17801.070765183
+          }
+        ],
+        "three_presses": true,
+        "unlocking": false
+      }
+    }
+  ],
+  "final": {
+    "bluetooth_forced_cli": false,
+    "bluetooth_probe_counts": {
+      "cli_devices": 3,
+      "cli_info": 1,
+      "cli_mutations": 2,
+      "dbus_calls": 1,
+      "dbus_errors": 0
+    },
+    "button": null,
+    "camera_ready": true,
+    "cpu_khz": 600000,
+    "display": "FramebufferDisplay",
+    "fd_count": 22,
+    "film": null,
+    "fresh": false,
+    "governor": "powersave",
+    "idle_stage": "screen_off",
+    "input_backend": "gpio_v2",
+    "input_event_fd": 11,
+    "last_status_ok": null,
+    "legacy_button_count": 0,
+    "live_mode": "printer_searching",
+    "locked": true,
+    "mock_attached": false,
+    "mock_event_fd": null,
+    "mode": "printer_searching",
+    "monotonic": 17814.409573771,
+    "network_forced_ip": false,
+    "network_probe_counts": {
+      "ip_calls": 0,
+      "native_calls": 39,
+      "native_errors": 0,
+      "native_ms_total": 107.6621419924777
+    },
+    "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+    "pairing_agent": {
+      "bus_unique": ":1.2636",
+      "generation": 1,
+      "owned_registration_tasks": 0,
+      "owner": ":1.2552",
+      "registered": true,
+      "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+    },
+    "pid": 18894,
+    "presses": 0,
+    "retired_status_tasks": 0,
+    "status_attempts": [
+      {
+        "end": 17776.487968265,
+        "online": false,
+        "start": 17770.828396653
+      },
+      {
+        "end": 17806.145381639,
+        "online": false,
+        "start": 17801.070765183
+      }
+    ],
+    "three_presses": true,
+    "unlocking": false
+  },
+  "initial": {
+    "bluetooth_forced_cli": false,
+    "bluetooth_probe_counts": {
+      "cli_devices": 3,
+      "cli_info": 1,
+      "cli_mutations": 2,
+      "dbus_calls": 1,
+      "dbus_errors": 0
+    },
+    "button": null,
+    "camera_ready": true,
+    "cpu_khz": 1000000,
+    "display": "FramebufferDisplay",
+    "fd_count": 22,
+    "film": null,
+    "fresh": false,
+    "governor": "performance",
+    "idle_stage": "active",
+    "input_backend": "gpio_v2",
+    "input_event_fd": 11,
+    "last_status_ok": null,
+    "legacy_button_count": 0,
+    "live_mode": "printer_searching",
+    "locked": false,
+    "mock_attached": false,
+    "mock_event_fd": null,
+    "mode": "printer_searching",
+    "monotonic": 17795.788909612,
+    "network_forced_ip": false,
+    "network_probe_counts": {
+      "ip_calls": 0,
+      "native_calls": 27,
+      "native_errors": 0,
+      "native_ms_total": 72.99151498591527
+    },
+    "network_source": "/opt/InstantLinkBridge/src/instantlink_bridge/net/addresses.py",
+    "pairing_agent": {
+      "bus_unique": ":1.2636",
+      "generation": 1,
+      "owned_registration_tasks": 0,
+      "owner": ":1.2552",
+      "registered": true,
+      "source": "/opt/InstantLinkBridge/src/instantlink_bridge/ble/agent.py"
+    },
+    "pid": 18894,
+    "presses": 0,
+    "retired_status_tasks": 0,
+    "status_attempts": [
+      {
+        "end": 17776.487968265,
+        "online": false,
+        "start": 17770.828396653
+      }
+    ],
+    "three_presses": true,
+    "unlocking": false
+  },
+  "passed": true
+}

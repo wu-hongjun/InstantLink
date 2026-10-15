@@ -1,0 +1,16 @@
+{
+  "timestamp_utc": "2026-10-13T22:53:41.864562+00:00",
+  "normal_service_restored": true,
+  "audit_dropin_removed": true,
+  "audit_socket_removed": true,
+  "removed": [
+    "/tmp/instantlink-model-runtime-observer-084.py",
+    "/tmp/instantlink-model-client-084.py",
+    "/tmp/instantlink-model-startup-084.py",
+    "/tmp/instantlink-model-reconnect-084.py",
+    "/tmp/instantlink-model-ui-smoke-084.py",
+    "/var/tmp/instantlink-model-candidate-lib-084.so",
+    "/var/tmp/instantlink-model-core-tests-084",
+    "/tmp/instantlink-model-health-084.py"
+  ]
+}

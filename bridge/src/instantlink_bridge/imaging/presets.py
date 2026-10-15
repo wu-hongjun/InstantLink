@@ -26,7 +26,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+from instantlink_bridge.imaging.models import AdjustmentProfile
 
 if TYPE_CHECKING:
     from instantlink_bridge.config import AdjustmentsConfig  # pragma: no cover
@@ -69,29 +69,29 @@ PRESETS: dict[str, AdjustmentProfile] = {
         hue=0,
     ),
     "Vivid": AdjustmentProfile(
-        saturation=1.5,   # +50 on the -100…+100 UI scale → factor 1.0 + 50/100 = 1.5
+        saturation=1.5,  # +50 on the -100…+100 UI scale → factor 1.0 + 50/100 = 1.5
         exposure=1.0,
-        sharpness=1.25,   # +25 on the UI scale → factor 1.25
+        sharpness=1.25,  # +25 on the UI scale → factor 1.25
         hue=0,
     ),
     "Soft": AdjustmentProfile(
         saturation=0.75,  # -25 on UI scale → factor 0.75
         exposure=1.0,
-        sharpness=0.75,   # -25 on UI scale → factor 0.75
+        sharpness=0.75,  # -25 on UI scale → factor 0.75
         hue=0,
     ),
     "Black & white": AdjustmentProfile(
-        saturation=0.0,   # -100 → greyscale
+        saturation=0.0,  # -100 → greyscale
         exposure=1.0,
         sharpness=1.0,
         hue=0,
     ),
     "Instax Film": AdjustmentProfile(
-        saturation=0.9,   # -10 on ±100 UI scale: slight desat for vintage feel
+        saturation=0.9,  # -10 on ±100 UI scale: slight desat for vintage feel
         exposure=1.0,
-        sharpness=0.9,    # -10 on ±100 UI scale: Instax prints aren't tack-sharp
+        sharpness=0.9,  # -10 on ±100 UI scale: Instax prints aren't tack-sharp
         hue=0,
-        vignette=50,      # visible but not heavy corner darkening
+        vignette=50,  # visible but not heavy corner darkening
     ),
 }
 
@@ -414,17 +414,16 @@ def save_user_presets(
         sat_ui = _factor_to_ui_int(profile.saturation - 1.0)  # round-trip via UI-int
         exp_ui = _factor_to_ui_int_exposure(profile.exposure)
         shr_ui = _factor_to_ui_int(profile.sharpness - 1.0)
-        hue_ui = int(profile.hue / 1.8) if profile.hue != 0 else 0
+        hue_ui = round(profile.hue / 1.8) if profile.hue != 0 else 0
         lines.append(f"\n[presets.{slot}]\n")
         lines.append(f"saturation = {sat_ui}\n")
         lines.append(f"exposure = {exp_ui}\n")
         lines.append(f"sharpness = {shr_ui}\n")
         lines.append(f"hue = {hue_ui}\n")
+        lines.append(f"vignette = {max(0, min(100, profile.vignette))}\n")
 
     text = "".join(lines)
-    fd, tmp_name = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
-    )
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
     tmp_path = Path(tmp_name)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fp:
@@ -504,6 +503,7 @@ def _profile_from_dict(name: str, fields: dict[str, object]) -> AdjustmentProfil
         exposure=2.0 ** (exp_ui / 100.0),
         sharpness=1.0 + shr_ui / 100.0,
         hue=round(hue_ui * 1.8),
+        vignette=max(0, min(100, _int_field("vignette"))),
     )
 
 

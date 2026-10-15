@@ -1,0 +1,27 @@
+{
+  "removed": [
+    "/run/systemd/system/instantlink-bridge.service.d/088-rgb565-audit.conf",
+    "/var/tmp/instantlink-rgb565-source-088",
+    "/var/tmp/instantlink-rgb565-source-088.tar.gz",
+    "/tmp/instantlink-rgb565-runtime-observer-088.py",
+    "/tmp/instantlink-rgb565-client-088.py",
+    "/tmp/instantlink-rgb565-startup-088.py",
+    "/tmp/instantlink-rgb565-reconnect-088.py",
+    "/tmp/instantlink-rgb565-ui-smoke-088.py",
+    "/tmp/instantlink-rgb565-gpio-smoke-088.py",
+    "/tmp/instantlink-rgb565-frame-benchmark-088.py",
+    "/tmp/instantlink-rgb565-baseline-render-088.py",
+    "/tmp/instantlink-rgb565-options-088.py",
+    "/tmp/instantlink-rgb565-import-cost-088.py",
+    "/var/tmp/instantlink-rgb565-baseline-source-088",
+    "/var/tmp/instantlink-rgb565-baseline-source-088.tar.gz",
+    "/var/tmp/instantlink-rgb565-source-final-088.tar.gz",
+    "/tmp/__pycache__/instantlink-rgb565-baseline-render-088.cpython-313.pyc",
+    "/tmp/instantlink-rgb565-health-088.py",
+    "/tmp/instantlink-rgb565-cleanup-088.py"
+  ],
+  "mockup_module_loaded": false,
+  "audit_socket_present": false,
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Tue 2026-10-13 22:12:08 EDT] ; stop_time=[n/a] ; pid=43539 ; code=(null) ; status=0/0 }",
+  "health_and_cleanup_scripts_removed_after_capture": true
+}

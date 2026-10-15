@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "comparisons": [
+    {
+      "sample": 1,
+      "matched": true,
+      "selected_connected_count": 0
+    },
+    {
+      "sample": 2,
+      "matched": true,
+      "selected_connected_count": 0
+    },
+    {
+      "sample": 3,
+      "matched": true,
+      "selected_connected_count": 0
+    },
+    {
+      "sample": 4,
+      "matched": true,
+      "selected_connected_count": 0
+    },
+    {
+      "sample": 5,
+      "matched": true,
+      "selected_connected_count": 0
+    }
+  ],
+  "dbus": {
+    "calls": 100,
+    "median_ms": 22.851015499327332,
+    "p95_ms": 23.095521000868757,
+    "parent_cpu_s": 0.7570789999999998,
+    "child_cpu_s": 8.326672684688674e-17
+  },
+  "cli": {
+    "calls": 10,
+    "median_ms": 616.758280499198,
+    "p95_ms": 620.1611450014752,
+    "parent_cpu_s": 0.1383209999999998,
+    "child_cpu_s": 3.90541
+  },
+  "fd_before_after": [
+    8,
+    8
+  ],
+  "boundary": "One separate diagnostic bus; reuse existing agent read method without registration/export. Fresh read-only D-Bus vs devices/info. No disconnect/remove/trust/image commands. Production uses its already registered agent bus."
+}

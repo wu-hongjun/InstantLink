@@ -157,6 +157,89 @@ async def test_instantlink_status_uses_combined_status_call() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("connected", [0, 1, ERROR_BLE, -4])
+async def test_cached_native_connection_only_reconnects_on_confirmed_disconnect(
+    connected: int,
+) -> None:
+    class ProbedLibrary(_FakeInstantLinkStatusLibrary):
+        def __init__(self) -> None:
+            super().__init__()
+            self.probe_calls = 0
+
+        def instantlink_is_connected(self) -> int:
+            self.probe_calls += 1
+            return connected
+
+    library = ProbedLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    status = await backend.status("INSTAX-1N034655")
+
+    assert status.film_remaining == 7
+    assert library.probe_calls == 1
+    assert library.connect_calls == (1 if connected == 0 else 0)
+    assert library.disconnect_calls == (1 if connected == 0 else 0)
+    assert library.status_calls == 1
+
+
+def test_native_connection_probe_does_not_skip_changed_printer_selection() -> None:
+    class ProbedLibrary(_FakeInstantLinkStatusLibrary):
+        def instantlink_is_connected(self) -> int:
+            raise AssertionError("old selected Printer must not satisfy new selection")
+
+    library = ProbedLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    backend._ensure_connected_blocking("INSTAX-12345678", scan_duration_s=5)
+
+    assert library.connect_calls == 1
+
+
+def test_cached_connection_remains_compatible_with_library_without_probe() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    backend._ensure_connected_blocking("INSTAX-1N034655", scan_duration_s=5)
+
+    assert library.connect_calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state_after_failure", [0, 1, ERROR_BLE])
+async def test_first_status_failure_drops_only_a_known_closed_native_session(
+    state_after_failure: int,
+) -> None:
+    class ProbedLibrary(_FakeInstantLinkStatusLibrary):
+        def instantlink_is_connected(self) -> int:
+            return state_after_failure if self.status_calls else 1
+
+    library = ProbedLibrary(status_rc=ERROR_PRINT_REJECTED)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+
+    with pytest.raises(InstantLinkBleError, match="status failed"):
+        await backend.status("INSTAX-1N034655")
+
+    assert library.connect_calls == 0
+    assert library.disconnect_calls == (1 if state_after_failure == 0 else 0)
+
+
+def test_new_native_session_does_not_inherit_previous_status_failure_streak() -> None:
+    library = _FakeInstantLinkStatusLibrary()
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    backend._consecutive_status_failures = 1
+
+    backend._ensure_connected_blocking("INSTAX-12345678", scan_duration_s=5)
+
+    assert library.connect_calls == 1
+    assert backend._consecutive_status_failures == 0
+
+
+@pytest.mark.asyncio
 async def test_instantlink_backend_configures_core_keepalive() -> None:
     library = _FakeInstantLinkStatusLibrary()
     backend = InstantLinkBackend()
@@ -225,9 +308,12 @@ async def test_instantlink_status_disconnects_when_printer_is_gone() -> None:
 class _FakeInstantLinkConnectLibrary:
     """Fake library whose connect runs the progress callback then fails with a chosen rc."""
 
-    def __init__(self, *, stages: list[int], connect_rc: int) -> None:
+    def __init__(
+        self, *, stages: list[int], connect_rc: int, failure_detail: bytes | None = None
+    ) -> None:
         self._stages = stages
         self._connect_rc = connect_rc
+        self._failure_detail = failure_detail
         self.disconnect_calls = 0
 
     def instantlink_connect_named_with_progress(
@@ -238,7 +324,7 @@ class _FakeInstantLinkConnectLibrary:
     ) -> int:
         emit = cast(Any, callback)
         for stage in self._stages:
-            emit(stage, None)
+            emit(stage, self._failure_detail if stage == 10 else None)
         return self._connect_rc
 
     def instantlink_device_name(self, _out: object, _out_len: int) -> int:
@@ -319,6 +405,98 @@ async def test_status_provider_does_not_flag_early_stage_failure_as_stale_bond()
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "detail",
+    [
+        b"BLE error: GATT readiness not confirmed before setup deadline",
+        b"BLE error: BLE link disconnected during GATT setup",
+        b"BLE error: GATT readiness not confirmed before setup deadline; last discovery error: "
+        b"BLE error: transient D-Bus failure",
+    ],
+)
+async def test_unconfirmed_gatt_never_requests_bond_removal(detail: bytes) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 3, 4, 5, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    with pytest.raises(InstantLinkBleError) as native_error:
+        await backend.status("INSTAX-1N034655")
+    assert native_error.value.connect_failure_detail == detail.decode()
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert not captured.value.stale_bond_suspected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stages", [[0, 3, 4, 5, 6, 3, 4, 10], [0, 3, 4, 5, 6, 4, 10]])
+async def test_fallback_does_not_inherit_prior_attempt_stale_bond_phase(stages: list[int]) -> None:
+    library = _FakeInstantLinkConnectLibrary(stages=stages, connect_rc=ERROR_BLE)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert not captured.value.stale_bond_suspected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "detail",
+    [
+        b"BLE error: write characteristic not found",
+        b"BLE error: subscription denied: org.bluez.Error.AuthenticationFailed",
+        b"BLE error: GATT readiness not confirmed before setup deadline; last discovery error: "
+        b"BLE error: org.bluez.Error.AuthenticationFailed",
+        b"BLE error: encrypted write failed with diagnostic: GATT readiness not confirmed",
+    ],
+)
+async def test_confirmed_gatt_or_authentication_failure_preserves_bond_recovery(
+    detail: bytes,
+) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 3, 4, 5, 6, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert captured.value.stale_bond_suspected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("detail", "suspected"),
+    [
+        (b"BLE error: connect failed: org.bluez.Error.AuthenticationFailed: bad key", True),
+        (b"BLE error: connect failed: Not connected", False),
+        (b"BLE error: connect failed: org.bluez.Error.AuthenticationFailedOther", False),
+        (b"BLE error: connect failed: other.org.bluez.Error.AuthenticationFailed", False),
+    ],
+)
+async def test_early_native_authentication_failure_requires_exact_error_token(
+    detail: bytes, suspected: bool
+) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[0, 2, 3, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    with pytest.raises(PrinterStatusUnavailableError) as captured:
+        await provider.fetch(PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655"))
+    assert captured.value.stale_bond_suspected is suspected
+
+
+def test_generic_python_authentication_text_is_not_native_authentication_evidence() -> None:
+    exc = InstantLinkBleError("org.bluez.Error.AuthenticationFailed", code=ERROR_BLE)
+    exc.connect_failure_stage = 3
+    assert not status_module._is_stale_bond_signature(exc)
+
+
+@pytest.mark.asyncio
 async def test_status_provider_flags_printer_not_found() -> None:
     # A connect that cannot find the printer in the advertisement scan must set printer_not_found
     # so the controller can recover the BlueZ silent-link deadlock by dropping the stale link.
@@ -346,7 +524,7 @@ async def test_instantlink_status_failure_logs_are_rate_limited(
     backend._lib = cast(Any, library)
     caplog.set_level(logging.WARNING, logger="instantlink_bridge.ble.instantlink")
 
-    for _ in range(3):
+    for _ in range(2):
         with pytest.raises(InstantLinkBleError, match="status failed"):
             await backend.status("INSTAX-1N034655")
 
@@ -356,6 +534,21 @@ async def test_instantlink_status_failure_logs_are_rate_limited(
         if record.getMessage().startswith("instantlink.status_failed_keep_connection")
     ]
     assert len(warning_messages) == 1
+    assert (
+        sum(
+            record.getMessage().startswith("instantlink.status_failed_disconnect")
+            for record in caplog.records
+        )
+        == 1
+    )
+    backend._log_status_failure(
+        "INSTAX-1N034655",
+        InstantLinkBleError(
+            "status failed: unexpected printer response", code=ERROR_PRINT_REJECTED
+        ),
+        disconnected=True,
+    )
+    assert len(caplog.records) == 2
     # A single transient failure keeps the connection, but a link that keeps failing is dead:
     # the 2nd consecutive failure hits STALE_LINK_STATUS_FAILURE_THRESHOLD and tears it down so
     # the next poll reconnects (rather than retrying status on a dead handle forever).
@@ -770,7 +963,7 @@ async def test_ble_status_provider_marks_selected_stale_after_repeated_absent_sc
     assert second_exc.value.consecutive_misses == 2
     assert second_exc.value.stale_selected
     assert second_exc.value.retry_after_s == 5.0
-    assert second_exc.value.status_message == "Hold K3 to re-pair"
+    assert second_exc.value.status_message == "Check saved Printer"
     assert third_exc.value.reason is PrinterStatusUnavailableReason.STALE_SELECTED
     assert third_exc.value.consecutive_misses == 3
     assert third_exc.value.retry_after_s == 5.0
@@ -973,3 +1166,124 @@ class _CancelAfterStatusProtocol:
             model=PrinterModel.MINI,
             name="INSTAX-1N034655",
         )
+
+
+@pytest.mark.asyncio
+async def test_exact_setup_drop_escalates_across_session_teardown_and_preserves_evidence(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    detail = b"BLE error: BLE link disconnected during GATT setup"
+
+    class ClosedLibrary(_FakeInstantLinkConnectLibrary):
+        def instantlink_is_connected(self) -> int:
+            return 0
+
+    library = ClosedLibrary(stages=[3, 4, 5, 10], connect_rc=ERROR_BLE, failure_detail=detail)
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    provider = InstantLinkPrinterStatusProvider(backend=backend)
+    printer = PairedPrinter(address="INSTANTLINK:X", name="INSTAX-1N034655")
+    caplog.set_level(logging.INFO, logger="instantlink_bridge.ble.instantlink")
+    for _ in range(4):
+        with pytest.raises(PrinterStatusUnavailableError) as captured:
+            await provider.fetch(printer)
+        assert captured.value.reason is PrinterStatusUnavailableReason.LINK_DROPPED
+        assert captured.value.native_detail == detail.decode()
+        assert captured.value.native_stage == 5
+        assert captured.value.failure_reported
+        assert captured.value.diagnostics is None
+        assert not captured.value.stale_bond_suspected
+        await backend.disconnect()
+    records = [r for r in caplog.records if r.getMessage().startswith("instantlink.status_failed")]
+    assert [r.levelno for r in records] == [logging.INFO, logging.WARNING]
+    assert all(detail.decode() in r.getMessage() and "stage=5" in r.getMessage() for r in records)
+    assert backend._consecutive_setup_drops == 4
+    # A successful status, not teardown, resets the recovery episode.
+    backend._lib = cast(Any, _FakeInstantLinkStatusLibrary())
+    await backend.status(printer.name)
+    assert backend._consecutive_setup_drops == 0
+    backend._lib = cast(Any, library)
+    with pytest.raises(InstantLinkBleError):
+        await backend.status(printer.name)
+    records = [r for r in caplog.records if r.getMessage().startswith("instantlink.status_failed")]
+    assert records[-1].levelno == logging.INFO
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "detail",
+    [
+        None,
+        b"BLE error: GATT readiness not confirmed before setup deadline",
+        b"BLE error: BLE link disconnected during GATT setup unexpectedly",
+        b"BLE error: BLE link disconnected during GATT setup; org.bluez.Error.AuthenticationFailed",
+        b"BLE error: org.bluez.Error.AuthenticationFailed",
+        b"other: BLE link disconnected during GATT setup",
+    ],
+)
+async def test_unproven_setup_drops_and_authentication_failures_remain_warnings(
+    detail: bytes | None,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    library = _FakeInstantLinkConnectLibrary(
+        stages=[3, 4, 5, 10], connect_rc=ERROR_BLE, failure_detail=detail
+    )
+    backend = InstantLinkBackend()
+    backend._lib = cast(Any, library)
+    caplog.set_level(logging.WARNING)
+    with pytest.raises(InstantLinkBleError):
+        await backend.status("INSTAX-1N034655")
+    records = [r for r in caplog.records if r.getMessage().startswith("instantlink.status_failed")]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+
+
+def test_native_failure_log_signature_keeps_distinct_details_and_targets(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    backend = InstantLinkBackend()
+    caplog.set_level(logging.INFO)
+    drop = InstantLinkBleError("connect failed: BLE communication failed", code=ERROR_BLE)
+    drop.connect_failure_stage = 5
+    drop.connect_failure_detail = "BLE error: BLE link disconnected during GATT setup"
+    for _ in range(3):
+        backend._log_status_failure("INSTAX-A", drop, disconnected=True)
+    backend._log_status_failure("INSTAX-B", drop, disconnected=True)
+    assert backend._consecutive_setup_drops == 1
+    auth = InstantLinkBleError(str(drop), code=ERROR_BLE)
+    auth.connect_failure_stage = 3
+    auth.connect_failure_detail = "BLE error: org.bluez.Error.AuthenticationFailed"
+    backend._log_status_failure("INSTAX-B", auth, disconnected=True)
+    records = [r for r in caplog.records if r.getMessage().startswith("instantlink.status_failed")]
+    assert [r.levelno for r in records] == [
+        logging.INFO,
+        logging.WARNING,
+        logging.INFO,
+        logging.WARNING,
+    ]
+    assert "AuthenticationFailed" in records[-1].getMessage()
+
+
+def test_setup_drop_escalation_survives_intervening_absence_and_unknown_failure(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    backend = InstantLinkBackend()
+    caplog.set_level(logging.INFO)
+    drop = InstantLinkBleError("connect failed: BLE communication failed", code=ERROR_BLE)
+    drop.connect_failure_detail = "BLE error: BLE link disconnected during GATT setup"
+    absent = InstantLinkPrinterNotFoundError("not advertising", code=ERROR_PRINTER_NOT_FOUND)
+    unknown = InstantLinkBleError("connect failed: BLE communication failed", code=ERROR_BLE)
+    backend._log_status_failure("INSTAX-A", drop, disconnected=True)
+    backend._log_status_failure("INSTAX-A", absent, disconnected=True)
+    backend._log_status_failure("instax-a", drop, disconnected=True)
+    backend._log_status_failure("INSTAX-A", unknown, disconnected=True)
+    backend._log_status_failure("INSTAX-A", drop, disconnected=True)
+    assert backend._consecutive_setup_drops == 3
+    records = [r for r in caplog.records if r.getMessage().startswith("instantlink.status_failed")]
+    assert [r.levelno for r in records] == [
+        logging.INFO,
+        logging.INFO,
+        logging.INFO,
+        logging.WARNING,
+        logging.WARNING,
+    ]

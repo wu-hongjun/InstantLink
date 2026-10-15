@@ -1,0 +1,86 @@
+{
+  "mode": "Same-connection download/cancel crossover; no PrintImage",
+  "rounds": [
+    {
+      "round": 1,
+      "requested_payload": 182,
+      "effective_payload": 182,
+      "total_ms_from_native": 21982.806,
+      "data_gatt_writes": 570,
+      "jpeg_bytes": 102846,
+      "jpeg_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "chunks": 57,
+      "download_cancel_ack_verified": true
+    },
+    {
+      "round": 1,
+      "requested_payload": 244,
+      "effective_payload": 244,
+      "total_ms_from_native": 22799.412,
+      "data_gatt_writes": 456,
+      "jpeg_bytes": 102846,
+      "jpeg_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "chunks": 57,
+      "download_cancel_ack_verified": true
+    },
+    {
+      "round": 1,
+      "requested_payload": 236,
+      "effective_payload": 236,
+      "total_ms_from_native": 21793.373,
+      "data_gatt_writes": 456,
+      "jpeg_bytes": 102846,
+      "jpeg_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "chunks": 57,
+      "download_cancel_ack_verified": true
+    },
+    {
+      "round": 2,
+      "requested_payload": 182,
+      "effective_payload": 182,
+      "total_ms_from_native": 21808.926,
+      "data_gatt_writes": 570,
+      "jpeg_bytes": 102846,
+      "jpeg_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "chunks": 57,
+      "download_cancel_ack_verified": true
+    },
+    {
+      "round": 2,
+      "requested_payload": 244,
+      "effective_payload": 244,
+      "total_ms_from_native": 22768.975,
+      "data_gatt_writes": 456,
+      "jpeg_bytes": 102846,
+      "jpeg_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "chunks": 57,
+      "download_cancel_ack_verified": true
+    },
+    {
+      "round": 2,
+      "requested_payload": 236,
+      "effective_payload": 236,
+      "total_ms_from_native": 21763.499,
+      "data_gatt_writes": 456,
+      "jpeg_bytes": 102846,
+      "jpeg_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "chunks": 57,
+      "download_cancel_ack_verified": true
+    }
+  ],
+  "film_before": 1,
+  "film_after": 1,
+  "history_before": 67,
+  "history_after": 67,
+  "counter_verification": "before/after native status replies reconstructed from checksum-verified HCI capture; later Bridge status also reports1",
+  "clock": {
+    "clock_sample_count": 1388,
+    "sampled_cpu_khz": [
+      1000000
+    ],
+    "prepared_sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+    "film_printing_permitted": false
+  },
+  "native_terminal_error": "Timeout during teardown after completed counters; original native JSON not emitted. Completed rounds reconstructed from native progress and HCI acknowledgements. Cleanup bug is being fixed.",
+  "original_driver_exit_code": 1
+}

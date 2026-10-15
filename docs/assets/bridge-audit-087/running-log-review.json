@@ -1,0 +1,134 @@
+{
+  "scope": "Full current-boot Bridge and manager journals; ANSI stripped; Python/Rust severity labels and journald priorities0-3 included. Historical faults retained. No kernel-log cleanliness claim. Raw journal private.",
+  "match_pattern": "\\b(?:WARNING|WARN|ERROR|CRITICAL|FATAL)\\b|Traceback|panicked|No match with that id|called `Result::unwrap\\(\\)`|ui\\.(?:render_failed|display_idle_stage_failed|input_edges_failed|input_fallback_failed)",
+  "records_reviewed": 12949,
+  "matched_issue_message_count": 144,
+  "issue_counts_by_pid": {
+    "480": 4,
+    "1221": 25,
+    "2167": 1,
+    "2522": 13,
+    "3395": 2,
+    "3981": 6,
+    "7530": 3,
+    "9040": 1,
+    "10928": 2,
+    "12639": 2,
+    "15365": 27,
+    "16829": 3,
+    "17231": 6,
+    "18770": 1,
+    "1": 8,
+    "18779": 1,
+    "18787": 1,
+    "18795": 1,
+    "18816": 1,
+    "18824": 1,
+    "18844": 1,
+    "18852": 1,
+    "21212": 1,
+    "22098": 3,
+    "23036": 4,
+    "23767": 2,
+    "24547": 2,
+    "25926": 2,
+    "26321": 2,
+    "27611": 6,
+    "28532": 1,
+    "29062": 1,
+    "30469": 2,
+    "30842": 2,
+    "31925": 2,
+    "32501": 2,
+    "36955": 1
+  },
+  "historical_panic_messages": [
+    {
+      "pid": "24547",
+      "message": "thread 'tokio-rt-worker' (24557) panicked at /Users/hongjunwu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bluez-async-0.8.2/src/messagestream.rs:40:84:"
+    },
+    {
+      "pid": "24547",
+      "message": "called `Result::unwrap()` on an `Err` value: D-Bus error: No match with that id found (org.freedesktop.DBus.Error.Failed)"
+    },
+    {
+      "pid": "25926",
+      "message": "thread 'tokio-rt-worker' (25938) panicked at /Users/hongjunwu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bluez-async-0.8.2/src/messagestream.rs:40:84:"
+    },
+    {
+      "pid": "25926",
+      "message": "called `Result::unwrap()` on an `Err` value: D-Bus error: No match with that id found (org.freedesktop.DBus.Error.Failed)"
+    }
+  ],
+  "historical_critical_messages": [
+    {
+      "pid": "480",
+      "message": "2026-10-12 19:59:34,903 CRITICAL instantlink_bridge.ble.instantlink instantlink.status_cancel_worker_stuck restarting_process grace_s=5.0"
+    }
+  ],
+  "task087_processes": {
+    "baseline": {
+      "pid": "38979",
+      "records": 353,
+      "issues": []
+    },
+    "candidate": {
+      "pid": "39485",
+      "records": 348,
+      "issues": []
+    },
+    "installed": {
+      "pid": "40333",
+      "records": 375,
+      "issues": []
+    },
+    "normal": {
+      "pid": "40805",
+      "records": 34,
+      "issues": []
+    }
+  },
+  "historical_systemd_priority_errors": [
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:22.584065+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:26.949274+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:31.409241+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:35.897277+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:40.413016+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:44.917036+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:49.422657+00:00"
+    },
+    {
+      "pid": "1",
+      "message": "Failed to start instantlink-bridge.service - InstantLink Bridge FTP receive service.",
+      "timestamp_utc": "2026-10-13T04:53:53.925096+00:00"
+    }
+  ],
+  "interpretation": "All144matched messages precede task087; expanded severity filter adds8 historical systemd priority3 startup-failure records to prior136matches. Two older native panic episodes, one worker-stuck CRITICAL and prior task086 cancellation warning retained. Full task087 baseline/candidate/installed/normal processes have no matched issues."
+}

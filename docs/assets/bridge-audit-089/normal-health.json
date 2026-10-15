@@ -1,0 +1,76 @@
+{
+  "timestamp_utc": "2026-10-14T04:13:12.479234+00:00",
+  "runtime_commit": "6a60165ae7993722a034e9389e0516db1819df85",
+  "dirty": false,
+  "cpu_governor": "powersave",
+  "cpu_khz": 600000,
+  "temperature_c": 42.932,
+  "throttled": "throttled=0x0",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "services": "MainPID=45900\nNRestarts=0\nActiveState=active\n\nMainPID=45198\nNRestarts=0\nActiveState=active",
+  "exec_start": "{ path=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge ; argv[]=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml ; ignore_errors=no ; start_time=[Wed 2026-10-14 00:01:48 EDT] ; stop_time=[n/a] ; pid=45900 ; code=(null) ; status=0/0 }",
+  "ftp_probe_path": "Pi hotspot address; no wireless airtime or upload measured",
+  "ftp_greeting_code": "220",
+  "ftp_noop_code": "200",
+  "ffi_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+  "source_sha256": {
+    "src/instantlink_bridge/ui/render.py": "3620d146e35fd1a76045b0834600a61c944a0a59131c508cbfc2d79987e7ea3b",
+    "src/instantlink_bridge/ui/display.py": "2a451b279dc94a3b7c8746b9b175cc7536b1bfce6f699d661f627f2c550b656b",
+    "src/instantlink_bridge/ui/input.py": "c26960fad81190dcf7c892346c1d046a073a31532ee3832a223c505911198037",
+    "src/instantlink_bridge/ui/gpio_edges.py": "33d4388afdeecdfd86c3b53a1da6ed6cbc67fac3a765f1154524f81a4e55fe97",
+    "src/instantlink_bridge/net/addresses.py": "bbb04762181431db82b3d1018649765f545e9732713821f0bc82054420cc79bf",
+    "src/instantlink_bridge/net/linux_snapshot.py": "29778966c881996875241c17b11c1058932d6b031e49feca92c5e88bb1062c8a",
+    "src/instantlink_bridge/ui/pairing.py": "2e532bd4cfb6777cfe582a64ac8fdb0a9d43c068f94938c186bb9535a1d44f70",
+    "src/instantlink_bridge/ble/agent.py": "a84a371e646f0dbeb401192b152272376fa64f791dd595c9f76994f505181f01",
+    "src/instantlink_bridge/app.py": "9f334b80316bcf29ef19c60c6356ef453823258566f08ae8e9dd53aba1015d09",
+    "src/instantlink_bridge/ui/controller.py": "7f986b5eb9c321a3b2f17b0ddc3669bea3fdd7c53fcfd91593cf3c6bb19f9af4",
+    "src/instantlink_bridge/ble/instantlink.py": "b0f119b4eef2050ad8f133dc38483480714fa078f8b7d51176b22b079fb03bea"
+  },
+  "working_cache_directories": 0,
+  "addresses": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \nusb0             UP             192.168.7.1/24 \nwlan0            UP             192.168.8.1/24",
+  "mockup_module_loaded": false,
+  "audit_dropin_present": false,
+  "audit_socket_present": false,
+  "input_backend_log": [
+    "2026-10-14 00:01:51,290 INFO instantlink_bridge.ui.input ui.input_edges_started backend=linux_gpio_v2 debounce_ms=50 lines=8"
+  ],
+  "input_failures": [],
+  "normal_app_warning_error_lines": [],
+  "network_fallback_log": [],
+  "printer_connected": false,
+  "film_used_in_this_task": 0,
+  "cli_sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e",
+  "native_manifest": {
+    "artifacts": {
+      "instantlink": {
+        "sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e",
+        "source_path": "target/aarch64-unknown-linux-gnu/release/instantlink"
+      },
+      "libinstantlink_ffi.so": {
+        "sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+        "source_path": "target/aarch64-unknown-linux-gnu/release/libinstantlink_ffi.so"
+      }
+    },
+    "artifacts_dir": "target/aarch64-unknown-linux-gnu/release",
+    "built_at_utc": "2026-10-13T22:47:30Z",
+    "cargo": {
+      "command": "cargo zigbuild",
+      "locked": true,
+      "packages": [
+        "instantlink-ffi",
+        "instantlink-cli"
+      ],
+      "profile": "release"
+    },
+    "instantlink_workspace": {
+      "branch": "codex/bridge-battery-day",
+      "commit_sha": "b2b6c8ceab6b2ba7f8b0151dd8b283a8c0560d62",
+      "dirty": false
+    },
+    "schema_version": 1,
+    "target_triple": "aarch64-unknown-linux-gnu"
+  },
+  "library_mapping": [
+    "/opt/InstantLinkBridge/lib/libinstantlink_ffi.so"
+  ]
+}

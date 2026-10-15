@@ -6,22 +6,34 @@ colour space; the model-size JPEG encode is the last step.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, datetime
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PIL import Image, ImageDraw, ImageFont
 
+from instantlink_bridge.imaging.models import (
+    AdjustmentProfile as AdjustmentProfile,
+)
+from instantlink_bridge.imaging.models import (
+    CorrectionProfile as CorrectionProfile,
+)
+from instantlink_bridge.imaging.models import (
+    correction_profile as correction_profile,
+)
+
 if TYPE_CHECKING:
     from instantlink_bridge.config import (  # pragma: no cover
-        AdjustmentsConfig,
         DatestampFormat,
     )
 
 __all__ = [
     "AdjustmentProfile",
+    "CorrectionProfile",
     "apply_adjustments",
+    "apply_correction",
+    "correction_profile",
     "format_datestamp",
     "read_exif_datestamp_text",
     "render_adjustments_preview",
@@ -31,87 +43,13 @@ __all__ = [
 ADJUSTMENT_PICKER_VALUES: tuple[int, ...] = (-100, -50, 0, 50, 100)
 
 
-@dataclass(frozen=True, slots=True)
-class AdjustmentProfile:
-    """Immutable description of all colour and overlay adjustments.
+def apply_correction(image: Image.Image, profile: CorrectionProfile | None) -> Image.Image:
+    """Apply user-selected output compensation; neutral correction is a no-op."""
+    if profile is None or profile.saturation == 1.0:
+        return image
+    from PIL import ImageEnhance
 
-    All defaults are pass-through identity values — an ``AdjustmentProfile()``
-    with no arguments applied via :func:`apply_adjustments` leaves every pixel
-    unchanged.
-
-    Internal float representation
-    ------------------------------
-    * ``saturation``: PIL ``ImageEnhance.Color`` factor. 1.0 = unchanged;
-      0.0 = greyscale; 2.0 = double saturation.
-    * ``exposure``: brightness factor derived from EV stops as
-      ``2 ** (ev_stops / 1.0)`` where ev_stops in [-1, +1]. 1.0 = unchanged.
-      Range: 0.5 (-1 EV) ... 2.0 (+1 EV), capped by design so Instax prints
-      survive extreme inputs.
-    * ``sharpness``: PIL ``ImageEnhance.Sharpness`` factor. 1.0 = unchanged;
-      0.0 = blurred; 2.0 = double sharpness.
-    * ``hue``: degrees of HSV hue rotation. 0 = unchanged; ±180 = full invert.
-    """
-
-    saturation: float = 1.0
-    """PIL ``ImageEnhance.Color`` factor. 1.0 = unchanged."""
-
-    exposure: float = 1.0
-    """Brightness multiplicative factor. 1.0 = unchanged."""
-
-    sharpness: float = 1.0
-    """PIL ``ImageEnhance.Sharpness`` factor. 1.0 = unchanged."""
-
-    hue: int = 0
-    """Degrees of HSV hue rotation. 0 = unchanged."""
-
-    vignette: int = 0
-    """Corner-darkening strength. 0 = off (identity), 100 = heavy. One-sided: no negative values."""
-
-    datestamp: bool = False
-    """Overlay flag. When True and datestamp_text is non-empty, renders it bottom-right."""
-
-    watermark: bool = False
-    """Overlay flag. When True and watermark_text is non-empty, renders it bottom-left."""
-
-    datestamp_text: str = ""
-    """Pre-formatted datestamp string. Empty string disables the overlay even if datestamp=True.
-
-    The controller formats EXIF DateTimeOriginal + locale before building the profile so
-    apply_adjustments stays locale-agnostic.
-    """
-
-    watermark_text: str = ""
-    """Watermark label to stamp. Empty string disables the overlay even if watermark=True."""
-
-    @classmethod
-    def from_config(cls, config: AdjustmentsConfig) -> AdjustmentProfile:
-        """Build a profile from user-facing -100...+100 integer config values.
-
-        Mapping:
-        * saturation: ``factor = 1.0 + value / 100.0``
-          -100 => 0.0 (greyscale), 0 => 1.0, +100 => 2.0.
-        * exposure: ``factor = 2 ** (value / 100.0)``
-          -100 => 0.5 (~-1 EV), 0 => 1.0, +100 => 2.0 (+1 EV).
-        * sharpness: ``factor = 1.0 + value / 100.0``
-          -100 => 0.0 (blurred), 0 => 1.0, +100 => 2.0.
-        * hue: ``degrees = value * 1.8``
-          -100 => -180 deg, 0 => 0 deg, +100 => +180 deg.
-
-        Note: datestamp_text is NOT set here — the caller (controller / app.py)
-        must read EXIF and format the date, then pass datestamp_text explicitly.
-        watermark_text is taken from config.watermark_text.
-        """
-        return cls(
-            saturation=1.0 + config.saturation / 100.0,
-            exposure=2.0 ** (config.exposure / 100.0),
-            sharpness=1.0 + config.sharpness / 100.0,
-            hue=int(config.hue * 1.8),
-            vignette=config.vignette,
-            datestamp=config.datestamp,
-            watermark=config.watermark,
-            datestamp_text="",  # caller fills this in after reading EXIF
-            watermark_text=config.watermark_text if config.watermark else "",
-        )
+    return ImageEnhance.Color(image).enhance(profile.saturation)
 
 
 _IDENTITY = AdjustmentProfile()
@@ -350,9 +288,9 @@ def _apply_vignette(image: Image.Image, strength: int) -> Image.Image:
     # factor map is H×W×1 = one channel).  Same pixel output, lower peak RSS
     # — important on the Pi Zero 2 W with 512 MB RAM.
     arr = np.array(image, dtype=np.float32)  # H×W×3 — copy so we can mutate
-    arr *= factor[:, :, np.newaxis]          # in-place multiply (no second H×W×3 alloc)
-    np.clip(arr, 0.0, 255.0, out=arr)        # in-place clip
-    return Image.fromarray(arr.astype(np.uint8), mode="RGB")
+    arr *= factor[:, :, np.newaxis]  # in-place multiply (no second H×W×3 alloc)
+    np.clip(arr, 0.0, 255.0, out=arr)  # in-place clip
+    return Image.fromarray(arr.astype(np.uint8))
 
 
 def _render_overlay(
@@ -523,9 +461,20 @@ def read_exif_datestamp_text(
     * everything else (default EN): ``MMM d, yyyy`` (e.g. ``"May 3, 2026"``)
     """
     try:
+        if isinstance(path, str | Path) and Path(path).suffix.lower() in {".hif", ".heif", ".heic"}:
+            # The normal decoder runs in an isolated worker (often through
+            # heif-thumbnailer), so it does not register a parent-process
+            # Pillow opener for this metadata-only read.
+            from instantlink_bridge.imaging.pipeline import _register_heif_opener
+
+            _register_heif_opener()
         with Image.open(path) as img:  # type: ignore[arg-type]
             exif = img.getexif()
             raw = exif.get(36867)  # DateTimeOriginal
+            if not raw:
+                # Camera files normally place DateTimeOriginal in ExifIFD,
+                # while older Bridge fixtures used the root TIFF directory.
+                raw = exif.get_ifd(34665).get(36867)
     except Exception:
         return ""
     if not raw or not isinstance(raw, str):
@@ -556,9 +505,7 @@ def _load_example_photo_resized(size: tuple[int, int]) -> Image.Image:
     """
     import importlib.resources
 
-    ref = importlib.resources.files("instantlink_bridge.imaging").joinpath(
-        "_example_photo.jpg"
-    )
+    ref = importlib.resources.files("instantlink_bridge.imaging").joinpath("_example_photo.jpg")
     with importlib.resources.as_file(ref) as path:
         with Image.open(path) as raw:
             resized = raw.resize(size, Image.Resampling.LANCZOS).convert("RGB")
@@ -573,6 +520,7 @@ def render_adjustments_preview(
     profile: AdjustmentProfile,
     *,
     size: tuple[int, int] = (88, 88),
+    correction: CorrectionProfile | None = None,
 ) -> Image.Image:
     """Load the built-in example photo, resize to ``size``, apply ``profile``.
 
@@ -594,7 +542,7 @@ def render_adjustments_preview(
     source = _load_example_photo_resized(size)
     # apply_adjustments returns ``source`` unchanged (same object) for the
     # identity profile — that's fine because we never mutate the cached object.
-    return apply_adjustments(source, profile)
+    return apply_correction(apply_adjustments(source, profile), correction)
 
 
 def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:
@@ -677,5 +625,5 @@ def _apply_hue(image: Image.Image, degrees: int) -> Image.Image:
         )
 
     out_u8 = (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
-    result = Image.fromarray(out_u8, mode="RGB")
+    result = Image.fromarray(out_u8)
     return result

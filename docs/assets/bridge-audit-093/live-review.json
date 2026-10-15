@@ -1,0 +1,53 @@
+{
+  "task": 93,
+  "reviewer": "independent adversarial subagent",
+  "status": "live_evidence_passed",
+  "blocking_findings": [],
+  "evidence_sha256": {
+    "/tmp/instantlink-093-live-backup-filtered.json": "35d37d679e14f2fd7a9ceaad921eae9a4429c501ac831baa4726878386acc5bb",
+    "/tmp/instantlink-093-reconnect.json": "cac0ed601d0d760e6ee224071e9a326decad98bdb2f5b607ed6aa9f631dccad8",
+    "/tmp/instantlink-093-final-health.json": "3123bd02509d505d85fc7cad237459a849ea6fdc0be3712bf221b54854aeabf8",
+    "/tmp/instantlink-093-cleanup.json": "85f5db0904e6e8832eeceefe16195c8478a68eb78b96de7adfd160deff8858f4",
+    "/tmp/instantlink-093-current-backup.json": "657037485005b158428e6243a7a880745b0696aba0e4235b501f9db471734fa4"
+  },
+  "source_matches_installed": {
+    "bridge/scripts/backup-broker.py": true,
+    "bridge/src/instantlink_bridge/manager/backup.py": true
+  },
+  "acceptance": {
+    "backup_verified_files": 29,
+    "restore_applied_files": 24,
+    "deployment_metadata_preserved": true,
+    "private_presets_runtime_owned_0600_readable": true,
+    "selected_identity_and_real_bluez_info_included": true,
+    "real_cryptographic_key_sections_present": true,
+    "root_private_archive_modes": true,
+    "synthetic_exact_key_roundtrip": true,
+    "reconnect_s": 7.532550353000261,
+    "power_saving_samples": 11,
+    "runtime_pid_unchanged": 9806,
+    "ftp_responsive_through_recovery": true,
+    "film_used": 0,
+    "warning_records": 6,
+    "warning_interpretation": "Six retained warning records form three transient status-unavailable episodes, including forced disconnect. All precede latest fresh status; no warning/error follows that status. Evidence does not support claiming zero warnings for the whole current PID.",
+    "fresh_status_restored": true,
+    "presets_load_failure_absent": true,
+    "services_active_no_automatic_restarts": true,
+    "backup_workers_absent": true,
+    "manager_no_new_privileges": "yes",
+    "cleanup_owned_helpers": 4,
+    "synthetic_roots_removed": true,
+    "production_backup_socket_preserved": true,
+    "fresh_current_backup_verified": true,
+    "fresh_current_backup_files": 28
+  },
+  "boundaries": [
+    "Review subagent read captured evidence and matched source hashes; performed no hardware actions or additional tests.",
+    "Screen-off idle is proven by 600MHz/powersave/GPIO24low; internal manual-lock state and physical switch contacts were not introspected.",
+    "FTP validation used same-Pi hotspot address; no real camera airtime or film/print-quality test was performed.",
+    "Initial reconnect fixture failed before mutation because BlueZ device object was not ready; only successful final recovery is used for timing.",
+    "An intermediate assertion requiring manual-lock logging was invalid for automatic idle; final evidence explicitly uses observable power/display state.",
+    "Temporary synthetic key fixture roots were removed; real key bytes were not exported.",
+    "Verified29/archive24applied count correctly excludes five deployment context files; later28file current backup is independently verified and need not share prior archive count."
+  ]
+}

@@ -140,9 +140,12 @@ async def test_config_get_returns_defaults_when_no_config_file(tmp_path: Path) -
         assert config["ui"]["appearance"] == "light"
         assert config["ui"]["font_size"] == "medium"
         assert config["ui"]["language"] == "en"
+        assert config["ui"]["unlock_requires_three_presses"] is True
         # Adjustments only exposes the user-editable bits.
         assert config["adjustments"]["watermark_text"] == ""
         assert config["adjustments"]["datestamp_format"] == "quartz_date"
+        assert config["correction"] == {"saturation": 0}
+        assert config["workflow"]["auto_print_delay_s"] == 1.0
     finally:
         await client.close()
 
@@ -220,6 +223,71 @@ datestamp_format = "olympus"
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("delay", [0, 1, 5, "off"])
+async def test_config_put_review_delay_persists_and_reads_supported_values(
+    tmp_path: Path, delay: int | str
+) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    client = TestClient(TestServer(_make_app(tmp_path, private_key, config_path)))
+    await client.start_server()
+    try:
+        path = "/v1/config"
+        body = _json_body({"config": {"workflow": {"auto_print_delay_s": delay}}})
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["workflow"]["auto_print_delay_s"] == delay
+        on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        assert on_disk["workflow"]["auto_print_delay_s"] == delay
+        response = await client.get(
+            path,
+            headers=signed_headers(private_key, method="GET", path=path, nonce="nonce-read"),
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["workflow"]["auto_print_delay_s"] == delay
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delay", [True, False, 2, 1.5, "1", -1])
+async def test_config_put_review_delay_rejects_unsupported_or_wrong_types(
+    tmp_path: Path, delay: object
+) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    client = TestClient(TestServer(_make_app(tmp_path, private_key, config_path)))
+    await client.start_server()
+    try:
+        path = "/v1/config"
+        body = _json_body({"config": {"workflow": {"auto_print_delay_s": delay}}})
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 422, data
+        errors = data["error"]["details"]["field_errors"]
+        assert errors["workflow.auto_print_delay_s"] == "Delay must be 0, 1, 5, or 'off'."
+        assert not config_path.exists()
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
 async def test_config_put_applies_diff_and_persists_file(tmp_path: Path) -> None:
     private_key = _private_key()
     config_path = tmp_path / "config.toml"
@@ -230,6 +298,7 @@ async def test_config_put_applies_diff_and_persists_file(tmp_path: Path) -> None
         diff = {
             "printer": {"quality": 90, "fit": "crop"},
             "workflow": {"allow_print_without_film": True},
+            "ui": {"unlock_requires_three_presses": False},
         }
         body = _json_body({"config": diff})
         path = "/v1/config"
@@ -247,11 +316,43 @@ async def test_config_put_applies_diff_and_persists_file(tmp_path: Path) -> None
         assert config["printer"]["quality"] == 90
         assert config["printer"]["fit"] == "crop"
         assert config["workflow"]["allow_print_without_film"] is True
+        assert config["ui"]["unlock_requires_three_presses"] is False
         # File is persisted on disk.
         assert config_path.exists()
         on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
         assert on_disk["printer"]["quality"] == 90
         assert on_disk["printer"]["fit"] == "crop"
+        assert on_disk["ui"]["unlock_requires_three_presses"] is False
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_config_put_persists_correction_without_changing_look(tmp_path: Path) -> None:
+    private_key = _private_key()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[adjustments]\nsaturation = 50\n")
+    app = _make_app(tmp_path, private_key, config_path)
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        body = _json_body({"config": {"correction": {"saturation": 20}}})
+        path = "/v1/config"
+        response = await client.put(
+            path,
+            data=body,
+            headers={
+                **signed_headers(private_key, method="PUT", path=path, body=body),
+                "Content-Type": "application/json",
+            },
+        )
+        data = cast(dict[str, Any], await response.json())
+        assert response.status == 200, data
+        assert data["config"]["correction"] == {"saturation": 20}
+        assert data["config"]["adjustments"]["saturation"] == 50
+        on_disk = tomllib.loads(config_path.read_text())
+        assert on_disk["correction"]["saturation"] == 20
+        assert on_disk["adjustments"]["saturation"] == 50
     finally:
         await client.close()
 

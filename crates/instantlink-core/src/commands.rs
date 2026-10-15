@@ -3,6 +3,7 @@
 //! Opcodes derived from javl/InstaxBLE reference implementation.
 
 use crate::error::Result;
+use crate::models::PrinterModel;
 use crate::protocol;
 
 /// Expected response identity for a command.
@@ -13,6 +14,7 @@ use crate::protocol;
 pub struct ResponseExpectation {
     opcode: u16,
     support_info_type: Option<u8>,
+    data_chunk_index: Option<u32>,
 }
 
 impl ResponseExpectation {
@@ -20,6 +22,7 @@ impl ResponseExpectation {
         Self {
             opcode,
             support_info_type: None,
+            data_chunk_index: None,
         }
     }
 
@@ -27,6 +30,15 @@ impl ResponseExpectation {
         Self {
             opcode: OP_SUPPORT_FUNCTION_INFO,
             support_info_type: Some(info_type),
+            data_chunk_index: None,
+        }
+    }
+
+    fn data(index: u32) -> Self {
+        Self {
+            opcode: OP_DATA,
+            support_info_type: None,
+            data_chunk_index: Some(index),
         }
     }
 
@@ -38,6 +50,16 @@ impl ResponseExpectation {
                     .get(1)
                     .is_none_or(|info_type| *info_type == expected)
             })
+            && self
+                .data_chunk_index
+                .is_none_or(|expected| match packet.payload.as_slice() {
+                    // Some models/legacy implementations report status only,
+                    // including rejection statuses. Keep that exact form compatible.
+                    [_status] => true,
+                    [_status, a, b, c, d] => u32::from_be_bytes([*a, *b, *c, *d]) == expected,
+                    // Partial or extra indexed bodies cannot acknowledge this chunk.
+                    _ => false,
+                })
     }
 }
 
@@ -182,6 +204,21 @@ impl Command {
         }
     }
 
+    /// Square exposes a verified status + big-endian chunk index ACK. Other
+    /// models retain their existing response-tail compatibility until verified.
+    pub fn response_expectation_for_model(
+        &self,
+        model: PrinterModel,
+    ) -> Option<ResponseExpectation> {
+        if model == PrinterModel::Square
+            && let Command::Data { index, .. } = self
+        {
+            Some(ResponseExpectation::data(*index))
+        } else {
+            self.response_expectation()
+        }
+    }
+
     pub fn response_expectation(&self) -> Option<ResponseExpectation> {
         match self {
             Command::DeviceInfo => Some(ResponseExpectation::opcode(OP_DEVICE_INFO_SERVICE)),
@@ -308,14 +345,25 @@ impl Response {
                         }
                     }
                     INFO_PRINT_HISTORY => {
-                        if data.len() < 2 {
-                            return Response::Unknown {
+                        // Square Link returns a leading big-endian u32 followed by
+                        // four uninterpreted bytes. Keep the exact two-byte legacy
+                        // format and the public u16 count contract; never truncate
+                        // an overflow or guess from an ambiguous payload length.
+                        let count = match data.len() {
+                            2 => Some(u16::from_be_bytes([data[0], data[1]])),
+                            8 => u16::try_from(u32::from_be_bytes([
+                                data[0], data[1], data[2], data[3],
+                            ]))
+                            .ok(),
+                            _ => None,
+                        };
+                        match count {
+                            Some(count) => Response::HistoryInfo { count },
+                            None => Response::Unknown {
                                 opcode: packet.opcode,
                                 payload: packet.payload.clone(),
-                            };
-                        };
-                        let count = u16::from_be_bytes([data[0], data[1]]);
-                        Response::HistoryInfo { count }
+                            },
+                        }
                     }
                     _ => Response::Unknown {
                         opcode: packet.opcode,

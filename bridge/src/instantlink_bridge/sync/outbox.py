@@ -15,6 +15,7 @@ import logging
 import os
 import secrets
 import shutil
+import tempfile
 import threading
 import time
 from dataclasses import asdict
@@ -37,6 +38,12 @@ class SyncOutbox:
         self._root = root
         self._budget_bytes = budget_mb * 1024 * 1024
         self._lock = threading.Lock()
+        # Index publication serializes mutations, while readers keep using
+        # the last committed snapshot during filesystem I/O.
+        self._mutation_lock = threading.Lock()
+        # Serialize arrivals without making existing-photo reads/acks wait
+        # for a new photo's potentially slow copy or checksum.
+        self._add_lock = threading.Lock()
         # Insertion order is arrival order (oldest first); the persisted
         # index list preserves it across restarts.
         self._items: dict[str, OutboxItem] = {}
@@ -46,30 +53,51 @@ class SyncOutbox:
     def add(self, source: Path, *, remote_ip: str = "") -> OutboxItem:
         """Spool ``source`` into the outbox without mutating the source.
 
-        Hard-links where possible (the print pipeline may also consume the
-        source), falling back to a copy across filesystems. Evicts oldest
-        items first when the disk budget would be exceeded.
+        Each original has its own inode: a camera may overwrite or append to
+        the incoming filename after dispatch releases it. Evicts oldest items
+        first when the disk budget would be exceeded.
         """
 
-        with self._lock:
+        with self._add_lock:
             item_id = secrets.token_hex(8)
             spool_path = self._spool_path(item_id, source.name)
             try:
-                os.link(source, spool_path)
-            except OSError:
                 shutil.copy2(source, spool_path)
-            size_bytes = spool_path.stat().st_size
-            item = OutboxItem(
-                item_id=item_id,
-                file_name=source.name,
-                size_bytes=size_bytes,
-                sha256=_hash_file(spool_path),
-                received_at=time.time(),
-                source_remote_ip=remote_ip,
-            )
-            self._evict_until_fits_locked(incoming_bytes=size_bytes)
-            self._items[item_id] = item
-            self._write_index_locked()
+                size_bytes = spool_path.stat().st_size
+                item = OutboxItem(
+                    item_id=item_id,
+                    file_name=source.name,
+                    size_bytes=size_bytes,
+                    sha256=_hash_file(spool_path),
+                    received_at=time.time(),
+                    source_remote_ip=remote_ip,
+                )
+                with self._mutation_lock:
+                    with self._lock:
+                        proposed = dict(self._items)
+                    evicted = self._evict_until_fits(proposed, incoming_bytes=size_bytes)
+                    proposed[item_id] = item
+                    self._write_index_locked(proposed)
+                    with self._lock:
+                        self._items = proposed
+            except BaseException:
+                try:
+                    spool_path.unlink(missing_ok=True)
+                except OSError:
+                    LOGGER.warning(
+                        "sync.outbox_unpublished_spool_unlink_failed path=%s",
+                        spool_path,
+                        exc_info=True,
+                    )
+                raise
+            for oldest in evicted:
+                self._unlink_spool(oldest)
+                LOGGER.warning(
+                    "sync.outbox_evicted item=%s file=%s size=%s reason=budget",
+                    oldest.item_id,
+                    oldest.file_name,
+                    oldest.size_bytes,
+                )
             LOGGER.info(
                 "sync.outbox_added item=%s file=%s size=%s remote_ip=%s",
                 item_id,
@@ -103,12 +131,16 @@ class SyncOutbox:
     def ack(self, item_id: str) -> bool:
         """Delete the spool file and index entry for a confirmed item."""
 
-        with self._lock:
-            item = self._items.pop(item_id, None)
+        with self._mutation_lock:
+            with self._lock:
+                proposed = dict(self._items)
+            item = proposed.pop(item_id, None)
             if item is None:
                 return False
+            self._write_index_locked(proposed)
+            with self._lock:
+                self._items = proposed
             self._unlink_spool(item)
-            self._write_index_locked()
             LOGGER.info("sync.outbox_acked item=%s file=%s", item_id, item.file_name)
             return True
 
@@ -132,40 +164,59 @@ class SyncOutbox:
             LOGGER.warning("sync.outbox_index_invalid path=%s", index_path)
             return
         dropped = 0
+        loaded: dict[str, OutboxItem] = {}
         for entry in entries:
             item = _item_from_json(entry)
             if item is None or not self._spool_path_for_item(item).is_file():
                 dropped += 1
                 continue
-            self._items[item.item_id] = item
+            self._detach_legacy_spool(self._spool_path_for_item(item))
+            loaded[item.item_id] = item
         if dropped:
             LOGGER.warning("sync.outbox_index_entries_dropped count=%s", dropped)
-            self._write_index_locked()
+            self._write_index_locked(loaded)
+        self._items = loaded
         LOGGER.info("sync.outbox_loaded depth=%s root=%s", len(self._items), self._root)
 
-    def _evict_until_fits_locked(self, *, incoming_bytes: int) -> None:
-        total_bytes = sum(item.size_bytes for item in self._items.values())
-        while self._items and total_bytes + incoming_bytes > self._budget_bytes:
-            oldest_id, oldest = next(iter(self._items.items()))
-            del self._items[oldest_id]
-            self._unlink_spool(oldest)
-            total_bytes -= oldest.size_bytes
-            LOGGER.warning(
-                "sync.outbox_evicted item=%s file=%s size=%s reason=budget",
-                oldest_id,
-                oldest.file_name,
-                oldest.size_bytes,
-            )
+    def _detach_legacy_spool(self, path: Path) -> None:
+        """Atomically migrate originals saved by older hard-link spooling."""
+        if path.stat().st_nlink <= 1:
+            return
+        with tempfile.TemporaryDirectory(prefix=".instantlink-detach-", dir=self._root) as temp:
+            detached = Path(temp) / "original"
+            shutil.copy2(path, detached)
+            os.replace(detached, path)
+        LOGGER.info("sync.outbox_legacy_spool_detached path=%s", path)
 
-    def _write_index_locked(self) -> None:
+    def _evict_until_fits(
+        self, proposed: dict[str, OutboxItem], *, incoming_bytes: int
+    ) -> list[OutboxItem]:
+        evicted: list[OutboxItem] = []
+        total_bytes = sum(item.size_bytes for item in proposed.values())
+        while proposed and total_bytes + incoming_bytes > self._budget_bytes:
+            oldest_id, oldest = next(iter(proposed.items()))
+            del proposed[oldest_id]
+            evicted.append(oldest)
+            total_bytes -= oldest.size_bytes
+        return evicted
+
+    def _write_index_locked(self, proposed: dict[str, OutboxItem]) -> None:
+        """Publish a staged index while holding the mutation lock (or constructing)."""
         payload = {
             "version": INDEX_VERSION,
-            "items": [asdict(item) for item in self._items.values()],
+            "items": [asdict(item) for item in proposed.values()],
         }
         index_path = self._root / INDEX_FILE_NAME
         tmp_path = self._root / f"{INDEX_FILE_NAME}.tmp"
-        tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        os.replace(tmp_path, index_path)
+        try:
+            tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            os.replace(tmp_path, index_path)
+        except BaseException:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                LOGGER.warning("sync.outbox_index_temp_unlink_failed", exc_info=True)
+            raise
 
     def _unlink_spool(self, item: OutboxItem) -> None:
         try:

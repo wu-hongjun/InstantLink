@@ -1,0 +1,9 @@
+{
+  "import_wall_ms": 531.424427012098,
+  "import_cpu_ms": 858.105266,
+  "rss_before_kib": 10216,
+  "rss_after_kib": 25992,
+  "numpy_version": "2.4.6",
+  "cpu_khz": 1000000,
+  "boundary": "Fresh subprocess NumPy import with pagecache already warm; includes no LCD/frame or native Printer operations."
+}

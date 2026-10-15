@@ -13,9 +13,7 @@ SERVICE_NAME = "instantlink-bridge-manager"
 DEFAULT_PORT = 8742
 DEFAULT_BIND_HOSTS = ("192.168.7.1", "192.168.8.1")
 
-JsonValue: TypeAlias = (
-    None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
-)
+JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 JsonObject: TypeAlias = dict[str, JsonValue]
 
 

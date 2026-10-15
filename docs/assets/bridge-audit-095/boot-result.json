@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "pid": 502,
+  "film_used": 0,
+  "film_before": 10,
+  "film_after": 10,
+  "boot_to_ui_s": 14.138153,
+  "boot_to_status_s": 20.041124,
+  "boot_to_core_ready_s": 14.151705,
+  "process_start_to_status_s": 6.630461,
+  "status_message": "2026-10-14 17:05:42,022 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=80 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "policy_messages": [
+    "2026-10-14 17:05:37,366 INFO instantlink_bridge.ui.controller ui.printer_discovery_policy screen=on scan_window_s=1 interval_s=1.0"
+  ],
+  "warning_error_messages": [],
+  "input_before_status": [],
+  "scope": "Normal installed service, automatic reboot connection without button input. Kernel monotonic boot clock excludes pre-kernel firmware time; Printer already powered on. Not a matched availability-controlled speedup. No image/print/actuator commands. GPIO initialization is not a button action; corrected observer false positive using action field. Film baseline comes from last fresh pre-reboot status."
+}

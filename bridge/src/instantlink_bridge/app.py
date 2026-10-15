@@ -8,21 +8,15 @@ import inspect
 import logging
 import os
 import signal
+import sys
 from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future as ThreadFuture
-from contextlib import suppress
+from contextlib import AsyncExitStack, suppress
 from functools import partial
+from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
-from instantlink_bridge.ble.client import (
-    DiscoveredPrinter,
-    close_default_ble_session_manager,
-    scan_instax_printers,
-)
-from instantlink_bridge.ble.client import (
-    print_file_to_printer as print_file_to_printer_bleak,
-)
 from instantlink_bridge.ble.instantlink import (
     close_default_instantlink_backend,
     instantlink_backend_enabled,
@@ -30,8 +24,10 @@ from instantlink_bridge.ble.instantlink import (
 from instantlink_bridge.ble.instantlink import (
     print_file_to_printer as print_file_to_printer_instantlink,
 )
-from instantlink_bridge.ble.instax import (
+from instantlink_bridge.ble.models import PrinterModel
+from instantlink_bridge.ble.types import (
     CoverOpenError,
+    DiscoveredPrinter,
     LowPrinterBatteryError,
     NoFilmError,
     PrinterBusyError,
@@ -40,24 +36,26 @@ from instantlink_bridge.ble.instax import (
 from instantlink_bridge.config import (
     DEFAULT_CONFIG_PATH,
     BridgeConfig,
+    DatestampFormat,
     FtpConfig,
     PowerBackend,
     SyncConfig,
     SyncDestination,
     load_config,
 )
-from instantlink_bridge.imaging.pipeline import (
+from instantlink_bridge.imaging.models import (
+    AdjustmentProfile,
+    CorrectionProfile,
+    FitMode,
     ImagePipelineError,
+    ImagePreparationTimeoutError,
     ImageTooLargeError,
     PreparedImage,
     PrintEdit,
 )
-from instantlink_bridge.imaging.worker import (
-    ImagePreparationTimeoutError,
-    close_default_image_preparation_worker,
-)
 from instantlink_bridge.net.health import FtpActivityTracker
 from instantlink_bridge.power.monitor import BatteryPolicy, IdlePolicy, PowerMonitor, PowerPolicy
+from instantlink_bridge.power.performance import CpuPerformanceController
 from instantlink_bridge.power.pisugar import PiSugarClient
 from instantlink_bridge.power.x306 import NoBatteryClient, X306BatteryClient
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
@@ -68,13 +66,19 @@ from instantlink_bridge.system_info import (
 )
 from instantlink_bridge.ui.controller import BridgeUi
 from instantlink_bridge.ui.models import PairedPrinter, UiAction, UiSnapshot
-from instantlink_bridge.ui.pairing import BluetoothctlPrinterPairer, PrinterPairer
+from instantlink_bridge.ui.pairing import (
+    BluetoothctlPrinterPairer,
+    BluezObjectsProvider,
+    PrinterPairer,
+)
 from instantlink_bridge.ui.status import scan_bluez_instax_printers, status_target_for_visible_match
 from instantlink_bridge.watchdog import WatchdogNotifier, run_watchdog_heartbeat
 
 if TYPE_CHECKING:
     from PIL import Image
 
+    from instantlink_bridge.ble.client import ConnectedInstaxPrinter
+    from instantlink_bridge.ble.session import InstaxBleSessionManager
     from instantlink_bridge.camera.ftp import FtpReceiveService, ReceivedImage
     from instantlink_bridge.sync.outbox import SyncOutbox
     from instantlink_bridge.sync.server import SyncService
@@ -91,7 +95,7 @@ else:
     PrinterSender = Callable[..., Awaitable[None]]
 
 LOGGER = logging.getLogger(__name__)
-AUTO_PRINT_DELAY_S = 5.0
+AUTO_PRINT_DELAY_S = 1.0
 IMAGE_QUEUE_MAXSIZE = 100
 PRINT_JOB_TIMEOUT_S = 120.0
 PRINT_JOB_HARD_TIMEOUT_S = 300.0
@@ -176,9 +180,86 @@ class AsyncStartStopService(Protocol):
         """Stop the helper."""
 
 
+async def scan_instax_printers(timeout_s: float = 5.0) -> list[DiscoveredPrinter]:
+    """Load the diagnostic scanner only when the fallback is requested."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import scan_instax_printers as scan
+
+    return await scan(timeout_s)
+
+
+async def close_default_ble_session_manager(*, forget_endpoint: bool = True) -> None:
+    """Close existing fallback state without importing an unused diagnostic backend."""
+    if "instantlink_bridge.ble.client" not in sys.modules:
+        return
+    # A cancelled first-use task may leave its import running in a worker. Join its
+    # module lock away from the event loop before accessing partially published state.
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import close_default_ble_session_manager as close
+
+    await close(forget_endpoint=forget_endpoint)
+
+
+async def close_default_image_preparation_worker() -> None:
+    """Close an existing photo worker without loading it on an idle native run."""
+    if "instantlink_bridge.imaging.worker" not in sys.modules:
+        return
+    await asyncio.to_thread(import_module, "instantlink_bridge.imaging.worker")
+    from instantlink_bridge.imaging.worker import close_default_image_preparation_worker as close
+
+    await close()
+
+
+async def print_file_to_printer_bleak(
+    address: str,
+    image_path: Path,
+    *,
+    name: str | None = None,
+    fit: FitMode = FitMode.AUTO,
+    quality: int = 100,
+    edit: PrintEdit | None = None,
+    print_option: int = 0,
+    model: PrinterModel | None = None,
+    progress: PrintProgressCallback | None = None,
+    adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    session_manager: object | None = None,
+) -> None:
+    """Import the diagnostic print path off the event loop before dispatching it."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import print_file_to_printer
+
+    await print_file_to_printer(
+        address,
+        image_path,
+        name=name,
+        fit=fit,
+        quality=quality,
+        edit=edit,
+        print_option=print_option,
+        model=model,
+        progress=progress,
+        adjustments=adjustments,
+        correction=correction,
+        session_manager=cast(
+            "InstaxBleSessionManager[ConnectedInstaxPrinter] | None", session_manager
+        ),
+    )
+
+
+def read_exif_datestamp_text(
+    source_path: Path, language: str = "en", *, fmt: DatestampFormat | None = None
+) -> str:
+    """Load EXIF helpers inside the existing metadata thread."""
+    from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text as read
+
+    return read(source_path, language, fmt=fmt)
+
+
 async def run_ftp_receive_slice(config_path: Path) -> None:
     """Run the first vertical slice: FTP upload -> logged file path."""
 
+    LOGGER.info("bridge.boot.start")
     config = load_config(config_path)
     queue: asyncio.Queue[ReceivedImage] = asyncio.Queue(maxsize=IMAGE_QUEUE_MAXSIZE)
     loop = asyncio.get_running_loop()
@@ -188,11 +269,13 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     watchdog_task: asyncio.Task[None] | None = None
     power_task: asyncio.Task[None] | None = None
     ui_event_tasks: set[asyncio.Task[None]] = set()
-    pairer = BluetoothctlPrinterPairer()
     ftp_activity = FtpActivityTracker()
     power_monitor: PowerMonitor | None = None
+    cpu_performance = CpuPerformanceController()
     service: FtpReceiveService | None = None
     bluez_agent: AsyncStopService | None = None
+    bluetooth_task: asyncio.Task[None] | None = None
+    cpu_start_task: asyncio.Task[None] | None = None
     sync_outbox: SyncOutbox | None = None
     sync_service: SyncService | None = None
     sync_setup_task: asyncio.Task[None] | None = None
@@ -200,6 +283,24 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     # callback so a destination flip that lands while sync setup is still
     # running is honored once setup finishes.
     sync_desired = config.sync.sync_enabled
+
+    async def current_bluez_objects() -> object:
+        provider = getattr(bluez_agent, "managed_objects_snapshot", None)
+        if not callable(provider):
+            raise RuntimeError("BlueZ pairing agent snapshot unavailable")
+        return await cast(BluezObjectsProvider, provider)()
+
+    async def watch_printer_disconnect(
+        name: str, callback: Callable[[], None]
+    ) -> Callable[[], None]:
+        watcher = getattr(bluez_agent, "watch_printer_disconnect", None)
+        if not callable(watcher):
+            return lambda: None
+        return await cast(
+            Callable[[str, Callable[[], None]], Awaitable[Callable[[], None]]], watcher
+        )(name, callback)
+
+    pairer = BluetoothctlPrinterPairer(bluez_objects_provider=current_bluez_objects)
 
     async def record_power_activity() -> None:
         if power_monitor is not None:
@@ -234,6 +335,10 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
     def apply_runtime_sync_config(sync_config: SyncConfig) -> None:
         nonlocal sync_desired
         sync_desired = sync_config.sync_enabled
+        if sync_service is None and (sync_setup_task is None or not sync_setup_task.done()):
+            # Construction follows core readiness. The setup worker reads the
+            # latest desired state; this pending service is still starting.
+            return
         task = loop.create_task(
             apply_sync_destination_change(sync_config, service=sync_service, ui=ui)
         )
@@ -279,8 +384,21 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # Sync is secondary to printing: any failure here logs an error and
         # leaves the bridge running print-only.
         nonlocal sync_outbox, sync_service
+        await ready_event.wait()
+        construction = asyncio.create_task(asyncio.to_thread(_build_sync_service_sync))
         try:
-            sync_outbox, sync_service = await asyncio.to_thread(_build_sync_service_sync)
+            try:
+                await asyncio.shield(construction)
+            finally:
+                try:
+                    await join_photo_task_cleanup(construction)
+                finally:
+                    if (
+                        construction.done()
+                        and not construction.cancelled()
+                        and construction.exception() is None
+                    ):
+                        sync_outbox, sync_service = construction.result()
         except Exception:
             LOGGER.exception("sync.setup_failed outbox_dir=%s", config.sync.outbox_dir)
             # Construction failure means nothing will ever listen this boot:
@@ -293,16 +411,20 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             await start_sync_service_guarded(sync_service, reason="startup", ui=ui)
 
     ready_event = asyncio.Event()
+    bluetooth_ready_event = asyncio.Event()
     ui = BridgeUi(
         config,
         config_path=config_path,
         pairer=pairer,
         ftp_activity=ftp_activity,
         power_activity_callback=record_power_activity,
+        cpu_performance=cpu_performance,
         ftp_config_applied_callback=apply_runtime_ftp_config,
         sync_config_applied_callback=apply_runtime_sync_config,
         sync_token_rotated_callback=on_sync_token_rotated,
         ready_event=ready_event,
+        bluetooth_ready_event=bluetooth_ready_event,
+        printer_disconnect_watcher=watch_printer_disconnect,
     )
     power_monitor = build_power_monitor(config, ui=ui)
 
@@ -332,50 +454,97 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             loop,
             activity_tracker=ftp_activity,
             queue_overflow_callback=notify_queue_overflow,
-            bridge_snapshot_provider=lambda: ui.snapshot,
+            bridge_snapshot_provider=lambda: live_ui_snapshot(ui),
         )
-        ftp_service.start()  # blocks until the FTP thread's listener is bound
+        try:
+            ftp_service.start()  # blocks until the FTP thread's listener is bound
+        except BaseException:
+            ftp_service.stop()
+            raise
+        LOGGER.info("bridge.ftp.ready bind_host=%s port=%s", config.ftp.bind_host, config.ftp.port)
         return ftp_service
 
     async def start_ftp_service() -> FtpReceiveService:
-        return await asyncio.to_thread(_setup_ftp_service_sync)
+        nonlocal service
+        task = asyncio.create_task(asyncio.to_thread(_setup_ftp_service_sync))
+        try:
+            return await asyncio.shield(task)
+        finally:
+            try:
+                await join_photo_task_cleanup(task)
+            finally:
+                if task.done() and not task.cancelled() and task.exception() is None:
+                    service = task.result()
 
-    async def start_ble_stack() -> AsyncStopService | None:
-        agent = await start_bluez_agent_if_needed()
+    async def start_ui_at_full_performance() -> None:
+        if cpu_start_task is None:
+            raise RuntimeError("BUG: CPU startup not assigned")
+        await asyncio.shield(cpu_start_task)
         await ui.start()
-        return agent
+
+    async def start_bluetooth() -> None:
+        nonlocal bluez_agent
+        bluez_agent = await start_bluez_agent_if_needed()
+        bluetooth_ready_event.set()
+        LOGGER.info("bridge.bluetooth.ready agent_registered=%s", bluez_agent is not None)
+
+    async def bluetooth_ready_for_print() -> bool:
+        if bluetooth_task is None:
+            return False
+        stop_waiter = asyncio.create_task(stop_event.wait())
+        try:
+            done, _ = await asyncio.wait(
+                {bluetooth_task, stop_waiter}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if stop_waiter in done:
+                return False
+            await bluetooth_task
+            return True
+        finally:
+            stop_waiter.cancel()
+            with suppress(asyncio.CancelledError):
+                await stop_waiter
+
+    async def dispatch_ready_image(received: ReceivedImage) -> None:
+        # Capture this item's destination once. Readiness waits remain inside
+        # the shutdown-observed job, retaining source ownership throughout.
+        snapshot = live_ui_snapshot(ui)
+        item_config = ui.config
+        if snapshot.sync_destination == SyncDestination.IPHONE.value:
+            if sync_setup_task is not None:
+                await asyncio.shield(sync_setup_task)
+        elif not await bluetooth_ready_for_print():
+            return
+        await dispatch_received_image(
+            received,
+            snapshot=snapshot,
+            config=item_config,
+            ui=ui,
+            pairer=pairer,
+            outbox=sync_outbox,
+            cpu_performance=cpu_performance,
+        )
 
     try:
-        # Run FTP-server startup and BLE/UI startup concurrently. Use return_exceptions
-        # so a failure in one branch does not prevent us from capturing the other
-        # branch's already-constructed resources (FTP server, BlueZ agent), which the
-        # outer finally still needs to tear down cleanly.
-        #
-        # Plan 033 Sprint 6 attempted a third "BLE warmup" branch here to pre-load the
-        # FFI library in parallel; both gather-blocked (v1) and fire-and-forget (v2)
-        # variants regressed bridge.ready by 2 s, because the warmup's 2 s scan held
-        # InstantLinkBackend._lock during ui.start()'s configure_printer_keepalive call.
-        # Reverted 2026-05-28. The Sprint 3 deferred status poll already moves the FFI
-        # load off the critical path post-ready_event; Phase 6 (FTP-as-signal) absorbs
-        # the remaining gap from the user's perspective via Sony's 4xx auto-retry.
-        #
-        # Sync (plan 050) starts as a fire-and-forget sibling task instead of a
-        # third gather branch: it must never delay bridge.ready, its imports run
-        # off-loop in a worker thread, and it holds no BLE locks (the failure
-        # mode that sank the Sprint 6 warmup branch).
+        # UI and FTP are the core service; Bluetooth initializes independently.
+        # Separate readiness events prevent early Printer operations without
+        # keeping the LCD/input path waiting for BlueZ. Sync imports begin after
+        # core readiness so their CPU/I/O cost does not compete with these paths.
+        # CPU helper I/O, FTP binding and agent registration are independent.
+        # First LCD/input and core READY still require the awake CPU tier.
+        cpu_start_task = asyncio.create_task(cpu_performance.start(), name="bridge.cpu_start")
+        bluetooth_task = asyncio.create_task(start_bluetooth(), name="bridge.bluetooth_start")
         sync_setup_task = asyncio.create_task(setup_sync_service())
-        ftp_result, ble_result = await asyncio.gather(
+        ftp_result, ui_result = await asyncio.gather(
             start_ftp_service(),
-            start_ble_stack(),
+            start_ui_at_full_performance(),
             return_exceptions=True,
         )
         if not isinstance(ftp_result, BaseException):
             service = ftp_result
-        if not isinstance(ble_result, BaseException):
-            bluez_agent = ble_result
         # If BOTH primary branches failed, log the secondary failure before re-raising the
         # primary so the second exception is never silently dropped (codex finding 1).
-        failures = [exc for exc in (ftp_result, ble_result) if isinstance(exc, BaseException)]
+        failures = [exc for exc in (ftp_result, ui_result) if isinstance(exc, BaseException)]
         for exc in failures[1:]:
             LOGGER.error("bridge.startup_secondary_failure", exc_info=exc)
         if failures:
@@ -383,6 +552,8 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
         # Robust runtime guard (not just `assert`, which would be stripped under `python -O`).
         if service is None:
             raise RuntimeError("BUG: FTP service not assigned after successful gather")
+        if bluetooth_task.done():
+            await bluetooth_task
         notifier.ready()
         ready_event.set()
         watchdog_task = asyncio.create_task(run_watchdog_heartbeat(stop_event, notifier))
@@ -395,6 +566,8 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
             config.ftp.incoming_dir,
         )
         while not stop_event.is_set():
+            if bluetooth_task.done():
+                await bluetooth_task
             service.raise_if_failed()
             try:
                 received = await asyncio.wait_for(queue.get(), timeout=0.5)
@@ -406,20 +579,17 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 received.remote_ip,
                 queue.qsize(),
             )
-            await notify_image_queue_changed(
-                ui,
-                depth=queue.qsize(),
-                max_size=queue.maxsize,
-            )
-            await power_monitor.record_activity()
             try:
-                await dispatch_received_image(
-                    received,
-                    snapshot=ui.snapshot,
-                    config=ui.config,
-                    ui=ui,
-                    pairer=pairer,
-                    outbox=sync_outbox,
+                await notify_image_queue_changed(
+                    ui,
+                    depth=queue.qsize(),
+                    max_size=queue.maxsize,
+                )
+                await power_monitor.record_activity()
+                await run_image_job_until_stopped(
+                    dispatch_ready_image(received),
+                    stop_event=stop_event,
+                    on_stop=service.begin_stopping,
                 )
             except Exception as exc:
                 LOGGER.exception(
@@ -429,34 +599,81 @@ async def run_ftp_receive_slice(config_path: Path) -> None:
                 )
             finally:
                 queue.task_done()
+                service.release_received_image(received.path)
     finally:
+        if service is not None:
+            service.begin_stopping()
+            # The consumer has exited. Retain abandoned originals on disk,
+            # but release every queued job's ownership and queue accounting.
+            while True:
+                try:
+                    abandoned = queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+                queue.task_done()
+                service.release_received_image(abandoned.path)
         notifier.stopping()
         stop_event.set()
-        if watchdog_task is not None:
-            watchdog_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await watchdog_task
-        if power_task is not None:
-            power_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await power_task
-        for task in ui_event_tasks:
-            task.cancel()
-        if ui_event_tasks:
-            await asyncio.gather(*ui_event_tasks, return_exceptions=True)
-        if sync_setup_task is not None:
-            sync_setup_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await sync_setup_task
-        await stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
-        await ui.stop()
-        await close_default_instantlink_backend()
-        if bluez_agent is not None:
-            await bluez_agent.stop()
-        await close_default_ble_session_manager()
-        await close_default_image_preparation_worker()
-        if service is not None:
-            service.stop()
+
+        async def shutdown_resources() -> None:
+            failures: list[BaseException] = []
+
+            async def close_resource(name: str, work: Awaitable[object]) -> None:
+                try:
+                    await work
+                except BaseException as exc:
+                    failures.append(exc)
+                    LOGGER.error("bridge.shutdown_resource_failed resource=%s", name, exc_info=exc)
+
+            async def stop_task(task: asyncio.Task[None]) -> None:
+                task.cancel()
+                await join_stopped_task(task)
+
+            async def join_stopped_task(task: asyncio.Task[None]) -> None:
+                with suppress(asyncio.CancelledError):
+                    await task
+
+            if watchdog_task is not None:
+                await close_resource("watchdog", stop_task(watchdog_task))
+            if power_task is not None:
+                await close_resource("power", stop_task(power_task))
+            event_tasks = tuple(ui_event_tasks)
+            for task in event_tasks:
+                task.cancel()
+            for task in event_tasks:
+                await close_resource("ui_event", join_stopped_task(task))
+            if sync_setup_task is not None:
+                await close_resource("sync_setup", stop_task(sync_setup_task))
+            if cpu_start_task is not None:
+                await close_resource("cpu_start", join_photo_task_cleanup(cpu_start_task))
+            await close_resource(
+                "sync", stop_sync_service_guarded(sync_service, reason="shutdown", ui=ui)
+            )
+            await close_resource("ui", ui.stop())
+            if bluetooth_task is not None:
+                await close_resource("bluetooth_start", stop_task(bluetooth_task))
+            await close_resource("cpu", cpu_performance.close())
+            await close_resource("instantlink_backend", close_default_instantlink_backend())
+            if bluez_agent is not None:
+                await close_resource("bluez_agent", bluez_agent.stop())
+            await close_resource("ble_sessions", close_default_ble_session_manager())
+            await close_resource("image_worker", close_default_image_preparation_worker())
+            if service is not None:
+                try:
+                    service.stop()
+                except BaseException as exc:
+                    failures.append(exc)
+                    LOGGER.error("bridge.shutdown_resource_failed resource=ftp", exc_info=exc)
+            if failures:
+                raise failures[0]
+
+        # A second shutdown/cancellation request must not abandon the remaining
+        # services while child operations still own their resources.
+        cleanup = asyncio.create_task(shutdown_resources(), name="bridge.shutdown")
+        try:
+            await asyncio.shield(cleanup)
+        finally:
+            await join_photo_task_cleanup(cleanup)
 
 
 async def start_bluez_agent_if_needed() -> AsyncStopService | None:
@@ -468,7 +685,13 @@ async def start_bluez_agent_if_needed() -> AsyncStopService | None:
         from instantlink_bridge.ble.agent import BluezAgentService
 
         agent = BluezAgentService()
-        await agent.start()
+        try:
+            await agent.start()
+        except BaseException:
+            # Registration can be canceled during shutdown after opening D-Bus
+            # but before returning ownership to the caller.
+            await agent.stop()
+            raise
         return agent
     except Exception:
         LOGGER.exception("bluetooth.agent_start_failed")
@@ -537,6 +760,11 @@ async def request_system_poweroff() -> None:
         )
 
 
+def live_ui_snapshot(ui: BridgeUi) -> UiSnapshot:
+    """Keep operational admission checks independent of a visible unlock overlay."""
+    return ui.live_snapshot
+
+
 async def dispatch_received_image(
     received: ReceivedImage,
     *,
@@ -546,6 +774,7 @@ async def dispatch_received_image(
     pairer: PrinterPairer,
     outbox: SyncOutbox | None,
     printer_sender: PrinterSender | None = None,
+    cpu_performance: CpuPerformanceController | None = None,
 ) -> None:
     """Fan one dequeued image out to the sync outbox and/or the print flow.
 
@@ -557,7 +786,8 @@ async def dispatch_received_image(
 
     destination = snapshot.sync_destination
     if destination in _SYNC_SPOOL_DESTINATIONS:
-        await spool_image_to_sync_outbox(received, ui=ui, outbox=outbox)
+        if not await spool_image_to_sync_outbox(received, ui=ui, outbox=outbox):
+            await ui.print_failed("Sync unavailable")
     if destination == SyncDestination.IPHONE.value:
         LOGGER.info("sync.print_skipped_destination path=%s", received.path)
         return
@@ -570,6 +800,8 @@ async def dispatch_received_image(
         printer_sender=printer_sender,
         timeout_s=config.workflow.auto_print_delay_s,
         notify_received=False,
+        cpu_performance=cpu_performance,
+        preparation_model_hint=snapshot.printer_model,
     )
 
 
@@ -587,8 +819,16 @@ async def spool_image_to_sync_outbox(
     if outbox is None:
         LOGGER.error("sync.outbox_add_failed path=%s reason=outbox_unavailable", received.path)
         return False
+    add_task = asyncio.create_task(
+        asyncio.to_thread(outbox.add, received.path, remote_ip=received.remote_ip)
+    )
     try:
-        await asyncio.to_thread(outbox.add, received.path, remote_ip=received.remote_ip)
+        try:
+            await asyncio.shield(add_task)
+        finally:
+            # A filesystem transaction cannot be cancelled with its asyncio
+            # waiter. Keep ownership until its thread commits or fails.
+            await join_photo_task_cleanup(add_task)
     except Exception:
         LOGGER.exception("sync.outbox_add_failed path=%s", received.path)
         return False
@@ -786,11 +1026,14 @@ async def handle_received_image(
     printer_sender: PrinterSender | None = None,
     timeout_s: float | None = AUTO_PRINT_DELAY_S,
     notify_received: bool = True,
+    cpu_performance: CpuPerformanceController | None = None,
+    preparation_model_hint: PrinterModel | None = None,
 ) -> None:
     """Run one FTP-received image through the auto-print flow."""
 
     progress_tasks: list[asyncio.Future[None] | ThreadFuture[None]] = []
     accepting_progress = False
+    performance_scope = AsyncExitStack()
     try:
         if notify_received:
             await ui.image_received(received)
@@ -798,6 +1041,17 @@ async def handle_received_image(
         if edit is None:
             LOGGER.info("bridge.print_cancelled path=%s", received.path)
             return
+
+        # Preview preparation reads the live settings after readiness/pairing
+        # waits. Freeze those accepted settings before consuming its JPEG, so
+        # model-mismatch preparation and sender options describe the same photo.
+        # Injected/headless PrintUi implementations retain their supplied config.
+        accepted_config = getattr(ui, "config", None)
+        if isinstance(accepted_config, BridgeConfig):
+            config = accepted_config
+
+        if cpu_performance is not None:
+            await performance_scope.enter_async_context(cpu_performance.boost())
 
         if printer_sender is not None:
             sender = printer_sender
@@ -810,20 +1064,15 @@ async def handle_received_image(
             sender = partial(
                 send_print_to_printer,
                 prepared_image=ui.take_prepared_print_image(received, edit),
+                preparation_model_hint=preparation_model_hint,
             )
         await ui.printing_started(received)
-        await ui.print_progress(
-            PrintProgress(PrintStage.SELECTING_PRINTER, "Checking printer", "Looking up printer")
-        )
         selected = select_configured_printer(
             await pairer.list_paired(),
             configured_name=config.printer.device_name,
         )
         if selected is None:
             raise PrintJobError("Select printer first")
-        await ui.print_progress(
-            PrintProgress(PrintStage.SELECTING_PRINTER, "Finding printer", selected.name)
-        )
         target = await resolve_print_target(selected)
         LOGGER.info(
             "bridge.print_start path=%s target=%s name=%s",
@@ -875,6 +1124,66 @@ async def handle_received_image(
     else:
         LOGGER.info("bridge.print_complete path=%s", received.path)
         await ui.print_complete(received)
+    finally:
+        accepting_progress = False
+        await performance_scope.aclose()
+
+
+async def run_image_job_until_stopped(
+    work: Awaitable[None],
+    *,
+    stop_event: asyncio.Event,
+    on_stop: Callable[[], None] | None = None,
+) -> None:
+    """Observe shutdown while one ordered photo job owns its resources.
+
+    Cancellation joins the job's cleanup before another photo or service
+    teardown can use the same Printer/image worker. The backend retains its
+    own serialization and bounded FFI cancellation grace.
+    """
+    job = asyncio.ensure_future(work)
+    stopping = asyncio.create_task(stop_event.wait())
+    try:
+        done, _ = await asyncio.wait({job, stopping}, return_when=asyncio.FIRST_COMPLETED)
+        if stopping in done and on_stop is not None:
+            on_stop()
+        if job in done:
+            await job
+        else:
+            await cancel_and_join_photo_task(job)
+    except asyncio.CancelledError:
+        if on_stop is not None:
+            on_stop()
+        raise
+    finally:
+        stopping.cancel()
+        try:
+            await cancel_and_join_photo_task(job)
+        finally:
+            await asyncio.gather(stopping, return_exceptions=True)
+
+
+async def cancel_and_join_photo_task(task: asyncio.Future[None]) -> None:
+    """Cancel once, then retain resource ownership through repeated outer cancellation."""
+    if not task.done() and not (isinstance(task, asyncio.Task) and task.cancelling()):
+        task.cancel()
+    await join_photo_task_cleanup(task)
+
+
+async def join_photo_task_cleanup(task: Awaitable[object]) -> None:
+    """Join existing work without forwarding repeated cancellation into its cleanup."""
+    joined = asyncio.gather(task, return_exceptions=True)
+    cancelled = False
+    while True:
+        try:
+            await asyncio.shield(joined)
+            break
+        except asyncio.CancelledError:
+            # Forwarding this into the sender could interrupt its FFI grace,
+            # release the Printer lock and leave a blocking call still alive.
+            cancelled = True
+    if cancelled:
+        raise asyncio.CancelledError
 
 
 async def await_print_sender_without_cancelling_on_timeout(
@@ -889,32 +1198,46 @@ async def await_print_sender_without_cancelling_on_timeout(
 
     send_task = asyncio.ensure_future(send)
     try:
-        await asyncio.wait_for(asyncio.shield(send_task), timeout=slow_after_s)
-    except TimeoutError:
-        LOGGER.warning(
-            "bridge.print_slow path=%s timeout_s=%s",
-            received.path,
-            slow_after_s,
-        )
-        await ui.print_progress(
-            PrintProgress(PrintStage.FINISHING, "Still printing", "Waiting for printer")
-        )
-        if hard_after_s is None or slow_after_s is None:
-            await send_task
-            return
-        remaining_s = max(1.0, hard_after_s - slow_after_s)
         try:
-            await asyncio.wait_for(asyncio.shield(send_task), timeout=remaining_s)
+            await asyncio.wait_for(asyncio.shield(send_task), timeout=slow_after_s)
         except TimeoutError:
-            LOGGER.critical(
-                "bridge.print_hard_timeout path=%s hard_timeout_s=%s",
+            if send_task.done():
+                # A sender can fail with its own TimeoutError. Preserve that
+                # result rather than treating completed work as still printing.
+                send_task.result()
+                return
+            LOGGER.warning(
+                "bridge.print_slow path=%s timeout_s=%s",
                 received.path,
-                hard_after_s,
+                slow_after_s,
             )
             await ui.print_progress(
-                PrintProgress(PrintStage.FINISHING, "Print stalled", "Restarting bridge")
+                PrintProgress(PrintStage.FINISHING, "Still printing", "Waiting for printer")
             )
-            os._exit(1)
+            if hard_after_s is None or slow_after_s is None:
+                await asyncio.shield(send_task)
+                return
+            remaining_s = max(1.0, hard_after_s - slow_after_s)
+            try:
+                await asyncio.wait_for(asyncio.shield(send_task), timeout=remaining_s)
+            except TimeoutError:
+                if send_task.done():
+                    send_task.result()
+                    return
+                LOGGER.critical(
+                    "bridge.print_hard_timeout path=%s hard_timeout_s=%s",
+                    received.path,
+                    hard_after_s,
+                )
+                await ui.print_progress(
+                    PrintProgress(PrintStage.FINISHING, "Print stalled", "Restarting bridge")
+                )
+                os._exit(1)
+    finally:
+        # A slow-print notice keeps the hardware job running. Shutdown is a
+        # separate cancellation path: join the sender before releasing its
+        # CPU boost or closing the UI/backend, rather than orphaning it.
+        await cancel_and_join_photo_task(send_task)
 
 
 async def drain_print_progress(
@@ -1000,23 +1323,33 @@ async def send_print_to_printer(
     progress: PrintProgressCallback,
     *,
     prepared_image: PreparedImage | None = None,
+    preparation_model_hint: PrinterModel | None = None,
 ) -> None:
     """Print a received file through the model-detecting BLE path."""
 
     from dataclasses import replace as _replace
 
-    from instantlink_bridge.imaging.postprocess import read_exif_datestamp_text
+    from instantlink_bridge.imaging.models import correction_profile
     from instantlink_bridge.imaging.presets import resolve_preset
 
     adjustments = resolve_preset(config.adjustments)
     # If datestamp is enabled, read EXIF and format the date now so
     # apply_adjustments stays locale-agnostic.
     if config.adjustments.datestamp:
-        datestamp_text = read_exif_datestamp_text(
-            received.path,
-            config.ui.language.value,
-            fmt=config.adjustments.datestamp_format,
+        metadata = asyncio.create_task(
+            asyncio.to_thread(
+                read_exif_datestamp_text,
+                received.path,
+                config.ui.language.value,
+                fmt=config.adjustments.datestamp_format,
+            )
         )
+        try:
+            datestamp_text = await asyncio.shield(metadata)
+        except BaseException:
+            # Retain the FTP source until the thread actually stops reading it.
+            await join_photo_task_cleanup(metadata)
+            raise
         adjustments = _replace(adjustments, datestamp_text=datestamp_text)
     if instantlink_backend_enabled():
         # When a preview was shown it already built this exact image; hand it
@@ -1035,7 +1368,9 @@ async def send_print_to_printer(
             model=config.printer.model,
             progress=progress,
             adjustments=adjustments,
+            correction=correction_profile(config.correction),
             prepared_image=prepared_image,
+            preparation_model_hint=preparation_model_hint,
         )
     else:
         await print_file_to_printer_bleak(
@@ -1049,6 +1384,7 @@ async def send_print_to_printer(
             model=config.printer.model,
             progress=progress,
             adjustments=adjustments,
+            correction=correction_profile(config.correction),
         )
 
 

@@ -1,0 +1,35 @@
+{
+  "label": "candidate",
+  "library": "instantlink-discovery-candidate-079.so",
+  "pid": 14377,
+  "rows": [
+    {
+      "trial": 1,
+      "elapsed_s": 5.359490259001177,
+      "cpu_s": 0.4575905200000001,
+      "result": -1,
+      "fd_before": 10,
+      "fd_after": 12,
+      "discovering": "b false"
+    },
+    {
+      "trial": 2,
+      "elapsed_s": 5.3978016119999666,
+      "cpu_s": 0.47512234,
+      "result": -1,
+      "fd_before": 12,
+      "fd_after": 12,
+      "discovering": "b false"
+    },
+    {
+      "trial": 3,
+      "elapsed_s": 5.368756560999827,
+      "cpu_s": 0.46158036700000027,
+      "result": -1,
+      "fd_before": 12,
+      "fd_after": 12,
+      "discovering": "b false"
+    }
+  ],
+  "no_film": true
+}

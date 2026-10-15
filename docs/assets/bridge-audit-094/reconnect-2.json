@@ -1,0 +1,122 @@
+{
+  "film_used": 0,
+  "boundary": "Normal installed service, no observer. External BlueZ Disconnect and read-only journal/CPU/backlight/FTP probes. Internal lock flag not introspected; powersave600/backlight low verified. No image/print/actuator commands.",
+  "pid": 13213,
+  "before_gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "film_before": 0,
+  "disconnect_monotonic": 17888.018383589,
+  "recovered_s": 7.366599411001516,
+  "status_message": "2026-10-14 15:55:19,446 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=True model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "film_after": 0,
+  "passed": true,
+  "samples": [
+    {
+      "elapsed_s": 2.012578072000906,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 2.5259084880017326,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.055444321002142,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 3.564114373002667,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.071041352002794,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 4.581981925002765,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 5.092608018003375,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 5.603003643002012,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 6.116960934999952,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 6.636109997001768,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    },
+    {
+      "elapsed_s": 7.167357184000139,
+      "cpu_khz": 600000,
+      "governor": "powersave",
+      "gpio24": "24: op -- -- | lo // GPIO24 = output",
+      "pid": 13213,
+      "ftp_greeting": "220",
+      "ftp_noop": "200"
+    }
+  ],
+  "setup_failure_messages": [
+    "2026-10-14 15:55:16,083 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed stage=5 detail=BLE error: BLE link disconnected during GATT setup setup_drop_streak=1"
+  ],
+  "warning_error_messages": [],
+  "event_messages": [
+    "2026-10-14 15:55:14,088 INFO instantlink_bridge.ui.controller ui.printer_disconnect_event name=INSTAX-52006924"
+  ],
+  "runtime_commit": "7c312adb51b7d43b29d1c6b3978f32cb33adf9ed",
+  "ffi_sha256": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+}

@@ -1,0 +1,107 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.13.9",
+  "pillow": "11.3.0",
+  "cases": [
+    {
+      "case": "ui_ready_rgb_240x240",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "5f99d27c4e28e25d0b0371fe82ef9656ae9e45a9d390aac45288e394aabb167f",
+      "timings": {
+        "baseline": {
+          "wall_median_ms": 7.855645497329533,
+          "cpu_median_ms": 7.850999999999997,
+          "wall_min_ms": 7.444165996275842,
+          "wall_max_ms": 392.57037499919534,
+          "iterations": 50
+        },
+        "candidate": {
+          "wall_median_ms": 0.277458515483886,
+          "cpu_median_ms": 0.2769999999999717,
+          "wall_min_ms": 0.2759579801931977,
+          "wall_max_ms": 0.41991600301116705,
+          "iterations": 50
+        }
+      }
+    },
+    {
+      "case": "random_rgb_240x240",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "RGB",
+      "sha256": "94956271e6061cc4f73a8bdb9f9251e9ce0be1b37082b324d3a6700bf9ee1216",
+      "timings": {
+        "baseline": {
+          "wall_median_ms": 7.908313011284918,
+          "cpu_median_ms": 7.880500000000012,
+          "wall_min_ms": 7.676500012166798,
+          "wall_max_ms": 8.17479204852134,
+          "iterations": 50
+        },
+        "candidate": {
+          "wall_median_ms": 0.29277103021740913,
+          "cpu_median_ms": 0.29199999999995896,
+          "wall_min_ms": 0.2879159292206168,
+          "wall_max_ms": 0.3993329592049122,
+          "iterations": 50
+        }
+      }
+    },
+    {
+      "case": "random_rgb_321x241",
+      "size": [
+        321,
+        241
+      ],
+      "mode": "RGB",
+      "sha256": "a15562ca3dc75ddccf09092386f3c284463355bad043916024137369d1fdb4b9",
+      "timings": {
+        "baseline": {
+          "wall_median_ms": 10.619750013574958,
+          "cpu_median_ms": 10.568999999999939,
+          "wall_min_ms": 9.925916907377541,
+          "wall_max_ms": 11.022582999430597,
+          "iterations": 50
+        },
+        "candidate": {
+          "wall_median_ms": 0.35500002559274435,
+          "cpu_median_ms": 0.3549999999998832,
+          "wall_min_ms": 0.3499999875202775,
+          "wall_max_ms": 0.4742919700220227,
+          "iterations": 50
+        }
+      }
+    },
+    {
+      "case": "grayscale_240x240",
+      "size": [
+        240,
+        240
+      ],
+      "mode": "L",
+      "sha256": "ccc9e9e6335cc14153d31fce9a3148cdc943a903bdcf4e03cdf0f2796c9008b4",
+      "timings": {
+        "baseline": {
+          "wall_median_ms": 7.747770985588431,
+          "cpu_median_ms": 7.744499999999932,
+          "wall_min_ms": 7.493000011891127,
+          "wall_max_ms": 8.294499944895506,
+          "iterations": 50
+        },
+        "candidate": {
+          "wall_median_ms": 0.2888955641537905,
+          "cpu_median_ms": 0.288000000000066,
+          "wall_min_ms": 0.27604191564023495,
+          "wall_max_ms": 0.3819999983534217,
+          "iterations": 50
+        }
+      }
+    }
+  ]
+}

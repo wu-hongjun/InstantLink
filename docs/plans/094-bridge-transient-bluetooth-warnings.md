@@ -1,0 +1,99 @@
+# Bridge transient Bluetooth warnings
+
+## Scope
+
+Investigate the Bluetooth warnings remaining after plan 093. Preserve automatic reconnect,
+status freshness and authentication recovery; validate on the installed Pi with status requests
+only and no film. Keep genuine faults visible while removing duplicate reports and incorrect
+diagnostic claims.
+
+## Baseline evidence
+
+The six warning records represent three failed connection attempts. Each native terminal callback
+reported `BLE error: BLE link disconnected during GATT setup` during characteristic lookup.
+The first two followed service/BlueZ restoration; the third followed an external Disconnect.
+All recovered automatically. The backend and controller each emitted a warning for the same
+attempt, and generic FFI error text obscured the native cause.
+
+The provider also supplied empty scanner diagnostics for BLE setup errors even though it had not
+performed a separate scanner pass. This incorrectly reported that the selected Printer was absent.
+Native readiness checks queried fresh BlueZ state and detected an actual dropped connection;
+the investigation provides no evidence that those checks should be bypassed or weakened.
+
+## Implementation and validation
+
+Only exact canonical setup-drop evidence qualifies for bounded transient handling. The first two
+unresolved setup drops are INFO; the third is WARNING. The episode survives session teardown,
+same-target absence, unknown failures and case variants, clearing only after fresh status or
+a different target. Unknown and authentication failures remain warnings themselves.
+
+The backend retains native detail and stage in its log signature. A per-exception ownership flag
+prevents a duplicate controller warning without suppressing failures from other providers.
+BLE setup errors no longer invent an empty scan. Startup permits the existing two prompt retries
+after a confirmed setup drop, then returns to normal offline cadence; repeated drops or absent
+scans do not renew this allowance. A pending disconnect event retains recovery ownership.
+
+Three subagents independently investigated, implemented and adversarially reviewed the work.
+Review fixed a misplaced failure-reason reset and a logging test fixture; root review also caught
+an allowance reset after intervening absent scans. All received regression coverage. The final
+full suite passed **2,450 tests**, with eight expected Mac GPIO warnings. Ruff formatting of
+158 files, Ruff lint, strict mypy of 68 source files, diff checks and strict MkDocs passed.
+The producer ran 352 affected tests; the independent reviewer ran 368 broader checks and the
+final amended 65-test status suite. No Rust, protocol, image, FFI ABI or configuration changes.
+
+Clean `aa852e1` installed through the normal deployment script, which restarts BlueZ, manager
+and Bridge. Loaded source hashes match the independent review; FFI remains
+`b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175`.
+Initial installed health: Bridge PID 11373 and manager 11371 active with zero automatic restarts,
+FTP 220/200, backup socket active and no runtime warnings. Startup was correctly awake at
+1,000 MHz. The attempted live baseline timed out before issuing Disconnect because the Printer
+was offline; historical plan 093 timings are contextual, not a matched speed comparison.
+
+Installed automatic screen-off settled at 600 MHz/powersave/GPIO 24 low. Its full current-PID
+journal contained 24 records and no warning/error matches. A second 85-second readiness probe
+also timed out before issuing Disconnect because the Printer remained unavailable. Neither
+probe issued any Printer command beyond the normal service's discovery/status activity.
+Live installed reconnect remains **pending Printer availability**; no physical contact,
+Printer power-cycle, fresh film-count comparison or reconnect-speed claim is made. No film used.
+Hardware unchanged: Pi Zero 2 W Rev 1.0/ST7789/X306, Debian 13.2/kernel 6.12.47/BlueZ 5.82,
+Link Square INSTAX-52006924.
+
+Public evidence: [plan 094 audit assets](../assets/bridge-audit-094/README.md).
+
+## Live follow-up after Printer power-on
+
+The normal installed service recovered one exact native setup drop at 15:49:24 EDT and
+published fresh status at 15:49:28: one detailed INFO record, no duplicate warning. A subsequent
+external Disconnect completed native connection/status setup again at 15:49:40 while the
+service stayed at 600 MHz with the screen dark and FTP responsive. Film remained zero.
+
+That first probe timed out because unchanged successful status after a disconnect was DEBUG,
+so its INFO-only journal observer could not prove controller acceptance. Connected BlueZ and
+native progress alone were not promoted to a successful fresh-status acceptance result.
+The follow-up clears the status-log signature only on an accepted current disconnect event:
+the next accepted fresh status is INFO once, with unchanged later polls returning to DEBUG.
+Stale watches and replies arriving while a disconnect is pending cannot generate fresh status.
+This restores the documented recovery logging without adding polls or changing BLE operations.
+
+Clean `7c312ad` with that amendment passed **2,451 full Bridge tests**, eight expected Mac GPIO
+warnings, Ruff and strict mypy. Independent review passed 370 affected tests. Installed controller
+SHA `c045cf31684e38857ab54aba213c4bd2e7a29205a629256535db88fa9f803694` matches review;
+native FFI unchanged.
+
+Two installed status-only external Disconnect checks passed at **11.159 and 7.367 seconds**,
+measured from command dispatch to an accepted fresh controller status record. The first attempt
+encountered one absent scan; the second encountered an exact setup drop, preserved at INFO with
+stage 5/detail/streak 1 and recovered automatically. All **21 + 11 observations** retained PID
+13213, 600 MHz/powersave, GPIO 24 low, FTP greeting 220/NOOP 200 and film **0 → 0**. No manual
+Reconnect, image, print or actuator command. No matched baseline or universal speedup claim.
+
+Final accepted health: Bridge 13213/manager 13211 active, zero automatic restarts, connected
+Printer with fresh Square/50%/charging status, throttle `0x0`, backup socket active and all three
+reviewed Python hashes matching. The complete current-PID journal contained 132 records and
+**zero warning/error matches**, including the successful recovery of the actual setup drop.
+Initial offline probe timeouts and the rejected INFO-observer timeout remain recorded above;
+they are not counted as successful checks. These checks validate automatic dark-screen recovery;
+physical contacts, manual lock-state introspection and Printer power cycles were not exercised.
+Independent final evidence review passed. Both owned remote helpers were removed afterward;
+Bridge, manager and the production backup socket remained active. Final documentation-only
+deployment preserves the accepted runtime process; no additional Bluetooth restart is needed.

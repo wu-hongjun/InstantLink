@@ -1,0 +1,30 @@
+{
+  "pid": 11373,
+  "services": "MainPID=11373\nNRestarts=0\nActiveState=active\n\nMainPID=11371\nNRestarts=0\nActiveState=active",
+  "cpu_khz": 600000,
+  "governor": "powersave",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "throttle": "throttled=0x0",
+  "warning_error_messages": [],
+  "setup_failure_messages": [
+    "2026-10-14 15:42:58,192 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkPrinterNotFoundError error=connect failed: printer not found stage=0 detail=no Instax printer found setup_drop_streak=0",
+    "2026-10-14 15:49:24,207 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed stage=5 detail=BLE error: BLE link disconnected during GATT setup setup_drop_streak=1"
+  ],
+  "runtime_log_records": 383,
+  "status_messages": [
+    "2026-10-14 15:49:28,799 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=50 charging=True model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+  ],
+  "socket_active": "active",
+  "source_sha256": {
+    "src/instantlink_bridge/ble/instantlink.py": "c63e54d6e1deff8b13fe2d9ee851c003452a3ce36a59285ebf0c2e63ff902673",
+    "src/instantlink_bridge/ui/status.py": "d63f565057c4002f893040e750501b4e0947155e19d0d72a0af7c7b624c58876",
+    "src/instantlink_bridge/ui/controller.py": "7e9a6ad13e8face690ca248856dfe1ecfe3699d9c6db0a4e07ba7235b8ff25cf",
+    "lib/libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+  },
+  "film_used": 0,
+  "printer_connected": true,
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "runtime_commit": "71d7c948a5e33dbf76bcb0cc658ca975cddb653f",
+  "acceptance": "Initial live attempt: fresh startup and actual transient drop recovery observed. External reconnect transport succeeded but observer timed out awaiting identical-value controllerINFO; do not count as fresh-controller acceptance."
+}

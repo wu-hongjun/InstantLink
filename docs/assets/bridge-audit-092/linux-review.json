@@ -1,0 +1,38 @@
+{
+  "reviewer": "gatt_readiness_adversarial",
+  "result": "pass",
+  "source_commit": "6d61384c064e6a3110bf4f3642b4b941b4690d1f",
+  "checked_evidence_sha256": {
+    "/tmp/instantlink-gatt-validation-final-092.json": "31c44eb3245e22326a745c2d93a9aabc08d13b76904bd66acad961facb71c090",
+    "/tmp/instantlink-gatt-integrity-092.json": "7c67b95362d8c12d8945d0b0d081894d278e71a1399518e59445dc745ccb34ae",
+    "/tmp/instantlink-gatt-linux-final-tests-092.log": "787091f46f1cf6d7272042920bfaeabce3ec2e30620e396824dc969b193a6fad"
+  },
+  "linux_gatt_cases_passed": 16,
+  "linux_failed": 0,
+  "linux_elapsed_s": 0.03,
+  "coverage_assertions": [
+    "gatt_snapshot_requires_typed_properties_on_exact_device",
+    "gatt_complete_cached_exports_cannot_bypass_pending_or_unknown_readiness",
+    "gatt_complete_cached_exports_wait_for_confirmed_ready_before_fresh_discovery",
+    "gatt_complete_cached_exports_cannot_hide_disconnect_during_readiness_wait",
+    "gatt_connect_outcomes_gate_complete_cached_exports",
+    "gatt_query_and_discovery_share_real_deadline_and_drop_pending_futures"
+  ],
+  "python_module_hashes_matched": 67,
+  "native_artifact_hashes_matched": {
+    "instantlink": "f1d325ac2fe436ee13b704183cd1ce9bc1490476c0e6080acbd7676d6631b21f",
+    "libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+  },
+  "frozen_reviewed_source_hashes_match": true,
+  "boundaries": [
+    "Root executed cross-built Linux tests on Pi; reviewer independently inspected captured log and evidence, without rerunning hardware tests.",
+    "Full Linux227 core tests preceded final guarded-cache delta; final Linux16 targeted cases cover updated code. Host full core212 and Bridge2383 gates reported in validation evidence.",
+    "Installed Python/native hashes are compared to host sources and build artifacts from the captured integrity report; this reviewer did not read the live device again."
+  ],
+  "outstanding_source_findings": [],
+  "remaining_acceptance": [
+    "Live matched service-restart samples, locked reconnect and UI/normal-service restoration log review"
+  ],
+  "film_used": 0,
+  "hardware_mutations": false
+}

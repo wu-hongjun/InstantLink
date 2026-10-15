@@ -16,7 +16,8 @@
 
 use std::ffi::{CStr, CString, c_void};
 use std::os::raw::c_char;
-use std::sync::{Arc, Mutex, Once, OnceLock};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, Once, OnceLock, TryLockError};
 use std::time::Duration;
 
 use instantlink_core::connect_progress::{ConnectProgressEvent, ConnectStage};
@@ -39,8 +40,14 @@ pub type instantlink_print_progress_cb_ctx = Option<extern "C" fn(u32, u32, *mut
 static INIT: Once = Once::new();
 static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static DEVICE: OnceLock<DeviceLock> = OnceLock::new();
+static CONNECT_OPERATION: Mutex<()> = Mutex::new(());
+static CONNECTION_GENERATION: AtomicU64 = AtomicU64::new(0);
 static KEEPALIVE_INTERVAL: OnceLock<KeepaliveIntervalLock> = OnceLock::new();
 static KEEPALIVE_TASK: OnceLock<KeepaliveTaskLock> = OnceLock::new();
+// Linux: listener <=250ms, physical disconnect <=5s, verification <=2s.
+#[cfg(target_os = "linux")]
+const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(8);
+#[cfg(not(target_os = "linux"))]
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const DEFAULT_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
@@ -97,6 +104,9 @@ fn start_keepalive_task(rt: &tokio::runtime::Runtime, device: DeviceArc) {
     let handle = rt.spawn(async move {
         loop {
             tokio::time::sleep(interval).await;
+            if device.known_disconnected() {
+                break;
+            }
             match device.keep_alive().await {
                 Ok(()) => log::debug!(
                     "instantlink.keepalive_ok name={} interval_s={}",
@@ -188,21 +198,60 @@ fn emit_connect_progress_with_context(
     progress_cb(connect_stage_code(event.stage), detail_ptr, context);
 }
 
+// Connect callbacks may read state or disconnect, but reentering connect must fail promptly
+// instead of blocking on this admission guard or creating a competing physical BLE session.
+fn try_connection_operation() -> Result<MutexGuard<'static, ()>, i32> {
+    match CONNECT_OPERATION.try_lock() {
+        Ok(operation) => Ok(operation),
+        Err(TryLockError::WouldBlock) => Err(-11),
+        Err(TryLockError::Poisoned(error)) => {
+            // Admission carries no mutable state. A caught transport panic must not permanently
+            // disable all future reconnects through mutex poisoning.
+            CONNECT_OPERATION.clear_poison();
+            Ok(error.into_inner())
+        }
+    }
+}
+
+fn begin_connection() -> Result<(MutexGuard<'static, ()>, u64, Option<DeviceArc>), i32> {
+    let operation = try_connection_operation()?;
+    let mut device = get_device_lock().lock().map_err(|_| -3)?;
+    let generation = CONNECTION_GENERATION
+        .fetch_add(1, Ordering::SeqCst)
+        .wrapping_add(1);
+    stop_keepalive_task();
+    Ok((operation, generation, device.take()))
+}
+
+fn publish_connection(
+    rt: &tokio::runtime::Runtime,
+    generation: u64,
+    device: Box<dyn instantlink_core::PrinterDevice>,
+) -> Result<(), i32> {
+    let device = Arc::new(device);
+    let published = match get_device_lock().lock() {
+        Ok(mut guard) if CONNECTION_GENERATION.load(Ordering::SeqCst) == generation => {
+            *guard = Some(Arc::clone(&device));
+            start_keepalive_task(rt, Arc::clone(&device));
+            true
+        }
+        _ => false,
+    };
+    if published {
+        Ok(())
+    } else {
+        let _ = disconnect_device(rt, device);
+        Err(-3)
+    }
+}
+
 fn connect_named_internal(
     device_name: &str,
     duration: Option<Duration>,
     progress: Option<Box<dyn Fn(ConnectProgressEvent) + Send + Sync>>,
-) -> i32 {
+) -> Result<instantlink_core::PrinterStatus, i32> {
     let rt = get_runtime();
-    stop_keepalive_task();
-    let old_device = {
-        let lock = get_device_lock();
-        if let Ok(mut guard) = lock.lock() {
-            guard.take()
-        } else {
-            return -3;
-        }
-    };
+    let (_operation, generation, old_device) = begin_connection()?;
     if let Some(old_device) = old_device {
         let _ = disconnect_device(rt, old_device);
     }
@@ -210,23 +259,16 @@ fn connect_named_internal(
     let progress_ref = progress
         .as_ref()
         .map(|callback| callback.as_ref() as &(dyn Fn(ConnectProgressEvent) + Send + Sync));
-    match rt.block_on(instantlink_core::printer::connect_with_progress(
+    match rt.block_on(instantlink_core::printer::connect_with_progress_and_status(
         device_name,
         duration,
         progress_ref,
     )) {
-        Ok(device) => {
-            let device = Arc::new(device);
-            let lock = get_device_lock();
-            if let Ok(mut guard) = lock.lock() {
-                *guard = Some(Arc::clone(&device));
-                start_keepalive_task(rt, device);
-                0
-            } else {
-                -3
-            }
+        Ok((device, status)) => {
+            publish_connection(rt, generation, device)?;
+            Ok(status)
         }
-        Err(e) => error_code(&e),
+        Err(e) => Err(error_code(&e)),
     }
 }
 
@@ -268,6 +310,68 @@ fn print_with_progress_internal(
     }
 }
 
+fn prepared_model(code: u8) -> Result<instantlink_core::PrinterModel, i32> {
+    use instantlink_core::PrinterModel;
+    match code {
+        0 => Ok(PrinterModel::Mini),
+        1 => Ok(PrinterModel::MiniLink3),
+        2 => Ok(PrinterModel::Square),
+        3 => Ok(PrinterModel::Wide),
+        _ => Err(-5),
+    }
+}
+
+/// See the exported prepared-JPEG functions for the pointer/lifetime contract.
+unsafe fn print_prepared_jpeg_internal(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+    progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
+) -> i32 {
+    let model = match prepared_model(expected_model) {
+        Ok(model) => model,
+        Err(code) => return code,
+    };
+    if data.is_null() || data_len == 0 || transport_flip_applied > 1 {
+        return -5;
+    }
+    if data_len as usize > model.spec().max_image_size {
+        return -6;
+    }
+    let device = {
+        let guard = match get_device_lock().lock() {
+            Ok(guard) => guard,
+            Err(_) => return -3,
+        };
+        match guard.as_ref() {
+            Some(device) => Arc::clone(device),
+            None => return -1,
+        }
+    };
+    // Release DEVICE before invoking user callbacks or waiting for BLE.
+    if model != device.model() || (transport_flip_applied != 0) != model.spec().flip_vertical {
+        return -6;
+    }
+    // SAFETY: null/length bounds are checked above; caller guarantees all data_len
+    // bytes remain readable and unchanged until this synchronous call returns.
+    let bytes = unsafe { std::slice::from_raw_parts(data, data_len as usize) };
+    let progress_ref = progress
+        .as_ref()
+        .map(|callback| callback.as_ref() as &(dyn Fn(usize, usize) + Send + Sync));
+    match get_runtime().block_on(device.print_prepared_jpeg(
+        bytes,
+        model,
+        transport_flip_applied != 0,
+        print_option,
+        progress_ref,
+    )) {
+        Ok(()) => 0,
+        Err(error) => error_code(&error),
+    }
+}
+
 /// Helper: read a C string pointer into a `&str`, returning `-5` on error.
 ///
 /// # Safety
@@ -301,7 +405,7 @@ unsafe fn write_str_to_buf(s: &str, out: *mut c_char, out_len: i32) -> i32 {
     // (caller contract), and copy_len <= max = out_len - 1, so both source and destination
     // ranges are valid and non-overlapping (src is a Rust &[u8], dst is the caller's buffer).
     unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out as *mut u8, copy_len);
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out.cast::<u8>(), copy_len);
         // SAFETY: out.add(copy_len) is within the buffer because copy_len <= out_len - 1,
         // so index copy_len is the last valid byte of the out_len-byte buffer.
         *out.add(copy_len) = 0; // NUL terminator
@@ -362,14 +466,9 @@ pub unsafe extern "C" fn instantlink_scan(
 pub extern "C" fn instantlink_connect() -> i32 {
     std::panic::catch_unwind(|| {
         let rt = get_runtime();
-        stop_keepalive_task();
-        let old_device = {
-            let lock = get_device_lock();
-            if let Ok(mut guard) = lock.lock() {
-                guard.take()
-            } else {
-                return -3;
-            }
+        let (_operation, generation, old_device) = match begin_connection() {
+            Ok(state) => state,
+            Err(code) => return code,
         };
         if let Some(old_device) = old_device {
             let _ = disconnect_device(rt, old_device);
@@ -377,15 +476,7 @@ pub extern "C" fn instantlink_connect() -> i32 {
 
         match rt.block_on(instantlink_core::printer::connect_any(None)) {
             Ok(device) => {
-                let device = Arc::new(device);
-                let lock = get_device_lock();
-                if let Ok(mut guard) = lock.lock() {
-                    *guard = Some(Arc::clone(&device));
-                    start_keepalive_task(rt, device);
-                    0
-                } else {
-                    -3
-                }
+                publish_connection(rt, generation, device).map_or_else(|code| code, |_| 0)
             }
             Err(e) => error_code(&e),
         }
@@ -415,14 +506,9 @@ pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration
             None
         };
         let rt = get_runtime();
-        stop_keepalive_task();
-        let old_device = {
-            let lock = get_device_lock();
-            if let Ok(mut guard) = lock.lock() {
-                guard.take()
-            } else {
-                return -3;
-            }
+        let (_operation, generation, old_device) = match begin_connection() {
+            Ok(state) => state,
+            Err(code) => return code,
         };
         if let Some(old_device) = old_device {
             let _ = disconnect_device(rt, old_device);
@@ -430,15 +516,7 @@ pub unsafe extern "C" fn instantlink_connect_named(name: *const c_char, duration
 
         match rt.block_on(instantlink_core::printer::connect(s, dur)) {
             Ok(device) => {
-                let device = Arc::new(device);
-                let lock = get_device_lock();
-                if let Ok(mut guard) = lock.lock() {
-                    *guard = Some(Arc::clone(&device));
-                    start_keepalive_task(rt, device);
-                    0
-                } else {
-                    -3
-                }
+                publish_connection(rt, generation, device).map_or_else(|code| code, |_| 0)
             }
             Err(e) => error_code(&e),
         }
@@ -481,7 +559,71 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress(
                 emit_connect_progress(Some(progress_cb), event)
             }) as Box<dyn Fn(ConnectProgressEvent) + Send + Sync>
         });
-        connect_named_internal(s, duration, progress)
+        connect_named_internal(s, duration, progress).map_or_else(|code| code, |_| 0)
+    }))
+    .unwrap_or(-3)
+}
+
+/// Connect to a named Printer and return the freshly queried initial status in one operation.
+///
+/// Uses the same progress stages as `instantlink_connect_named_with_progress`. No subsequent
+/// status request is needed to obtain this connection's initial battery, film, charging or print
+/// count. Later `instantlink_status` calls still query the Printer. Outputs are untouched on error.
+/// Existing-session replacement and concurrent-disconnect semantics match the named connect APIs;
+/// callers must serialize operations when they require the returned session to remain connected.
+///
+/// # Safety
+///
+/// `name` must be a valid, non-null, null-terminated UTF-8 C string. Each output must point to a
+/// distinct writable i32 slot for the duration of this call. `progress_cb` may be null, and callback
+/// detail is valid only during its invocation. Concurrent or reentrant connect returns -11; a callback
+/// disconnect invalidates this connection attempt, which then returns -3 without publishing it.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_connect_named_with_status(
+    name: *const c_char,
+    duration_secs: i32,
+    progress_cb: instantlink_connect_stage_cb,
+    out_battery: *mut i32,
+    out_film: *mut i32,
+    out_charging: *mut i32,
+    out_print_count: *mut i32,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if out_battery.is_null()
+            || out_film.is_null()
+            || out_charging.is_null()
+            || out_print_count.is_null()
+        {
+            return -5;
+        }
+        // SAFETY: name remains a valid C string throughout this call, as required above.
+        let name = match unsafe { cstr_to_str(name) } {
+            Ok(name) => name,
+            Err(code) => return code,
+        };
+        let duration = if duration_secs > 0 {
+            Some(Duration::from_secs(duration_secs as u64))
+        } else {
+            None
+        };
+        let progress = progress_cb.map(|progress_cb| {
+            Box::new(move |event: ConnectProgressEvent| {
+                emit_connect_progress(Some(progress_cb), event)
+            }) as Box<dyn Fn(ConnectProgressEvent) + Send + Sync>
+        });
+        match connect_named_internal(name, duration, progress) {
+            Ok(status) => {
+                // SAFETY: outputs were checked for null and meet the caller-owned slot contract.
+                unsafe {
+                    *out_battery = status.battery as i32;
+                    *out_film = status.film_remaining as i32;
+                    *out_charging = i32::from(status.is_charging);
+                    *out_print_count = status.print_count as i32;
+                }
+                0
+            }
+            Err(code) => code,
+        }
     }))
     .unwrap_or(-3)
 }
@@ -522,7 +664,7 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress_ctx(
                 emit_connect_progress_with_context(Some(progress_cb), context as *mut c_void, event)
             }) as Box<dyn Fn(ConnectProgressEvent) + Send + Sync>
         });
-        connect_named_internal(s, duration, progress)
+        connect_named_internal(s, duration, progress).map_or_else(|code| code, |_| 0)
     }))
     .unwrap_or(-3)
 }
@@ -531,20 +673,31 @@ pub unsafe extern "C" fn instantlink_connect_named_with_progress_ctx(
 #[unsafe(no_mangle)]
 pub extern "C" fn instantlink_disconnect() -> i32 {
     std::panic::catch_unwind(|| {
-        stop_keepalive_task();
-        let lock = get_device_lock();
-        if let Ok(mut guard) = lock.lock() {
-            if let Some(device) = guard.take() {
-                let rt = get_runtime();
-                match disconnect_device(rt, device) {
-                    Ok(()) => 0,
-                    Err(e) => error_code(&e),
-                }
-            } else {
-                -1 // no device connected
+        // Hold admission through physical teardown so a later connect cannot race this old
+        // session's disconnect. During a connect callback, invalidate the unpublished attempt
+        // without blocking on its own admission guard.
+        let _operation = match try_connection_operation() {
+            Ok(operation) => Some(operation),
+            Err(-11) => None,
+            Err(code) => return code,
+        };
+        let device = {
+            let mut guard = match get_device_lock().lock() {
+                Ok(guard) => guard,
+                Err(_) => return -3,
+            };
+            if _operation.is_none() && guard.is_some() {
+                return -11;
             }
-        } else {
-            -3
+            CONNECTION_GENERATION.fetch_add(1, Ordering::SeqCst);
+            stop_keepalive_task();
+            guard.take()
+        };
+        match device {
+            Some(device) => {
+                disconnect_device(get_runtime(), device).map_or_else(|e| error_code(&e), |_| 0)
+            }
+            None => -1,
         }
     })
     .unwrap_or(-3)
@@ -958,6 +1111,120 @@ pub unsafe extern "C" fn instantlink_print_with_progress_ctx(
     .unwrap_or(-3)
 }
 
+/// Send a printer-oriented prepared JPEG unchanged. Returns 0 or a negative error code.
+///
+/// Model codes: 0 Mini, 1 Mini Link 3, 2 Square, 3 Wide. The exact detected model,
+/// baseline 8-bit three-component JPEG integrity/dimensions/size, and flip declaration
+/// are checked before any Printer writes. `transport_flip_applied` is strictly 0/1
+/// and must equal the model's required vertical flip (1 only for Mini Link 3).
+/// Raw pixel orientation is authoritative; recognized non-neutral EXIF orientation
+/// is rejected. No resize, flip, colour adjustment or re-encode occurs.
+///
+/// # Safety
+///
+/// `data` must point to `data_len` readable bytes that remain unchanged until return.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_print_prepared_jpeg(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // SAFETY: caller upholds the exported function's data lifetime contract.
+        unsafe {
+            print_prepared_jpeg_internal(
+                data,
+                data_len,
+                expected_model,
+                transport_flip_applied,
+                print_option,
+                None,
+            )
+        }
+    }))
+    .unwrap_or(-3)
+}
+
+/// Send a prepared JPEG unchanged with an ACK progress callback.
+/// Uses the same model, integrity and orientation contract as `instantlink_print_prepared_jpeg`.
+/// The callback is invoked synchronously during the call, never after return.
+///
+/// # Safety
+///
+/// `data` must point to `data_len` readable bytes that remain unchanged until return.
+/// `progress_cb` may be null. It must not synchronously start another serialized
+/// Printer operation (status/print/disconnect); read-only identity getters are safe.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_print_prepared_jpeg_with_progress(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+    progress_cb: Option<extern "C" fn(u32, u32)>,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> = progress_cb.map(|cb| {
+            Box::new(move |sent: usize, total: usize| cb(sent as u32, total as u32))
+                as Box<dyn Fn(usize, usize) + Send + Sync>
+        });
+        // SAFETY: caller upholds the exported function's data lifetime contract.
+        unsafe {
+            print_prepared_jpeg_internal(
+                data,
+                data_len,
+                expected_model,
+                transport_flip_applied,
+                print_option,
+                progress,
+            )
+        }
+    }))
+    .unwrap_or(-3)
+}
+
+/// Send a prepared JPEG unchanged with an ACK progress callback and opaque context.
+/// Uses the same model, integrity, orientation and callback contract as the legacy callback form.
+///
+/// # Safety
+///
+/// `data` must point to `data_len` readable bytes that remain unchanged until return.
+/// `progress_cb` may be null. `context` must remain valid for every callback during
+/// this call. Callbacks must not synchronously start another serialized Printer operation.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn instantlink_print_prepared_jpeg_with_progress_ctx(
+    data: *const u8,
+    data_len: u32,
+    expected_model: u8,
+    transport_flip_applied: u8,
+    print_option: u8,
+    progress_cb: instantlink_print_progress_cb_ctx,
+    context: *mut c_void,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let context = context as usize;
+        let progress: Option<Box<dyn Fn(usize, usize) + Send + Sync>> = progress_cb.map(|cb| {
+            Box::new(move |sent: usize, total: usize| {
+                cb(sent as u32, total as u32, context as *mut c_void);
+            }) as Box<dyn Fn(usize, usize) + Send + Sync>
+        });
+        // SAFETY: caller upholds the exported function's data lifetime contract.
+        unsafe {
+            print_prepared_jpeg_internal(
+                data,
+                data_len,
+                expected_model,
+                transport_flip_applied,
+                print_option,
+                progress,
+            )
+        }
+    }))
+    .unwrap_or(-3)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1017,6 +1284,15 @@ mod tests {
         progress_enabled: bool,
     }
 
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct PreparedPrintInvocation {
+        data: Vec<u8>,
+        model: PrinterModel,
+        flip: bool,
+        print_option: u8,
+        progress_enabled: bool,
+    }
+
     #[derive(Debug, Default)]
     struct FakeFailures {
         status: Option<PrinterError>,
@@ -1026,6 +1302,7 @@ mod tests {
         print_file: Option<PrinterError>,
         set_led: Option<PrinterError>,
         disconnect: Option<PrinterError>,
+        panic_prepared: bool,
     }
 
     struct FakeDevice {
@@ -1033,10 +1310,14 @@ mod tests {
         model: PrinterModel,
         status: PrinterStatus,
         print_calls: Arc<StdMutex<Vec<PrintInvocation>>>,
+        prepared_calls: Arc<StdMutex<Vec<PreparedPrintInvocation>>>,
         led_calls: Arc<StdMutex<Vec<(u8, u8, u8, u8)>>>,
         shutdown_calls: Arc<AtomicU32>,
+        disconnect_calls: Arc<AtomicU32>,
+        disconnect_gate: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
         reset_calls: Arc<AtomicU32>,
         film_and_charging_calls: Arc<AtomicU32>,
+        closed: bool,
         failures: Arc<StdMutex<FakeFailures>>,
     }
 
@@ -1054,10 +1335,14 @@ mod tests {
                     name: name.to_string(),
                 },
                 print_calls: Arc::new(StdMutex::new(Vec::new())),
+                prepared_calls: Arc::new(StdMutex::new(Vec::new())),
                 led_calls: Arc::new(StdMutex::new(Vec::new())),
                 shutdown_calls: Arc::new(AtomicU32::new(0)),
+                disconnect_calls: Arc::new(AtomicU32::new(0)),
+                disconnect_gate: None,
                 reset_calls: Arc::new(AtomicU32::new(0)),
                 film_and_charging_calls: Arc::new(AtomicU32::new(0)),
+                closed: false,
                 failures: Arc::new(StdMutex::new(FakeFailures::default())),
             }
         }
@@ -1069,6 +1354,9 @@ mod tests {
     }
 
     impl PrinterDevice for FakeDevice {
+        fn known_disconnected(&self) -> bool {
+            self.closed
+        }
         fn status<'life0, 'async_trait>(
             &'life0 self,
         ) -> Pin<
@@ -1202,6 +1490,47 @@ mod tests {
             Box::pin(async move { Ok(()) })
         }
 
+        fn print_prepared_jpeg<'life0, 'life1, 'life2, 'async_trait>(
+            &'life0 self,
+            data: &'life1 [u8],
+            model: PrinterModel,
+            flip: bool,
+            print_option: u8,
+            progress: Option<&'life2 (dyn Fn(usize, usize) + Send + Sync)>,
+        ) -> Pin<Box<dyn Future<Output = instantlink_core::Result<()>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            'life2: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move {
+                if self.failures.lock().unwrap().panic_prepared {
+                    panic!("simulated prepared JPEG panic");
+                }
+                instantlink_core::image::validate_prepared_jpeg(data, model, self.model, flip)?;
+                self.prepared_calls
+                    .lock()
+                    .unwrap()
+                    .push(PreparedPrintInvocation {
+                        data: data.to_vec(),
+                        model,
+                        flip,
+                        print_option,
+                        progress_enabled: progress.is_some(),
+                    });
+                if let Some(progress) = progress {
+                    progress(2, 5);
+                }
+                self.failures
+                    .lock()
+                    .unwrap()
+                    .print_file
+                    .take()
+                    .map_or(Ok(()), Err)
+            })
+        }
+
         fn set_led<'life0, 'async_trait>(
             &'life0 self,
             _r: u8,
@@ -1259,8 +1588,14 @@ mod tests {
             'life0: 'async_trait,
             Self: 'async_trait,
         {
+            self.disconnect_calls.fetch_add(1, Ordering::SeqCst);
             let result = self.failures.lock().unwrap().disconnect.take();
+            let gate = self.disconnect_gate.clone();
             Box::pin(async move {
+                if let Some((started, release)) = gate {
+                    started.notify_one();
+                    release.notified().await;
+                }
                 match result {
                     Some(err) => Err(err),
                     None => Ok(()),
@@ -1321,6 +1656,135 @@ mod tests {
         );
         assert_eq!(slots.0.load(Ordering::SeqCst), 7);
         assert_eq!(slots.1.load(Ordering::SeqCst), 52);
+    }
+
+    fn prepared_fixture(model: PrinterModel) -> Vec<u8> {
+        instantlink_core::image::prepare_image_from_bytes(
+            include_bytes!("../../../bridge/src/instantlink_bridge/imaging/_example_photo.jpg"),
+            model,
+            FitMode::Stretch,
+            80,
+        )
+        .unwrap()
+        .0
+    }
+
+    extern "C" fn prepared_identity_callback(sent: u32, total: u32, context: *mut c_void) {
+        let mut buffer = [0 as c_char; 128];
+        let name_length = unsafe { instantlink_device_name(buffer.as_mut_ptr(), 128) };
+        let slots = unsafe { &*(context.cast::<(AtomicU32, AtomicU32, AtomicI32)>()) };
+        slots.0.store(sent, Ordering::SeqCst);
+        slots.1.store(total, Ordering::SeqCst);
+        slots.2.store(name_length, Ordering::SeqCst);
+    }
+
+    #[test]
+    fn prepared_ffi_rejects_invalid_pointer_length_codes_and_orientation() {
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        let calls = Arc::clone(&device.prepared_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let jpeg = prepared_fixture(PrinterModel::Mini);
+        for (pointer, length, model, flip, expected) in [
+            (std::ptr::null(), jpeg.len() as u32, 0, 0, -5),
+            (jpeg.as_ptr(), 0, 0, 0, -5),
+            (jpeg.as_ptr(), jpeg.len() as u32, 4, 0, -5),
+            (jpeg.as_ptr(), jpeg.len() as u32, 0, 2, -5),
+            (jpeg.as_ptr(), u32::MAX, 0, 0, -6),
+            (jpeg.as_ptr(), jpeg.len() as u32, 1, 1, -6),
+            (jpeg.as_ptr(), jpeg.len() as u32, 0, 1, -6),
+            (jpeg.as_ptr(), 2, 0, 0, -6),
+        ] {
+            assert_eq!(
+                unsafe { instantlink_print_prepared_jpeg(pointer, length, model, flip, 0) },
+                expected
+            );
+        }
+        assert!(calls.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn prepared_ffi_all_models_preserve_bytes_and_context_identity_callback_is_safe() {
+        for (code, &model) in PrinterModel::all().iter().enumerate() {
+            let device = FakeDevice::new("INSTAX-12345678", model);
+            let calls = Arc::clone(&device.prepared_calls);
+            let legacy_calls = Arc::clone(&device.print_calls);
+            let _guard = install_test_device(Some(Box::new(device)));
+            let jpeg = prepared_fixture(model);
+            let slots = (AtomicU32::new(0), AtomicU32::new(0), AtomicI32::new(0));
+            let rc = unsafe {
+                instantlink_print_prepared_jpeg_with_progress_ctx(
+                    jpeg.as_ptr(),
+                    jpeg.len() as u32,
+                    code as u8,
+                    u8::from(model.spec().flip_vertical),
+                    1,
+                    Some(prepared_identity_callback),
+                    (&slots as *const (AtomicU32, AtomicU32, AtomicI32))
+                        .cast_mut()
+                        .cast(),
+                )
+            };
+            assert_eq!(rc, 0);
+            assert_eq!(slots.0.load(Ordering::SeqCst), 2);
+            assert_eq!(slots.1.load(Ordering::SeqCst), 5);
+            assert!(slots.2.load(Ordering::SeqCst) > 0); // DEVICE was unlocked in callback
+            assert_eq!(
+                *calls.lock().unwrap(),
+                vec![PreparedPrintInvocation {
+                    data: jpeg,
+                    model,
+                    flip: model.spec().flip_vertical,
+                    print_option: 1,
+                    progress_enabled: true,
+                }]
+            );
+            assert!(legacy_calls.lock().unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn prepared_ffi_callbacks_are_optional_and_errors_or_panics_leave_device_installed() {
+        let model = PrinterModel::Mini;
+        let device = FakeDevice::new("INSTAX-12345678", model);
+        let failures = Arc::clone(&device.failures);
+        let calls = Arc::clone(&device.prepared_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let jpeg = prepared_fixture(model);
+        assert_eq!(
+            unsafe {
+                instantlink_print_prepared_jpeg_with_progress(
+                    jpeg.as_ptr(),
+                    jpeg.len() as u32,
+                    0,
+                    0,
+                    0,
+                    None,
+                )
+            },
+            0
+        );
+        assert!(!calls.lock().unwrap()[0].progress_enabled);
+        failures.lock().unwrap().print_file = Some(PrinterError::PrinterBusy);
+        assert_eq!(
+            unsafe { instantlink_print_prepared_jpeg(jpeg.as_ptr(), jpeg.len() as u32, 0, 0, 0) },
+            -11
+        );
+        failures.lock().unwrap().panic_prepared = true;
+        assert_eq!(
+            unsafe { instantlink_print_prepared_jpeg(jpeg.as_ptr(), jpeg.len() as u32, 0, 0, 0) },
+            -3
+        );
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn prepared_ffi_requires_a_connected_device() {
+        let _guard = install_test_device(None);
+        let data = [0xff, 0xd8, 0xff, 0xd9];
+        assert_eq!(
+            unsafe { instantlink_print_prepared_jpeg(data.as_ptr(), data.len() as u32, 0, 0, 0) },
+            -1
+        );
     }
 
     #[test]
@@ -1575,6 +2039,63 @@ mod tests {
     }
 
     #[test]
+    fn ffi_is_connected_reports_closed_session_without_mutation_or_commands() {
+        let mut device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        device.closed = true;
+        let calls = Arc::clone(&device.film_and_charging_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        let original = Arc::clone(get_device_lock().lock().unwrap().as_ref().unwrap());
+        assert_eq!(instantlink_is_connected(), 0);
+        assert!(Arc::ptr_eq(
+            &original,
+            get_device_lock().lock().unwrap().as_ref().unwrap()
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn uncertain_command_timeout_does_not_assert_known_disconnection() {
+        let device =
+            FakeDevice::new("INSTAX-12345678", PrinterModel::Mini).with_failures(FakeFailures {
+                film_and_charging: Some(PrinterError::Timeout),
+                ..FakeFailures::default()
+            });
+        let _guard = install_test_device(Some(Box::new(device)));
+        assert_eq!(instantlink_film_remaining(), -4);
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn closed_keepalive_task_exits_without_printer_commands() {
+        let mut device = FakeDevice::new("INSTAX-12345678", PrinterModel::Mini);
+        device.closed = true;
+        let calls = Arc::clone(&device.film_and_charging_calls);
+        let _guard = install_test_device(Some(Box::new(device)));
+        set_configured_keepalive_interval(Some(Duration::from_millis(1))).unwrap();
+        let device = Arc::clone(get_device_lock().lock().unwrap().as_ref().unwrap());
+        start_keepalive_task(get_runtime(), device);
+        get_runtime().block_on(async {
+            tokio::time::timeout(Duration::from_secs(1), async {
+                loop {
+                    let finished = get_keepalive_task_lock()
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .unwrap()
+                        .is_finished();
+                    if finished {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+            })
+            .await
+            .unwrap();
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
     fn ffi_error_code_mapping_is_stable() {
         assert_eq!(error_code(&PrinterError::PrinterNotFound), -1);
         assert_eq!(error_code(&PrinterError::MultiplePrinters { count: 2 }), -2);
@@ -1587,6 +2108,129 @@ mod tests {
             error_code(&PrinterError::UnexpectedResponse("bad packet".into())),
             -7
         );
+    }
+
+    #[test]
+    fn connect_status_invalid_arguments_preserve_outputs_and_live_session() {
+        let _guard = install_test_device(Some(Box::new(FakeDevice::new(
+            "INSTAX-12345678",
+            PrinterModel::Square,
+        ))));
+        let original = Arc::clone(get_device_lock().lock().unwrap().as_ref().unwrap());
+        let name = CString::new("INSTAX-12345678").unwrap();
+        let invalid = [0x66_u8 as c_char, -1_i8 as c_char, 0];
+        for missing in 0..6 {
+            let mut values = [91, 92, 93, 94];
+            let pointers: Vec<_> = values.iter_mut().map(|v| v as *mut i32).collect();
+            let name_ptr = match missing {
+                4 => std::ptr::null(),
+                5 => invalid.as_ptr(),
+                _ => name.as_ptr(),
+            };
+            let code = unsafe {
+                instantlink_connect_named_with_status(
+                    name_ptr,
+                    0,
+                    Some(connect_progress_noop),
+                    if missing == 0 {
+                        std::ptr::null_mut()
+                    } else {
+                        pointers[0]
+                    },
+                    if missing == 1 {
+                        std::ptr::null_mut()
+                    } else {
+                        pointers[1]
+                    },
+                    if missing == 2 {
+                        std::ptr::null_mut()
+                    } else {
+                        pointers[2]
+                    },
+                    if missing == 3 {
+                        std::ptr::null_mut()
+                    } else {
+                        pointers[3]
+                    },
+                )
+            };
+            assert_eq!(code, -5);
+            assert_eq!(values, [91, 92, 93, 94]);
+            assert!(Arc::ptr_eq(
+                &original,
+                get_device_lock().lock().unwrap().as_ref().unwrap()
+            ));
+        }
+    }
+
+    #[test]
+    fn nested_connect_fails_promptly_without_replacing_session() {
+        let _guard = install_test_device(None);
+        let (_operation, generation, _) = begin_connection().unwrap();
+        assert!(matches!(begin_connection(), Err(-11)));
+        assert_eq!(instantlink_connect(), -11);
+        assert_eq!(CONNECTION_GENERATION.load(Ordering::SeqCst), generation);
+    }
+
+    #[test]
+    fn callback_disconnect_invalidates_unpublished_connection() {
+        let _guard = install_test_device(None);
+        let (_operation, generation, _) = begin_connection().unwrap();
+        assert_eq!(instantlink_disconnect(), -1);
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::Square);
+        let disconnects = Arc::clone(&device.disconnect_calls);
+        assert_eq!(
+            publish_connection(get_runtime(), generation, Box::new(device)),
+            Err(-3)
+        );
+        assert_eq!(disconnects.load(Ordering::SeqCst), 1);
+        assert_eq!(instantlink_is_connected(), 0);
+        assert!(get_keepalive_task_lock().lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn published_connection_cannot_be_torn_down_during_connect_admission() {
+        let _guard = install_test_device(None);
+        let (_operation, generation, _) = begin_connection().unwrap();
+        let device = FakeDevice::new("INSTAX-12345678", PrinterModel::Square);
+        let disconnects = Arc::clone(&device.disconnect_calls);
+        publish_connection(get_runtime(), generation, Box::new(device)).unwrap();
+        assert_eq!(instantlink_disconnect(), -11);
+        assert_eq!(disconnects.load(Ordering::SeqCst), 0);
+        assert_eq!(instantlink_is_connected(), 1);
+    }
+
+    #[test]
+    fn physical_disconnect_holds_admission_until_teardown_completes() {
+        let started = Arc::new(tokio::sync::Notify::new());
+        let release = Arc::new(tokio::sync::Notify::new());
+        let mut device = FakeDevice::new("INSTAX-12345678", PrinterModel::Square);
+        device.disconnect_gate = Some((Arc::clone(&started), Arc::clone(&release)));
+        let _guard = install_test_device(Some(Box::new(device)));
+        let worker = std::thread::spawn(|| instantlink_disconnect());
+        get_runtime().block_on(async {
+            tokio::time::timeout(Duration::from_secs(1), started.notified())
+                .await
+                .unwrap();
+        });
+        assert_eq!(instantlink_is_connected(), 0);
+        assert!(matches!(begin_connection(), Err(-11)));
+        assert_eq!(instantlink_connect(), -11);
+        release.notify_one();
+        assert_eq!(worker.join().unwrap(), 0);
+        assert!(begin_connection().is_ok());
+    }
+
+    #[test]
+    fn caught_connect_panic_does_not_poison_future_admission() {
+        let _guard = install_test_device(None);
+        let result = std::panic::catch_unwind(|| {
+            let _operation = try_connection_operation().unwrap();
+            panic!("simulated connect panic");
+        });
+        assert!(result.is_err());
+        assert!(begin_connection().is_ok());
+        assert!(!CONNECT_OPERATION.is_poisoned());
     }
 
     #[test]
@@ -2170,14 +2814,20 @@ pub extern "C" fn instantlink_led_off() -> i32 {
     .unwrap_or(-3)
 }
 
-/// Check if a printer is currently connected.
+/// Check whether a cached printer session exists and has not been closed.
+/// This is a cheap, read-only check; it does not poll hardware or guarantee
+/// that the physical link is live before the next Printer operation.
 /// Returns 1 if connected, 0 if not, -3 on error.
 #[unsafe(no_mangle)]
 pub extern "C" fn instantlink_is_connected() -> i32 {
     std::panic::catch_unwind(|| {
         let lock = get_device_lock();
         if let Ok(guard) = lock.lock() {
-            i32::from(guard.is_some())
+            i32::from(
+                guard
+                    .as_ref()
+                    .is_some_and(|device| !device.known_disconnected()),
+            )
         } else {
             -3
         }

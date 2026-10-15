@@ -1,0 +1,51 @@
+{
+  "label": "connected091",
+  "boundary": "Installed isolated FTP receive service on alternate port; same-Pi hotspot IP path, NO wireless airtime. Pacing included in continuity trial; unpaced transfer separate.",
+  "film_used": 0,
+  "payload_bytes": 8388608,
+  "payload_sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+  "production_uploads": 0,
+  "uploads": [
+    {
+      "name": "unpaced.jpg",
+      "started_monotonic": 568.852893115,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.0,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 0.16184494799995264,
+      "MiB_s_including_pacing": 49.43002607657757
+    },
+    {
+      "name": "paced-0.jpg",
+      "started_monotonic": 569.019765459,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 7.880505360999905,
+      "MiB_s_including_pacing": 1.01516332183358
+    }
+  ],
+  "receive_checksums_passed": true,
+  "all_uploads_completed": true,
+  "production_ftp_failures": 0,
+  "printer_connected_samples": 17,
+  "receipts": [
+    {
+      "name": "unpaced.jpg",
+      "bytes": 8388608,
+      "sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+      "source_ip": "192.168.8.1",
+      "monotonic": 569.259818375
+    },
+    {
+      "name": "paced-0.jpg",
+      "bytes": 8388608,
+      "sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+      "source_ip": "192.168.8.1",
+      "monotonic": 577.1246078
+    }
+  ],
+  "locked_fresh_camera_ready_600mhz_samples": 17
+}

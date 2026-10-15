@@ -24,23 +24,53 @@ from functools import partial
 from pathlib import Path
 from typing import TypeVar
 
-from instantlink_bridge.ble.instax import (
+from instantlink_bridge.ble.models import PrinterModel, spec_for
+from instantlink_bridge.ble.types import (
     CoverOpenError,
     LowPrinterBatteryError,
     NoFilmError,
     PrinterBusyError,
     PrintRejectedError,
 )
-from instantlink_bridge.ble.models import PrinterModel, spec_for
-from instantlink_bridge.imaging.pipeline import (
+from instantlink_bridge.imaging.models import (
+    AdjustmentProfile,
+    CorrectionProfile,
     FitMode,
     ImagePipelineError,
     PreparedImage,
     PrintEdit,
-    prepare_for_instantlink_backend,
+    WorkingImageCache,
 )
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
+
+
+def prepare_for_instantlink_backend(
+    source_path: Path,
+    model: PrinterModel,
+    *,
+    fit: FitMode = FitMode.AUTO,
+    quality: int = 100,
+    edit: PrintEdit | None = None,
+    adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
+    working_cache: WorkingImageCache | None = None,
+    apply_model_flip: bool = False,
+) -> PreparedImage:
+    """Import photo transforms on the existing native preparation worker thread."""
+    from instantlink_bridge.imaging.pipeline import prepare_for_instantlink_backend as prepare
+
+    return prepare(
+        source_path,
+        model,
+        fit=fit,
+        quality=quality,
+        edit=edit,
+        adjustments=adjustments,
+        correction=correction,
+        working_cache=working_cache,
+        apply_model_flip=apply_model_flip,
+    )
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +89,12 @@ ERROR_PRINTER_BUSY = -11
 INSTANTLINK_FIT_CROP = 0
 INSTANTLINK_FIT_CONTAIN = 1
 INSTANTLINK_FIT_STRETCH = 2
+PREPARED_MODEL_CODES = {
+    PrinterModel.MINI: 0,
+    PrinterModel.MINI_LINK3: 1,
+    PrinterModel.SQUARE: 2,
+    PrinterModel.WIDE: 3,
+}
 DEFAULT_SCAN_DURATION_S = 5
 STRING_BUFFER_SIZE = 4096
 FFI_CANCEL_GRACE_S = 5.0
@@ -81,15 +117,11 @@ CONNECT_STAGE_NAMES = {
 }
 # Named connect milestone: the encrypted notify subscription succeeded.
 CONNECT_STAGE_NOTIFICATION_SUBSCRIBE = 6
-# Lowest connect stage that proves GATT came up far enough that the encrypted characteristics
-# should resolve. Reaching characteristic_lookup (stage 5) means service_discovery (stage 4) already
-# succeeded, so the link is up. A connect that reaches this stage (or later) and then fails with a
-# BLE/write error is the stale-bond signature: the printer cleared its pairing after a power cycle,
-# so either the encrypted characteristics never resolve ("write characteristic not found" at
-# characteristic_lookup) or the first encrypted write fails (notification_subscribe). Both are the
-# same fingerprint, so the boundary is characteristic_lookup, not notification_subscribe — a
-# power-cycled printer can fail at either depending on how far BlueZ gets exporting the encrypted
-# GATT table.
+# Earliest phase used by the stale-key recovery heuristic. Modern native builds distinguish
+# confirmed resolved-table characteristic absence from uncertain readiness and dropped links;
+# terminal detail excludes the latter before this phase gate. Legacy builds retain phase-based
+# behavior. Confirmed missing encrypted characteristics or encrypted subscription/write failures
+# still qualify for the existing bounded bond recovery.
 CONNECT_STAGE_STALE_BOND_MIN = 5
 # Consecutive status failures that mean the cached BLE link is dead (not a one-off hiccup),
 # after which the connection is torn down so the next poll does a fresh connect (which can
@@ -121,6 +153,11 @@ class InstantLinkError(RuntimeError):
         # produced this error, when known. ``None`` means the error did not originate from a
         # connect attempt (e.g. a status read on an already-established link).
         self.connect_failure_stage: int | None = None
+        # Native terminal progress carries the actual setup error; the C ABI return code alone
+        # cannot distinguish unresolved GATT from a confirmed encrypted-characteristic failure.
+        self.connect_failure_detail: str | None = None
+        # Native status logging owns this failure, including rate-limited repeats.
+        self.status_failure_reported = False
 
 
 class InstantLinkLibraryUnavailableError(InstantLinkError):
@@ -166,6 +203,20 @@ def default_instantlink_backend() -> InstantLinkBackend:
     return _DEFAULT_BACKEND
 
 
+def prepared_jpeg_available() -> bool:
+    """Report a loaded native capability without loading FFI or touching BLE.
+
+    Printer status normally loads the library before uploads become ready.
+    Earlier callers safely prepare the legacy flavor; printing rechecks the
+    actual loaded library and rebuilds an incompatible orientation if needed.
+    """
+    return (
+        instantlink_backend_enabled()
+        and _DEFAULT_BACKEND is not None
+        and _DEFAULT_BACKEND.prepared_jpeg_available()
+    )
+
+
 async def close_default_instantlink_backend() -> None:
     """Disconnect the process-wide InstantLink backend, if loaded."""
 
@@ -205,7 +256,9 @@ async def print_file_to_printer(
     model: PrinterModel | None = None,
     progress: PrintProgressCallback | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
     prepared_image: PreparedImage | None = None,
+    preparation_model_hint: PrinterModel | None = None,
 ) -> None:
     """Print a file through InstantLink's Rust transport.
 
@@ -225,7 +278,9 @@ async def print_file_to_printer(
         model_override=model,
         progress=progress,
         adjustments=adjustments,
+        correction=correction,
         prepared_image=prepared_image,
+        preparation_model_hint=preparation_model_hint,
     )
 
 
@@ -237,8 +292,16 @@ class InstantLinkBackend:
         self._lib: ctypes.CDLL | None = None
         self._lock = asyncio.Lock()
         self._last_status_failure_log_at = -float("inf")
-        self._last_status_failure_signature: tuple[str, str, str] | None = None
+        self._last_status_failure_signature: tuple[object, ...] | None = None
+        self._setup_drop_target: str | None = None
+        self._consecutive_setup_drops = 0
         self._consecutive_status_failures = 0
+
+    def prepared_jpeg_available(self) -> bool:
+        """Read the optional export from an already loaded library only."""
+        return self._lib is not None and hasattr(
+            self._lib, "instantlink_print_prepared_jpeg_with_progress"
+        )
 
     async def scan(self, timeout_s: float = DEFAULT_SCAN_DURATION_S) -> list[str]:
         """Return normalized visible Instax printer names."""
@@ -273,7 +336,9 @@ class InstantLinkBackend:
         model_override: PrinterModel | None = None,
         progress: PrintProgressCallback | None = None,
         adjustments: AdjustmentProfile | None = None,
+        correction: CorrectionProfile | None = None,
         prepared_image: PreparedImage | None = None,
+        preparation_model_hint: PrinterModel | None = None,
     ) -> None:
         """Prepare an edited image and send it through InstantLink."""
 
@@ -290,7 +355,9 @@ class InstantLinkBackend:
                 model_override,
                 progress,
                 adjustments,
+                correction,
                 prepared_image,
+                preparation_model_hint,
             ),
         )
 
@@ -321,15 +388,42 @@ class InstantLinkBackend:
                 return await asyncio.shield(task)
             except asyncio.CancelledError:
                 LOGGER.warning("instantlink.%s_cancel_waiting_for_worker", operation)
-                try:
-                    await asyncio.wait_for(asyncio.shield(task), timeout=FFI_CANCEL_GRACE_S)
-                except TimeoutError:
-                    LOGGER.critical(
-                        "instantlink.%s_cancel_worker_stuck restarting_process grace_s=%.1f",
-                        operation,
-                        FFI_CANCEL_GRACE_S,
-                    )
-                    os._exit(1)
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + FFI_CANCEL_GRACE_S
+                while not task.done():
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.shield(task), timeout=max(0.0, deadline - loop.time())
+                        )
+                    except asyncio.CancelledError:
+                        # Retain the Printer lock through repeated cancellation,
+                        # without granting the blocking call a fresh grace period.
+                        continue
+                    except TimeoutError:
+                        if task.done():
+                            # The worker's own TimeoutError is a completed
+                            # failure, not expiration of the cleanup deadline.
+                            break
+                        LOGGER.critical(
+                            "instantlink.%s_cancel_worker_stuck restarting_process grace_s=%.1f",
+                            operation,
+                            FFI_CANCEL_GRACE_S,
+                        )
+                        os._exit(1)
+                    except Exception:
+                        # Consume a completed worker failure without replacing
+                        # the caller's cancellation with an obsolete result.
+                        break
+                # Retrieve completion (including a worker failure) before releasing
+                # the serialization lock and propagating the caller's cancellation.
+                if not task.cancelled():
+                    error = task.exception()
+                    if error is not None:
+                        LOGGER.debug(
+                            "instantlink.%s_cancel_worker_failed error_type=%s",
+                            operation,
+                            type(error).__name__,
+                        )
                 raise
 
     def _scan_blocking(self, timeout_s: float) -> list[str]:
@@ -380,7 +474,8 @@ class InstantLinkBackend:
         """Decide whether to drop the cached connection after a status error.
 
         Tear down when the printer is genuinely gone (``InstantLinkPrinterNotFoundError``),
-        OR when the link has failed on ``STALE_LINK_STATUS_FAILURE_THRESHOLD`` consecutive
+        the native session is known closed, or the link has failed on
+        ``STALE_LINK_STATUS_FAILURE_THRESHOLD`` consecutive
         attempts (a dead link, not a one-off hiccup). A single transient
         ``InstantLinkBleError`` / ``TimeoutError`` keeps the connection so the next poll
         reuses the live link; persistent failures force a fresh reconnect.
@@ -388,23 +483,58 @@ class InstantLinkBackend:
 
         if isinstance(exc, InstantLinkPrinterNotFoundError):
             return True
+        if self._native_connection_known_closed():
+            return True
         return consecutive_failures >= STALE_LINK_STATUS_FAILURE_THRESHOLD
+
+    def _native_connection_known_closed(self) -> bool:
+        is_connected = getattr(self._library(), "instantlink_is_connected", None)
+        return is_connected is not None and int(is_connected()) == 0
 
     def _log_status_failure(self, name: str, exc: BaseException, *, disconnected: bool) -> None:
         normalized_name = normalize_printer_name(name)
         event = "status_failed_disconnect" if disconnected else "status_failed_keep_connection"
-        signature = (normalized_name, type(exc).__name__, str(exc))
+        detail = exc.connect_failure_detail if isinstance(exc, InstantLinkError) else None
+        stage = exc.connect_failure_stage if isinstance(exc, InstantLinkError) else None
+        setup_drop = is_native_setup_disconnect(exc)
+        target_key = normalized_name.casefold()
+        if self._setup_drop_target != target_key:
+            self._consecutive_setup_drops = 0
+        self._setup_drop_target = target_key
+        if setup_drop:
+            # Absence between setup attempts does not prove recovery. Keep this episode's
+            # budget until fresh status succeeds or another selected Printer is queried.
+            self._consecutive_setup_drops += 1
+        expected_absence = isinstance(exc, InstantLinkPrinterNotFoundError)
+        routine_drop = setup_drop and self._consecutive_setup_drops <= 2
+        level = logging.INFO if expected_absence or routine_drop else logging.WARNING
+        signature = (
+            normalized_name,
+            type(exc).__name__,
+            str(exc),
+            disconnected,
+            stage,
+            detail,
+            level,
+        )
+        if isinstance(exc, InstantLinkError):
+            exc.status_failure_reported = True
         now = time.monotonic()
-        if (
-            signature != self._last_status_failure_signature
-            or now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
+        if signature != self._last_status_failure_signature or (
+            not expected_absence
+            and now - self._last_status_failure_log_at >= STATUS_FAILURE_LOG_INTERVAL_S
         ):
-            LOGGER.warning(
-                "instantlink.%s name=%s error_type=%s error=%s",
+            LOGGER.log(
+                level,
+                "instantlink.%s name=%s error_type=%s error=%s stage=%s detail=%s "
+                "setup_drop_streak=%s",
                 event,
                 normalized_name,
                 type(exc).__name__,
                 exc,
+                stage,
+                detail,
+                self._consecutive_setup_drops,
             )
             LOGGER.debug("instantlink.%s_trace", event, exc_info=True)
             self._last_status_failure_signature = signature
@@ -421,15 +551,23 @@ class InstantLinkBackend:
     def _clear_status_failure_log_state(self) -> None:
         self._last_status_failure_signature = None
         self._last_status_failure_log_at = -float("inf")
+        self._setup_drop_target = None
+        self._consecutive_setup_drops = 0
 
     def _status_blocking_connected(self, name: str, scan_duration_s: int) -> InstantLinkStatus:
-        self._ensure_connected_blocking(name, scan_duration_s=scan_duration_s)
+        initial_status = self._ensure_connected_blocking(
+            name, scan_duration_s=scan_duration_s, read_initial_status=True
+        )
 
         battery = ctypes.c_int()
         film = ctypes.c_int()
         charging = ctypes.c_int()
         print_count = ctypes.c_int()
-        if hasattr(self._library(), "instantlink_status"):
+        if initial_status is not None:
+            # This snapshot belongs only to the fresh connection created by this worker.
+            # Established sessions and every later poll still request current printer status.
+            battery.value, film.value, charging.value, print_count.value = initial_status
+        elif hasattr(self._library(), "instantlink_status"):
             rc = int(
                 self._library().instantlink_status(
                     ctypes.byref(battery),
@@ -488,27 +626,33 @@ class InstantLinkBackend:
         model_override: PrinterModel | None,
         progress: PrintProgressCallback | None,
         adjustments: AdjustmentProfile | None = None,
+        correction: CorrectionProfile | None = None,
         prepared_image: PreparedImage | None = None,
+        preparation_model_hint: PrinterModel | None = None,
     ) -> None:
         # Image prep needs no BLE link, so overlap it with the connect and
         # model query below — seconds of radio work (plan 056 T1.6). Only
-        # speculate when the model is configured: that is the model we build
-        # for, and the mismatch guard further down discards the result if
-        # detection disagrees. Skipped entirely when a preview already handed
-        # us an image (T1.1), which is the common case at the shipped default.
+        # speculate when a configured model or a cached detection hint is
+        # available. A hint affects preparation only; detection still chooses
+        # the actual output model and discards a mismatched preparation. Skip
+        # speculation when a preview already supplied prepared bytes.
         speculative: Future[PreparedImage] | None = None
         prep_executor: ThreadPoolExecutor | None = None
-        if prepared_image is None and model_override is not None:
+        prepared_native = hasattr(self._library(), "instantlink_print_prepared_jpeg_with_progress")
+        preparation_model = model_override or preparation_model_hint
+        if prepared_image is None and preparation_model is not None:
             prep_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="instantlink-prep")
             speculative = prep_executor.submit(
                 partial(
                     prepare_for_instantlink_backend,
                     image_path,
-                    model_override,
+                    preparation_model,
                     fit=fit,
                     quality=quality,
                     edit=edit,
                     adjustments=adjustments,
+                    correction=correction,
+                    apply_model_flip=prepared_native,
                 )
             )
 
@@ -523,6 +667,7 @@ class InstantLinkBackend:
                 model_override=model_override,
                 progress=progress,
                 adjustments=adjustments,
+                correction=correction,
                 prepared_image=prepared_image,
                 speculative=speculative,
             )
@@ -544,6 +689,7 @@ class InstantLinkBackend:
         model_override: PrinterModel | None,
         progress: PrintProgressCallback | None,
         adjustments: AdjustmentProfile | None,
+        correction: CorrectionProfile | None,
         prepared_image: PreparedImage | None,
         speculative: Future[PreparedImage] | None,
     ) -> None:
@@ -553,7 +699,12 @@ class InstantLinkBackend:
         )
         self._ensure_connected_blocking(name, scan_duration_s=DEFAULT_SCAN_DURATION_S)
         detected_model = self._device_model_blocking()
-        model = _compatible_model_override(detected_model, model_override)
+        prepared_native = hasattr(self._library(), "instantlink_print_prepared_jpeg_with_progress")
+        model = (
+            detected_model
+            if prepared_native
+            else _compatible_model_override(detected_model, model_override)
+        )
 
         spec = spec_for(model)
         _emit_progress(
@@ -570,7 +721,12 @@ class InstantLinkBackend:
         if prepared is None and speculative is not None:
             prepared = _speculative_prepared(speculative)
             source = "speculative"
-        if prepared is not None and prepared.model is not model:
+        expected_flip = prepared_native and spec.flip_vertical
+        if prepared is not None and (
+            prepared.model is not model
+            or prepared.transport_flip_applied != expected_flip
+            or (prepared.width, prepared.height) != (spec.width, spec.height)
+        ):
             LOGGER.info(
                 "instantlink.prepared_discarded expected=%s prepared=%s source=%s",
                 model.value,
@@ -589,6 +745,8 @@ class InstantLinkBackend:
                     quality=quality,
                     edit=edit,
                     adjustments=adjustments,
+                    correction=correction,
+                    apply_model_flip=prepared_native,
                 )
             except ImagePipelineError:
                 raise
@@ -608,37 +766,55 @@ class InstantLinkBackend:
             (time.monotonic() - prepare_started) * 1000,
         )
 
+        _emit_progress(
+            progress,
+            PrintProgress(
+                PrintStage.SENDING,
+                "Sending to printer",
+                f"{len(prepared.data) // 1024} KB",
+                0,
+            ),
+        )
+        callback = _print_progress_callback(progress, len(prepared.data))
+        if prepared_native:
+            # Both locals remain strongly referenced until the synchronous
+            # native call returns. Embedded NUL bytes are ordinary JPEG data;
+            # the explicit length, not C-string termination, bounds the input.
+            buffer = (ctypes.c_uint8 * len(prepared.data)).from_buffer_copy(prepared.data)
+            rc = int(
+                self._library().instantlink_print_prepared_jpeg_with_progress(
+                    buffer,
+                    ctypes.c_uint32(len(prepared.data)),
+                    ctypes.c_uint8(PREPARED_MODEL_CODES[prepared.model]),
+                    ctypes.c_uint8(int(prepared.transport_flip_applied)),
+                    ctypes.c_uint8(max(0, min(255, print_option))),
+                    callback,
+                )
+            )
+        else:
+            rc = self._send_legacy_prepared(prepared, print_option, callback)
+        if rc < 0:
+            _raise_for_code(rc, "print failed")
+        _emit_progress(
+            progress,
+            PrintProgress(PrintStage.FINISHING, "Finishing", "Waiting for printer", 100),
+        )
+
+    def _send_legacy_prepared(
+        self,
+        prepared: PreparedImage,
+        print_option: int,
+        callback: Callable[[int, int], None],
+    ) -> int:
+        """Use the older file API with logical pixels and its existing encode quality."""
         temp_path: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(
-                prefix="instantlink-bridge-instantlink-",
-                suffix=".jpg",
-                delete=False,
+                prefix="instantlink-bridge-instantlink-", suffix=".jpg", delete=False
             ) as temp_file:
                 temp_file.write(prepared.data)
                 temp_path = Path(temp_file.name)
-
-            _emit_progress(
-                progress,
-                PrintProgress(
-                    PrintStage.SENDING,
-                    "Sending to printer",
-                    f"{len(prepared.data) // 1024} KB",
-                    0,
-                ),
-            )
-            callback = _print_progress_callback(progress, len(prepared.data))
-            # Hand InstantLink the quality the pipeline actually settled on,
-            # not the configured one (plan 056 T1.3). `prepared.data` is
-            # already sized under spec.max_image_size, but the core decodes it
-            # and re-encodes at whatever quality it is given
-            # (crates/instantlink-core/src/image.rs `encode_jpeg`). Passing the
-            # config value — 100 by default — inflated a 102 KB image back to
-            # ~412 KB and forced the core through its own binary search: a
-            # third full encode pass plus a second generation of JPEG loss.
-            # `encode_jpeg` tries the requested quality first and returns
-            # immediately when it fits, so this collapses that to one encode.
-            rc = int(
+            return int(
                 self._library().instantlink_print_with_progress(
                     str(temp_path).encode("utf-8"),
                     ctypes.c_uint8(max(1, min(100, prepared.quality))),
@@ -646,12 +822,6 @@ class InstantLinkBackend:
                     ctypes.c_uint8(max(0, min(255, print_option))),
                     callback,
                 )
-            )
-            if rc < 0:
-                _raise_for_code(rc, "print failed")
-            _emit_progress(
-                progress,
-                PrintProgress(PrintStage.FINISHING, "Finishing", "Waiting for printer", 100),
             )
         finally:
             if temp_path is not None:
@@ -662,21 +832,51 @@ class InstantLinkBackend:
         name: str,
         *,
         scan_duration_s: int,
-    ) -> None:
+        read_initial_status: bool = False,
+    ) -> tuple[int, int, int, int] | None:
         target_name = _connect_target_name(name)
         connected_name = self._device_name_blocking()
         if connected_name is not None and _printer_names_match(connected_name, target_name):
-            return
+            # New native builds report terminal session state without a hardware query; older
+            # ones report cached presence. Only a confirmed closure retires a reusable session.
+            if not self._native_connection_known_closed():
+                return None
+            self._disconnect_blocking()
         stage_tracker = _ConnectStageTracker()
-        rc = self._connect_named_blocking(target_name, scan_duration_s, stage_tracker)
+        initial_status: tuple[int, int, int, int] | None = None
+        connect_with_status = getattr(
+            self._library(), "instantlink_connect_named_with_status", None
+        )
+        if read_initial_status and connect_with_status is not None:
+            battery, film, charging, print_count = (ctypes.c_int() for _ in range(4))
+            callback = _connect_progress_logger(target_name, stage_tracker)
+            rc = int(
+                connect_with_status(
+                    target_name.encode("utf-8"),
+                    max(1, scan_duration_s),
+                    callback,
+                    ctypes.byref(battery),
+                    ctypes.byref(film),
+                    ctypes.byref(charging),
+                    ctypes.byref(print_count),
+                )
+            )
+            if rc >= 0:
+                initial_status = battery.value, film.value, charging.value, print_count.value
+        else:
+            rc = self._connect_named_blocking(target_name, scan_duration_s, stage_tracker)
         if rc < 0:
             try:
                 _raise_for_code(rc, "connect failed")
             except InstantLinkError as exc:
-                # Carry the highest connect stage observed so the status/UI layer can classify a
-                # late-stage write/comms failure as the stale-bond signature.
+                # Carry the current attempt's phase and terminal detail so readiness uncertainty
+                # cannot masquerade as a confirmed encrypted-characteristic failure.
                 exc.connect_failure_stage = stage_tracker.max_stage
+                exc.connect_failure_detail = stage_tracker.failure_detail
                 raise
+        # The new session must not inherit a transient failure streak from the previous link.
+        self._consecutive_status_failures = 0
+        return initial_status
 
     def _connect_named_blocking(
         self,
@@ -834,8 +1034,22 @@ def _configure_library(lib: ctypes.CDLL) -> None:
             _CONNECT_PROGRESS_CALLBACK,
         ]
         lib.instantlink_connect_named_with_progress.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_connect_named_with_status"):
+        lib.instantlink_connect_named_with_status.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_int,
+            _CONNECT_PROGRESS_CALLBACK,
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+        ]
+        lib.instantlink_connect_named_with_status.restype = ctypes.c_int
     lib.instantlink_disconnect.argtypes = []
     lib.instantlink_disconnect.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_is_connected"):
+        lib.instantlink_is_connected.argtypes = []
+        lib.instantlink_is_connected.restype = ctypes.c_int
     lib.instantlink_status.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_int),
@@ -868,6 +1082,16 @@ def _configure_library(lib: ctypes.CDLL) -> None:
         _PRINT_PROGRESS_CALLBACK,
     ]
     lib.instantlink_print_with_progress.restype = ctypes.c_int
+    if hasattr(lib, "instantlink_print_prepared_jpeg_with_progress"):
+        lib.instantlink_print_prepared_jpeg_with_progress.argtypes = [
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_uint32,
+            ctypes.c_uint8,
+            ctypes.c_uint8,
+            ctypes.c_uint8,
+            _PRINT_PROGRESS_CALLBACK,
+        ]
+        lib.instantlink_print_prepared_jpeg_with_progress.restype = ctypes.c_int
 
 
 def _raise_for_code(code: int, context: str) -> None:
@@ -896,6 +1120,16 @@ def _raise_for_code(code: int, context: str) -> None:
             raise PrintRejectedError("print rejected")
         raise InstantLinkBleError(f"{context}: unexpected printer response", code=code)
     raise InstantLinkError(f"{context}: InstantLink error {code}", code=code)
+
+
+def is_native_setup_disconnect(exc: BaseException) -> bool:
+    """Recognize only the native setup error that confirms an actual dropped link."""
+
+    return (
+        isinstance(exc, InstantLinkBleError)
+        and exc.code == ERROR_BLE
+        and exc.connect_failure_detail == "BLE error: BLE link disconnected during GATT setup"
+    )
 
 
 def _parse_instantlink_model(value: str) -> PrinterModel:
@@ -984,18 +1218,23 @@ def _has_platform_suffix(name: str) -> bool:
 
 
 class _ConnectStageTracker:
-    """Capture the highest connect-progress stage seen during one connect attempt."""
+    """Capture the current attempt's real phase and terminal native error."""
 
     def __init__(self) -> None:
         self.max_stage: int | None = None
+        self.failure_detail: str | None = None
 
-    def observe(self, stage: int) -> None:
+    def observe(self, stage: int, detail: str = "") -> None:
         if stage == _CONNECT_STAGE_FAILED:
-            # The terminal "failed" sentinel is not a real progress milestone; ignore it so the
-            # recorded max reflects how far the connection actually advanced.
+            self.failure_detail = detail or None
             return
-        if self.max_stage is None or stage > self.max_stage:
-            self.max_stage = stage
+        if stage not in CONNECT_STAGE_NAMES:
+            return
+        # Native callbacks are synchronous. A phase regression starts a setup retry, including
+        # reused-link fallbacks that begin at service_discovery without ble_connecting.
+        if self.max_stage is None or stage < self.max_stage:
+            self.failure_detail = None
+        self.max_stage = stage
 
 
 _CONNECT_STAGE_FAILED = 10
@@ -1006,11 +1245,17 @@ def _connect_progress_logger(
     stage_tracker: _ConnectStageTracker | None = None,
 ) -> Callable[[int, bytes | None], None]:
     def emit(stage: int, detail: bytes | None) -> None:
-        if stage_tracker is not None:
-            stage_tracker.observe(stage)
-        stage_name = CONNECT_STAGE_NAMES.get(stage, "unknown")
         detail_text = detail.decode("utf-8", errors="replace") if detail else ""
-        LOGGER.info(
+        if stage_tracker is not None:
+            stage_tracker.observe(stage, detail_text)
+        stage_name = CONNECT_STAGE_NAMES.get(stage, "unknown")
+        routine_scan = stage in {0, 1} or (
+            stage == _CONNECT_STAGE_FAILED
+            and stage_tracker is not None
+            and stage_tracker.max_stage in {None, 0, 1}
+        )
+        LOGGER.log(
+            logging.DEBUG if routine_scan else logging.INFO,
             "instantlink.connect_progress target=%s stage=%s detail=%s",
             target_name,
             stage_name,

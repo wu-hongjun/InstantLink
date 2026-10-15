@@ -1,0 +1,64 @@
+{
+  "source_commit": "b2b6c8ceab6b2ba7f8b0151dd8b283a8c0560d62",
+  "status": "PASS",
+  "sha256": {
+    "crates/instantlink-core/src/device.rs": "6cb7f942587c397827bdd2dcbedb109b05145000d9a2dc3770981c03dc676740",
+    "crates/instantlink-core/src/transport.rs": "917d837abc24020863ff56d201061ab93322d2af75f3f5c718c68ad11e680947"
+  },
+  "host_Rust_tests": 322,
+  "host_Rust_doctests": 1,
+  "full_Bridge_tests": 1773,
+  "existing_Bridge_warnings": 27,
+  "independent_core_tests": 196,
+  "ARM_tests": {
+    "model_query": 8,
+    "device": 47
+  },
+  "gates": [
+    "normal hooks",
+    "Rust formatting",
+    "host production strict workspace Clippy",
+    "header drift",
+    "Ruff",
+    "strict mypy67",
+    "strict MkDocs"
+  ],
+  "resolved_findings": [
+    "Partial reply assembler explicitly reset at retry boundary under serialization",
+    "DIS identity normalization restricted to ASCII whitespace before exact model validation"
+  ],
+  "no_new_C_ABI_or_config_fields": true,
+  "retry_policy": "Only single-fragment, read-only ImageSupportInfo is resent once after one second; original ten-second total transaction deadline and single command lock/delivery guard. Terminal uncertainty still retires session; no actuating command replay.",
+  "model_policy": "Authoritative dimensions retained; exact FI033 requires600x800, FI017 requires800x800; ambiguous Link3 identity or known hint conflicts rejected; other unknown hints use dimensions. No image bytes or preparation rules changed.",
+  "native_manifest": {
+    "artifacts": {
+      "instantlink": {
+        "sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e",
+        "source_path": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release/instantlink"
+      },
+      "libinstantlink_ffi.so": {
+        "sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+        "source_path": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release/libinstantlink_ffi.so"
+      }
+    },
+    "artifacts_dir": "/Users/hongjunwu/.codex/worktrees/bridge-battery-day/InstantLink/target/aarch64-unknown-linux-gnu/release",
+    "built_at_utc": "2026-10-13T22:47:30Z",
+    "cargo": {
+      "command": "cargo zigbuild",
+      "locked": true,
+      "packages": [
+        "instantlink-ffi",
+        "instantlink-cli"
+      ],
+      "profile": "release"
+    },
+    "instantlink_workspace": {
+      "branch": "codex/bridge-battery-day",
+      "commit_sha": "b2b6c8ceab6b2ba7f8b0151dd8b283a8c0560d62",
+      "dirty": false
+    },
+    "schema_version": 1,
+    "target_triple": "aarch64-unknown-linux-gnu"
+  },
+  "film_used": 0
+}

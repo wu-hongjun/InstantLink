@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib import import_module
 from pathlib import Path
 from typing import Protocol, cast
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 from instantlink_bridge.config import UiSurface
 from instantlink_bridge.ui.models import UiSnapshot
@@ -17,6 +20,10 @@ from instantlink_bridge.ui.render import render_snapshot
 LOGGER = logging.getLogger(__name__)
 ST7789_FRAMEBUFFER_NAME = "fb_st7789v"
 BACKLIGHT_OFF_STAGES = {"screen_off", "deep_idle", "poweroff"}
+_RGB565_RED_HIGH = tuple(value & 0xF8 for value in range(256))
+_RGB565_GREEN_HIGH = tuple(value >> 5 for value in range(256))
+_RGB565_GREEN_LOW = tuple((value & 0x1C) << 3 for value in range(256))
+_RGB565_BLUE_LOW = tuple(value >> 3 for value in range(256))
 
 
 class _BacklightDevice(Protocol):
@@ -101,16 +108,19 @@ class FramebufferDisplay:
     """Linux framebuffer display for kernel-owned ST7789 devices."""
 
     def __init__(self, path: Path = Path("/dev/fb0"), *, sysfs_root: Path = Path("/sys")) -> None:
+        self._packer: Callable[[Image.Image], bytes] = _rgb565_bytes_pillow
+        self._closed = False
+        self._packer_task: asyncio.Task[None] | None = None
         self._path = path
         self._sysfs_root = sysfs_root
         self._size = _framebuffer_size(path, sysfs_root=sysfs_root)
+        self._last_frame: bytes | None = None
+        self._idle_stage = "active"
         self._framebuffer_name = _framebuffer_name(path, sysfs_root=sysfs_root)
-        self._backlight: _FramebufferBacklight | _GpioBacklight | None = (
-            _framebuffer_backlight(
-                path,
-                framebuffer_name=self._framebuffer_name,
-                sysfs_root=sysfs_root,
-            )
+        self._backlight: _FramebufferBacklight | _GpioBacklight | None = _framebuffer_backlight(
+            path,
+            framebuffer_name=self._framebuffer_name,
+            sysfs_root=sysfs_root,
         )
         if self._framebuffer_name == ST7789_FRAMEBUFFER_NAME and self._backlight is None:
             # The kernel ST7789v driver doesn't always expose a sysfs
@@ -128,25 +138,68 @@ class FramebufferDisplay:
             )
             self._backlight = _GpioBacklight.try_open()
 
+    def _schedule_packer(self) -> None:
+        if self._closed or self._packer_task is not None:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # The standalone boot splash has no event loop. Keep using Pillow
+            # rather than paying NumPy's cold import on that path.
+            return
+        else:
+            self._packer_task = loop.create_task(self._prepare_packer())
+
+    async def _prepare_packer(self) -> None:
+        try:
+            # Only dependency loading runs in a worker; rendering, framebuffer
+            # writes and backlight sequencing remain synchronous on the UI loop.
+            packer = await asyncio.to_thread(_rgb565_packer)
+        except Exception:
+            LOGGER.warning("ui.framebuffer_packer_unavailable backend=numpy", exc_info=True)
+            return
+        if not self._closed:
+            self._packer = packer
+
     def render(self, snapshot: UiSnapshot) -> None:
         image = render_snapshot(snapshot)
         if image.size != self._size:
             image = image.resize(self._size)
-        self._path.write_bytes(_rgb565_bytes(image))
+        frame = _rgb565_bytes(image, packer=self._packer)
+        self._path.write_bytes(frame)
+        self._last_frame = frame
+        self._idle_stage = snapshot.idle_stage
         if snapshot.idle_stage in BACKLIGHT_OFF_STAGES:
             self._turn_backlight_off()
         else:
             self._turn_backlight_on()
+        # Start dependency loading only after the first successful frame is
+        # visible, so the worker cannot compete with the first paint for CPU.
+        self._schedule_packer()
 
     def set_idle_stage(self, stage: str) -> None:
         if stage in BACKLIGHT_OFF_STAGES:
-            self._path.write_bytes(_rgb565_bytes(Image.new("RGB", self._size, "black")))
+            self._path.write_bytes(
+                _rgb565_bytes(Image.new("RGB", self._size, "black"), packer=self._packer)
+            )
             self._turn_backlight_off()
         else:
+            # Screen-off clears the kernel framebuffer, so enabling only the
+            # backlight would expose a blank panel when the UI dedups a frame.
+            # Restore pixels first; the controller can then render newer state.
+            if self._idle_stage in BACKLIGHT_OFF_STAGES and self._last_frame is not None:
+                self._path.write_bytes(self._last_frame)
             self._turn_backlight_on()
+        self._idle_stage = stage
 
     def close(self) -> None:
-        return
+        if self._closed:
+            return
+        self._closed = True
+        if self._packer_task is not None:
+            self._packer_task.cancel()
+        if isinstance(self._backlight, _GpioBacklight):
+            self._backlight.close()
 
     def _turn_backlight_on(self) -> None:
         if self._backlight is None:
@@ -275,9 +328,7 @@ class _GpioBacklight:
         try:
             device = OutputDevice(cls.BL_GPIO_PIN, active_high=True, initial_value=True)
         except Exception:
-            LOGGER.warning(
-                "ui.gpio_backlight_open_failed pin=%s", cls.BL_GPIO_PIN, exc_info=True
-            )
+            LOGGER.warning("ui.gpio_backlight_open_failed pin=%s", cls.BL_GPIO_PIN, exc_info=True)
             return None
         return cls(device)
 
@@ -390,13 +441,51 @@ def _read_sysfs_int(path: Path) -> int:
     return int(path.read_text(encoding="ascii").strip())
 
 
-def _rgb565_bytes(image: Image.Image) -> bytes:
-    rgb = image.convert("RGB")
-    output = bytearray(rgb.width * rgb.height * 2)
-    index = 0
-    for red, green, blue in cast(Iterable[tuple[int, int, int]], rgb.getdata()):
-        value = ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3)
-        output[index] = value & 0xFF
-        output[index + 1] = value >> 8
-        index += 2
-    return bytes(output)
+def _rgb565_bytes(
+    image: Image.Image,
+    *,
+    packer: Callable[[Image.Image], bytes] | None = None,
+) -> bytes:
+    """Pack exact little-endian RGB565 without sharing mutable frame buffers."""
+    return (packer if packer is not None else _rgb565_packer())(image)
+
+
+@lru_cache(maxsize=1)
+def _rgb565_packer() -> Callable[[Image.Image], bytes]:
+    # NumPy is already supplied by the RAW processing dependency. Keep it lazy
+    # so importing this module or using another display never loads NumPy.
+    # Development/minimal installs can still use the exact Pillow path.
+    try:
+        import_module("numpy")
+    except ImportError:
+        return _rgb565_bytes_pillow
+    return _rgb565_bytes_numpy
+
+
+def _rgb565_bytes_numpy(image: Image.Image) -> bytes:
+    import numpy as np
+
+    pixels = np.frombuffer(image.convert("RGB").tobytes(), dtype=np.uint8).reshape(-1, 3)
+    # Explicit little endian is required even on a big-endian development host.
+    # uint16 promotes the channels before shifting so red/green cannot overflow.
+    output = np.empty(pixels.shape[0], dtype="<u2")
+    temporary = np.empty(pixels.shape[0], dtype=np.uint16)
+    np.bitwise_and(pixels[:, 0], 0xF8, out=output)
+    np.left_shift(output, 8, out=output)
+    np.bitwise_and(pixels[:, 1], 0xFC, out=temporary)
+    np.left_shift(temporary, 3, out=temporary)
+    np.bitwise_or(output, temporary, out=output)
+    np.right_shift(pixels[:, 2], 3, out=temporary)
+    np.bitwise_or(output, temporary, out=output)
+    return output.tobytes()
+
+
+def _rgb565_bytes_pillow(image: Image.Image) -> bytes:
+    """Exact dependency fallback using Pillow's native band operations."""
+    red, green, blue = image.convert("RGB").split()
+    # These fields occupy disjoint bits, so addition equals bitwise OR and
+    # cannot overflow. LA is only a two-byte interleaving container here;
+    # neither byte is interpreted as luminance or alpha by the framebuffer.
+    low = ImageChops.add(green.point(_RGB565_GREEN_LOW), blue.point(_RGB565_BLUE_LOW))
+    high = ImageChops.add(red.point(_RGB565_RED_HIGH), green.point(_RGB565_GREEN_HIGH))
+    return Image.merge("LA", (low, high)).tobytes()

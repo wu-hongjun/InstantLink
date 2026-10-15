@@ -1,0 +1,10 @@
+{
+  "kind": "offline replay of saved status values and timestamps; mocked I/O",
+  "source": "pacing late idle record074",
+  "input_status_records": 25,
+  "provider_fetches": 25,
+  "candidate_info_records": 1,
+  "candidate_debug_records": 24,
+  "status_fresh_after_replay": true,
+  "hardware_measurement": false
+}

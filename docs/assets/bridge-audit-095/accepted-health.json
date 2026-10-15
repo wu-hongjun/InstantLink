@@ -1,0 +1,30 @@
+{
+  "pid": 502,
+  "services": "MainPID=502\nNRestarts=0\nActiveState=active\n\nMainPID=661\nNRestarts=0\nActiveState=active",
+  "cpu_khz": 600000,
+  "governor": "powersave",
+  "gpio24": "24: op -- -- | lo // GPIO24 = output",
+  "throttle": "throttled=0x0",
+  "warning_error_messages": [],
+  "setup_failure_messages": [
+    "2026-10-14 17:07:30,437 INFO instantlink_bridge.ble.instantlink instantlink.status_failed_disconnect name=INSTAX-52006924 error_type=InstantLinkBleError error=connect failed: BLE communication failed stage=5 detail=BLE error: BLE link disconnected during GATT setup setup_drop_streak=1"
+  ],
+  "runtime_log_records": 83,
+  "status_messages": [
+    "2026-10-14 17:05:42,022 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=80 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+    "2026-10-14 17:07:35,135 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=80 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+  ],
+  "socket_active": "active",
+  "source_sha256": {
+    "src/instantlink_bridge/ble/instantlink.py": "c63e54d6e1deff8b13fe2d9ee851c003452a3ce36a59285ebf0c2e63ff902673",
+    "src/instantlink_bridge/ui/status.py": "bf202340f5151212a1d1ecd6de0334f4e4e66c6c282271f3cab52dc20a8b367e",
+    "src/instantlink_bridge/ui/controller.py": "9117f57343f5095ad42c1aeecde1c60425a356291e71f0e0b6e6c1b035353f0b",
+    "lib/libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175"
+  },
+  "film_used": 0,
+  "printer_connected": true,
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "commit": "2cfd1941722690476bfe659ce19945a05a203467",
+  "dirty": false
+}

@@ -1,0 +1,66 @@
+{
+  "installed_lcd_gate": "passed",
+  "source_commit": "398dde5",
+  "source_sha256": "608d52b29c5b4aad4c116fd0e63111b4f6155dfa81e26ab2fe679513ac17af1a",
+  "blockers": [],
+  "film_used": 0,
+  "frame_hashes_exact": true,
+  "frames_per_variant": 18,
+  "all_cpu_khz": 1000000,
+  "all_installed_frames_numpy": true,
+  "baseline": {
+    "total_ms": 14.12125048955204,
+    "pack_ms": 9.852265502559021,
+    "cpu_ms": 13.77216300000006,
+    "pack_cpu_ms": 9.602214000000275,
+    "draw_ms": 2.6818225014721975
+  },
+  "installed": {
+    "total_ms": 7.784375004121102,
+    "pack_ms": 3.310781001346186,
+    "cpu_ms": 7.479245000000079,
+    "pack_cpu_ms": 3.170026000000048,
+    "draw_ms": 2.7419534962973557
+  },
+  "first_paint": {
+    "wall_ms": 149.03687499463558,
+    "baseline_wall_ms": 129.00874999468215,
+    "candidate_wall_ms": 128.1653119949624,
+    "first_frame_exact": true,
+    "first_paint_precedes_import_worker": true,
+    "worker_wall_ms": 1467.7206769993063,
+    "exec_to_first_frame_s": 2.3981672789959703,
+    "assessment": "Installed first-frame wall span20ms abovebaseline, withworkerprovablynotstarted yet; allpaths use samePillow, variation includesdraw/pack andstartup scheduling. No boot-speed improvement claimed; actualwarmservice measurement only."
+  },
+  "gpio": {
+    "cases": 11,
+    "all_passed": true,
+    "final_locked": true,
+    "final_cpu_khz": 600000,
+    "production_input_active": true,
+    "owned_mock_detached": true,
+    "camera_ready": true,
+    "queue_latency": "Installed18actions vsbaseline18/candidate15: differentcapturedaction sets, descriptive medians only; do not claimcontrolledlatencyimprovement. Actualcontact-to-photon notmeasured."
+  },
+  "running_log": {
+    "rows_reviewed": 464,
+    "new_render_idle_packer_traceback_panic_errors": 0,
+    "source": "/tmp/instantlink-rgb565-installed-journal-088.jsonl",
+    "scope": "installedobserver PIDjournal; notcompletehistoricalboot ornormalfinalservice"
+  },
+  "remaining": "Normalservice restoration/cleanup/finalhealth gate pending; installedLCD/GPIO/status/automatic reconnect gates allpassed.",
+  "printer_hardware_gate": "passed",
+  "printer_validation": {
+    "status_successful_attempt_s": 3.442864217009628,
+    "periodic_new_fresh_status": true,
+    "availability_inclusive_wait_s": 243.45887480300735,
+    "availability_wait_is_not_startup_benchmark": true,
+    "external_disconnect_automatic_recovery_s": 11.649239371006843,
+    "observations": 31,
+    "all_locked600_and_camera_ready": true,
+    "final_new_fresh_status_and_bluez_connected": true,
+    "film_used": 0,
+    "manual_reconnect_action": false,
+    "candidate_Printer_off_100s_timeout": "Retained explicitly in evidence; no candidate reconnect was attempted or claimed. User laterturned Printeron forinstalledchecks."
+  }
+}

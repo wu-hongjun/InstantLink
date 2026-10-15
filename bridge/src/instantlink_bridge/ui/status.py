@@ -5,20 +5,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import re
 import time
 from collections.abc import Awaitable, Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
+from importlib import import_module
 from typing import Protocol, cast
 from weakref import WeakKeyDictionary
 
-from instantlink_bridge.ble.client import (
-    DiscoveredPrinter,
-    connect_instax_printer,
-    default_ble_session_manager,
-    scan_instax_printers,
-)
 from instantlink_bridge.ble.instantlink import (
     CONNECT_STAGE_STALE_BOND_MIN,
     InstantLinkBackend,
@@ -27,14 +23,10 @@ from instantlink_bridge.ble.instantlink import (
     InstantLinkMultiplePrintersError,
     InstantLinkPrinterNotFoundError,
     default_instantlink_backend,
+    is_native_setup_disconnect,
 )
-from instantlink_bridge.ble.instax import PrinterStatus
 from instantlink_bridge.ble.models import PrinterModel, spec_for
-from instantlink_bridge.ble.session import (
-    InstaxBleSessionLease,
-    InstaxBleSessionManager,
-    PrinterEndpoint,
-)
+from instantlink_bridge.ble.types import DiscoveredPrinter, PrinterEndpoint, PrinterStatus
 from instantlink_bridge.ui.models import PairedPrinter
 from instantlink_bridge.ui.pairing import normalize_instax_name, parse_instax_devices
 
@@ -66,6 +58,65 @@ class ConnectedInstaxPrinter(Protocol):
         """Disconnect from the printer."""
 
 
+class StatusSessionLease(Protocol):
+    """Status ownership needed from the optional diagnostic session manager."""
+
+    @property
+    def connected(self) -> ConnectedInstaxPrinter:
+        """Return the connected protocol client."""
+
+    async def release(self, *, failed: bool, keep_connected: bool | None = None) -> None:
+        """Release exclusive session ownership."""
+
+
+class StatusSessionManager(Protocol):
+    """Session operations used by the diagnostic status provider."""
+
+    def cached_endpoint_for(self, selected: PrinterEndpoint) -> PrinterEndpoint | None:
+        """Return a matching cached endpoint."""
+
+    async def acquire_status(
+        self,
+        endpoint: PrinterEndpoint,
+        *,
+        connect_timeout_s: float | None = None,
+        model_override: PrinterModel | None = None,
+    ) -> StatusSessionLease:
+        """Acquire exclusive status ownership."""
+
+    async def close(self, *, forget_endpoint: bool = True) -> None:
+        """Close the cached diagnostic connection."""
+
+
+async def scan_instax_printers(timeout_s: float = 5.0) -> list[DiscoveredPrinter]:
+    """Load the optional scanner away from the UI event loop."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import scan_instax_printers as scan
+
+    return await scan(timeout_s)
+
+
+async def connect_instax_printer(
+    address: str,
+    name: str | None = None,
+    *,
+    timeout_s: float = 10.0,
+    model_override: PrinterModel | None = None,
+) -> ConnectedInstaxPrinter:
+    """Load the optional connector away from the UI event loop."""
+    await asyncio.to_thread(import_module, "instantlink_bridge.ble.client")
+    from instantlink_bridge.ble.client import connect_instax_printer as connect
+
+    return await connect(address, name, timeout_s=timeout_s, model_override=model_override)
+
+
+def default_ble_session_manager() -> StatusSessionManager:
+    """Return fallback ownership only when a diagnostic provider is constructed."""
+    from instantlink_bridge.ble.client import default_ble_session_manager as default
+
+    return default()
+
+
 Scanner = Callable[[float], Awaitable[Sequence[DiscoveredPrinter]]]
 BluezScanner = Callable[[float], Awaitable[Sequence[PairedPrinter]]]
 Connector = Callable[[str, str | None], Awaitable[ConnectedInstaxPrinter]]
@@ -78,6 +129,8 @@ class PrinterStatusUnavailableReason(StrEnum):
 
     NOT_ADVERTISING = "not_advertising"
     STALE_SELECTED = "stale_selected"
+    LINK_DROPPED = "link_dropped"
+    BLE_FAILURE = "ble_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +205,9 @@ class PrinterStatusUnavailableError(RuntimeError):
         status_message: str | None = None,
         stale_bond_suspected: bool = False,
         printer_not_found: bool = False,
+        native_detail: str | None = None,
+        native_stage: int | None = None,
+        failure_reported: bool = False,
     ) -> None:
         super().__init__(message)
         self.diagnostics = diagnostics
@@ -168,6 +224,9 @@ class PrinterStatusUnavailableError(RuntimeError):
         # holding a silent auto-reconnected link, so the printer is not advertising and the scan
         # can't see it" deadlock by dropping that BlueZ link so the printer re-advertises.
         self.printer_not_found = printer_not_found
+        self.native_detail = native_detail
+        self.native_stage = native_stage
+        self.failure_reported = failure_reported
 
     @property
     def stale_selected(self) -> bool:
@@ -192,7 +251,7 @@ class BlePrinterStatusProvider:
         scanner: Scanner | None = None,
         connector: Connector | None = None,
         bluez_scanner: BluezScanner | None = None,
-        session_manager: InstaxBleSessionManager[ConnectedInstaxPrinter] | None = None,
+        session_manager: StatusSessionManager | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: StatusSleep = asyncio.sleep,
     ) -> None:
@@ -225,15 +284,14 @@ class BlePrinterStatusProvider:
             if bluez_scanner is not None
             else cast(BluezScanner, scan_bluez_instax_printers)
         )
-        self._session_manager: InstaxBleSessionManager[ConnectedInstaxPrinter]
+        self._session_manager: StatusSessionManager
         if session_manager is not None:
             self._session_manager = session_manager
         elif connector is None:
-            self._session_manager = cast(
-                InstaxBleSessionManager[ConnectedInstaxPrinter],
-                default_ble_session_manager(),
-            )
+            self._session_manager = default_ble_session_manager()
         else:
+            from instantlink_bridge.ble.session import InstaxBleSessionManager
+
             self._session_manager = InstaxBleSessionManager[ConnectedInstaxPrinter](
                 self._connect_endpoint
             )
@@ -249,6 +307,16 @@ class BlePrinterStatusProvider:
         """Return diagnostics from the latest scanner pass."""
 
         return self._last_scan_diagnostics
+
+    def configure_discovery(self, *, scan_duration_s: int, retry_interval_s: float) -> None:
+        """Apply the UI's discovery policy without starting or cancelling BLE work."""
+
+        if scan_duration_s < 1:
+            raise ValueError("scan_duration_s must be at least 1")
+        interval = _positive_interval(retry_interval_s, name="retry_interval_s")
+        self._scan_timeout_s = float(scan_duration_s)
+        self._unavailable_scan_interval_s = interval
+        self._stale_selected_scan_interval_s = interval
 
     async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
         """Fetch film and battery status from the printer."""
@@ -458,7 +526,7 @@ class BlePrinterStatusProvider:
             if stale
             else "printer status endpoint is not advertising"
         )
-        status_message = "Hold K3 to re-pair" if stale else None
+        status_message = "Check saved Printer" if stale else None
         retry_after_s = self._unavailable_scan_interval_for_misses(self._not_advertising_misses)
         return PrinterStatusUnavailableError(
             message,
@@ -495,6 +563,14 @@ class InstantLinkPrinterStatusProvider:
         self._backend = backend if backend is not None else default_instantlink_backend()
         self._scan_duration_s = scan_duration_s
 
+    def configure_discovery(self, *, scan_duration_s: int, retry_interval_s: float) -> None:
+        """Change only the next native scan's budget; the controller owns retry pacing."""
+
+        if scan_duration_s < 1:
+            raise ValueError("scan_duration_s must be at least 1")
+        _positive_interval(retry_interval_s, name="retry_interval_s")
+        self._scan_duration_s = scan_duration_s
+
     async def fetch(self, printer: PairedPrinter) -> PrinterStatusSnapshot:
         """Return the current printer status."""
 
@@ -524,10 +600,20 @@ class InstantLinkPrinterStatusProvider:
         except (InstantLinkBleError, TimeoutError) as exc:
             raise PrinterStatusUnavailableError(
                 "printer status unavailable",
-                diagnostics=scanner_diagnostics(printer, ()),
-                reason=PrinterStatusUnavailableReason.NOT_ADVERTISING,
+                reason=PrinterStatusUnavailableReason.LINK_DROPPED
+                if is_native_setup_disconnect(exc)
+                else PrinterStatusUnavailableReason.BLE_FAILURE,
                 status_message="Retrying printer",
                 stale_bond_suspected=_is_stale_bond_signature(exc),
+                native_detail=exc.connect_failure_detail
+                if isinstance(exc, InstantLinkBleError)
+                else None,
+                native_stage=exc.connect_failure_stage
+                if isinstance(exc, InstantLinkBleError)
+                else None,
+                failure_reported=exc.status_failure_reported
+                if isinstance(exc, InstantLinkBleError)
+                else False,
             ) from exc
 
         return PrinterStatusSnapshot(
@@ -555,7 +641,7 @@ class InstantLinkPrinterStatusProvider:
 
 
 async def _release_status_lease(
-    lease: InstaxBleSessionLease[ConnectedInstaxPrinter],
+    lease: StatusSessionLease,
     *,
     failed: bool,
     keep_connected: bool | None,
@@ -589,14 +675,29 @@ async def scan_bluez_instax_printers(timeout_s: float = 8.0) -> list[PairedPrint
 def _is_stale_bond_signature(exc: InstantLinkBleError | TimeoutError) -> bool:
     """Return true when a status BLE error matches the stale-bond write-failure signature.
 
-    The signature is: a connect attempt that advanced to at least the characteristic-lookup
-    stage (service discovery succeeded, so GATT was up) but then failed with a BLE error — either
-    the encrypted characteristics never resolved ("write characteristic not found") or the first
-    encrypted write/subscribe failed. A timeout, or a BLE error from an earlier connect stage
-    (scan/connect/service-discovery), is treated as an ordinary transient miss.
+    Confirmed resolved-table characteristic absence or encrypted subscribe/write failures retain
+    the existing phase heuristic. Native uncertain-readiness and dropped-link details are excluded;
+    explicit BlueZ authentication failure remains actionable. Timeouts and earlier setup failures
+    remain ordinary transient misses. Legacy builds without terminal detail retain phase behavior.
     """
 
     if not isinstance(exc, InstantLinkBleError):
+        return False
+    detail = exc.connect_failure_detail or ""
+    if detail.startswith("BLE error: ") and re.search(
+        r"(?<![\w.])org\.bluez\.Error\.AuthenticationFailed(?![\w.])", detail
+    ):
+        # Service readiness can expose real authentication failure before lookup. Only the
+        # canonical error in native terminal progress is evidence, not generic Python text.
+        return True
+    if detail.startswith(
+        (
+            "BLE error: GATT readiness not confirmed",
+            "BLE error: BLE link disconnected during GATT setup",
+        )
+    ):
+        # A connected flag/empty incremental table or failed state RPC is not evidence of bad
+        # pairing keys. Keep these native readiness failures on ordinary reconnect recovery.
         return False
     stage = exc.connect_failure_stage
     return stage is not None and stage >= CONNECT_STAGE_STALE_BOND_MIN

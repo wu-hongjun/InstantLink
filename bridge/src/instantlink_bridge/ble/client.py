@@ -15,8 +15,9 @@ from instantlink_bridge.ble import protocol
 from instantlink_bridge.ble.instax import InstaxProtocolClient
 from instantlink_bridge.ble.models import PrinterModel
 from instantlink_bridge.ble.session import InstaxBleSessionManager, PrinterEndpoint
+from instantlink_bridge.ble.types import DiscoveredPrinter as DiscoveredPrinter
 from instantlink_bridge.imaging.pipeline import FitMode, PrintEdit
-from instantlink_bridge.imaging.postprocess import AdjustmentProfile
+from instantlink_bridge.imaging.postprocess import AdjustmentProfile, CorrectionProfile
 from instantlink_bridge.imaging.worker import prepare_for_instax_async
 from instantlink_bridge.printing import PrintProgress, PrintProgressCallback, PrintStage
 
@@ -30,15 +31,6 @@ BLE_WRITE_TIMEOUT_S = 5.0
 BLE_GATT_READ_TIMEOUT_S = 5.0
 BLE_CLEANUP_TIMEOUT_S = 5.0
 IMAGE_PREP_TIMEOUT_S = 60.0
-
-
-@dataclass(frozen=True, slots=True)
-class DiscoveredPrinter:
-    """BLE advertisement summary."""
-
-    name: str
-    address: str
-    device: object | None = None
 
 
 _DISCOVERED_DEVICE_CACHE: dict[str, object] = {}
@@ -308,6 +300,7 @@ async def print_file_to_printer(
     model: PrinterModel | None = None,
     progress: PrintProgressCallback | None = None,
     adjustments: AdjustmentProfile | None = None,
+    correction: CorrectionProfile | None = None,
     session_manager: InstaxBleSessionManager[ConnectedInstaxPrinter] | None = None,
 ) -> None:
     """Connect, prepare for the detected model, print, and disconnect."""
@@ -340,6 +333,7 @@ async def print_file_to_printer(
             quality=quality,
             edit=edit,
             adjustments=adjustments,
+            correction=correction,
             timeout_s=IMAGE_PREP_TIMEOUT_S,
         )
         LOGGER.info(

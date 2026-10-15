@@ -1,0 +1,9 @@
+{
+  "duration_s": 36,
+  "native_get_managed_objects": 12,
+  "native_get_all": 225,
+  "other_python_bulk_queries": 1,
+  "tracing_excluded_from_cpu_intervals": true,
+  "no_film": true,
+  "boundary": "Read-only BlueZ method-call counts; cached/ambient devices vary. Peripheral identities and raw capture remain private."
+}

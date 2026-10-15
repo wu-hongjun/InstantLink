@@ -1,0 +1,54 @@
+{
+  "pid": 501,
+  "services": "MainPID=501\nNRestarts=0\nActiveState=active\n\nMainPID=659\nNRestarts=0\nActiveState=active",
+  "cpu_khz": 1000000,
+  "governor": "performance",
+  "gpio24": "24: op -- -- | hi // GPIO24 = output",
+  "throttle": "throttled=0x0",
+  "warning_error_messages": [],
+  "setup_failure_messages": [],
+  "runtime_log_records": 33,
+  "status_messages": [
+    "2026-10-14 18:55:37,181 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=10 battery=65 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+  ],
+  "socket_active": "active",
+  "source_sha256": {
+    "src/instantlink_bridge/app.py": "86907d0b40de5e64a157e6e34e2f2eecb389bcb46a885200e561628d82683389",
+    "src/instantlink_bridge/ble/client.py": "4d0e5979c9206eb4f09f5aa237da931ccca714546fdd645ef245e12408b06ddf",
+    "src/instantlink_bridge/ble/instantlink.py": "5b903ee8622d6e486ed32a7aa26edb58be92801d155d44bd03988a248086012a",
+    "src/instantlink_bridge/ble/instax.py": "634dd3ecfc5bf1a5fd6dfdc4d8df8aeab4649d0198ddea06c616f706c3e8f9e1",
+    "src/instantlink_bridge/ble/session.py": "e514bc4ef390bec6858b83135877d2cc108359ca162f0ca85636e5c82798dbe9",
+    "src/instantlink_bridge/ble/types.py": "e466bd0db3f2070f8cf9945fa23160595eb5099875f3057a8183f2f95494e45e",
+    "src/instantlink_bridge/config.py": "0c1aca867828c3a5e3159d1e006ec75c5a626d4255f8a584dd68e36e4e833e59",
+    "src/instantlink_bridge/imaging/models.py": "1cf4bc81aadfc534fc8ed63bcca6177f4576b6d119ef615aff734d952b3b4cd3",
+    "src/instantlink_bridge/imaging/pipeline.py": "e5f5d324bd4b4855c175e7373019d7aa0cfec966c175cd5ac44cd0a2a22ac59f",
+    "src/instantlink_bridge/imaging/postprocess.py": "5d72e73228dcaf86b141184fa4e47a7fa8c66f33b89501379f940c63749e36b3",
+    "src/instantlink_bridge/imaging/presets.py": "625c62dd045e6f4e25364f7dac380a1d2e62a7c266c3700b9efc4da1412aa513",
+    "src/instantlink_bridge/imaging/worker.py": "49a67de3cbbbdaa28f1d7e444f38e27ef876605aa56bf960bad7a3a27a3746a3",
+    "src/instantlink_bridge/manager/config_payload.py": "c3dc3649f7ffc8bf4bae692923a185855b6b11cbac0561df324c75c60c11fd10",
+    "src/instantlink_bridge/ui/controller.py": "c38bf7b7b633185e73181b287c46c7fa848b6c885ae4fe8da5041e4a5de8230e",
+    "src/instantlink_bridge/ui/models.py": "407938207d7c51e036e7382c094aa9671d22f79c3277cdb433e6d6f8b68b2226",
+    "src/instantlink_bridge/ui/settings.py": "5fde200193500c6469fb7e02bfa12642aabe128602cbcce05fabe1aa16456077",
+    "src/instantlink_bridge/ui/status.py": "78f8f75c80da920c496ddd686e8d1b055bed3c2ec7370949d462ebb648813390",
+    "lib/libinstantlink_ffi.so": "b91cf3fdd128b314cbcb952037e686514023371fe960a1c7d8ed4562d9ea1175",
+    "systemd/instantlink-bridge.service": "b3f8672c9e792fec1bf12806b796d6a30ebf39aa04bb95407255ea2cbbf079ff"
+  },
+  "film_used": 0,
+  "printer_connected": true,
+  "ftp_greeting": "220",
+  "ftp_noop": "200",
+  "other_services": {
+    "bluetooth.service": "active",
+    "NetworkManager.service": "active",
+    "systemd-networkd.service": "active",
+    "dnsmasq.service": "active"
+  },
+  "framebuffer": {
+    "name": "fb_st7789v",
+    "bytes_read": 115200,
+    "unique_rgb565_pixels": 148,
+    "scope": "Read-only framebuffer, not a physical LCD quality observation."
+  },
+  "commit": "1a3a61dcb73ab6169927ffc356c0e476824bb46c",
+  "dirty": false
+}

@@ -1,0 +1,107 @@
+{
+  "verdict": "Candidate accepted for deployment: no source, quality, lock/input or reconnect blockers. Installed firmware and cleanup evidence still to review.",
+  "baseline_commit": "b231b8a",
+  "candidate_commit": "cac3318",
+  "display_sha256": "ef6e7fd51003578d40117f5f758bdbe435972bc695fd23ad2955b9b20165b5a1",
+  "display_quality": {
+    "all_18_hardware_frame_hashes_identical": true,
+    "all_16777216_rgb_colors_exact": true,
+    "all_17_pillow_modes_exact": true,
+    "all_40_light_dark_ui_modes_exact": true,
+    "awake_gpio_capture_matches_scalar_oracle": true,
+    "timeout_frame_black": true
+  },
+  "frame_metrics": {
+    "baseline": {
+      "total_ms": 267.37640649662353,
+      "pack_ms": 234.78153649921296,
+      "draw_ms": 30.930025997804478,
+      "write_ms": 0.3423434973228723,
+      "backlight_ms": 0.917421501071658,
+      "cpu_ms": 266.5280214999997
+    },
+    "candidate": {
+      "total_ms": 45.81010399124352,
+      "pack_ms": 10.132004499610048,
+      "draw_ms": 33.71841099578887,
+      "write_ms": 0.37591150612570345,
+      "backlight_ms": 1.0177340009249747,
+      "cpu_ms": 43.39708500000006
+    }
+  },
+  "event_loop_max_lag_ms": {
+    "baseline": 272.44479100510944,
+    "candidate": 179.44781300786417
+  },
+  "frame_count_per_phase": 18,
+  "frequency_khz": 1000000,
+  "gpio_cases": [
+    {
+      "case": "key2_lock_low_tier",
+      "passed": true
+    },
+    {
+      "case": "short_bounce_does_not_wake",
+      "passed": true
+    },
+    {
+      "case": "sub_50ms_press_does_not_wake",
+      "passed": true
+    },
+    {
+      "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+      "passed": true
+    },
+    {
+      "case": "held_key1_counts_once",
+      "passed": true
+    },
+    {
+      "case": "joystick_select_resets_same_action_different_button",
+      "passed": true
+    },
+    {
+      "case": "key1_resets_joystick_sequence",
+      "passed": true
+    },
+    {
+      "case": "three_same_joystick_presses_unlock_home",
+      "passed": true
+    },
+    {
+      "case": "10s_without_press_returns_dark_low_tier",
+      "passed": true
+    },
+    {
+      "case": "rapid_75ms_triple_key1_unlocks",
+      "passed": true
+    },
+    {
+      "case": "detached_mock_has_no_callbacks_real_input_remains",
+      "passed": true
+    }
+  ],
+  "final_candidate_locked_frequency_khz": 600000,
+  "final_candidate_fresh_status": true,
+  "candidate_startup_initial_status_attempt_seconds": 3.4924613000039244,
+  "fresh_subsequent_hardware_poll_passed": true,
+  "film_used": 0,
+  "boundaries": [
+    "Component timings end at kernel write return, not physical panel scanout.",
+    "Button checks use real kernel GPIO mockup edges and production action queue; physical contacts not actuated.",
+    "Candidate ran concurrently with BLE startup: event-loop maxima and action outliers are not attributable solely to LCD work.",
+    "Synthetic printing-mode snapshot renders no image/print commands.",
+    "Installed firmware and reconnect evidence pending.",
+    "First wake included383ms acceptedqueue\u2192done, laterwake147/150ms; overall actions include powertransitions and differing counts, so do not claim allbuttonresponses below50ms."
+  ],
+  "deploy_blockers": [],
+  "candidate_locked_reconnect": {
+    "passed": true,
+    "observations": 31,
+    "seconds": 12.134571141999913,
+    "all_locked_frequency_khz": 600000,
+    "all_camera_ready": true,
+    "final_bluez_connected": true,
+    "final_fresh_status": true
+  }
+}

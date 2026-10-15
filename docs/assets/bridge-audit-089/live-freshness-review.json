@@ -1,0 +1,8 @@
+{
+  "reviewer": "review_live_disconnect_freshness",
+  "scope": "Synchronous published freshness invalidation and render wakeup; callback guards, pending replies, lock/print handoff and same-loop mutation",
+  "findings": [],
+  "targeted_tests_passed": 27,
+  "hardware_used": false,
+  "limits": "Source review; physical acceptance is separately recorded in live-reconnect-validated.json. Additional stale callback/in-flight/initial watch assertions passed full commit hooks after review."
+}

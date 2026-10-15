@@ -1,0 +1,87 @@
+{
+  "runtime": "473a62c",
+  "hardware": "Pi Zero 2 W Rev 1.0, Waveshare ST7789, X306 2300 mAh",
+  "os": "Debian 13.2, kernel 6.12.47+rpt-rpi-v8, Python 3.13.5, BlueZ 5.82, Bridge 0.1.17",
+  "software_smoke": {
+    "kind": "On-Pi software concurrency smoke; injected gates, no Printer send or film",
+    "settings_refresh_ms": 271.9,
+    "settings_overlap": true,
+    "existing_sync_read_ack_ms": 3.1,
+    "sync_read_ack_during_hash": true,
+    "jpeg_prepare_dimensions": [
+      800,
+      800
+    ],
+    "jpeg_prepare_bytes": 4037,
+    "closed_worker_rejects_new_work": true,
+    "ffi_lock_retained_on_repeated_cancel": true
+  },
+  "boot_trial_1": {
+    "systemd_total_s": 17.152,
+    "kernel_s": 2.653,
+    "userspace_s": 14.499,
+    "milestones_s": {
+      "service_start": 9.944158,
+      "boot_start": 12.907949,
+      "ui_ready": 14.40615,
+      "ftp_ready": 14.075609,
+      "bluetooth_ready": 14.46213,
+      "core_ready": 14.428906,
+      "hotspot_ready": 18.797008,
+      "manager_usb": 19.343538,
+      "manager_hotspot": 19.345292,
+      "printer_status": null,
+      "splash_done": 9.860086
+    }
+  },
+  "final_health_before_printer_poweron": {
+    "bridge_active": true,
+    "manager_active": true,
+    "service_restarts": 0,
+    "throttled": "0x0",
+    "idle_cpu_khz": 600000,
+    "backlight_gpio24": "low",
+    "ftp_greeting_ok": true,
+    "ftp_noop_ok": true
+  },
+  "notes": [
+    "Software probes use injected control/IO gates; no Printer send or film.",
+    "Kernel-monotonic reboot times exclude firmware/power-button delay.",
+    "No measured boot gain versus plan067; no battery-runtime or physical-print-throughput claim."
+  ],
+  "boot_trial_2_printer_on": {
+    "systemd_total_s": 16.991,
+    "kernel_s": 2.614,
+    "userspace_s": 14.377,
+    "milestones_s": {
+      "service_start": 9.753828,
+      "boot_start": 12.719019,
+      "ui_ready": 14.205025,
+      "ftp_ready": 13.869977,
+      "bluetooth_ready": 14.261683,
+      "core_ready": 14.224152,
+      "hotspot_ready": 18.619991,
+      "manager_usb": 19.251669,
+      "manager_hotspot": 19.253301,
+      "printer_status": 17.321113,
+      "splash_done": 9.630361
+    },
+    "printer": "Instax Square INSTAX-52006924",
+    "film_remaining": 4,
+    "battery_percent": 65
+  },
+  "locked_network_recovery": {
+    "initial": {
+      "frequency_khz": 600000,
+      "backlight_low": true,
+      "printer_connected": true,
+      "hotspot": true
+    },
+    "recovered_ip_after_s": 29.75,
+    "sample_count": 38,
+    "always_600mhz": true,
+    "always_backlight_low": true,
+    "always_printer_connected": true,
+    "bridge_pid_unchanged": true
+  }
+}

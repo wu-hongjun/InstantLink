@@ -1,0 +1,19 @@
+{
+  "complete_fresh_boot_service_records": 504,
+  "flagged_service_records": 48,
+  "service_flag_categories": {
+    "bluetooth_directory_mode_note": 1,
+    "supplicant_unsupported_registration": 1,
+    "offline_hotspot_no_upstream_dns": 1,
+    "bluez_expected_disconnect_cleanup": 3,
+    "audit_observer_permission_start_failure": 42
+  },
+  "fixture_failure_correction": "Host-private script0600 transferred unreadable to ib, causing21failed observer startup attempts; corrected root:ib0640 then resumed. This was an audit setup fault, not production source. Normal services restored; final PID1542 has no warnings/errors.",
+  "final_normal_application_fault_records": 0,
+  "complete_fresh_boot_kernel_records": 397,
+  "kernel_warning_records": 21,
+  "vendor_ie_errors": 0,
+  "kernel_warning_categories": "Existing dummy regulators, SD read-only-switch note, staging LCD/media modules, VCHI/shared-memory/media initialization findings, and expected local out-of-tree brcmfmac taint. No new HCI fault or vendor-IE error.",
+  "film_used": 0,
+  "raw_logs": "Retained privately on host; no credentials or full raw journal committed."
+}

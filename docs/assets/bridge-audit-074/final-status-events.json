@@ -1,0 +1,16 @@
+[
+  "2026-10-12 14:41:31,330 INFO instantlink_bridge.power.performance power.cpu_mode governor=performance photo_jobs=0",
+  "2026-10-12 14:41:34,313 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:41:42,936 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:41:54,962 INFO instantlink_bridge.power.performance power.cpu_mode governor=ondemand photo_jobs=0",
+  "2026-10-12 14:42:11,513 INFO instantlink_bridge.power.performance power.cpu_mode governor=performance photo_jobs=0",
+  "2026-10-12 14:42:14,633 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:42:23,363 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:42:33,353 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:42:43,358 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:42:53,363 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:43:03,368 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:43:11,560 INFO instantlink_bridge.power.performance power.cpu_mode governor=powersave photo_jobs=0",
+  "2026-10-12 14:43:13,393 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0",
+  "2026-10-12 14:43:23,410 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=1 battery=35 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+]

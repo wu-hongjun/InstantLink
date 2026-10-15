@@ -1,0 +1,338 @@
+{
+  "label": "baseline",
+  "pid": 7530,
+  "hz": 100,
+  "samples": [
+    {
+      "sample": 1,
+      "duration_s": 30.028969467000024,
+      "process_cpu_s": 2.64,
+      "process_percent_one_core": 8.791510487568335,
+      "child_cpu_s": 0.16,
+      "system_busy_percent_all_cores": 2.809364548494983,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "7530",
+          "name": "instantlink-bri",
+          "cpu_s": 0.08
+        },
+        {
+          "tid": "7534",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7535",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7536",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7537",
+          "name": "instantlink-bri",
+          "cpu_s": 0.04
+        },
+        {
+          "tid": "7538",
+          "name": "instantlink-bri",
+          "cpu_s": 2.23
+        },
+        {
+          "tid": "7540",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7542",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7544",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7546",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7548",
+          "name": "instantlink-bri",
+          "cpu_s": 0.01
+        },
+        {
+          "tid": "7550",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7552",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7554",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7556",
+          "name": "instantlink-bri",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "7560",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7561",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7562",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7563",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "duration_s": 30.02991332200054,
+      "process_cpu_s": 3.11,
+      "process_percent_one_core": 10.356340248646504,
+      "child_cpu_s": 0.06,
+      "system_busy_percent_all_cores": 4.469880524688779,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "7530",
+          "name": "instantlink-bri",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "7534",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7535",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7536",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7537",
+          "name": "instantlink-bri",
+          "cpu_s": 0.04
+        },
+        {
+          "tid": "7538",
+          "name": "instantlink-bri",
+          "cpu_s": 2.23
+        },
+        {
+          "tid": "7540",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7542",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7544",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7546",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7548",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7550",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7552",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7554",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7556",
+          "name": "instantlink-bri",
+          "cpu_s": 0.36
+        },
+        {
+          "tid": "7560",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.21
+        },
+        {
+          "tid": "7561",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7562",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7563",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 3,
+      "duration_s": 30.029908114000136,
+      "process_cpu_s": 3.27,
+      "process_percent_one_core": 10.889144207788984,
+      "child_cpu_s": 0.5,
+      "system_busy_percent_all_cores": 5.705203279237075,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "7530",
+          "name": "instantlink-bri",
+          "cpu_s": 0.09
+        },
+        {
+          "tid": "7534",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7535",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7536",
+          "name": "instantlink-bri",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7537",
+          "name": "instantlink-bri",
+          "cpu_s": 0.04
+        },
+        {
+          "tid": "7538",
+          "name": "instantlink-bri",
+          "cpu_s": 2.24
+        },
+        {
+          "tid": "7540",
+          "name": "instantlink-bri",
+          "cpu_s": 0.01
+        },
+        {
+          "tid": "7542",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7544",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7546",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7548",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7550",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7552",
+          "name": "instantlink-bri",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "7554",
+          "name": "instantlink-bri",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "7556",
+          "name": "instantlink-bri",
+          "cpu_s": 0.44
+        },
+        {
+          "tid": "7560",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.23
+        },
+        {
+          "tid": "7561",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7562",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "7563",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    }
+  ],
+  "boundary": "Actual Bridge process and whole-system CPU counters, dark600MHz, 3x30s. Same hardware; no energy measurement; subprocess CPU separate. No strace during CPU interval. No film used."
+}

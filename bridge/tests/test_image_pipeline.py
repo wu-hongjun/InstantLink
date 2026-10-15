@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from io import BytesIO
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CompletedProcess, TimeoutExpired
 from types import SimpleNamespace
 from typing import cast
 
@@ -230,6 +230,84 @@ def test_hif_square_keeps_conservative_thumbnailer_size(
     assert len(calls) == 1
     assert calls[0][:4] == ["/bin/heif", "-s", "1600", str(hif_path)]
     assert prepared.model is PrinterModel.SQUARE
+
+
+def test_hif_tiny_embedded_thumbnail_retries_primary_and_preserves_primary_pixels(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, source_jpeg: Path
+) -> None:
+    calls: list[list[str]] = []
+    hif_path = tmp_path / "source.hif"
+    hif_path.write_bytes(b"fake hif with small embedded thumbnail")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, timeout: int
+    ) -> CompletedProcess[str]:
+        assert check and capture_output and timeout == 30
+        calls.append(args)
+        if "-p" in args:
+            with Image.open(source_jpeg) as primary:
+                primary.save(args[-1], format="PNG")
+        else:
+            Image.new("RGB", (160, 120), (240, 10, 10)).save(args[-1], format="PNG")
+        return CompletedProcess(args, 0)
+
+    monkeypatch.setattr(pipeline.shutil, "which", lambda _: "/bin/heif")
+    monkeypatch.setattr(pipeline.subprocess, "run", fake_run)
+    prepared = prepare_for_instantlink_backend(hif_path, PrinterModel.SQUARE)
+    expected = prepare_for_instantlink_backend(source_jpeg, PrinterModel.SQUARE)
+
+    assert len(calls) == 2
+    assert calls[0][:-1] == ["/bin/heif", "-s", "1600", str(hif_path)]
+    assert calls[1][:-1] == ["/bin/heif", "-s", "1600", "-p", str(hif_path)]
+    assert prepared == expected
+    assert all(not Path(args[-1]).parent.exists() for args in calls)
+
+
+def test_hif_intrinsically_small_primary_does_not_retry_indefinitely(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    source = tmp_path / "small.hif"
+    source.write_bytes(b"intrinsically small source")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, timeout: int
+    ) -> CompletedProcess[str]:
+        calls.append(args)
+        Image.new("RGB", (160, 120), (20, 90, 160)).save(args[-1], format="PNG")
+        return CompletedProcess(args, 0)
+
+    monkeypatch.setattr(pipeline.shutil, "which", lambda _: "/bin/heif")
+    monkeypatch.setattr(pipeline.subprocess, "run", fake_run)
+    prepared = prepare_for_instantlink_backend(source, PrinterModel.SQUARE)
+    assert prepared.width == 800 and prepared.height == 800
+    assert len(calls) == 2 and "-p" in calls[-1]
+
+
+def test_hif_primary_fallback_timeout_remains_bounded_and_cleans_temporary_files(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    source = tmp_path / "timeout.hif"
+    source.write_bytes(b"fake hif")
+
+    def fake_run(
+        args: list[str], *, check: bool, capture_output: bool, timeout: int
+    ) -> CompletedProcess[str]:
+        assert timeout == 30
+        calls.append(args)
+        if "-p" in args:
+            Path(args[-1]).write_bytes(b"partial primary output")
+            raise TimeoutExpired(args, timeout)
+        Image.new("RGB", (160, 120), (20, 90, 160)).save(args[-1], format="PNG")
+        return CompletedProcess(args, 0)
+
+    monkeypatch.setattr(pipeline.shutil, "which", lambda _: "/bin/heif")
+    monkeypatch.setattr(pipeline.subprocess, "run", fake_run)
+    with pytest.raises(UnsupportedImageError, match="could not decode HIF"):
+        prepare_for_instantlink_backend(source, PrinterModel.SQUARE)
+    assert len(calls) == 2
+    assert all(not Path(args[-1]).parent.exists() for args in calls)
 
 
 def test_raw_errors_are_lcd_friendly(tmp_path: Path) -> None:

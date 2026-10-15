@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "base": "54a84af",
+  "source_commit": "ec960c2",
+  "sha256": {
+    "bridge/src/instantlink_bridge/ble/agent.py": "fefb9bccbad62fa32a2a8426134bef19bda4e872cd515000c63e35321ba8dbec",
+    "bridge/src/instantlink_bridge/ui/controller.py": "73b77ee5cbd3568036d816bea186a89061a142fe18c7629f453a130622b99eb0",
+    "bridge/src/instantlink_bridge/app.py": "1219f4ad62d5a0c5ccc077036b9226c0a9cdaa9eaa23e2cd06c7c0637f72fabb"
+  },
+  "independent_targeted_tests": 36,
+  "resolved_findings": [
+    "stale disconnected IOS/ANDROID alias cannot invalidate live path",
+    "watch setup failure logs/queries once per connected episode",
+    "detected model metadata does not change selected identity"
+  ],
+  "full_bridge_tests": 1724,
+  "agent_tests": 48,
+  "controller_runtime_tests": 288,
+  "gates": [
+    "Ruff",
+    "strict mypy67sources",
+    "touchedformat",
+    "normalhooks",
+    "strictdocs"
+  ],
+  "native_changes": false,
+  "film_used": 0
+}

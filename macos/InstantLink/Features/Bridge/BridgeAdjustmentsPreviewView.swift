@@ -151,6 +151,7 @@ struct BridgeAdjustmentsPreviewView: View {
             (draft.adjustmentsValue(forKey: key) as? String) ?? ""
         }
         return PreviewSnapshot(
+            correctionSaturation: draft.draft?.correction.saturation ?? 0,
             saturation: intValue("saturation"),
             exposure: intValue("exposure"),
             sharpness: intValue("sharpness"),
@@ -253,6 +254,14 @@ struct BridgeAdjustmentsPreviewView: View {
         // Crop back to the base extent in case any filter (vignette,
         // gaussian blur) extended the image bounds. Without this the
         // CGImage would include transparent margins.
+        if snapshot.correctionSaturation != 0 {
+            ciImage = ciImage.applyingFilter(
+                "CIColorControls",
+                parameters: [
+                    kCIInputSaturationKey: 1.0 + Double(snapshot.correctionSaturation) / 100.0
+                ]
+            )
+        }
         ciImage = ciImage.cropped(to: base.extent)
 
         guard let cgImage = Self.ciContext.createCGImage(ciImage, from: base.extent) else {
@@ -339,6 +348,7 @@ struct BridgeAdjustmentsPreviewView: View {
 /// ``Equatable`` lets SwiftUI's ``onChange`` debounce noop edits and
 /// only fire when the visible state actually changes.
 private struct PreviewSnapshot: Equatable {
+    var correctionSaturation: Int
     var saturation: Int
     var exposure: Int
     var sharpness: Int

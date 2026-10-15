@@ -1,0 +1,16 @@
+{
+  "timestamp_utc": "2026-10-13T22:14:33.338431+00:00",
+  "removed": [
+    "/tmp/instantlink-status-runtime-observer-083.py",
+    "/tmp/instantlink-status-client-083.py",
+    "/tmp/instantlink-status-reconnect-083.py",
+    "/tmp/instantlink-status-ui-smoke-083.py",
+    "/var/tmp/instantlink-status-source-083",
+    "/var/tmp/instantlink-status-candidate-lib-083.so",
+    "/var/tmp/instantlink-status-candidate-083.tar.gz",
+    "/tmp/instantlink-status-health-083.py"
+  ],
+  "normal_service_restored": true,
+  "audit_dropin_removed": true,
+  "audit_socket_removed": true
+}

@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "independent_review": true,
+  "accepted_captures": 5,
+  "checks": [
+    "raw elapsed/statusattempt/failedcount summary matches",
+    "allaccepted sampleslocked nonunlocking600MHz cameraReady film0",
+    "source/native/mappedFFI hashesmatch cleanmanifest",
+    "normalBridge38records+manager2records zero warning/error/panic",
+    "wholeboot6642records retains2historicalpanics",
+    "ownedfixtures removed"
+  ],
+  "caveats": [
+    "small uncontrolledradio sample, no universal overall speedup",
+    "CPU0.417% baseline to0.500% candidate, no reduction/energyclaim",
+    "candidate3 transientmissingwritecharacteristic auto-recovered",
+    "installed1scanmiss retained",
+    "complete candidate1JSON accepted despite stdoutENOSPC; emptycandidate2JSON excluded",
+    "FTP+cameraReady isnotwirelessupload verification",
+    "no physicalqualitytest in nofilm task"
+  ],
+  "deployment_blocker": false
+}

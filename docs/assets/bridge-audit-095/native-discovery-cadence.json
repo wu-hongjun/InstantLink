@@ -1,0 +1,70 @@
+{
+  "passed": true,
+  "film_used": 0,
+  "awake_gaps_s": [
+    1.3856396350000182,
+    1.3778278639999826,
+    1.392231823000003
+  ],
+  "dark_period_s": 30.00234550899998,
+  "wake_to_next_scan_s": 0.040786250000053315,
+  "locked_at": 250.970128029,
+  "cpu_after_first_press_khz": 1000000,
+  "samples": [
+    {
+      "start": 245.421892249,
+      "dark": false,
+      "unlocking": false,
+      "scan_window_s": 1,
+      "cpu_khz": 1000000,
+      "reason": "not_advertising",
+      "end": 246.755337926
+    },
+    {
+      "start": 246.807531884,
+      "dark": false,
+      "unlocking": false,
+      "scan_window_s": 1,
+      "cpu_khz": 1000000,
+      "reason": "not_advertising",
+      "end": 248.133668759
+    },
+    {
+      "start": 248.185359748,
+      "dark": false,
+      "unlocking": false,
+      "scan_window_s": 1,
+      "cpu_khz": 1000000,
+      "reason": "not_advertising",
+      "end": 249.526175321
+    },
+    {
+      "start": 249.577591571,
+      "dark": false,
+      "unlocking": false,
+      "scan_window_s": 1,
+      "cpu_khz": 1000000,
+      "reason": "not_advertising",
+      "end": 250.966973914
+    },
+    {
+      "start": 279.57993708,
+      "dark": true,
+      "unlocking": false,
+      "scan_window_s": 5,
+      "cpu_khz": 600000,
+      "reason": "not_advertising",
+      "end": 284.647470464
+    },
+    {
+      "start": 284.701844943,
+      "dark": false,
+      "unlocking": true,
+      "scan_window_s": 1,
+      "cpu_khz": 600000,
+      "reason": "not_advertising",
+      "end": 286.066984786
+    }
+  ],
+  "scope": "Controlled production controller/nativeFFI with synthetic unmatched target, NullDisplay, real CPU helper; no GPIO contacts, film, real target connection, bond changes or image commands. Normal Bridge stopped during probe and restored by caller."
+}

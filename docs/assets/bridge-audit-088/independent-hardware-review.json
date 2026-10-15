@@ -1,0 +1,105 @@
+{
+  "reviewer": "independent adversarial subagent",
+  "source_sha256": "608d52b29c5b4aad4c116fd0e63111b4f6155dfa81e26ab2fe679513ac17af1a",
+  "source_blockers": [],
+  "lcd_deployment_gate": "passed",
+  "final_printer_validation": "pending: candidate Printer offline; no fresh status/reconnect success claimed",
+  "film_used": 0,
+  "benchmarks": {
+    "baseline": {
+      "total_ms": 14.12125048955204,
+      "pack_ms": 9.852265502559021,
+      "cpu_ms": 13.77216300000006,
+      "pack_cpu_ms": 9.602214000000275,
+      "draw_ms": 2.6818225014721975
+    },
+    "candidate": {
+      "total_ms": 7.90463549492415,
+      "pack_ms": 3.1856510031502694,
+      "cpu_ms": 7.51343800000015,
+      "pack_cpu_ms": 3.165963500000757,
+      "draw_ms": 2.8133590021752752
+    },
+    "frames_per_run": 18,
+    "frame_hashes_exact": true,
+    "all_frames_cpu_khz": 1000000,
+    "candidate_all_numpy": true,
+    "event_loop_max_lag_ms": {
+      "baseline": 18.825677009881474,
+      "candidate": 11.382136003812773
+    },
+    "boundary": "Actual framebufferdraw/pack/write/backlight atawake1000MHz, test-only UI snapshots; no Printer/image actions or film. Timings end at kernel write return, not physical panel scanout.",
+    "settle_protocol": "both runs waited3seconds after startup/backend-ready; early/unsettled/provisional data excluded"
+  },
+  "startup": {
+    "baseline_first_frame_ms": 129.00874999468215,
+    "candidate_first_frame_ms": 128.1653119949624,
+    "first_frame_exact": true,
+    "first_paint_finished_before_numpy_warmup": true,
+    "warmup_ms": 1485.5316140019568,
+    "scope": "service-restart measurements with both source trees precompiled, not full cold-boot measurement; first frame kernel-write+backlight timing, not physical panel scanout"
+  },
+  "gpio": {
+    "case_count": 11,
+    "all_passed": true,
+    "cases": [
+      {
+        "case": "key2_lock_low_tier",
+        "passed": true
+      },
+      {
+        "case": "short_bounce_does_not_wake",
+        "passed": true
+      },
+      {
+        "case": "sub_50ms_press_does_not_wake",
+        "passed": true
+      },
+      {
+        "case": "75ms_key1_wakes_nonblank_prompt_and_high_tier",
+        "passed": true
+      },
+      {
+        "case": "held_key1_counts_once",
+        "passed": true
+      },
+      {
+        "case": "joystick_select_resets_same_action_different_button",
+        "passed": true
+      },
+      {
+        "case": "key1_resets_joystick_sequence",
+        "passed": true
+      },
+      {
+        "case": "three_same_joystick_presses_unlock_home",
+        "passed": true
+      },
+      {
+        "case": "10s_without_press_returns_dark_low_tier",
+        "passed": true
+      },
+      {
+        "case": "rapid_75ms_triple_key1_unlocks",
+        "passed": true
+      },
+      {
+        "case": "detached_mock_has_no_callbacks_real_input_remains",
+        "passed": true
+      }
+    ],
+    "final_locked": true,
+    "final_cpu_khz": 600000,
+    "production_input_restored": true,
+    "camera_ready": true,
+    "boundary": "real kernel mockup edges + production action queue + real LCD/CPU/FTP/BLE; physical button contacts not actuated",
+    "initial_fixture_failure": "first attempt occurred whileUIwasbooting; rejected beforeinput, ownedmock unloaded; waited startup and reran successfully, retained failure privately"
+  },
+  "memory": {
+    "warmup_numpy_import_resident_delta_kib": 15776,
+    "per_frame_peak_tracemalloc_bytes": 519650,
+    "1000_frames_retained_bytes": 760,
+    "assessment": "bounded display-size allocations and no global mutable frames; NumPy persistent RSS tradeoff explicit"
+  },
+  "scope": "Packing+owned dependency warmup only. No Printer/image/command transport changes; source status/reconnect tests pass, hardware reconnect still requires onlinePrinter. Safe to deploy validated LCD candidate then finish installed LCD/GPIO/status/reconnect checks."
+}

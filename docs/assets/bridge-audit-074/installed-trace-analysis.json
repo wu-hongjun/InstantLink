@@ -1,0 +1,65 @@
+{
+  "rounds": [
+    {
+      "round_order": 1,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 14928.453922271729,
+      "inter_chunk_gap_ms": {
+        "min": 29.033184051513672,
+        "mean": 29.8794720854078,
+        "max": 33.89787673950195,
+        "sum": 1673.250436782837
+      },
+      "last_chunk_to_end_gap_ms": 154.8597812652588,
+      "fragment_spans_ms_sum": 9695.508480072021,
+      "post_last_fragment_ack_ms_sum": 3311.8221759796143,
+      "cancel_ack": "00"
+    },
+    {
+      "round_order": 2,
+      "jpeg_bytes": 102846,
+      "sha256": "867ca28e128bd60149a33d719646ab649c12d4d45d62e0b104e4ec1dda32f878",
+      "rgb_sha256": "7e887aada319bc1c56cd0176fb81ca8943b65a6ba4e0f009b60d8a8380289f97",
+      "chunks": 57,
+      "indexed_ack_count": 57,
+      "data_gatt_writes": 456,
+      "data_gatt_value_lengths": [
+        167,
+        236
+      ],
+      "download_cancel_ms": 15085.299968719482,
+      "inter_chunk_gap_ms": {
+        "min": 28.99789810180664,
+        "mean": 30.707636049815587,
+        "max": 83.74691009521484,
+        "sum": 1719.6276187896729
+      },
+      "last_chunk_to_end_gap_ms": 154.7720432281494,
+      "fragment_spans_ms_sum": 9739.17269706726,
+      "post_last_fragment_ack_ms_sum": 3357.656717300415,
+      "cancel_ack": "00"
+    }
+  ],
+  "film_before": 1,
+  "film_after": 1,
+  "history_before": 67,
+  "history_after": 67,
+  "print_image_command_count": 0,
+  "request_opcodes": {
+    "0x2": 7,
+    "0x1000": 2,
+    "0x1001": 114,
+    "0x1002": 2,
+    "0x1003": 2
+  },
+  "boundary": "No-film download/end/cancel; outboundJPEGbytes and indexedACKverified; no storedimage or physicalfilmmeasurement"
+}

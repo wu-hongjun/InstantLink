@@ -1,0 +1,151 @@
+{
+  "source_name": "DSC02832.jpeg",
+  "source_bytes": 4054720,
+  "source_sha256": "a0d2f9e43df6efc76923467f4b5ca6e34da256ed6ed1f9b0a459d6655a4b521c",
+  "boundary": "Installed Bridge runtime with private observation socket, same-Pi hotspot-address FTP replay of user-selected JPEG, actual Square BLE print. No camera Wi-Fi airtime or mechanical completion sensor. One sheet requested; no retries.",
+  "deployment": "811d51f1d377d89fdc0123fa6262fd72d183d355",
+  "native_sha256": "5622ca8d2cce25f9437ddaad97771a3c4e29fee42e226cfb9444b73fcb9de3b8",
+  "throttled": "throttled=0x0",
+  "data_att_write_count": 464,
+  "data_att_value_bytes": [
+    167,
+    236
+  ],
+  "trial": "validation",
+  "settings": {
+    "fit": "auto",
+    "quality": 100,
+    "adjustments": {
+      "saturation": 1.5,
+      "exposure": 1.0,
+      "sharpness": 1.0,
+      "hue": 0,
+      "vignette": 0,
+      "datestamp": false,
+      "watermark": false,
+      "datestamp_text": "",
+      "watermark_text": ""
+    },
+    "correction": {
+      "saturation": 1.0
+    }
+  },
+  "film_before": 1,
+  "film_after": 0,
+  "ftp_reply_code": "226",
+  "jpeg": {
+    "bytes": 104552,
+    "dimensions": [
+      800,
+      800
+    ],
+    "quality": 88,
+    "sha256": "ecf0c06b116247eb9db928088ad71c55f5eae864238b891453711f16bb9a363a",
+    "rgb_sha256": "32182d7919257b4774e183e11af56947ba679df4957bf0fe1d5f700097f76c6f",
+    "exact_reference_python_bytes": true,
+    "square_transport_flip": false
+  },
+  "timings_s": {
+    "local_ftp_upload": 0.055745601654052734,
+    "ftp_start_to_print_complete": 19.779170036315918,
+    "ftp_complete_to_print_complete": 19.723424434661865,
+    "dequeue_to_jpeg_ready": 1.843864917755127,
+    "jpeg_ready_to_print_start": 1.5134499073028564,
+    "native_handoff_to_download_start": 0.02669215202331543,
+    "download_start_through_end_ack": 15.238228797912598,
+    "data_first_send_to_last_ack": 15.011357069015503,
+    "last_data_ack_to_download_end_send": 0.15508794784545898,
+    "download_end_ack_to_led_send": 0.0033931732177734375,
+    "led_send_to_print_execute": 1.0310869216918945,
+    "print_execute_to_status_ack": 0.030460119247436523,
+    "native_handoff_to_complete": 16.34034013748169
+  },
+  "data_chunks": 58,
+  "data_ack_wait_s": {
+    "mean": 0.05876761058281208,
+    "min": 0.05596804618835449,
+    "max": 0.07254314422607422,
+    "sum": 3.4085214138031006
+  },
+  "data_fragment_span_s": {
+    "sum": 9.896500587463379,
+    "mean": 0.17062932047350654
+  },
+  "inter_chunk_after_ack_s": {
+    "mean": 0.029935702942965322,
+    "min": 0.028766870498657227,
+    "max": 0.03362107276916504,
+    "sum": 1.7063350677490234
+  },
+  "led_transaction": {
+    "opcode": "0x3001",
+    "request_start_unix_s": 1791851421.771568,
+    "request_end_unix_s": 1791851421.771568,
+    "request_fragment_span_s": 0.0,
+    "ack_unix_s": 1791851421.798161,
+    "ack_wait_after_final_fragment_s": 0.02659296989440918,
+    "reply_payload_hex": "00"
+  },
+  "execute_transaction": {
+    "opcode": "0x1080",
+    "request_start_unix_s": 1791851422.802655,
+    "request_end_unix_s": 1791851422.802655,
+    "request_fragment_span_s": 0.0,
+    "ack_unix_s": 1791851422.833115,
+    "ack_wait_after_final_fragment_s": 0.030460119247436523,
+    "reply_payload_hex": "000c"
+  },
+  "clock_samples_during_job": 65,
+  "sampled_job_cpu_khz": [
+    1000000
+  ],
+  "ui_before": {
+    "pid": 3981,
+    "monotonic": 1931.887972646,
+    "unix_s": 1791851401.9107063,
+    "mode": "ready",
+    "live_mode": "ready",
+    "locked": true,
+    "unlocking": false,
+    "presses": 0,
+    "button": null,
+    "idle_stage": "screen_off",
+    "fresh": true,
+    "film": 1,
+    "camera_ready": true,
+    "last_status_ok": 1924.509008169,
+    "retired_status_tasks": 0,
+    "status_misses": 0,
+    "three_presses": true,
+    "cpu_khz": 600000,
+    "governor": "powersave",
+    "display": "FramebufferDisplay",
+    "history": 67
+  },
+  "ui_after": {
+    "pid": 3981,
+    "monotonic": 1964.069481384,
+    "unix_s": 1791851434.092215,
+    "mode": "no_film",
+    "live_mode": "no_film",
+    "locked": true,
+    "unlocking": false,
+    "presses": 0,
+    "button": null,
+    "idle_stage": "screen_off",
+    "fresh": true,
+    "film": 0,
+    "camera_ready": true,
+    "last_status_ok": 1963.165807269,
+    "retired_status_tasks": 0,
+    "status_misses": 0,
+    "three_presses": true,
+    "cpu_khz": 600000,
+    "governor": "powersave",
+    "display": "FramebufferDisplay",
+    "history": 67
+  },
+  "history_after_reconnect": 68,
+  "mechanical_completion_and_developed_film_inspected": false,
+  "print_commands": 1
+}

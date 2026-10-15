@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent media_adversarial_review subagent",
+  "timestamp_utc": "2026-10-14T15:14:26.024661+00:00",
+  "evidence_sha256": {
+    "normal-health.json": "f2c1bb601818779b40c4833e22655c30d0cf620a9d46fd519b05a6a62da74e35",
+    "log-review.json": "ed6652ae3cea25f3c81c319b5ee446334fe4e5b94bc52d6ba296fc014c5bfb57",
+    "cleanup.json": "7cbe82a6439b8cae009a9f8956ab449a398d45e3794c6ceab6dac74cfacd85a5"
+  },
+  "private_raw_journal_sha256": {
+    "service": "cd529ad5cf205e9827376d2a1f6a462fc442663963f809120aaa0856e65b18c0",
+    "kernel": "0034cf918ed90c48736b9ee34e5da5ad813b8f8b131b0e9c8b2e5e3986682576"
+  },
+  "plan_sha256": "1e4f905110b08de45d327f91749ec1d75f89247971b35a79990526539e18461b",
+  "findings": [],
+  "resolved_documentation_findings": [
+    "Replaced unsupported immediate stale-publication timing claim with consistently marked stale.",
+    "Removed unproven historical origin claim for remaining connection setup issue; retained existing auto-rebond policy attribution."
+  ],
+  "final_normal_review_passed": true,
+  "normal_runtime": "PID2626/manager637 active zero automatic restarts; Printer connected,600MHzpowersave,FTP220/200,GPIOv2/no input or network fallback/throttle0x0. Auditdropin/socket/mockup/cache absent.19ownedfixturesremoved and exact productionprofile retained; no userphoto changes/film.",
+  "full_log_review": "Independently read all478private service and376private kernel records. Two write-characteristic failure detail records present; five structured BLE warnings and expected managerbindwait remain documented. Kernel VCHI/null-unregister/vendorIEerrors zero; ten expected regulator/readonlyswitch/backporttaint/essentialLCD staging+SPI-ID notices retained. Logs are not fault-free.",
+  "normal_restart_recovery_s": 66.48020299999996,
+  "normal_restart_boundary": "66.480s normal service restoration recovery is separate from6.269s controlled externalDisconnect acceptance. Source/loader dependencies unchanged, but do not claim broader GATT timing guarantees or historical failure origin. Remaining GATT/service-cache issue documented for follow-up.",
+  "remaining_gpu_profile_regressions": [],
+  "measurement_and_privacy_boundaries": "No power-on/firmware latency, wireless camera airtime, physical switch contact or filmquality claims. Raw full journals remain private; published reports preserve relevant warnings and hash/statusmetadata.",
+  "film_used": 0,
+  "hardware_mutated_by_reviewer": false
+}

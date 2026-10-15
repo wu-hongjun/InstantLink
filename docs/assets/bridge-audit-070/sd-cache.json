@@ -1,0 +1,348 @@
+{
+  "boundary": "Real HIF repeated edit; production worker; isolated tmpfs versus SD cache directories, no Printer send",
+  "trials": [
+    {
+      "location": "tmpfs",
+      "initial": {
+        "seconds": 5.882293747999938,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 60,
+        "attempt": 1
+      },
+      "cache_bytes": 5131254,
+      "durable_flush_s": null,
+      "edits": [
+        {
+          "seconds": 0.6601694789997055,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.6698761979996561,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.6591742710006656,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.6697485419999794,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        }
+      ]
+    },
+    {
+      "location": "sd",
+      "initial": {
+        "seconds": 5.834250257999884,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 59,
+        "attempt": 1
+      },
+      "cache_bytes": 5131254,
+      "durable_flush_s": 0.25921718799963855,
+      "edits": [
+        {
+          "seconds": 0.8638888539999243,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 10,
+          "attempt": 1,
+          "file_pages_eviction_requested": true
+        },
+        {
+          "seconds": 0.6696871350004585,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.8721632809993025,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 10,
+          "attempt": 1,
+          "file_pages_eviction_requested": true
+        },
+        {
+          "seconds": 0.6695664059998307,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        }
+      ]
+    },
+    {
+      "location": "sd",
+      "initial": {
+        "seconds": 5.832647862999693,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 59,
+        "attempt": 1
+      },
+      "cache_bytes": 5131254,
+      "durable_flush_s": 0.2452141669991761,
+      "edits": [
+        {
+          "seconds": 0.8728588539997872,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 10,
+          "attempt": 1,
+          "file_pages_eviction_requested": true
+        },
+        {
+          "seconds": 0.6586243230003674,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.8938116139997874,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 10,
+          "attempt": 1,
+          "file_pages_eviction_requested": true
+        },
+        {
+          "seconds": 0.6698098429997117,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        }
+      ]
+    },
+    {
+      "location": "tmpfs",
+      "initial": {
+        "seconds": 5.817132393000065,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 59,
+        "attempt": 1
+      },
+      "cache_bytes": 5131254,
+      "durable_flush_s": null,
+      "edits": [
+        {
+          "seconds": 0.6605093750004016,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.6696348439991198,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.6691490620005425,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        },
+        {
+          "seconds": 0.6585398950001036,
+          "output": {
+            "bytes": 104413,
+            "quality": 78,
+            "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+            "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+          },
+          "sampled_cpu_khz": [
+            1000000
+          ],
+          "clock_sample_count": 8,
+          "attempt": 1,
+          "file_pages_eviction_requested": false
+        }
+      ]
+    }
+  ],
+  "all_jpeg_and_rgb_hashes_equal": true,
+  "temperature_c": 47.236,
+  "throttled": "throttled=0x0",
+  "date": "2026-10-12",
+  "runtime": "b62dd8f",
+  "filesystem": {
+    "active_photo_cache": "/tmp tmpfs,232MiB limit",
+    "sd": "/dev/root,57GiB total,48GiB available at start"
+  },
+  "method": {
+    "source_bytes": 11255808,
+    "cache_bytes": 5131254,
+    "model": "Square",
+    "working_pixels": "1600x1069 normalized RGB",
+    "edits": "zoom1.1, saved Vivid settings, stock1000MHz",
+    "sd_page_eviction": "fsync then POSIX_FADV_DONTNEED on the benchmark BMP only; advisory, no global drop_caches",
+    "trials": "tmpfs / SD / SD / tmpfs; four edits each; no physical Printer send"
+  },
+  "decision": "Keep current-photo cache on tmpfs. Persistent SD reuse is only useful if a previous photo is revisited after expiry, replacement or restart; no new persistent cache implemented."
+}

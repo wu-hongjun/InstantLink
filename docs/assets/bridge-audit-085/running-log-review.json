@@ -1,0 +1,72 @@
+{
+  "scope": "Current-boot Bridge and manager service journal including native stderr panic markers. Historical faults retained; no kernel-log cleanliness claim. Raw journal private.",
+  "records_reviewed": 10681,
+  "matched_issue_message_count": 134,
+  "issue_counts_by_pid": {
+    "480": 3,
+    "1221": 25,
+    "2167": 1,
+    "2522": 13,
+    "3395": 2,
+    "3981": 6,
+    "7530": 3,
+    "9040": 1,
+    "10928": 2,
+    "12639": 2,
+    "15365": 27,
+    "16829": 3,
+    "17231": 6,
+    "18770": 1,
+    "18779": 1,
+    "18787": 1,
+    "18795": 1,
+    "18816": 1,
+    "18824": 1,
+    "18844": 1,
+    "18852": 1,
+    "21212": 1,
+    "22098": 3,
+    "23036": 4,
+    "23767": 2,
+    "24547": 2,
+    "25926": 2,
+    "26321": 2,
+    "27611": 6,
+    "28532": 1,
+    "29062": 1,
+    "30469": 2,
+    "30842": 2,
+    "31925": 2,
+    "32501": 2
+  },
+  "historical_panic_messages": [
+    {
+      "pid": "24547",
+      "message": "thread 'tokio-rt-worker' (24557) panicked at /Users/hongjunwu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bluez-async-0.8.2/src/messagestream.rs:40:84:"
+    },
+    {
+      "pid": "24547",
+      "message": "called `Result::unwrap()` on an `Err` value: D-Bus error: No match with that id found (org.freedesktop.DBus.Error.Failed)"
+    },
+    {
+      "pid": "25926",
+      "message": "thread 'tokio-rt-worker' (25938) panicked at /Users/hongjunwu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bluez-async-0.8.2/src/messagestream.rs:40:84:"
+    },
+    {
+      "pid": "25926",
+      "message": "called `Result::unwrap()` on an `Err` value: D-Bus error: No match with that id found (org.freedesktop.DBus.Error.Failed)"
+    }
+  ],
+  "task085_issues_by_pid": {
+    "34786": [],
+    "34996": [],
+    "35409": [],
+    "36130": [],
+    "36582": []
+  },
+  "final_normal_pid": "36582",
+  "final_normal_status_lines": [
+    "2026-10-13 19:31:16,829 INFO instantlink_bridge.ui.controller ui.printer_status film_remaining=0 battery=100 charging=False model=square battery_minutes_remaining=None keepalive_interval_s=10.0"
+  ],
+  "interpretation": "All task085 observed processes have no matched warning/error/panic messages; baseline/installed scan misses retained as failed attempts. Earlier fault/panic records remain historical."
+}

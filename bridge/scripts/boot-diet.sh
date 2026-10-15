@@ -192,7 +192,7 @@ print_app_milestones() {
   printf '\nInstantLink Bridge boot milestones\n'
   if command -v journalctl >/dev/null 2>&1; then
     journalctl --boot -o short-monotonic -u instantlink-bridge.service 2>/dev/null |
-      grep -E 'bridge\.(boot\.start|usb\.ready|bt\.scanning|bt\.connected|ui\.ready|ready)' ||
+      grep -E 'bridge\.(boot\.start|ftp\.ready|bluetooth\.ready|ui\.ready|ready)' ||
       echo "No bridge.* boot milestones found in this boot journal."
   else
     echo "journalctl not found"
@@ -222,6 +222,25 @@ print_boot_config() {
       printf 'present: %s\n' "${token}"
     else
       printf 'missing: %s\n' "${token}"
+    fi
+  done
+}
+
+print_media_module_config() {
+  local config="${INSTANTLINK_BRIDGE_MEDIA_MODULE_CONFIG:-/etc/modprobe.d/instantlink-bridge-unused-media.conf}"
+  local module
+
+  printf '\nUnused VCHI media alias autoload checks (%s)\n' "${config}"
+  if [[ ! -f "${config}" ]]; then
+    echo "missing; install the tracked Bridge media module profile and reboot"
+    return
+  fi
+
+  for module in bcm2835_v4l2 bcm2835_codec bcm2835_isp vc_sm_cma snd_bcm2835; do
+    if grep -qxF "blacklist ${module}" "${config}"; then
+      printf 'present: blacklist %s\n' "${module}"
+    else
+      printf 'missing: blacklist %s\n' "${module}"
     fi
   done
 }
@@ -278,6 +297,7 @@ report() {
   fi
 
   print_boot_config
+  print_media_module_config
   print_app_milestones
 }
 

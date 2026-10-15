@@ -62,7 +62,7 @@ def test_release_slot_install_copies_payload_switches_links_and_persists_state(
     release_id = "2026-05-26T153000Z-v0.2.0"
     release_dir = layout.releases_dir / release_id
     assert (release_dir / "bridge" / "pyproject.toml").read_text(encoding="utf-8") == (
-        "[project]\nname = \"instantlink-bridge\"\n"
+        '[project]\nname = "instantlink-bridge"\n'
     )
     assert (release_dir / "native" / "bin" / "instantlink").read_text(encoding="utf-8") == (
         "#!/usr/bin/env bash\n"
@@ -162,7 +162,7 @@ def write_firmware_bundle(tmp_path: Path) -> Path:
     native_lib.mkdir(parents=True)
 
     (bridge_dir / "pyproject.toml").write_text(
-        "[project]\nname = \"instantlink-bridge\"\n",
+        '[project]\nname = "instantlink-bridge"\n',
         encoding="utf-8",
     )
     instantlink = native_bin / "instantlink"

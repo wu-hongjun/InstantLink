@@ -162,6 +162,8 @@ echo "Installing InstantLink Bridge USB gadget config into ${ROOT}"
 ensure_runtime_identity
 disable_legacy_instantbridge_services
 install_file config/g_ether.conf /etc/modprobe.d/g_ether.conf
+install_file config/instantlink-bridge-unused-media.conf \
+  /etc/modprobe.d/instantlink-bridge-unused-media.conf
 install_file config/10-usb0.network /etc/systemd/network/10-usb0.network
 install_file config/dnsmasq-bridge.conf /etc/dnsmasq.d/instantlink-bridge.conf
 install_file config/99-networkmanager-unmanaged-usb0.conf \
@@ -175,9 +177,11 @@ install_private_file config/NetworkManager/instantlink-bridge-hotspot.nmconnecti
   /etc/NetworkManager/system-connections/InstantLink Bridge-Hotspot.nmconnection
 install_executable scripts/wifi-mode.sh /usr/local/sbin/instantlink-bridge-wifi-mode
 install_executable scripts/poweroff.sh /usr/local/sbin/instantlink-bridge-poweroff
+install_executable scripts/cpu-mode.sh /usr/local/sbin/instantlink-bridge-cpu-mode
 install_executable scripts/usb-gadget-mode.sh /usr/local/sbin/instantlink-bridge-usb-gadget-mode
 install_sudoers_file config/sudoers-instantlink-bridge-wifi /etc/sudoers.d/instantlink-bridge-wifi
 install_sudoers_file config/sudoers-instantlink-bridge-power /etc/sudoers.d/instantlink-bridge-power
+install_sudoers_file config/sudoers-instantlink-bridge-cpu /etc/sudoers.d/instantlink-bridge-cpu
 install_file udev/99-instantlink-bridge-usb0.rules /etc/udev/rules.d/99-instantlink-bridge-usb0.rules
 install_file udev/60-instantlink-bridge-backlight.rules /etc/udev/rules.d/60-instantlink-bridge-backlight.rules
 install_file udev/61-instantlink-bridge-fb1.rules /etc/udev/rules.d/61-instantlink-bridge-fb1.rules
@@ -190,6 +194,7 @@ install_file systemd/instantlink-bridge-usb0-rearm.service \
   /etc/systemd/system/instantlink-bridge-usb0-rearm.service
 install_file systemd/instantlink-bridge-usb0-lost.service \
   /etc/systemd/system/instantlink-bridge-usb0-lost.service
+bash "${REPO_DIR}/scripts/install-backup-broker.sh" "${ROOT}"
 if [[ ! -f "${ROOT%/}/etc/InstantLinkBridge/config.toml" ]]; then
   install_file config/config.example.toml /etc/InstantLinkBridge/config.toml
 else

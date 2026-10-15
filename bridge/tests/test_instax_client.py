@@ -300,6 +300,7 @@ async def test_print_file_to_printer_reuses_cached_session_without_reconnecting(
         quality: int,
         edit: PrintEdit | None,
         adjustments: object = None,
+        correction: object = None,
         timeout_s: float | None,
     ) -> PreparedImage:
         assert source_path == image_path
@@ -308,6 +309,7 @@ async def test_print_file_to_printer_reuses_cached_session_without_reconnecting(
         assert quality == 100
         assert edit is None
         assert timeout_s is not None
+        assert correction is None
         return PreparedImage(
             data=b"\xff\xd8cached\xff\xd9",
             model=model,

@@ -1,0 +1,72 @@
+{
+  "uptime_s": 30.91,
+  "pid": 528,
+  "commit": "56c7b5bac1ce6d1558ccff0307f036e3ad05c6df",
+  "dirty": false,
+  "service_timing": "ExecMainStartTimestampMonotonic=10749967\nExecStartPre={ path=/usr/bin/sudo ; argv[]=/usr/bin/sudo -n /usr/local/sbin/instantlink-bridge-cpu-mode performance ; ignore_errors=yes ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\nActiveEnterTimestampMonotonic=15114749",
+  "governor": "performance",
+  "cpu_khz": 1000000,
+  "label": "candidate-core",
+  "passed": true,
+  "film_used": 0,
+  "boot_to_ui_s": 14.3063,
+  "boot_to_core_ready_s": 14.930198,
+  "process_boot_marker_s": 13.859514,
+  "boot_to_ftp_s": 14.915847,
+  "boot_to_agent_s": 14.414027,
+  "boot_to_status_s": null,
+  "status_message": null,
+  "input_before_status": [],
+  "warning_error_messages": [],
+  "early_ssh_cpu_samples": [
+    {
+      "uptime_s": 20.68,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 22.01,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 23.28,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 24.55,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 25.85,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 27.15,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 28.41,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 29.66,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    },
+    {
+      "uptime_s": 30.91,
+      "governor": "performance",
+      "cpu_khz": 1000000
+    }
+  ],
+  "scope": "Normal installed service reboot; core/UI/FTP timings from kernel monotonic clock, excludes firmware latency. No input injected. Fresh status may be absent if Printer unavailable. SSH CPU sampling begins after SSH availability, not guaranteed during interpreter imports. No image/print/actuator commands.",
+  "boot_to_receive_ready_s": 20.437169,
+  "boot_to_first_discovery_policy_s": 15.270168,
+  "boot_to_ffi_loaded_s": 15.16653
+}

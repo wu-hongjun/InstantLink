@@ -254,6 +254,24 @@ struct InstantLinkMacOSTestRunner {
             ("BridgeConfigTests.testBridgeConfigDecodesFullPayload", {
                 try BridgeConfigTests().testBridgeConfigDecodesFullPayload()
             }),
+            ("BridgeConfigTests.testWorkflowDefaultAndLegacyChoicesDecodeWithoutMigration", {
+                try BridgeConfigTests().testWorkflowDefaultAndLegacyChoicesDecodeWithoutMigration()
+            }),
+            ("BridgeSettingsDraftTests.testWorkflowReviewChoicesValidateAndPreserveLoadedSettings", {
+                try BridgeSettingsDraftTests().testWorkflowReviewChoicesValidateAndPreserveLoadedSettings()
+            }),
+            ("BridgeConfigTests.testUnlockGuardDefaultsTrueForOlderBridgeAndDecodesStrictBoolean", {
+                try BridgeConfigTests().testUnlockGuardDefaultsTrueForOlderBridgeAndDecodesStrictBoolean()
+            }),
+            ("BridgeSettingsDraftTests.testUnlockGuardDiffAndRevertPreserveOtherSettings", {
+                try BridgeSettingsDraftTests().testUnlockGuardDiffAndRevertPreserveOtherSettings()
+            }),
+            ("BridgeConfigTests.testCorrectionDefaultsForOlderBridgeAndRoundTripsIndependently", {
+                try BridgeConfigTests().testCorrectionDefaultsForOlderBridgeAndRoundTripsIndependently()
+            }),
+            ("BridgeSettingsDraftTests.testCorrectionDiffValidationAndRevertPreserveLook", {
+                try BridgeSettingsDraftTests().testCorrectionDiffValidationAndRevertPreserveLook()
+            }),
             ("BridgeConfigTests.testBridgeConfigEncodesPayload", {
                 try BridgeConfigTests().testBridgeConfigEncodesPayload()
             }),

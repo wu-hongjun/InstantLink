@@ -1,0 +1,71 @@
+{
+  "role": "Independent adversarial source and hardware evidence review",
+  "source_hashes": {
+    "crates/instantlink-core/src/device.rs": "6cb7f942587c397827bdd2dcbedb109b05145000d9a2dc3770981c03dc676740",
+    "crates/instantlink-core/src/transport.rs": "917d837abc24020863ff56d201061ab93322d2af75f3f5c718c68ad11e680947"
+  },
+  "source_verdict": "No remaining blocker after fixes",
+  "resolved_findings": [
+    {
+      "finding": "One-second outer ACK timeout can cancel receive with a partial buffered frame, corrupting the resend ACK",
+      "resolution": "Reset assembler before each capability write while retaining command serialization and queued complete notifications; real channel gated test forces outer cancellation before inner reset."
+    },
+    {
+      "finding": "Unicode trim in physical DIS read disagreed with new exact ASCII-trimmed detection policy",
+      "resolution": "Physical DIS read uses trim_ascii and canonical DIS service UUID; ambiguous formerly recognized FI033-containing identity fails closed instead of silently selecting Mini orientation."
+    }
+  ],
+  "independent_validation": {
+    "log": "/tmp/instantlink-model-review-core-084.log",
+    "core_lib_tests_passed": 196,
+    "note": "Run included47devicecases and8newretrycases. Subsequent zero-timeout guard/canonicalservice changes statically reviewed; root final gate covers frozen source."
+  },
+  "verified_invariants": [
+    "One serialized delivery guard spans exactly one read-only capability resend",
+    "All writes and ACK waits share original ten-second deadline",
+    "Terminal error/cancellation retires uncertain session; constructor error disconnects",
+    "No print/image command retry or ModelSpec/orientation preparation change",
+    "Width/height authoritative; exact FI033 needs600x800, exact FI017 needs800x800; conflicts rejected",
+    "Late duplicate model ACK cannot acknowledge battery/film/history selector; fresh hardware polls remain"
+  ],
+  "hardware_review": {
+    "baseline1_first_attempt_to_ready_s": 3.673100259009516,
+    "baseline2_first_attempt_to_ready_s": 32.270759050996276,
+    "candidate1_first_attempt_to_ready_s": 3.73413744600839,
+    "candidate2_first_attempt_to_ready_s": 3.7031505719933193,
+    "note": "Baseline1 delayed harness collection was corrected using first attempt start to first successful end; original collection latency retained. Candidate healthy paths remain similar to healthy baseline. Baseline2 had real missing model ACK then recovery. Current candidate captures are healthy single-query runs, so do not infer missed-ACK speedup from them.",
+    "candidate3_first_attempt_to_ready_s": 3.86596598799224,
+    "candidate_reconnect_s": 11.828081401996315,
+    "candidate_reconnect_samples_locked_600mhz_camera_ready": 33,
+    "installed_first_attempt_to_ready_s": 4.325806299995747,
+    "installed_reconnect_s": 12.485591869990458,
+    "installed_reconnect_samples_locked_600mhz_camera_ready": 33,
+    "installed_ui_pause_resume_passed": true,
+    "installed_whole_pid_journal_only_opcode_0x0002": true,
+    "installed_journal_warnings_errors_panics": 0,
+    "no_live_resend_observed": true,
+    "verdict": "No source or installed runtime acceptance blocker. Missed first-ACK improvement is deterministic-test validated, not physically measured in healthy candidate/installed starts."
+  },
+  "final_normal_review": {
+    "verdict": "PASS",
+    "pid": 34446,
+    "normal_service_active_no_restarts": true,
+    "native_manifest_clean": true,
+    "runtime_commit": "b2b6c8ceab6b2ba7f8b0151dd8b283a8c0560d62",
+    "native_ffi_hash_verified": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+    "normal_library_mapping_production_path": true,
+    "printer_connected": true,
+    "locked_idle_frequency_khz": 600000,
+    "ftp_greeting_noop_codes": [
+      "220",
+      "200"
+    ],
+    "normal_warnings_errors_panics": 0,
+    "observer_dropin_socket_removed": true,
+    "running_log_review_scope": "Current-boot Bridge and manager service journal, including native stderr markers; no kernel-log claim. Historical messages retained. Raw journal private.",
+    "running_log_records": 9294,
+    "historical_panic_episodes_retained": 2,
+    "source_frozen_hashes_still_match": true
+  },
+  "final_verdict": "Approved: source, no-film installed reconnect/freshness/UI, and restored normal runtime acceptance pass. Retry acceleration is deterministically tested; no physical missed-reply speedup was observed in healthy candidate/installed starts."
+}

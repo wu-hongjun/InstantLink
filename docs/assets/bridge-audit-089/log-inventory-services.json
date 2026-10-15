@@ -1,0 +1,203 @@
+{
+  "records": 14796,
+  "flagged_records": 144,
+  "groups": [
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "480",
+      "count": 4
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "1221",
+      "count": 25
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "2167",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "2522",
+      "count": 13
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "3395",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "3981",
+      "count": 6
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "7530",
+      "count": 3
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "9040",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "10928",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "12639",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "15365",
+      "count": 27
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "16829",
+      "count": 3
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "17231",
+      "count": 6
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18770",
+      "count": 1
+    },
+    {
+      "unit": "init.scope",
+      "pid": "1",
+      "count": 8
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18779",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18787",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18795",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18816",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18824",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18844",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "18852",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "21212",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "22098",
+      "count": 3
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "23036",
+      "count": 4
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "23767",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "24547",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "25926",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "26321",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "27611",
+      "count": 6
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "28532",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "29062",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "30469",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "30842",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "31925",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "32501",
+      "count": 2
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "36955",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "41161",
+      "count": 1
+    },
+    {
+      "unit": "instantlink-bridge.service",
+      "pid": "41954",
+      "count": 1
+    }
+  ],
+  "current_bridge_pid": 44093,
+  "current_bridge_issues": []
+}

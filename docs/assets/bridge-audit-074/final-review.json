@@ -1,0 +1,17 @@
+{
+  "result": "passed",
+  "unresolved_findings": [],
+  "independent_host_tests": 47,
+  "independent_capture_checks": [
+    "installed shared-core2 transfers/114 indexed ACKs/exact JPEG and RGB/padding/checksums/no actuators",
+    "installed FFI2 status/disconnect cycles and2 physical Disconnect Complete events/no download or actuator",
+    "clean native artifact and installed hash identity",
+    "600MHz screen-off/connected Printer/fresh status/FTP and Wi-Fi/services unchanged/no throttle"
+  ],
+  "limits": [
+    "Same-source shared-core probe postdeploy; installed FFI status checked separately",
+    "No FFI print call, physical film, mechanical timing or battery-energy measurement",
+    "Extended idle: last good status14:47:03, unavailable14:47:13 about299s after reconnect; consistent with documented5min automatic poweroff, prior physical power-light state not recorded; subsequent user power-on automatically recovered. Does not invalidate completed checks; idle status code unchanged by pacing."
+  ],
+  "additional_observation": "User power-on after extended offline period: normal Bridge automatically reconnected and received fresh status at600MHz without restart/unlock/manual FFI probe; services,Wi-Fi,FTP healthy."
+}

@@ -12,7 +12,10 @@
 //!
 //! ## MTU Fragmentation
 //!
-//! BLE packets larger than 182 bytes are split into sub-packets for transmission.
+//! BLE packets are split into sub-packets bounded by the negotiated ATT payload.
+//! Unavailable MTU information retains the established 182-byte fallback.
+
+use std::num::NonZeroUsize;
 
 use crate::error::{PrinterError, ProtocolError, Result};
 
@@ -28,8 +31,44 @@ pub const HEADER: [u8; 2] = [0x41, 0x62];
 /// ```
 pub const RESPONSE_HEADER: [u8; 2] = [0x61, 0x42];
 
-/// Maximum BLE sub-packet size for MTU fragmentation.
+/// Established BLE payload fallback when no valid negotiated ATT MTU is available.
 pub const MTU_SIZE: usize = 182;
+/// Preferred negotiated BLE write payload. With a 27-byte HCI payload, adding
+/// ATT (3) and L2CAP (4) overhead produces exactly nine HCI packets at this size.
+/// It preserves the 244-byte ceiling's write count for every full model data packet.
+pub const MAX_FRAGMENT_PAYLOAD: usize = 236;
+/// Explicit download-only diagnostics may compare this larger negotiated limit.
+pub const MAX_DIAGNOSTIC_FRAGMENT_PAYLOAD: usize = 244;
+
+/// Select a write payload from the ATT MTU (which includes three bytes of ATT overhead).
+/// Unknown or invalid MTUs retain the established fallback. A device that previously
+/// failed delivery uses at most that fallback, while still respecting a smaller MTU.
+pub fn fragment_payload_size(negotiated_mtu: Option<u16>, conservative: bool) -> usize {
+    let ceiling = if conservative {
+        MTU_SIZE
+    } else {
+        MAX_FRAGMENT_PAYLOAD
+    };
+    payload_size_for_ceiling(negotiated_mtu, ceiling)
+}
+
+/// Negotiated ceiling for explicitly requested download-only comparisons.
+/// Device-specific fallback still applies; this never changes production sends.
+pub fn diagnostic_fragment_payload_size(negotiated_mtu: Option<u16>, conservative: bool) -> usize {
+    let ceiling = if conservative {
+        MTU_SIZE
+    } else {
+        MAX_DIAGNOSTIC_FRAGMENT_PAYLOAD
+    };
+    payload_size_for_ceiling(negotiated_mtu, ceiling)
+}
+
+fn payload_size_for_ceiling(negotiated_mtu: Option<u16>, ceiling: usize) -> usize {
+    match negotiated_mtu {
+        Some(mtu @ 23..=517) => usize::from(mtu - 3).min(ceiling),
+        _ => MTU_SIZE,
+    }
+}
 
 /// Minimum packet size: header(2) + length(2) + opcode(2) + checksum(1) = 7.
 pub const MIN_PACKET_SIZE: usize = 7;
@@ -136,7 +175,18 @@ pub fn parse_packet(data: &[u8]) -> Option<Packet> {
 
 /// Fragment a packet into MTU-sized sub-packets for BLE transmission.
 pub fn fragment(packet: &[u8]) -> Vec<Vec<u8>> {
-    packet.chunks(MTU_SIZE).map(|c| c.to_vec()).collect()
+    fragment_with_size(
+        packet,
+        NonZeroUsize::new(MTU_SIZE).expect("fallback is nonzero"),
+    )
+}
+
+/// Fragment without modifying protocol bytes, using a nonzero write payload limit.
+pub fn fragment_with_size(packet: &[u8], payload_size: NonZeroUsize) -> Vec<Vec<u8>> {
+    packet
+        .chunks(payload_size.get())
+        .map(|c| c.to_vec())
+        .collect()
 }
 
 /// Reassembles fragmented BLE sub-packets into complete protocol packets.

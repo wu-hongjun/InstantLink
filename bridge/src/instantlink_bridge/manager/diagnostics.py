@@ -204,12 +204,7 @@ def default_support_bundle_sources(root: Path) -> tuple[SupportBundleSource, ...
         SupportBundleSource(
             archive_path="var/lib/InstantLinkBridge/management/health.json",
             on_disk_path=(
-                root
-                / "var"
-                / "lib"
-                / "InstantLinkBridge"
-                / "management"
-                / "health.json"
+                root / "var" / "lib" / "InstantLinkBridge" / "management" / "health.json"
             ),
             required=False,
         ),
@@ -257,24 +252,18 @@ def create_support_bundle(
     seconds = now_seconds if now_seconds is not None else time.time()
     timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(seconds))
     resolved_bundle_id = bundle_id or f"support-{timestamp}"
-    created = created_at or time.strftime(
-        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(seconds)
-    )
+    created = created_at or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(seconds))
     archive_path = bundles_dir / f"{resolved_bundle_id}.zip"
 
     contents: list[str] = []
-    with zipfile.ZipFile(
-        archive_path, mode="w", compression=zipfile.ZIP_DEFLATED
-    ) as archive:
+    with zipfile.ZipFile(archive_path, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
         manifest = {
             "schema_version": SUPPORT_BUNDLE_SCHEMA_VERSION,
             "bundle_kind": SUPPORT_BUNDLE_KIND,
             "bundle_id": resolved_bundle_id,
             "created_at": created,
         }
-        archive.writestr(
-            "manifest.json", json.dumps(manifest, indent=2, sort_keys=True)
-        )
+        archive.writestr("manifest.json", json.dumps(manifest, indent=2, sort_keys=True))
         contents.append("manifest.json")
 
         for source in sources:

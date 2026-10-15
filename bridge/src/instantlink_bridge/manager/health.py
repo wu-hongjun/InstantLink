@@ -160,9 +160,7 @@ class BridgeHealthResult:
 
         present = {result.gate for result in self.gate_results}
         return tuple(
-            spec.gate
-            for spec in self.gate_specs
-            if spec.required and spec.gate not in present
+            spec.gate for spec in self.gate_specs if spec.required and spec.gate not in present
         )
 
     @property

@@ -1,0 +1,11 @@
+{
+  "line_count": 287,
+  "warning_error_panic_lines": [
+    "2026-10-13 10:40:01,415 WARNING instantlink_bridge.ble.instantlink instantlink.status_cancel_waiting_for_worker"
+  ],
+  "payload_selection_lines": [
+    "[2026-10-13T14:37:45Z INFO  instantlink_core::transport] BLE write payload selected: device=hci0/dev_FA_AB_BC_C7_95_64 mtu=Some(247) payload=236 conservative=false",
+    "[2026-10-13T14:39:24Z INFO  instantlink_core::transport] BLE write payload selected: device=hci0/dev_FA_AB_BC_C7_95_64 mtu=Some(247) payload=236 conservative=false"
+  ],
+  "scope": "One observedruntimePID; rawjournal private. Candidatewarnings include transient characteristicfailure andautomaticrebond; installedworker-waitwarning from intentionalstatuspause smoke."
+}

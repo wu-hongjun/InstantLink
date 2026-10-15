@@ -1,0 +1,22 @@
+{
+  "samples": [
+    {
+      "governor": "powersave",
+      "seconds": 2.5838357800000153
+    },
+    {
+      "governor": "performance",
+      "seconds": 1.701435207000003
+    },
+    {
+      "governor": "performance",
+      "seconds": 1.6880056760000173
+    },
+    {
+      "governor": "powersave",
+      "seconds": 2.599174531000017
+    }
+  ],
+  "restored_governor": "powersave",
+  "scope": "Warm-cache fresh Python app imports only, includes runuser/process startup; normal production service retained. Not whole-boot measurement."
+}

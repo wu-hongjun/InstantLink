@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
-import re
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -14,6 +13,7 @@ from types import TracebackType
 from typing import Generic, Protocol, TypeVar
 
 from instantlink_bridge.ble.models import PrinterModel, spec_for
+from instantlink_bridge.ble.types import PrinterEndpoint as PrinterEndpoint
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,33 +36,6 @@ class SessionRole(StrEnum):
 
     STATUS = "status"
     PRINT = "print"
-
-
-@dataclass(frozen=True, slots=True)
-class PrinterEndpoint:
-    """Resolved BLE endpoint for a selected Instax printer."""
-
-    address: str
-    name: str
-    model: PrinterModel | None = None
-
-    def normalized(self) -> PrinterEndpoint:
-        """Return a stable endpoint representation."""
-
-        return PrinterEndpoint(
-            address=self.address.upper(),
-            name=_normalize_instax_name(self.name),
-            model=self.model,
-        )
-
-    def matches(self, other: PrinterEndpoint) -> bool:
-        """Return true when two endpoints identify the same selected printer."""
-
-        if self.address.upper() == other.address.upper():
-            return True
-        self_name = _normalize_instax_name(self.name).casefold()
-        other_name = _normalize_instax_name(other.name).casefold()
-        return bool(self_name and other_name and self_name == other_name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -401,7 +374,3 @@ class InstaxBleSessionManager(Generic[ConnectedT]):
     async def _disconnect(self, connected: ConnectedT) -> None:
         with suppress(Exception):
             await connected.disconnect()
-
-
-def _normalize_instax_name(name: str) -> str:
-    return re.sub(r"\s*\((IOS|ANDROID)\)$", "", name.strip(), flags=re.IGNORECASE).strip()

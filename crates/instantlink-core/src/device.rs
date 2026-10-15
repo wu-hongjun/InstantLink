@@ -36,6 +36,12 @@ pub struct PrinterStatus {
 /// Async trait for controlling an Instax printer. Enables mocking in tests.
 #[async_trait]
 pub trait PrinterDevice: Send + Sync {
+    /// Cheap evidence that this session is terminally closed; this does not
+    /// poll hardware or prove that an otherwise cached session is still live.
+    fn known_disconnected(&self) -> bool {
+        false
+    }
+
     /// Get the printer's current status.
     async fn status(&self) -> Result<PrinterStatus>;
 
@@ -97,6 +103,21 @@ pub trait PrinterDevice: Send + Sync {
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()>;
 
+    /// Send a validated, printer-oriented RGB JPEG without re-encoding.
+    /// Implementations that do not support byte-preserving printing reject it.
+    async fn print_prepared_jpeg(
+        &self,
+        _data: &[u8],
+        _expected_model: PrinterModel,
+        _transport_flip_applied: bool,
+        _print_option: u8,
+        _progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
+    ) -> Result<()> {
+        Err(PrinterError::Image(
+            "prepared JPEG printing is unsupported".into(),
+        ))
+    }
+
     /// Set the LED color and pattern.
     async fn set_led(&self, r: u8, g: u8, b: u8, pattern: u8) -> Result<()>;
 
@@ -123,14 +144,53 @@ pub struct BlePrinterDevice {
     name: String,
 }
 
+struct ImageTransferGuard<'a> {
+    transport: &'a dyn Transport,
+    complete: bool,
+}
+
+impl<'a> ImageTransferGuard<'a> {
+    fn new(transport: &'a dyn Transport) -> Self {
+        transport.image_transfer_started();
+        Self {
+            transport,
+            complete: false,
+        }
+    }
+    fn finish(mut self, result: Result<()>) -> Result<()> {
+        match &result {
+            Ok(()) => {
+                self.transport.image_transfer_completed();
+                self.complete = true;
+            }
+            Err(
+                PrinterError::NoFilm | PrinterError::CoverOpen | PrinterError::LowBattery { .. },
+            ) => {
+                self.transport.image_transfer_rejected();
+                self.complete = true;
+            }
+            Err(_) => {}
+        }
+        result
+    }
+}
+
+impl Drop for ImageTransferGuard<'_> {
+    fn drop(&mut self) {
+        if !self.complete {
+            self.transport.image_transfer_failed();
+        }
+    }
+}
+
 const LED_PATTERN_SOLID: u8 = 0;
 const PRINT_START_LED_COLOR: (u8, u8, u8) = (248, 120, 67);
 
 impl BlePrinterDevice {
     /// Create a new BLE Instax device with a connected transport.
     ///
-    /// Auto-detects the printer model by querying IMAGE_SUPPORT_INFO,
-    /// using the optional DIS model number hint for Link 3 detection.
+    /// Auto-detects the printer model from IMAGE_SUPPORT_INFO dimensions,
+    /// checking known DIS model numbers for consistency and Link 3 detection.
     pub async fn new(transport: Box<dyn Transport>, name: String) -> Result<Self> {
         Self::new_with_progress(transport, name, None).await
     }
@@ -145,11 +205,8 @@ impl BlePrinterDevice {
 
         // Query image support info to detect model
         emit_connect_progress(progress, ConnectStage::ModelDetecting, None::<String>);
-        let cmd = Command::ImageSupportInfo;
         let model_result = async {
-            let packet =
-                send_command_and_receive_matching(transport.as_ref(), &cmd, DEFAULT_TIMEOUT)
-                    .await?;
+            let packet = transport.query_image_support(DEFAULT_TIMEOUT).await?;
             let response = Response::decode(&packet);
 
             match response {
@@ -181,10 +238,43 @@ impl BlePrinterDevice {
 
     /// Send a command and decode the response.
     async fn command_unlocked(&self, cmd: &Command) -> Result<Response> {
-        let packet =
-            send_command_and_receive_matching(self.transport.as_ref(), cmd, DEFAULT_TIMEOUT)
-                .await?;
+        let packet = send_command_and_receive_matching(
+            self.transport.as_ref(),
+            cmd,
+            DEFAULT_TIMEOUT,
+            Some(self.model),
+        )
+        .await?;
         Ok(Response::decode(&packet))
+    }
+
+    /// Exercise the production transfer loop without LED handoff or PrintImage.
+    /// Completed buffers are explicitly cancelled and that ACK is checked.
+    pub async fn download_prepared_jpeg_and_cancel(
+        &self,
+        data: &[u8],
+        expected_model: PrinterModel,
+        transport_flip_applied: bool,
+        progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
+    ) -> Result<()> {
+        let _guard = self.operation_lock.lock().await;
+        image::validate_prepared_jpeg(data, expected_model, self.model, transport_flip_applied)?;
+        let chunks = image::chunk_image_data(data, self.model);
+        let transfer = ImageTransferGuard::new(self.transport.as_ref());
+        let result = async {
+            self.send_image_data(data, &chunks, 0, progress).await?;
+            match self.command_unlocked(&Command::DownloadCancel).await? {
+                Response::DownloadAck { status } => self.check_status(status, "download cancel")?,
+                _ => {
+                    return Err(PrinterError::UnexpectedResponse(
+                        "expected DownloadCancel ACK".into(),
+                    ));
+                }
+            }
+            Ok(())
+        }
+        .await;
+        transfer.finish(result)
     }
 
     /// Check if a status code indicates success for this printer model.
@@ -278,26 +368,33 @@ impl BlePrinterDevice {
         print_option: u8,
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()> {
-        self.send_image_data(&jpeg_data, &chunks, print_option, progress)
-            .await?;
+        let transfer = ImageTransferGuard::new(self.transport.as_ref());
+        let result = async {
+            self.send_image_data(&jpeg_data, &chunks, print_option, progress)
+                .await?;
 
-        self.signal_print_handoff_unlocked().await;
+            self.signal_print_handoff_unlocked().await;
 
-        // Pre-execute delay (critical for Link 3 and Square)
-        let pre_delay = self.model.spec().pre_execute_delay_ms;
-        if pre_delay > 0 {
-            log::debug!("Waiting {}ms before print execute", pre_delay);
-            tokio::time::sleep(Duration::from_millis(pre_delay)).await;
+            // Pre-execute delay (critical for Link 3 and Square)
+            let pre_delay = self.model.spec().pre_execute_delay_ms;
+            if pre_delay > 0 {
+                log::debug!("Waiting {}ms before print execute", pre_delay);
+                tokio::time::sleep(Duration::from_millis(pre_delay)).await;
+            }
+
+            // Trigger print
+            let result = match self.command_unlocked(&Command::PrintImage).await? {
+                Response::PrintStatus { status } if self.is_success(status) => Ok(()),
+                Response::PrintStatus { status } => self.check_status(status, "print"),
+                _ => Err(PrinterError::UnexpectedResponse(
+                    "expected PrintStatus".into(),
+                )),
+            };
+            result?;
+            Ok(())
         }
-
-        // Trigger print
-        match self.command_unlocked(&Command::PrintImage).await? {
-            Response::PrintStatus { status } if self.is_success(status) => Ok(()),
-            Response::PrintStatus { status } => self.check_status(status, "print"),
-            _ => Err(PrinterError::UnexpectedResponse(
-                "expected PrintStatus".into(),
-            )),
-        }
+        .await;
+        transfer.finish(result)
     }
 
     /// Send JPEG data to the printer with ACK-based flow control.
@@ -309,7 +406,7 @@ impl BlePrinterDevice {
         progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
     ) -> Result<()> {
         let total = chunks.len();
-        let delay_ms = self.model.spec().packet_delay_ms;
+        let baseline_delay_ms = self.model.spec().packet_delay_ms;
 
         // DOWNLOAD_START
         let start_resp = self
@@ -356,7 +453,16 @@ impl BlePrinterDevice {
                     cb(i + 1, total);
                 }
 
-                // Inter-packet delay (required for Link 3, Square, Wide)
+                // Re-evaluate after the ACK: legacy replies or a prior pacing
+                // failure retain baseline. The final chunk always keeps its settle.
+                let delay_ms = if i + 1 == total {
+                    baseline_delay_ms
+                } else {
+                    self.transport.data_packet_delay_ms(self.model)
+                };
+                if i + 1 < total && delay_ms < baseline_delay_ms {
+                    self.transport.fast_chunk_gap_used();
+                }
                 if delay_ms > 0 {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                 }
@@ -391,6 +497,10 @@ impl BlePrinterDevice {
 
 #[async_trait]
 impl PrinterDevice for BlePrinterDevice {
+    fn known_disconnected(&self) -> bool {
+        self.transport.known_disconnected()
+    }
+
     async fn status(&self) -> Result<PrinterStatus> {
         let _guard = self.operation_lock.lock().await;
         let battery = self.battery_unlocked().await?;
@@ -458,6 +568,21 @@ impl PrinterDevice for BlePrinterDevice {
             .await
     }
 
+    async fn print_prepared_jpeg(
+        &self,
+        data: &[u8],
+        expected_model: PrinterModel,
+        transport_flip_applied: bool,
+        print_option: u8,
+        progress: Option<&(dyn Fn(usize, usize) + Send + Sync)>,
+    ) -> Result<()> {
+        let _guard = self.operation_lock.lock().await;
+        image::validate_prepared_jpeg(data, expected_model, self.model, transport_flip_applied)?;
+        let chunks = image::chunk_image_data(data, self.model);
+        self.print_prepared_unlocked(data.to_vec(), chunks, print_option, progress)
+            .await
+    }
+
     async fn set_led(&self, r: u8, g: u8, b: u8, pattern: u8) -> Result<()> {
         let _guard = self.operation_lock.lock().await;
         self.set_led_unlocked(r, g, b, pattern).await
@@ -487,11 +612,17 @@ async fn send_command_and_receive_matching(
     transport: &dyn Transport,
     cmd: &Command,
     timeout: Duration,
+    model: Option<PrinterModel>,
 ) -> Result<crate::protocol::Packet> {
     let encoded = cmd.encode()?;
-    let expectation = cmd.response_expectation().ok_or_else(|| {
-        PrinterError::UnexpectedResponse(format!("{cmd:?} does not expect a response"))
-    })?;
+    let expectation = model
+        .map_or_else(
+            || cmd.response_expectation(),
+            |model| cmd.response_expectation_for_model(model),
+        )
+        .ok_or_else(|| {
+            PrinterError::UnexpectedResponse(format!("{cmd:?} does not expect a response"))
+        })?;
     transport
         .send_and_receive_expected(&encoded, timeout, expectation)
         .await
@@ -499,11 +630,29 @@ async fn send_command_and_receive_matching(
 
 /// Detect the printer model from image support dimensions and optional DIS model string.
 fn detect_model(width: u16, height: u16, dis_model: Option<&str>) -> Result<PrinterModel> {
-    // Check DIS model string first for Link 3 detection
-    if let Some(model_str) = dis_model
-        && model_str.contains("FI033")
-    {
-        return Ok(PrinterModel::MiniLink3);
+    // DIS is supplementary evidence, never a substitute for capabilities.
+    // Link 3 shares Mini dimensions but requires a different upload orientation.
+    // Reject formerly recognized ambiguous strings instead of silently selecting
+    // Mini and changing their orientation.
+    let dis_model = dis_model.map(str::trim_ascii);
+    let known_model = match dis_model {
+        Some("FI033") => Some(PrinterModel::MiniLink3),
+        Some("FI017") => Some(PrinterModel::Square),
+        Some(model) if model.contains("FI033") => {
+            return Err(PrinterError::UnexpectedResponse(format!(
+                "ambiguous DIS model number: {model:?}"
+            )));
+        }
+        _ => None,
+    };
+    if let Some(model) = known_model {
+        let spec = model.spec();
+        if (u32::from(width), u32::from(height)) != (spec.width, spec.height) {
+            return Err(PrinterError::UnexpectedResponse(format!(
+                "DIS model {dis_model:?} conflicts with printer dimensions: {width}x{height}"
+            )));
+        }
+        return Ok(model);
     }
 
     // Fall back to dimension matching (skip MiniLink3 since it shares Mini's dimensions)
@@ -705,7 +854,7 @@ mod tests {
 
     #[tokio::test]
     async fn detect_model_link3_via_dis() {
-        // Link 3 reports same dimensions as Mini (600x800) but DIS contains "FI033"
+        // Link 3 reports Mini dimensions but an exact DIS model number.
         let (device, _) =
             make_device_with_dis(PrinterModel::Mini, vec![], Some("FI033".into())).await;
         assert_eq!(device.model(), PrinterModel::MiniLink3);
@@ -741,6 +890,122 @@ mod tests {
         };
         assert!(matches!(err, PrinterError::Timeout));
         assert_eq!(state.lock().unwrap().disconnects, 1);
+    }
+
+    #[test]
+    fn model_detection_requires_capabilities_for_every_hint() {
+        for &(width, height, expected) in &[
+            (600, 800, PrinterModel::Mini),
+            (800, 800, PrinterModel::Square),
+            (1260, 840, PrinterModel::Wide),
+        ] {
+            for hint in [None, Some(""), Some("future-model"), Some("FI999")] {
+                assert_eq!(detect_model(width, height, hint).unwrap(), expected);
+            }
+        }
+        for hint in ["FI033", " \tFI033\r\n"] {
+            assert_eq!(
+                detect_model(600, 800, Some(hint)).unwrap(),
+                PrinterModel::MiniLink3
+            );
+        }
+        for hint in ["FI017", " \tFI017\r\n"] {
+            assert_eq!(
+                detect_model(800, 800, Some(hint)).unwrap(),
+                PrinterModel::Square
+            );
+        }
+    }
+
+    #[test]
+    fn known_dis_conflicts_and_ambiguous_link3_identity_fail_closed() {
+        for (hint, width, height) in [
+            ("FI033", 800, 800),
+            ("FI033", 1260, 840),
+            ("FI033", 999, 999),
+            ("FI017", 600, 800),
+            ("FI017", 1260, 840),
+            ("FI017", 999, 999),
+            ("prefixFI033", 600, 800),
+            ("FI033suffix", 600, 800),
+            ("FI033\0", 600, 800),
+            ("\u{a0}FI033", 600, 800),
+        ] {
+            assert!(matches!(
+                detect_model(width, height, Some(hint)),
+                Err(PrinterError::UnexpectedResponse(_))
+            ));
+        }
+        assert!(detect_model(999, 999, Some("future-model")).is_err());
+    }
+
+    #[tokio::test]
+    async fn conflicting_model_hint_disconnects_without_reading_status() {
+        let (transport, state) = MockTransport::new_with_dis(
+            vec![image_support_info_packet(PrinterModel::Square)],
+            Some("FI033".into()),
+        );
+        assert!(matches!(
+            BlePrinterDevice::new(transport, "Test".into()).await,
+            Err(PrinterError::UnexpectedResponse(_))
+        ));
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 1);
+        assert_eq!(state.disconnects, 1);
+    }
+
+    #[tokio::test]
+    async fn late_duplicate_model_reply_does_not_replace_initial_status() {
+        let (device, state) = make_device_with_dis(
+            PrinterModel::Square,
+            vec![
+                image_support_info_packet(PrinterModel::Square),
+                battery_packet(79),
+                printer_function_packet(6, true),
+                history_packet(69),
+            ],
+            Some("FI017".into()),
+        )
+        .await;
+        let status = device.status().await.unwrap();
+        assert_eq!(status.model, PrinterModel::Square);
+        assert_eq!(status.battery, 79);
+        assert_eq!(status.film_remaining, 6);
+        assert!(status.is_charging);
+        assert_eq!(status.print_count, 69);
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 4);
+        assert_eq!(state.disconnects, 0);
+    }
+
+    #[tokio::test]
+    async fn malformed_model_response_disconnects_without_retry_or_hint_bypass() {
+        let (transport, state) = MockTransport::new_with_dis(
+            vec![support_function_packet(INFO_IMAGE_SUPPORT, &[0, 1])],
+            Some("FI017".into()),
+        );
+        assert!(matches!(
+            BlePrinterDevice::new(transport, "Test".into()).await,
+            Err(PrinterError::UnexpectedResponse(_))
+        ));
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 1);
+        assert_eq!(state.disconnects, 1);
+    }
+
+    #[tokio::test]
+    async fn model_link_error_disconnects_without_retry_or_hint_bypass() {
+        let (transport, state) = MockTransport::new_with_dis(
+            vec![Err(PrinterError::Ble("link closed".into()))],
+            Some("FI017".into()),
+        );
+        assert!(matches!(
+            BlePrinterDevice::new(transport, "Test".into()).await,
+            Err(PrinterError::Ble(_))
+        ));
+        let state = state.lock().unwrap();
+        assert_eq!(state.sent.len(), 1);
+        assert_eq!(state.disconnects, 1);
     }
 
     // ── Success Code Handling ─────────────────────────────────────────────
@@ -1275,5 +1540,101 @@ mod tests {
             .print_bytes(&png, image::FitMode::Crop, 97, 0, None)
             .await;
         assert!(matches!(result.unwrap_err(), PrinterError::NoFilm));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn prepared_jpeg_all_models_transfer_exact_bytes_with_one_declared_flip() {
+        for &model in PrinterModel::all() {
+            let png = make_png_bytes(model);
+            let (jpeg, chunks) =
+                image::prepare_image_from_bytes(&png, model, image::FitMode::Stretch, 80).unwrap();
+            let mut responses = vec![download_ack_packet(OP_DOWNLOAD_START, 0)];
+            responses.extend((0..chunks.len()).map(|_| download_ack_packet(OP_DATA, 0)));
+            responses.extend([
+                download_ack_packet(OP_DOWNLOAD_END, 0),
+                led_ack_packet(),
+                print_status_packet(model.spec().success_code),
+            ]);
+            let (device, state) = make_device_with_dis(
+                model,
+                responses,
+                (model == PrinterModel::MiniLink3).then(|| "FI033".into()),
+            )
+            .await;
+            let progress = std::sync::Mutex::new(Vec::new());
+            let callback = |sent, total| progress.lock().unwrap().push((sent, total));
+            device
+                .print_prepared_jpeg(&jpeg, model, model.spec().flip_vertical, 1, Some(&callback))
+                .await
+                .unwrap();
+            let packets: Vec<_> = state
+                .lock()
+                .unwrap()
+                .sent
+                .iter()
+                .skip(1)
+                .map(|bytes| protocol::parse_packet(bytes).unwrap())
+                .collect();
+            let start = &packets[0];
+            assert_eq!(start.opcode, OP_DOWNLOAD_START);
+            assert_eq!(&start.payload[..4], &[2, 1, 0, 0]);
+            assert_eq!(
+                u32::from_be_bytes(start.payload[4..8].try_into().unwrap()) as usize,
+                jpeg.len()
+            );
+            let data_packets: Vec<_> = packets
+                .iter()
+                .filter(|packet| packet.opcode == OP_DATA)
+                .collect();
+            assert_eq!(data_packets.len(), chunks.len());
+            let mut transported = Vec::new();
+            for (index, packet) in data_packets.iter().enumerate() {
+                assert_eq!(
+                    u32::from_be_bytes(packet.payload[..4].try_into().unwrap()) as usize,
+                    index
+                );
+                transported.extend_from_slice(&packet.payload[4..]);
+            }
+            assert_eq!(&transported[..jpeg.len()], jpeg.as_slice());
+            assert!(transported[jpeg.len()..].iter().all(|byte| *byte == 0));
+            assert_eq!(
+                *progress.lock().unwrap(),
+                (1..=chunks.len())
+                    .map(|sent| (sent, chunks.len()))
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(packets[packets.len() - 3].opcode, OP_DOWNLOAD_END);
+            assert_eq!(packets[packets.len() - 2].opcode, OP_LED_PATTERN_SETTINGS);
+            assert_eq!(
+                packets.last().unwrap().opcode,
+                crate::commands::OP_PRINT_IMAGE
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn prepared_jpeg_rejection_never_writes_to_printer() {
+        let model = PrinterModel::Mini;
+        let (jpeg, _) = image::prepare_image_from_bytes(
+            &make_png_bytes(model),
+            model,
+            image::FitMode::Stretch,
+            80,
+        )
+        .unwrap();
+        let (device, state) = make_device(model, vec![]).await;
+        for (data, expected, flipped) in [
+            (jpeg.as_slice(), PrinterModel::MiniLink3, true),
+            (jpeg.as_slice(), model, true),
+            (&[0xff, 0xd8, 0xff, 0xd9], model, false),
+        ] {
+            assert!(
+                device
+                    .print_prepared_jpeg(data, expected, flipped, 0, None)
+                    .await
+                    .is_err()
+            );
+            assert_eq!(state.lock().unwrap().sent.len(), 1); // only constructor model query
+        }
     }
 }

@@ -468,13 +468,13 @@ def test_ready_footer_exposes_upload_credentials_when_printer_is_paired() -> Non
         )
     )
 
-    assert lines == (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
+    assert lines == (("KEY1 Settings", "KEY2 Lock", "KEY3 Post"),)
 
 
 def test_no_printer_footer_keeps_sync_mode_one_press_away() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.NEEDS_PAIRING, ftp_host="192.168.7.1"))
 
-    assert lines == (("KEY1 Pair", "KEY2 Sync", "KEY3 Pair"),)
+    assert lines == (("KEY1 Settings", "KEY2 Lock", "KEY3 Pair"),)
 
 
 def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
@@ -490,15 +490,15 @@ def test_settings_status_message_stays_in_settings_body_not_top_bar() -> None:
 def test_pair_failed_footer_uses_retry_and_back_controls() -> None:
     lines = _footer_label_lines(UiSnapshot(mode=UiMode.PAIR_FAILED, ftp_host="192.168.7.1"))
 
-    assert lines == (("KEY1 Retry", "KEY2 Back", "KEY3 Retry"),)
+    assert lines == (("KEY1 Settings", "KEY2 Back", "KEY3 Pair"),)
 
 
-def test_crop_preview_footer_uses_all_direction_pan_hint() -> None:
+def test_crop_preview_footer_names_print_cancel_and_tool() -> None:
     lines = _footer_label_lines(
         UiSnapshot(mode=UiMode.AWAITING_CONFIRM, ftp_host="192.168.7.1", preview_tool="crop")
     )
 
-    assert lines == (("4-way Pan", "KEY1 Print", "KEY2 Cancel"),)
+    assert lines == (("KEY1 Print", "KEY2 Cancel", "KEY3 Tool"),)
 
 
 def test_printer_model_text_shows_detected_type() -> None:
@@ -561,7 +561,7 @@ def test_hotspot_ftp_status_text_shows_ap_mode_state() -> None:
     )
 
     assert hotspot_ftp_status_text(active) == "Bridge FTP 192.168.8.1"
-    assert hotspot_ftp_status_text(inactive) == "Bridge Wi-Fi off 192.168.8.1"
+    assert hotspot_ftp_status_text(inactive) == "Bridge Wi-Fi unavailable 192.168.8.1"
 
 
 def test_ftp_hint_points_to_alternate_wifi_or_admin_usb() -> None:
@@ -1797,7 +1797,7 @@ def test_footer_iphone_only_offers_settings_and_iphone_pairing() -> None:
         sync_service_state="listening",
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Print", "KEY3 iPhone"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Settings", "KEY2 Lock", "KEY3 iPhone"),)
 
 
 def test_footer_print_mode_without_printer_offers_sync_and_pair() -> None:
@@ -1809,7 +1809,7 @@ def test_footer_print_mode_without_printer_offers_sync_and_pair() -> None:
         sync_service_state="listening",
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Sync", "KEY3 Pair"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Settings", "KEY2 Lock", "KEY3 Pair"),)
 
 
 def test_footer_print_mode_with_printer_keeps_network_shortcut() -> None:
@@ -1822,7 +1822,7 @@ def test_footer_print_mode_with_printer_keeps_network_shortcut() -> None:
         paired_printer=PairedPrinter(address="AA:BB:CC:DD:EE:FF", name="INSTAX-12345678"),
     )
 
-    assert _footer_label_lines(snapshot) == (("KEY1 Setting", "KEY2 Sync", "KEY3 Network"),)
+    assert _footer_label_lines(snapshot) == (("KEY1 Settings", "KEY2 Lock", "KEY3 Post"),)
 
 
 # ---------------------------------------------------------------------------
@@ -2027,3 +2027,161 @@ def test_sync_pairing_qr_raster_rekeys_on_payload_change() -> None:
     # yields the same raster as the original — the cache key is the payload.
     again = _sync_pairing_qr_image(payload_old, _QR_TARGET_PX)
     assert again.tobytes() == first.tobytes()
+
+
+@pytest.mark.parametrize(
+    "language,headline,cause",
+    [
+        ("en", "Setup needed", "Bridge Wi-Fi unavailable"),
+        ("zh-Hans", "需要设置", "桥接 Wi-Fi 不可用"),
+    ],
+)
+def test_unavailable_hotspot_copy_preserves_blocked_readiness_until_address_returns(
+    monkeypatch: pytest.MonkeyPatch, language: str, headline: str, cause: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.VALIDATION,
+        ftp_host="192.168.7.1",
+        hotspot_ftp_host="192.168.8.1",
+        language=language,
+        paired_printer=PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=7,
+        camera_receive_ready=False,
+        camera_status_message="Bridge Wi-Fi unavailable",
+    )
+    assert not can_accept_images(snapshot)
+    assert readiness_cause_texts(snapshot) == ["Bridge Wi-Fi unavailable"]
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert headline in drawn
+    assert cause in drawn
+    assert not any("Bridge Wi-Fi off" in text or "Wi-Fi 已关闭" in text for text in drawn)
+
+    restored = replace(
+        snapshot,
+        hotspot_host="192.168.8.1",
+        camera_receive_ready=True,
+        camera_status_message="Bridge Wi-Fi ready",
+    )
+    assert can_accept_images(restored)
+    assert readiness_cause_texts(restored) == []
+    assert hotspot_ftp_status_text(restored) == "Bridge FTP 192.168.8.1"
+
+
+@pytest.mark.parametrize(
+    "title,stage",
+    [
+        ("Checking printer", "Connecting"),
+        ("Finding printer", "Connecting"),
+        ("Connecting", "Connecting"),
+        ("Preparing image", "Preparing"),
+        ("Sending 45%", "Sending"),
+        ("Finishing", "Finishing"),
+        ("Still printing", "Still printing"),
+        ("Print stalled", "Print stalled"),
+    ],
+)
+def test_print_job_keeps_one_layout_and_only_meaningful_progress_copy(
+    monkeypatch: pytest.MonkeyPatch, title: str, stage: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.PRINTING,
+        ftp_host="192.168.7.1",
+        last_image_name="DSC01234.HIF",
+        print_title=title,
+        print_detail="52/115 chunks  100 KB",
+        print_progress_percent=45 if title.startswith("Sending") else None,
+        printer_model=PrinterModel.SQUARE,
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert "Printing" in drawn
+    assert stage in drawn
+    assert "DSC01234.HIF" in drawn
+    assert not any("chunks" in text or "KB" in text or "Type:" in text for text in drawn)
+    assert "Do not power off" not in drawn
+    assert "Progress: working..." not in drawn
+    if title.startswith("Sending"):
+        assert drawn.count("45%") == 1
+        assert "Sending 45%" not in drawn
+
+
+@pytest.mark.parametrize("language,expected", [("en", "Print in 5s"), ("zh-Hans", "5 秒后打印")])
+def test_preview_review_countdown_is_localized_without_duplicate_tool_hints(
+    monkeypatch: pytest.MonkeyPatch, language: str, expected: str
+) -> None:
+    from PIL import Image
+
+    snapshot = UiSnapshot(
+        mode=UiMode.AWAITING_CONFIRM,
+        ftp_host="192.168.7.1",
+        language=language,
+        preview_image=Image.new("RGB", (100, 80), "orange"),
+        print_title="Print in 5s",
+        print_detail="Crop: joystick  K3 tool",
+        preview_tool="crop",
+        preview_zoom=1.25,
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert expected in drawn
+    assert ("Joystick: Crop" if language == "en" else "摇杆\N{FULLWIDTH COLON}裁剪") in drawn
+    assert not any("Zoom 1.25" in text or "K3 tool" in text for text in drawn)
+
+
+@pytest.mark.parametrize(
+    "title,expected", [("Preparing preview", "Preparing"), ("Updating preview", "Updating")]
+)
+def test_preview_preparation_omits_working_progress_and_transport_copy(
+    monkeypatch: pytest.MonkeyPatch, title: str, expected: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.AWAITING_CONFIRM,
+        ftp_host="192.168.7.1",
+        print_title=title,
+        last_image_name="DSC01234.HIF",
+        print_detail="Zoom: Up/Down  K3 tool",
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert drawn.count(expected) == 1
+    assert "DSC01234.HIF" not in drawn
+    assert "Progress: working..." not in drawn
+
+
+@pytest.mark.parametrize("film_remaining", [0, 6])
+def test_completion_returns_home_layout_with_printed_acknowledgement(
+    monkeypatch: pytest.MonkeyPatch, film_remaining: int
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.PRINT_COMPLETE,
+        ftp_host="192.168.7.1",
+        camera_receive_ready=True,
+        paired_printer=PairedPrinter("AA:BB:CC:DD:EE:FF", "INSTAX-12345678"),
+        printer_status_fresh=True,
+        film_remaining=film_remaining,
+        printer_battery=90,
+        last_image_name="DSC01234.HIF",
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert "Printed" in drawn
+    assert "Look: " in drawn
+    assert "Workflow: " in drawn
+    assert "Photo sent to Printer" not in drawn
+    assert "Setup needed" not in drawn
+
+
+@pytest.mark.parametrize(
+    "language,stalled,recovery",
+    [("en", "Print stalled", "Restarting"), ("zh-Hans", "打印无响应", "重启中")],
+)
+def test_stalled_print_preserves_recovery_action(
+    monkeypatch: pytest.MonkeyPatch, language: str, stalled: str, recovery: str
+) -> None:
+    snapshot = UiSnapshot(
+        mode=UiMode.PRINTING,
+        ftp_host="192.168.7.1",
+        language=language,
+        print_title="Print stalled",
+        print_detail="Restarting bridge",
+    )
+    drawn = _drawn_texts(monkeypatch, snapshot)
+    assert stalled in drawn
+    assert recovery in drawn

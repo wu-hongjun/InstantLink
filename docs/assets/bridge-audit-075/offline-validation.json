@@ -1,0 +1,12 @@
+{
+  "source_baseline": "20a6eb0",
+  "new_regression_cases": 18,
+  "focused_tests": 20,
+  "bridge_suite_tests": 1542,
+  "host": "macOS / Python3.13.9",
+  "native_ABI_or_protocol_changed": false,
+  "hardware_accessed": false,
+  "hardware_deployed": false,
+  "power_or_energy_measured": false,
+  "coverage_limit": "Saved/overlapping/filtered journals only; full current live journal unavailable while Pi disconnected"
+}

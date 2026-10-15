@@ -1,0 +1,283 @@
+{
+  "baseline": "c4a2787",
+  "reviews": [
+    {
+      "area": "power",
+      "checks": [
+        "Read repository AGENTS.md and /tmp/instantlink-polish-audit-057.json, /tmp/instantlink-polish-audit-058.json, /tmp/instantlink-polish-audit-060.json. Inspected only changed power/performance.py, imaging/presets.py, and their tests versus c4a2787.",
+        {
+          "command": "PYTHONPATH=bridge/src bridge/.venv/bin/python -m pytest -q bridge/tests/test_power_performance.py bridge/tests/test_presets.py",
+          "result": "267 passed in 0.55s"
+        },
+        {
+          "command": "PYTHONPATH=bridge/src bridge/.venv/bin/python -m pytest -q /tmp/test_instantlink_power_presets_review_089.py",
+          "result": "1 failed, 7 passed in 1.39s; failure is the repeated-close-cancellation finding above"
+        },
+        "Independent exhaustive per-axis checks passed: saturation, exposure, sharpness and hue -100..100; vignette 0..100; mixed nonneutral companion axes; save/load/stamp repeated three times per value; is_preset_modified remains false after each cycle.",
+        "Independent pending-retry/new-tier test passed: transient startup failure followed by powersave request reconciles latest desired state, close restores ondemand, and no helper calls occur afterward.",
+        "Independent repeated boost-entry and restore cancellation test passed: jobs reaches zero and autonomous retry restores powersave after both awaits are cancelled.",
+        "Reviewed retry delay doubling and cap, one retry worker, no same-tier request busy loop, stale-applied invalidation before external writes, close cancellation of transition/retry workers, and shutdown restore timeout. Authored focused tests cover transient recovery, partial writes, timeout writes, delay cap/warning coalescing, close during a helper write and hung restore, single cancelled close, and rapid mode coalescing.",
+        "Legacy preset absence of vignette defaults to zero; writer and loader clamp vignette; new hue inverse uses round consistently with stamping and modification detection. These focused checks pass.",
+        {
+          "command": "PYTHONPATH=bridge/src bridge/.venv/bin/python -m pytest -q /tmp/test_instantlink_power_presets_review_089.py bridge/tests/test_power_performance.py bridge/tests/test_presets.py",
+          "result": "Final recheck: 277 passed in 2.62s; all eight independent probes pass, including the previously failing repeated-close cancellation regression."
+        },
+        "Read the final performance.py cleanup loop and authored held-restore regressions for two and five caller cancellations. No remaining actionable findings in the scoped power/preset changes."
+      ],
+      "limitations": [
+        "Read-only repository audit; only temporary test/report files were created under /tmp. No source edits, commits, Pi commands, physical hardware checks, Printer use, or film consumption.",
+        "All power fault probes used cooperative async fake setters. Actual sudo/helper/sysfs behavior and real power-down timing were not measured.",
+        "Other concurrently polished files were not reviewed. Snapshot reflects the two production files and focused tests read during this review."
+      ],
+      "finding_history": [
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/power/performance.py",
+          "line": 100,
+          "problem": "Repeated caller cancellation lets close() return before its ondemand restoration finishes. The second shield await is outside another cancellation handler, so a second cancellation escapes the promised cleanup join while the Bridge can still be running at performance.",
+          "evidence": "/tmp/test_instantlink_power_presets_review_089.py::test_repeated_close_cancellation_still_joins_cleanup starts ondemand restoration behind an Event, calls closer.cancel(), yields once, then calls closer.cancel() again. Before releasing the restore Event, closer.done() is True, cpu._close_task.done() is False, and the actual governor is performance. The assertion fails with (True, False, 'performance') instead of (False, False, 'performance'). A shutdown caller may consequently finish and close the event loop while the unjoined restoration task is pending. The existing test_cancelled_close_joins_ondemand_restore covers only one cancellation.",
+          "recommendation": "Join the shielded _close_task in a loop that records cancellation and keeps awaiting through repeated CancelledError, then propagate cancellation after cleanup finishes. Add an Event-controlled regression that cancels the close caller twice while ondemand restoration is blocked and proves the caller remains pending until restoration completes. Preserve the setter timeout and do not restart retries after close.",
+          "status": "resolved",
+          "resolution": "close() now repeatedly shields and joins _close_task through every caller CancelledError, then propagates recorded cancellation after cleanup finishes. The independent twice-cancelled held-restore regression now passes; authored tests cover two and five cancellations."
+        }
+      ],
+      "findings": [],
+      "final_remaining_findings": []
+    },
+    {
+      "area": "bluetooth",
+      "checks": [
+        {
+          "check": "Read AGENTS.md and audit JSONs 078, 080, 081, 082, 085; reviewed scoped production diff versus c4a2787 and associated modified/new tests.",
+          "result": "Complete; no source edits."
+        },
+        {
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider bridge/tests/test_bluetooth_safety.py bridge/tests/test_bluez_agent_recovery.py bridge/tests/test_ui_pairing.py bridge/tests/test_ui_pairing_dbus.py bridge/tests/test_ui_status.py",
+          "result": "215 passed in 0.43s."
+        },
+        {
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider /tmp/test_instantlink_polish_bluetooth_review_089.py",
+          "result": "10 passed in 0.23s; four cases positively reproduce the two findings, six verify additional conservative paths."
+        },
+        {
+          "check": "Independent same-turn reply then Address/Adapter PropertiesChanged, same-turn owner change, cancellation during second snapshot attempt, cache reuse after cancellation, unauthenticated snapshot plus failed CLI inventory.",
+          "result": "Fresh revision retry returned the second tree with exactly two calls; owner change rejected old reply; cancellation removed the pending watch without disconnecting shared bus; subsequent cached watch added no RPC; both backends rejected uncertain fallback without removal or native disconnect."
+        },
+        {
+          "check": "Existing authenticated reply/Connected and identity-change regressions, bounded retry, pending 512-row watch overflow, cache fast path, disposition-aware status log suppression.",
+          "result": "All included in passing focused repository suite; no additional current actionable finding in ble/agent.py or ble/instantlink.py."
+        },
+        {
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider /tmp/test_instantlink_polish_bluetooth_recheck_089.py bridge/tests/test_bluetooth_safety.py bridge/tests/test_bluez_agent_recovery.py bridge/tests/test_ui_pairing.py bridge/tests/test_ui_pairing_dbus.py bridge/tests/test_ui_status.py",
+          "result": "241 passed in 0.54s: 227 repository cases including 35 Bluetooth safety cases, plus 14 independent stateful rechecks. Both original findings resolved."
+        },
+        {
+          "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=bridge/src:bridge/tests bridge/.venv/bin/python -m pytest -q -p no:cacheprovider /tmp/test_instantlink_polish_bluetooth_review_089.py -k 'not earlier_target_connects and not failed_remove_is_reported'",
+          "result": "6 passed, 4 deselected in 0.19s; earlier independent snapshot identity-property, owner-change, cancellation/cache reuse and authentication/fallback probes still pass."
+        },
+        {
+          "check": "Original reproduction mock limitation clarified during recheck",
+          "result": "The original first-target positive reproduction deliberately returned its initial no response on repeated info calls. It proves the original one-check command sequence only and should not be rerun as a regression against the fix. The new stateful simulation returns current yes after reconnection and additionally asserts that exact-target info is the last CLI command before any deletion."
+        }
+      ],
+      "limitations": [
+        "Read-only review of the current in-progress worktree diff versus c4a2787. No source edits, commits, Pi access, live BlueZ/system-bus requests, Printer commands, deployment or film use.",
+        "Interleavings and subprocess exit codes are simulated locally at the existing DBus/CLI boundaries. No claim that the live-bond interleaving occurred on deployed hardware.",
+        "A check immediately before subprocess dispatch cannot make a separately dispatched bluetoothctl deletion atomic with a concurrent BlueZ connection change. The first finding concerns extra intervening CLI I/O after the relevant last check.",
+        "Scoped Bluetooth Python tests only; no full Bridge suite, Rust suite or hardware smoke test was run in this independent review.",
+        "Temporary repro file is under /tmp; repository source and tests were not edited.",
+        "Recheck covers the later pairing.py fixes; original findings remain as resolved history and findings contains only currently actionable issues (none)."
+      ],
+      "findings": [],
+      "resolved_findings": [
+        {
+          "severity": "P1",
+          "file": "bridge/src/instantlink_bridge/ui/pairing.py",
+          "line": 724,
+          "problem": "The CLI fallback still removes an earlier target from a connection check superseded while checking later targets. _bond_reset_targets runs info sequentially for all addresses, but _remove_validated_bond_targets skips any refresh before the first deletion. A matching target can reconnect during another target's info subprocess and have its live bond removed. Both selection backends share this path.",
+          "evidence": {
+            "repro": "/tmp/test_instantlink_polish_bluetooth_review_089.py::test_cli_earlier_target_connects_while_later_target_is_checked",
+            "result": "Reproduced for both native=False and native=True; the test asserts that the address is connected when remove is invoked.",
+            "sequence": [
+              "devices returns two matching identities A=88:B4:36:51:CC:E2 and B=FA:AB:BC:51:CC:E2.",
+              "info A reports Connected: no.",
+              "While info B is being processed, A reconnects; info B reports Connected: no.",
+              "The first deletion issues remove A with A still connected, without checking A again."
+            ],
+            "related_lines": [
+              707,
+              708,
+              714,
+              724,
+              725,
+              738
+            ]
+          },
+          "recommendation": "Refresh the exact address to be removed immediately before each removal dispatch, including the first deletion after multi-address CLI inventory. Preserve the original authorized target set and fail conservatively if that last guard is uncertain or any matching live identity is known. Add this two-info-call interleaving for both backends. This reduces the avoidable stale interval; it does not promise atomicity against a connection that changes after the final check.",
+          "status": "resolved",
+          "verification": {
+            "recheck_file": "/tmp/test_instantlink_polish_bluetooth_recheck_089.py",
+            "result": "Current code checks the exact next CLI deletion target last and immediately before remove dispatch. Stateful info returns current connection state. Both backends skip a newly live first target and skip a newly live second target after prior deletion success or failure."
+          }
+        },
+        {
+          "severity": "P2",
+          "file": "bridge/src/instantlink_bridge/ui/pairing.py",
+          "line": 738,
+          "problem": "The new removal helper sets removed=True even when bluetoothctl remove returns a nonzero exit status. Both reset methods report an actual removal that did not occur, and the native selector disconnects its backend on that false result. Partial batch bookkeeping likewise treats failed removal attempts as successful removals.",
+          "evidence": {
+            "repro": "/tmp/test_instantlink_polish_bluetooth_review_089.py::test_failed_remove_is_reported_as_actual_removal",
+            "result": "Both backends return True after the only remove returns code 1 and Failed to remove device: org.bluez.Error.Failed. The native backend records one disconnect call.",
+            "related_lines": [
+              461,
+              464,
+              465,
+              738,
+              739
+            ]
+          },
+          "recommendation": "Inspect each remove result and record an actual removal only on success. Preserve any earlier successful removals when a later command fails so native cleanup still occurs for genuine partial progress; return False or propagate a useful error when every removal failed. Cover failure-only and mixed-result batches for both backends.",
+          "status": "resolved",
+          "verification": {
+            "recheck_file": "/tmp/test_instantlink_polish_bluetooth_recheck_089.py",
+            "result": "Only returncode=0 counts as a successful deletion. Both backends return False for failure-only batches; mixed success/failure returns True. Native backend disconnects only when at least one removal succeeded."
+          }
+        }
+      ]
+    },
+    {
+      "area": "files-manager",
+      "findings": [],
+      "checks": [
+        {
+          "scope": "Fresh independent review against c4a2787",
+          "workspace": "<repository>",
+          "files": [
+            "bridge/src/instantlink_bridge/app.py (startup, stop, teardown and run_image_job_until_stopped; accepted print config changes excluded)",
+            "bridge/src/instantlink_bridge/camera/ftp.py",
+            "bridge/src/instantlink_bridge/sync/outbox.py",
+            "bridge/src/instantlink_bridge/manager/api.py",
+            "bridge/src/instantlink_bridge/manager/status.py"
+          ],
+          "context": "Read repository AGENTS.md, audit plans 067/068/069/070 and current-context file ownership notes. No repository edits, Pi access, film or commits."
+        },
+        {
+          "command": "PYTHONPATH=src bridge/.venv/bin/python -m pytest -q tests/test_runtime_shutdown_ownership.py tests/test_bridge_startup.py tests/test_ftp_upload_concurrency.py tests/test_ftp_upload_ownership.py tests/test_ftp_receive.py tests/test_sync_outbox.py tests/test_manager_collection_concurrency.py tests/test_manager.py tests/test_manager_update_api.py",
+          "cwd": "bridge",
+          "result": "153 passed in 8.13s"
+        },
+        {
+          "command": "PYTHONPATH=src:tests bridge/.venv/bin/python -m pytest -q /tmp/instantlink_review_files_manager_089.py",
+          "cwd": "bridge",
+          "result": "5 independent checks passed",
+          "probes": [
+            "Barrier-coordinated simultaneous legacy outbox migration and FTP source detachment; replacement upload preserves original spool bytes, SHA, index metadata and independent inode; no detach directories remain.",
+            "Multiple held FTP pins followed by overflow discard and injected unlink PermissionError; first discard keeps source owned, last discard releases exclusion only after attempted cleanup, retry reservation works and leaves no owners.",
+            "Cancellation of a cold manager cache waiter while its worker probe is held; another waiter reuses the same probe and returns the immutable SystemInfo snapshot.",
+            "Backend close raises asyncio.CancelledError itself; runtime still closes BLE, image worker and FTP in order and propagates cancellation after cleanup.",
+            "Injected partial spool copy failure removes unpublished bytes, leaves pending list empty and preserves complete incoming source."
+          ]
+        },
+        {
+          "review": "Manager threading and freshness",
+          "result": "Signed verifier/nonce and pairing authorization mutations remain on event loop. Off-loop hello reads pairing/config atomically from files. Cache serializes cold probes; per-request pairing, config and stats remain uncached. CPU sampler lock includes baseline warmup. Firmware install/rollback invalidate in worker finally, including failed and cancelled requests."
+        },
+        {
+          "review": "File ownership and shutdown",
+          "result": "Active photo stop/cancellation closes FTP admission before job cleanup, repeated cancellation joins shielded teardown, individual teardown errors do not skip later resources. FTP legacy source detachment precedes pyftpdlib open and retains old bytes for REST/APPE semantics; failed detachment releases reservation and cleans partial temporary files. Outbox originals use copied inodes and legacy migration replaces atomically."
+        },
+        {
+          "command": "PYTHONPATH=src bridge/.venv/bin/python -m pytest -q tests/test_sync_outbox.py tests/test_ftp_receive.py tests/test_ftp_upload_ownership.py tests/test_ftp_upload_concurrency.py",
+          "cwd": "bridge",
+          "result": "78 passed in 0.69s on revised transaction code"
+        },
+        {
+          "command": "PYTHONPATH=src:tests bridge/.venv/bin/python -m pytest -q /tmp/instantlink_review_files_manager_089.py",
+          "cwd": "bridge",
+          "result": "8 passed in 1.09s on revised transaction code",
+          "additional_probes": [
+            "Held failing add publication followed by concurrent ACK: pending/readers retain both committed old items; ACK waits, removes only its committed target after failure; reload and physical spool set match expected surviving old item.",
+            "Held failing ACK publication followed by concurrent budget-evicting add: add waits and stages from unchanged committed queue; correct oldest item evicted, surviving old/new files and reload agree.",
+            "Successful budget publication followed by blocked old-spool deletion: readers/reload see the committed new photo, concurrent ACK of that new photo completes; later old deletion leaves empty consistent index and no residual spools."
+          ]
+        },
+        {
+          "review": "Revised outbox transaction and lock ordering",
+          "result": "add/ack hold mutation lock across snapshot, staged index publication and live state swap; metadata lock is held only for short snapshot/swap so readers remain responsive. Old evicted/ACKed spool deletion follows committed publication. Unpublished new spool/index temp cleanup preserves original exceptions and committed files on failed write/replace. Constructor repairs use staged loaded metadata. git diff --check passed for outbox source/tests."
+        }
+      ],
+      "limitations": [
+        "Legacy spool migration deliberately fails closed on copy/replace OSError: original/index are retained, but setup_sync_service catches constructor failure and Sync remains unavailable until restart. This is explicit tested behavior, recorded as an availability limitation rather than an actionable regression.",
+        "No hardware, physical camera upload, Pi filesystem pressure, power-loss durability, BLE or film checks were performed. Reviewed deterministic local behavior on macOS only.",
+        "The shared worktree contains concurrent root/UI changes. This review excluded accepted print config and other UI/Printer changes as instructed.",
+        "Atomic rename ordering was verified for ordinary IO exceptions and controlled thread interleavings. Actual power-loss durability/fsync semantics and persistent filesystem unlink failures were not simulated; deletion failures remain best effort logged cleanup."
+      ],
+      "history": [
+        {
+          "phase": "Initial review",
+          "result": "No actionable findings in original polish diff. Nontransactional outbox index publication was identified as a preexisting concern and initially excluded because the review compared changes against c4a2787."
+        },
+        {
+          "phase": "Scope expanded by root",
+          "result": "Root reported six write/replace regression failures and repaired add/eviction/ack publication ordering. Independent follow-up reviewed current staged publication and concurrency behavior."
+        },
+        {
+          "phase": "Final follow-up",
+          "result": "No remaining actionable findings in revised outbox transaction code."
+        }
+      ]
+    },
+    {
+      "area": "ui",
+      "findings": [],
+      "checks": [
+        {
+          "kind": "independent source review",
+          "result": "Passed after one correction",
+          "scope": "Diff against c4a2787: ui/controller.py, input.py, models.py, render.py, display.py; app.py print functions from line 900, excluding run_image_job_until_stopped. Read AGENTS.md and plans 059, 062, 066, 067, 068, 072, 075, 077, 086."
+        },
+        {
+          "kind": "focused pytest",
+          "command": "PYTHONPATH=src bridge/.venv/bin/python -m pytest -q tests/test_polish_ui.py tests/test_input_discontinuity.py tests/test_accepted_print_config.py tests/test_preview_review.py tests/test_controller_concurrency.py tests/test_ui_input.py tests/test_ui_display.py tests/test_ui_unlock_render.py tests/test_ui_about_concurrency.py tests/test_app.py tests/test_prepared_print_reuse.py tests/test_prepared_jpeg_adversarial.py tests/test_runtime_shutdown_ownership.py tests/test_photo_job_concurrency.py tests/test_ui_routing.py",
+          "result": "283 passed, 2 existing Pillow deprecation warnings, 6.69 s"
+        },
+        {
+          "kind": "ruff",
+          "result": "check passed; format passed on 10 files: owned UI sources, app.py, polish/input discontinuity/accepted config/ui input tests"
+        },
+        {
+          "kind": "mypy",
+          "command": "PYTHONPATH=src bridge/.venv/bin/python -m mypy src/instantlink_bridge/ui/controller.py src/instantlink_bridge/ui/input.py src/instantlink_bridge/ui/models.py src/instantlink_bridge/ui/render.py src/instantlink_bridge/ui/display.py src/instantlink_bridge/app.py",
+          "result": "Success: no issues found in 6 source files"
+        },
+        {
+          "kind": "resolved independent finding",
+          "file": "bridge/src/instantlink_bridge/ui/input.py",
+          "result": "Original sequence-gap reset occurred after read_levels. At 2/3 KEY1 unlock progress, kernel sequence gap plus failed read_levels switched to gpiozero with count 2; one KEY1 press then unlocked. Reported to parent. Current source resets before resync and on runtime backend failure; rerunning the original pipe-to-gpiozero reproducer now stays locked at 1/3. Added regression and updated EOF expectation pass."
+        },
+        {
+          "kind": "independent queue ownership probe",
+          "result": "Held power activity callback after consumer dequeued one event, overflowed the bounded queue with later presses, then resumed consumer. queue.join completed with balanced task_done accounting; gap relocked after in-flight wake."
+        },
+        {
+          "kind": "independent immediate sender metadata probe",
+          "result": "Held EXIF reader in a real thread, cancelled sender twice, confirmed photo owner stayed alive before release and finished only after reader exited."
+        },
+        {
+          "kind": "independent accepted configuration probe",
+          "result": "Changed UI config device_name and print_option while list_paired yielded after confirmation. Sender still selected INSTAX-ACCEPTED and option 7 from frozen accepted config; print destination remained print."
+        },
+        {
+          "kind": "behavior invariants reviewed",
+          "result": "Timed review starts after first rendered timed frame; manual and immediate paths preserved. About details update by key while explanatory Help remains untouched; locked/unlocking screens do not launch new About collection. Backlight close idempotence and nested resource-finally cleanup validated. Prepared-image model mismatch uses accepted fit, quality, correction, adjustments and sender options; preset label is informational and axes reside in immutable config."
+        }
+      ],
+      "limitations": [
+        "No Raspberry Pi, physical LCD/GPIO/Printer, film-consuming print, or deployment was used. Hardware behavior was exercised with real local pipes, mocked GPIO devices, fake displays and native-library fixtures.",
+        "Review observed ongoing parent edits and revalidated the final relevant source/test changes. No repository source or tests were edited by this reviewer.",
+        "Full Bridge suite and repository-wide gates are owned by the parent; this report records focused checks only."
+      ]
+    }
+  ],
+  "limits": "Fresh independent source/mock reviews; counts overlap. Initial failures and their resolutions remain in review history."
+}

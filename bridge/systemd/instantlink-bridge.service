@@ -14,6 +14,8 @@ Group=ib
 SupplementaryGroups=bluetooth gpio spi i2c plugdev video
 WorkingDirectory=/opt/InstantLinkBridge
 ExecStart=/opt/InstantLinkBridge/.venv/bin/instantlink-bridge --config /etc/InstantLinkBridge/config.toml
+# Restore normal scaling even after a crash/SIGKILL while the LCD was locked.
+ExecStopPost=-/usr/bin/sudo -n /usr/local/sbin/instantlink-bridge-cpu-mode ondemand
 Restart=on-failure
 RestartSec=2
 WatchdogSec=30

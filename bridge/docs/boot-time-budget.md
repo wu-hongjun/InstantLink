@@ -1,6 +1,7 @@
 # Boot-Time Budget
 
-Target: cold boot to `Ready` in 7 s or less on Raspberry Pi Zero 2 W with X306 hardware power-on.
+Design target: cold boot to print readiness in 7 s or less on Raspberry Pi Zero 2 W with X306
+hardware power-on. This target has not been achieved on the current hardware.
 
 ## Budget
 
@@ -103,6 +104,23 @@ tracked boot config sets `camera_auto_detect=0`, `display_auto_detect=0`, `auto_
 `max_framebuffers=1`, and removes `dtoverlay=vc4-kms-v3d` / `dtoverlay=vc4-fkms-v3d` during
 provisioning.
 
+Provisioning also installs `config/instantlink-bridge-unused-media.conf` under
+`/etc/modprobe.d/`. It suppresses alias autoload for the unused legacy VCHI camera,
+codec, ISP, shared-memory and audio leaf drivers: `bcm2835_v4l2`, `bcm2835_codec`,
+`bcm2835_isp`, `vc_sm_cma` and `snd_bcm2835`. VCHI bus devices can advertise media
+and audio drivers even with camera autodetection and firmware audio disabled; the
+media drivers also pull in the shared-memory driver as a dependency. The Bridge
+receives camera uploads over FTP and decodes JPEG/HIF with CPU libraries; its SPI
+ST7789 framebuffer uses `fb_st7789v`/`fbtft`. Those paths retain their drivers.
+
+This is an ordinary `blacklist` profile: explicit diagnostic `modprobe` calls and
+dependencies can still load these modules. It does not unload an active driver.
+Apply it at boot and verify the effective loader configuration and loaded modules
+after reboot. `boot-diet.sh --report` reports the tracked file directives only.
+For rollback, restore the previous copy of this one file (or remove it if it did
+not exist before installation), then reboot. Existing users of local VCHI camera,
+video or audio hardware should omit this appliance-specific profile.
+
 ## `/boot/firmware/config.txt` Tuning
 
 ```ini
@@ -155,13 +173,30 @@ an undocumented target mutation.
 Add application milestones through structured logs:
 
 - `bridge.boot.start`
-- `bridge.usb.ready`
-- `bridge.bt.scanning`
-- `bridge.bt.connected`
+- `bridge.ftp.ready` (listener bound; not proof of an active camera receive path)
+- `bridge.bluetooth.ready` (agent initialized; not Printer connection)
 - `bridge.ui.ready`
 - `bridge.ready`
 
-The product metric is time from X306 button press to the LCD showing Ready.
+`bridge.boot.start` follows Python imports. `bridge.ui.ready` confirms the initial LCD draw;
+`bridge.ready` confirms UI and FTP initialization for systemd. Bluetooth, Printer status, hotspot
+address and Sync readiness are separate. Plan 067 moves Bluetooth registration, Printer
+keepalive, health probing and optional Sync construction off the UI/FTP critical path.
+Plan 068 additionally starts CPU helper I/O, FTP setup and Bluetooth registration together;
+the first UI/input and core READY still wait for the maximum awake CPU tier.
+
+Plan 096 uses the registered agent's fresh BlueZ snapshot for saved-Printer lookup, avoiding
+redundant CLI inventory/trust operations and retaining CLI fallback when adapter, identity or
+trust state is uncertain. Agent/core readiness gates, live-link protection, startup bond reset
+and runtime CPU tiers remain unchanged. An extra pre-interpreter CPU boost was tested and
+rejected after the full reboot comparison showed no clear readiness benefit.
+
+The product metric is time from X306 button press to the LCD showing Ready with healthy FTP and
+Printer status. Kernel-monotonic reboot measurements exclude power-button/firmware latency.
+The 2026-10-11 controlled baseline at runtime `4574aa9` reached core readiness at 16.146 s,
+FTP at 13.964 s, hotspot receive readiness at 18.625 s and manager listeners at 19.131 s.
+See plan 067 for the post-change hardware comparison; the older May measurements below are
+historical observations, not the baseline for this audit.
 
 ## Earliest LCD Output
 

@@ -156,9 +156,7 @@ def test_format_sse_event_encodes_log_event_with_id_and_json_payload() -> None:
     record = format_sse_event(event).decode()
     assert record.startswith("id: evt-9\n")
     assert "event: log\n" in record
-    data_line = next(
-        line for line in record.splitlines() if line.startswith("data: ")
-    )
+    data_line = next(line for line in record.splitlines() if line.startswith("data: "))
     payload = json.loads(data_line.removeprefix("data: "))
     assert payload == {
         "id": "evt-9",

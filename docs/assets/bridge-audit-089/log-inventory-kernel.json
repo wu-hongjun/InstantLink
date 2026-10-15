@@ -1,0 +1,13 @@
+{
+  "records": 626,
+  "flagged_records": 183,
+  "groups": [
+    {
+      "unit": "kernel",
+      "pid": "kernel",
+      "count": 183
+    }
+  ],
+  "current_bridge_pid": 44093,
+  "current_bridge_issues": []
+}

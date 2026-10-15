@@ -1,0 +1,10 @@
+{
+  "commit": "982d8c6a2eabf99c21362fb7cf2d9e3b4145c2d8",
+  "dirty": false,
+  "helper_source_sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2",
+  "helper_installed_sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2",
+  "ffi_sha256": "9e31f99896ece2b687652bfdd0e80318a349cdb387c4e8c2d44ef35fa0d34031",
+  "cli_sha256": "1068fcb591c94e5a2b8bb888361230ade931b8da5b529528500c58edba4ce38e",
+  "stamp_permissions": "0o600",
+  "all_installed_python_source_hashes_match": 67
+}

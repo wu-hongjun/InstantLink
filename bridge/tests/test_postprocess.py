@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from datetime import date
 from io import BytesIO
 
@@ -68,6 +69,53 @@ def test_apply_adjustments_preserves_size_and_mode() -> None:
         result = apply_adjustments(img, profile)
         assert result.size == img.size
         assert result.mode == img.mode
+
+
+@pytest.mark.parametrize(
+    "profile",
+    [
+        AdjustmentProfile(hue=-180),
+        AdjustmentProfile(hue=90),
+        AdjustmentProfile(hue=180),
+        AdjustmentProfile(vignette=1),
+        AdjustmentProfile(vignette=100),
+        AdjustmentProfile(hue=-90, vignette=50),
+    ],
+)
+def test_array_adjustments_preserve_explicit_rgb_pixels_without_deprecation(
+    profile: AdjustmentProfile, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Inferred RGB matches the previous explicit mode without Pillow warnings."""
+    import numpy as np
+
+    pixels = np.random.default_rng(93).integers(0, 256, size=(7, 13, 3), dtype=np.uint8)
+    pixels[0, :4] = [(0, 0, 0), (255, 255, 255), (255, 0, 0), (128, 128, 128)]
+    image = Image.fromarray(pixels)
+    original_pixels = image.tobytes()
+    original_fromarray = Image.fromarray
+
+    def explicit_rgb(array: np.ndarray, mode: str | None = None) -> Image.Image:
+        assert array.dtype == np.uint8
+        assert array.shape == (image.height, image.width, 3)
+        # The old conversion is the pixel oracle; only its known warning is ignored.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message=".*mode.*deprecated", category=DeprecationWarning
+            )
+            return original_fromarray(array, mode="RGB")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Image, "fromarray", explicit_rgb)
+        expected = apply_adjustments(image, profile)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        actual = apply_adjustments(image, profile)
+
+    assert actual.mode == expected.mode == "RGB"
+    assert actual.size == expected.size == image.size
+    assert actual.tobytes() == expected.tobytes()
+    assert image.tobytes() == original_pixels
 
 
 # ---------------------------------------------------------------------------

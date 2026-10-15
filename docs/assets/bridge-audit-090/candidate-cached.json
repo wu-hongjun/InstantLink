@@ -1,0 +1,94 @@
+{
+  "label": "candidate-cached",
+  "timestamp_utc": "2026-10-14T12:10:28.743583+00:00",
+  "boundary": "Installed isolated FTP receive service on alternate port; same-Pi hotspot IP path, NO wireless airtime. Pacing included in continuity trial; unpaced transfer separate.",
+  "isolated_storage": "/var/tmp (SD)",
+  "film_used": 0,
+  "payload_bytes": 8388608,
+  "payload_sha256": "a246feea07bc0adc97bc2896f1fb2bf0c11b543ab655829b7afb94e1b1d3cdc6",
+  "production_uploads": 0,
+  "uploads": [
+    {
+      "name": "unpaced.jpg",
+      "started_monotonic": 130358.522700779,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.0,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 0.15829739600303583,
+      "MiB_s_including_pacing": 50.53778648289689
+    },
+    {
+      "name": "paced-0.jpg",
+      "started_monotonic": 130358.685779373,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 7.867294632000267,
+      "MiB_s_including_pacing": 1.0168679799355618
+    },
+    {
+      "name": "paced-1.jpg",
+      "started_monotonic": 130367.057016713,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 7.859890517996973,
+      "MiB_s_including_pacing": 1.0178258821394794
+    },
+    {
+      "name": "paced-2.jpg",
+      "started_monotonic": 130375.420482804,
+      "bytes": 8388608,
+      "pace_delay_s_per_64KiB": 0.06,
+      "greeting": "220",
+      "completion": "226",
+      "elapsed_s": 7.856942497004638,
+      "MiB_s_including_pacing": 1.0182077828684504
+    }
+  ],
+  "helper_calls": [
+    {
+      "start": 130358.936394529,
+      "elapsed_s": 2.1873790090030525,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 130367.307363796,
+      "vendor_ie_errors_to_next_call": 0,
+      "kernel_events_to_next_call": []
+    },
+    {
+      "start": 130367.307363796,
+      "elapsed_s": 2.1918588539992925,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 130375.672339158,
+      "vendor_ie_errors_to_next_call": 0,
+      "kernel_events_to_next_call": []
+    },
+    {
+      "start": 130375.672339158,
+      "elapsed_s": 2.16439854100463,
+      "returncode": 0,
+      "kernel_window_end_monotonic": 130384.7814878,
+      "vendor_ie_errors_to_next_call": 0,
+      "kernel_events_to_next_call": []
+    }
+  ],
+  "vendor_ie_errors": 0,
+  "receive_checksums_passed": true,
+  "all_uploads_completed": true,
+  "helper_calls_passed": true,
+  "production_ftp_failures": 0,
+  "printer_connected_samples": 45,
+  "active_connection_snapshots": [
+    "100 (connected)\nc4a44a6d-5eea-363d-b444-0e6df922b66f\n/org/freedesktop/NetworkManager/ActiveConnection/108"
+  ],
+  "monitor_max_span_s": 0.40668015599658247,
+  "helper_median_s": 2.1873790090030525,
+  "samples_count": 45,
+  "all_samples_locked_600mhz_camera_ready_fresh_printer_connected": true,
+  "source_helper_sha256": "736cf4ba661859b16e8f9ebf49cdd289bca7e062b33e91957a6ff925572afed2",
+  "initial_unknown_stamp_apply_s": 6.07877723700949,
+  "cold_apply_limit": "Includes credential/applied-state verification; not a device boot timing or speedup."
+}

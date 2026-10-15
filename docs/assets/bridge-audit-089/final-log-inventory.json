@@ -1,0 +1,26 @@
+{
+  "services": {
+    "records": 15172,
+    "flagged": 148
+  },
+  "kernel": {
+    "records": 637,
+    "flagged": 193
+  },
+  "normal_bridge_pid": 45900,
+  "normal_manager_pid": 45198,
+  "normal_warning_error_records": 0,
+  "service_classification": {
+    "historical_before_initial_install": 144,
+    "bounded_status_cancellation_wait_during_test_restarts": 2,
+    "intentional_governor_failure_warning_and_traceback": 2
+  },
+  "kernel_classification": {
+    "vendor_ie_errors_total": 187,
+    "vendor_ie_errors_added_during_service_reconfiguration": 10,
+    "early_multimedia_initialization_failures": 5,
+    "historical_hci_timeout_warning": 1,
+    "new_hci_timeout_warnings": 0
+  },
+  "limits": "Raw full journals retained privately. Driver causes are not claimed repaired. Printer was unavailable, so live disconnect/reconnect remains pending."
+}

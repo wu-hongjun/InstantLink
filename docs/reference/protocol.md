@@ -53,7 +53,15 @@ Response format: `[return_code] [sub_index] [string_length] [ASCII bytes...]`
 | `0x00` | Image Support Info | Width(2B), Height(2B) |
 | `0x01` | Battery Status | State(1B), Level(1B) |
 | `0x02` | Printer Function Info | Film remaining in bits `0...3`, charging in bit `7` |
-| `0x03` | Print Count | Print count(2B, big-endian) |
+| `0x03` | Print Count | Exact 2B legacy count, or observed Square 8B data: count(4B, big-endian) + 4B uninterpreted |
+
+The Square Link's observed history data is eight bytes: a leading big-endian
+32-bit counter followed by four bytes whose meaning is unverified. For example,
+`00 03 00 00 00 43 00 00 00 12` (including status and InfoType) reports 67. The
+exact two-byte legacy count remains supported. The core's public count remains
+`u16` (0–65,535); larger counters and ambiguous payload lengths are rejected,
+rather than truncated. The diagnostic Python backend applies the same limit.
+No FFI signature changes.
 
 #### Status Response Payload Format
 
@@ -121,8 +129,9 @@ Colors are sent in **BGR** order.
 2. Discover services and subscribe to notifications
 3. Query `Image Support Info`
 4. Detect the model:
-   - use DIS model hint `FI033` first for Mini Link 3
-   - otherwise fall back to the reported width and height
+   - match the reported width and height
+   - use exact DIS model number `FI033` to distinguish Mini Link 3 at `600 × 800`
+   - reject known DIS numbers that conflict with the reported dimensions
 5. Resize and JPEG-encode the image for the detected model
 6. Apply vertical flip if required by model (see **Mini Link 3** section below)
 7. Send `Download Start` and wait for ACK
@@ -131,6 +140,12 @@ Colors are sent in **BGR** order.
 10. Send `Print Image` and accept `0` or the model-specific success code
 11. Disconnect
 
+The native BLE transport may resend the read-only `Image Support Info` query once if no
+matching ACK arrives within one second. Both writes and response waits share the original
+ten-second deadline and retain command serialization. Write failures, link errors and
+malformed responses do not trigger a resend. A failed model query retires the connection;
+this retry does not apply to image transfer or print commands.
+
 ### Mini Link 3 Vertical-Flip Behavior
 
 The Mini Link 3 printer requires a vertically flipped image upload. This is the only printing difference between the Mini Link 3 and the standard Mini Link.
@@ -138,10 +153,16 @@ The Mini Link 3 printer requires a vertically flipped image upload. This is the 
 **Detection**
 
 Mini Link 3 is detected via the BLE Device Information Service (DIS) model number characteristic:
-- If the DIS model string contains `FI033`, the device is identified as `PrinterModel::MiniLink3`
-- Both Mini Link and Mini Link 3 report the same image support dimensions (`600 × 800`), so the DIS hint is necessary to distinguish them
 
-See `crates/instantlink-core/src/device.rs`, `detect_model()` function (line 473–489).
+- After trimming ASCII whitespace, the DIS model number must equal `FI033` and the image
+  support dimensions must equal `600 × 800` to select `PrinterModel::MiniLink3`.
+- Both Mini Link and Mini Link 3 report `600 × 800`, so the DIS hint is necessary to
+  distinguish them.
+- Strings containing `FI033` with other characters are rejected rather than selecting Mini
+  with a different upload orientation. Exact `FI017` requires Square dimensions (`800 × 800`).
+- Other unknown or missing DIS hints use the reported dimensions. Unknown dimensions are rejected.
+
+See `crates/instantlink-core/src/device.rs`, `detect_model()`.
 
 **Flip Application**
 
@@ -184,3 +205,77 @@ InstantLink's production runtime is BLE-only. The packet structure has also been
 - [linssenste/instax-link-web](https://github.com/linssenste/instax-link-web)
 - [dgwilson/ESP32-Instax-Bridge](https://github.com/dgwilson/ESP32-Instax-Bridge)
 - [Reverse Engineering Guide](../development/reverse-engineering.md)
+
+## Negotiated BLE Fragment Size
+
+Protocol packets and model JPEG chunks are distinct from individual GATT writes. Their bytes,
+checksums, indexes, padding and ACK order do not change when the write payload limit changes.
+
+On Linux, each new connection performs a bounded one-second BlueZ query for the exact connected
+device, unique Instax service and write characteristic. The characteristic must advertise
+write-without-response and expose a valid 23–517-byte MTU. The selected payload is `MTU − 3`,
+capped at 236 bytes. The diagnostic download/cancel probe can explicitly compare up to 244 bytes.
+The 236-byte production ceiling avoids extra HCI fragmentation on the tested Pi controller.
+A known smaller MTU is honored (23 selects 20). Missing, malformed,
+ambiguous or unavailable metadata uses the existing 182-byte path. Other platforms retain 182 bytes.
+[BlueZ 5.82 characteristic API](https://raw.githubusercontent.com/bluez/bluez/5.82/doc/org.bluez.GattCharacteristic.rst).
+
+The query has no per-fragment shell or D-Bus lookup. At most one blocking bus open may be
+outstanding; late results own their unspawned resources, and live query/listener tasks have
+cleanup guards. Every connection discovers its own capability again. Raw sends and complete
+send/ACK transactions share the transport command lock.
+
+A failed, timed-out or cancelled delivery poisons the session. No uncertain packet or print
+job is replayed. Before reuse, a new transport requires a bounded disconnect and an authoritative
+disconnected result. If an actual enlarged fragment was attempted, that exact device uses
+conservative fragments on its next connection for the process lifetime. A tiny status failure
+requires link reset without disabling larger writes. Known smaller MTUs still clamp conservative
+fragments. The recovery cache holds at most 128 device identities; saturation selects conservative
+fragments and reset for all new connections, preserving safety without unbounded growth.
+
+Disconnect immediately closes the transport to new commands and marks uncertain teardown for
+fresh-link reset. Physical disconnect is attempted before querying connection state; an authoritative
+disconnected result permits idempotent cleanup even when the disconnect RPC reports an error.
+Cancellation or an unknown/still-connected result retains the reset requirement. Linux allows
+five seconds for physical disconnect and the FFI allows eight seconds for full teardown,
+covering BlueZ's delayed disconnect. State queries retain their two-second budget. Other
+platforms retain the existing two-second action / three-second FFI budgets.
+
+This does not reduce protocol chunk pacing or pre-execute waits. Printer firmware acceptance
+of larger fragments requires physical validation in addition to a negotiated ATT MTU.
+
+### Print-history replies
+
+The observed Square reply body has eight bytes: the leading four form a big-endian print
+counter, followed by four uninterpreted bytes. Exact two-byte legacy counters are also accepted.
+The current public count type remains u16; larger counters and malformed lengths are rejected
+rather than truncated. The no-film probe compares before/after counts as well as film remaining.
+
+## ACK correlation and chunk pacing
+
+Square Data replies with a five-byte payload must echo the current big-endian chunk index after
+the status byte. Stale/future or malformed indexed replies do not advance the transfer and share
+the original transaction deadline. Exact one-byte legacy status replies remain supported. Other
+models retain their existing response-tail compatibility until their format is verified.
+
+Validated Linux Square connections using the 236-byte payload use a **25 ms** intermediate
+gap after an indexed ACK. Other platforms/models, smaller/unknown payloads and conservative
+sessions retain model pacing (Square 150 ms). The last chunk retains its model settling delay, and pre-execute waits are
+separate. Legacy replies cannot authorize a shorter gap. A full-transfer guard handles interrupted
+Start/Data/End/handoff/execute, including cancellation between ACKs: require a fresh link, never
+replay the uncertain image, and restore baseline pacing after accelerated uncertainty. Pacing and
+fragment fallback are separate flags in the bounded device cache. Known NoFilm/CoverOpen/LowBattery
+rejections require reset without penalizing pacing; busy/unknown/transport errors stay conservative.
+
+The download-only diagnostic can sweep intermediate delays and can exercise the same production
+transfer loop followed by checked DownloadCancel. Its wrapper rejects LED/PrintImage/reset/shutdown
+commands; the helper fixes print option 0. No-film tests establish outbound bytes, ACK acceptance,
+unchanged counters and reconnects, rather than developed-film or mechanical-print measurements.
+
+## Linux discovery records
+
+BlueZ retains names and service UUIDs for saved Printers after they are powered off. Linux
+discovery excludes a matching record with neither RSSI nor a confirmed connected link.
+Connected-state queries share a 250 ms budget per collection. Connected Printers remain
+usable without an advertisement. RSSI may persist after a prior scan, so this is an inactive
+cache guard rather than proof that every returned Printer is currently reachable.

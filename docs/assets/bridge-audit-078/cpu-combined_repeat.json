@@ -1,0 +1,434 @@
+{
+  "label": "combined_repeat",
+  "pid": 12639,
+  "hz": 100,
+  "samples": [
+    {
+      "sample": 1,
+      "audit_before": {
+        "pid": 12639,
+        "monotonic": 9704.915814939,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "retired_status_tasks": 0,
+        "three_presses": true,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "legacy_button_count": 0,
+        "bluetooth_probe_counts": {
+          "dbus_calls": 14,
+          "dbus_errors": 4,
+          "cli_devices": 7,
+          "cli_info": 5,
+          "cli_mutations": 2
+        },
+        "bluetooth_forced_cli": false,
+        "network_probe_counts": {
+          "native_calls": 173,
+          "native_errors": 35,
+          "ip_calls": 35,
+          "native_ms_total": 404.20609098509885
+        },
+        "network_forced_ip": false,
+        "network_source": "/tmp/instantlink-idle-candidate-078/bridge/src/instantlink_bridge/net/addresses.py",
+        "mock_attached": false,
+        "mock_event_fd": null
+      },
+      "audit_after": {
+        "pid": 12639,
+        "monotonic": 9735.138476802,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "retired_status_tasks": 0,
+        "three_presses": true,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "legacy_button_count": 0,
+        "bluetooth_probe_counts": {
+          "dbus_calls": 15,
+          "dbus_errors": 4,
+          "cli_devices": 7,
+          "cli_info": 5,
+          "cli_mutations": 2
+        },
+        "bluetooth_forced_cli": false,
+        "network_probe_counts": {
+          "native_calls": 179,
+          "native_errors": 35,
+          "ip_calls": 35,
+          "native_ms_total": 424.43567298505513
+        },
+        "network_forced_ip": false,
+        "network_source": "/tmp/instantlink-idle-candidate-078/bridge/src/instantlink_bridge/net/addresses.py",
+        "mock_attached": false,
+        "mock_event_fd": null
+      },
+      "duration_s": 30.028850093000074,
+      "process_cpu_s": 0.71,
+      "process_percent_one_core": 2.36439290149677,
+      "child_cpu_s": 0.0,
+      "system_busy_percent_all_cores": 2.1831514040496627,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "12639",
+          "name": "python",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "12641",
+          "name": "python",
+          "cpu_s": 0.39
+        },
+        {
+          "tid": "12642",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12646",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12647",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "12648",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12649",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12650",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12651",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.22
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "audit_before": {
+        "pid": 12639,
+        "monotonic": 9735.144571177,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "retired_status_tasks": 0,
+        "three_presses": true,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "legacy_button_count": 0,
+        "bluetooth_probe_counts": {
+          "dbus_calls": 15,
+          "dbus_errors": 4,
+          "cli_devices": 7,
+          "cli_info": 5,
+          "cli_mutations": 2
+        },
+        "bluetooth_forced_cli": false,
+        "network_probe_counts": {
+          "native_calls": 179,
+          "native_errors": 35,
+          "ip_calls": 35,
+          "native_ms_total": 424.43567298505513
+        },
+        "network_forced_ip": false,
+        "network_source": "/tmp/instantlink-idle-candidate-078/bridge/src/instantlink_bridge/net/addresses.py",
+        "mock_attached": false,
+        "mock_event_fd": null
+      },
+      "audit_after": {
+        "pid": 12639,
+        "monotonic": 9765.363445228,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "retired_status_tasks": 0,
+        "three_presses": true,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "legacy_button_count": 0,
+        "bluetooth_probe_counts": {
+          "dbus_calls": 15,
+          "dbus_errors": 4,
+          "cli_devices": 7,
+          "cli_info": 5,
+          "cli_mutations": 2
+        },
+        "bluetooth_forced_cli": false,
+        "network_probe_counts": {
+          "native_calls": 185,
+          "native_errors": 35,
+          "ip_calls": 35,
+          "native_ms_total": 444.3011949842912
+        },
+        "network_forced_ip": false,
+        "network_source": "/tmp/instantlink-idle-candidate-078/bridge/src/instantlink_bridge/net/addresses.py",
+        "mock_attached": false,
+        "mock_event_fd": null
+      },
+      "duration_s": 30.02716238499852,
+      "process_cpu_s": 0.41,
+      "process_percent_one_core": 1.36543038846999,
+      "child_cpu_s": 0.0,
+      "system_busy_percent_all_cores": 1.2650853100291302,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "12639",
+          "name": "python",
+          "cpu_s": 0.07
+        },
+        {
+          "tid": "12641",
+          "name": "python",
+          "cpu_s": 0.21
+        },
+        {
+          "tid": "12642",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12646",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "12647",
+          "name": "python",
+          "cpu_s": 0.01
+        },
+        {
+          "tid": "12648",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12649",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12650",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12651",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.12
+        }
+      ]
+    },
+    {
+      "sample": 3,
+      "audit_before": {
+        "pid": 12639,
+        "monotonic": 9765.370483249,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "retired_status_tasks": 0,
+        "three_presses": true,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "legacy_button_count": 0,
+        "bluetooth_probe_counts": {
+          "dbus_calls": 15,
+          "dbus_errors": 4,
+          "cli_devices": 7,
+          "cli_info": 5,
+          "cli_mutations": 2
+        },
+        "bluetooth_forced_cli": false,
+        "network_probe_counts": {
+          "native_calls": 185,
+          "native_errors": 35,
+          "ip_calls": 35,
+          "native_ms_total": 444.3011949842912
+        },
+        "network_forced_ip": false,
+        "network_source": "/tmp/instantlink-idle-candidate-078/bridge/src/instantlink_bridge/net/addresses.py",
+        "mock_attached": false,
+        "mock_event_fd": null
+      },
+      "audit_after": {
+        "pid": 12639,
+        "monotonic": 9795.590064071,
+        "mode": "printer_searching",
+        "live_mode": "printer_searching",
+        "locked": true,
+        "unlocking": false,
+        "presses": 0,
+        "button": null,
+        "idle_stage": "screen_off",
+        "fresh": false,
+        "film": null,
+        "camera_ready": true,
+        "last_status_ok": null,
+        "retired_status_tasks": 0,
+        "three_presses": true,
+        "cpu_khz": 600000,
+        "governor": "powersave",
+        "display": "FramebufferDisplay",
+        "input_backend": "gpio_v2",
+        "input_event_fd": 11,
+        "legacy_button_count": 0,
+        "bluetooth_probe_counts": {
+          "dbus_calls": 16,
+          "dbus_errors": 4,
+          "cli_devices": 7,
+          "cli_info": 5,
+          "cli_mutations": 2
+        },
+        "bluetooth_forced_cli": false,
+        "network_probe_counts": {
+          "native_calls": 191,
+          "native_errors": 35,
+          "ip_calls": 35,
+          "native_ms_total": 465.5121309860988
+        },
+        "network_forced_ip": false,
+        "network_source": "/tmp/instantlink-idle-candidate-078/bridge/src/instantlink_bridge/net/addresses.py",
+        "mock_attached": false,
+        "mock_event_fd": null
+      },
+      "duration_s": 30.028877957000077,
+      "process_cpu_s": 0.46,
+      "process_percent_one_core": 1.5318587682786486,
+      "child_cpu_s": 0.0,
+      "system_busy_percent_all_cores": 1.2896247607954072,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "12639",
+          "name": "python",
+          "cpu_s": 0.05
+        },
+        {
+          "tid": "12641",
+          "name": "python",
+          "cpu_s": 0.22
+        },
+        {
+          "tid": "12642",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12646",
+          "name": "python",
+          "cpu_s": 0.01
+        },
+        {
+          "tid": "12647",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "12648",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12649",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12650",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "12651",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.13
+        }
+      ]
+    }
+  ],
+  "boundary": "Actual Bridge process and whole-system CPU counters, dark600MHz, 3x30s. Same hardware; no energy measurement; subprocess CPU separate. No strace during CPU interval. No film used."
+}

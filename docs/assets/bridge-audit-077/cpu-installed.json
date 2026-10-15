@@ -1,0 +1,173 @@
+{
+  "label": "installed",
+  "pid": 10538,
+  "hz": 100,
+  "samples": [
+    {
+      "sample": 1,
+      "duration_s": 30.027570874000048,
+      "process_cpu_s": 0.54,
+      "process_percent_one_core": 1.7983472664702607,
+      "child_cpu_s": 0.06,
+      "system_busy_percent_all_cores": 0.9318578916715201,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "10538",
+          "name": "python",
+          "cpu_s": 0.36
+        },
+        {
+          "tid": "10542",
+          "name": "python",
+          "cpu_s": 0.09
+        },
+        {
+          "tid": "10543",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10545",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "10559",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.06
+        },
+        {
+          "tid": "10560",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10561",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10562",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "duration_s": 30.027595665999797,
+      "process_cpu_s": 0.66,
+      "process_percent_one_core": 2.1979781776111933,
+      "child_cpu_s": 0.25,
+      "system_busy_percent_all_cores": 1.5397419891801913,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "10538",
+          "name": "python",
+          "cpu_s": 0.38
+        },
+        {
+          "tid": "10542",
+          "name": "python",
+          "cpu_s": 0.17
+        },
+        {
+          "tid": "10543",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10545",
+          "name": "python",
+          "cpu_s": 0.03
+        },
+        {
+          "tid": "10559",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.09
+        },
+        {
+          "tid": "10560",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10561",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10562",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    },
+    {
+      "sample": 3,
+      "duration_s": 30.027633061000415,
+      "process_cpu_s": 0.51,
+      "process_percent_one_core": 1.698435567545225,
+      "child_cpu_s": 0.34,
+      "system_busy_percent_all_cores": 2.030118978284383,
+      "cpu_khz": [
+        600000
+      ],
+      "printer_connected_before": false,
+      "printer_connected_after": false,
+      "threads": [
+        {
+          "tid": "10538",
+          "name": "python",
+          "cpu_s": 0.08
+        },
+        {
+          "tid": "10542",
+          "name": "python",
+          "cpu_s": 0.26
+        },
+        {
+          "tid": "10543",
+          "name": "python",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10545",
+          "name": "python",
+          "cpu_s": 0.02
+        },
+        {
+          "tid": "10559",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.14
+        },
+        {
+          "tid": "10560",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10561",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        },
+        {
+          "tid": "10562",
+          "name": "tokio-rt-worker",
+          "cpu_s": 0.0
+        }
+      ]
+    }
+  ],
+  "boundary": "Actual Bridge process and whole-system CPU counters, dark600MHz, 3x30s. Same hardware; no energy measurement; subprocess CPU separate. No strace during CPU interval. No film used."
+}

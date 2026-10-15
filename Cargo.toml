@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
+default-members = ["crates/instantlink-core", "crates/instantlink-cli", "crates/instantlink-ffi"]
 members = [
     "crates/instantlink-core",
     "crates/instantlink-cli",
     "crates/instantlink-ffi",
+    "vendor/bluez-async",
 ]
 
 [workspace.dependencies]
@@ -42,3 +44,7 @@ tokio-util = { version = "0.7", features = ["rt"] }
 lto = "fat"
 codegen-units = 1
 strip = true
+
+# Localized cleanup fix for the Linux Bluetooth backend; see vendor provenance.
+[patch.crates-io]
+bluez-async = { path = "vendor/bluez-async" }

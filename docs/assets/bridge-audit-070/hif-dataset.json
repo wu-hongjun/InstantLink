@@ -1,0 +1,386 @@
+{
+  "boundary": "Real saved camera HIFs; production worker, Square model and saved adjustments; no Printer send",
+  "rows": [
+    {
+      "source_bytes": 11255808,
+      "source_sha256": "1c6752379da20783758366073059935e4c4d06fc03a259926a3ca21fbd602aa3",
+      "date_metadata_s": 0.24665010399985476,
+      "date_present": true,
+      "first": {
+        "seconds": 5.8134378630002175,
+        "output": {
+          "bytes": 102303,
+          "quality": 76,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "1354cc449d9903ef44a15c09f9e75e35484af2f596df89034a3255ebed337ec8",
+          "rgb_sha256": "a7b9a07e96030e453f17d2c72f5bd99d7a01f06f1e47055f197e982bb7d262f9"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 59
+      },
+      "cached_edit": {
+        "seconds": 0.6721335410002212,
+        "output": {
+          "bytes": 104413,
+          "quality": 78,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+          "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 5.752009060000091,
+        "output": {
+          "bytes": 104413,
+          "quality": 78,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "8ebfe37f96ec2af168bae3348d47fcec49c9694aec5a2596ee9a1122f4354b60",
+          "rgb_sha256": "d0dc08ec4ea3218d166ab4cd687a03f8c3e3eb33a1f1f54ed77ffa7e8d8f24f2"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 58
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 5131254,
+      "cache_cleaned_on_close": true
+    },
+    {
+      "source_bytes": 3186688,
+      "source_sha256": "db6a243439566ff56366ed13389d6b8c3036497a31fac7e4f38f1e6ad75cd566",
+      "date_metadata_s": 0.015631197999937285,
+      "date_present": true,
+      "first": {
+        "seconds": 3.116430675000629,
+        "output": {
+          "bytes": 101222,
+          "quality": 90,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "fd8416482e2847379c55122f2d24c1091ded651416832876be87680532418950",
+          "rgb_sha256": "17fd95a1b37dff3f1ce95be928f160dce72bcbb9ef97bce142c9aff2ed486036"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 32
+      },
+      "cached_edit": {
+        "seconds": 0.6377041659998213,
+        "output": {
+          "bytes": 103779,
+          "quality": 90,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "a0212d1b3e03ea59b322c5316394bf0c7fe8d38130c8f412d96774c23171d37e",
+          "rgb_sha256": "307ab73f826aae1a2180df990c05c16d3b72fd97c9d3934435955e07a3530057"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 3.101148904999718,
+        "output": {
+          "bytes": 103779,
+          "quality": 90,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "a0212d1b3e03ea59b322c5316394bf0c7fe8d38130c8f412d96774c23171d37e",
+          "rgb_sha256": "307ab73f826aae1a2180df990c05c16d3b72fd97c9d3934435955e07a3530057"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 32
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 3551286,
+      "cache_cleaned_on_close": true
+    },
+    {
+      "source_bytes": 3207168,
+      "source_sha256": "6e9ec8dbe1c8b0b2df75036064ec338af039470d367d0644fcab9e7d7235a93f",
+      "date_metadata_s": 0.016365520999897853,
+      "date_present": true,
+      "first": {
+        "seconds": 3.362852290000774,
+        "output": {
+          "bytes": 101945,
+          "quality": 92,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "b0e319ed164739a752d6e598283b26eef99cb8c3f4c90c55e4aa7f3bac72d541",
+          "rgb_sha256": "a06719bec7f1da8a3b27ce195c1050b233641c30230f0c316290cc0e80fcd59f"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 35
+      },
+      "cached_edit": {
+        "seconds": 0.692810938000548,
+        "output": {
+          "bytes": 103964,
+          "quality": 92,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "5232cb510699b9d86fe316e4e207813d4b922b35c8f0dcd5a5430cded4189978",
+          "rgb_sha256": "de78c470bda9d401e7e8eb25828ecafa9fcb020bb2d718536ce5bbfb699520b0"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 3.4241275510003106,
+        "output": {
+          "bytes": 103964,
+          "quality": 92,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "5232cb510699b9d86fe316e4e207813d4b922b35c8f0dcd5a5430cded4189978",
+          "rgb_sha256": "de78c470bda9d401e7e8eb25828ecafa9fcb020bb2d718536ce5bbfb699520b0"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 35
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 3551286,
+      "cache_cleaned_on_close": true
+    },
+    {
+      "source_bytes": 6201344,
+      "source_sha256": "901bc100ad06a26a4712e04153a8a0b5f667d9cb70132c13052225b853a87f85",
+      "date_metadata_s": 0.025089948000641016,
+      "date_present": true,
+      "first": {
+        "seconds": 4.374668227000257,
+        "output": {
+          "bytes": 104637,
+          "quality": 81,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "7bc400a3c9ae54034363fa0a5062b36c963c4ac49fcfbc2c9882466c3e5ae30f",
+          "rgb_sha256": "47c0b8ed9a9ed8bbdd1f88c37a98ff8815b036709266ce36c3b39a4d40409fdf"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 45
+      },
+      "cached_edit": {
+        "seconds": 0.6905181239999365,
+        "output": {
+          "bytes": 102384,
+          "quality": 82,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "52b33e72fcf1052949b1b231576942cc6a22e7c92c1ac0ad4622cf91e87b4453",
+          "rgb_sha256": "51cc455154d32480b5674acb512026e52048e8e5bb8ab9e2be4bfe70ae0fe672"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 4.417990363000172,
+        "output": {
+          "bytes": 102384,
+          "quality": 82,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "52b33e72fcf1052949b1b231576942cc6a22e7c92c1ac0ad4622cf91e87b4453",
+          "rgb_sha256": "51cc455154d32480b5674acb512026e52048e8e5bb8ab9e2be4bfe70ae0fe672"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 45
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 3551286,
+      "cache_cleaned_on_close": true
+    },
+    {
+      "source_bytes": 4853760,
+      "source_sha256": "ecb17de431069ca7ad5bb038ddd76685fe8d5d9844ee8cf50ac662a9971feb26",
+      "date_metadata_s": 0.02211000000079366,
+      "date_present": true,
+      "first": {
+        "seconds": 3.5895371859996885,
+        "output": {
+          "bytes": 99709,
+          "quality": 89,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "59118b6dcdd8191fd8022205d813b72508103964aa0d058dff2186847d9c319d",
+          "rgb_sha256": "a7ef96786e07fb2b3401d27d04d1db4e9f5b9a7412c2d6c7f8a9447180eb2a0b"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 37
+      },
+      "cached_edit": {
+        "seconds": 0.6909376030007479,
+        "output": {
+          "bytes": 102533,
+          "quality": 89,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "67c4a198868b1a8c0d656c416e03f1de69236b9579e22d68db352032041bd090",
+          "rgb_sha256": "2278338a4833b78522bbfb2dbd81d54960b7dfc5de97a8450ee4eb91ae576bfa"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 3.5809496860001673,
+        "output": {
+          "bytes": 102533,
+          "quality": 89,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "67c4a198868b1a8c0d656c416e03f1de69236b9579e22d68db352032041bd090",
+          "rgb_sha256": "2278338a4833b78522bbfb2dbd81d54960b7dfc5de97a8450ee4eb91ae576bfa"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 37
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 3551286,
+      "cache_cleaned_on_close": true
+    },
+    {
+      "source_bytes": 6381568,
+      "source_sha256": "bed484876f84ecec86d71c268a8c4f8cc1a85166d476044b6a34f8357757c6fa",
+      "date_metadata_s": 0.02538666700002068,
+      "date_present": true,
+      "first": {
+        "seconds": 3.8746341140004006,
+        "output": {
+          "bytes": 98459,
+          "quality": 93,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "7d3bd92b23b7420247a1aa6e40bbc7c01ab920ce0788b5cd3d890da007cf70c3",
+          "rgb_sha256": "6e197e3cf44466c601cc0f7b7afa44cf676de87ebfed5aebfaea6e6229e6553c"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 40
+      },
+      "cached_edit": {
+        "seconds": 0.6625501560001794,
+        "output": {
+          "bytes": 97501,
+          "quality": 93,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "fea14e703c2795c75479b3c16ac8f6bc204faa43f9cd841f703400e8d38ddb14",
+          "rgb_sha256": "979807a848e5cba5ca5428ed51476357acfa63ece1dc1eeb971685a5c3e2835b"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 3.9124603109994496,
+        "output": {
+          "bytes": 97501,
+          "quality": 93,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "fea14e703c2795c75479b3c16ac8f6bc204faa43f9cd841f703400e8d38ddb14",
+          "rgb_sha256": "979807a848e5cba5ca5428ed51476357acfa63ece1dc1eeb971685a5c3e2835b"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 40
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 5131254,
+      "cache_cleaned_on_close": true
+    },
+    {
+      "source_bytes": 4423680,
+      "source_sha256": "d758a2b9d3a5ade673a3f43f11d22df7fcd5bc936eeda49a1223087304869abd",
+      "date_metadata_s": 0.02071598900056415,
+      "date_present": true,
+      "first": {
+        "seconds": 3.4055479670005298,
+        "output": {
+          "bytes": 101600,
+          "quality": 89,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "c2782f591aa955a57a89a05541bcf88d7938aeab004ec2a03b448bdc3d4fb20d",
+          "rgb_sha256": "a7710f3f062198449df2b05262e4fb0ccd876793bea035fef0df1805d4289e2b"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 35
+      },
+      "cached_edit": {
+        "seconds": 0.6806463019993316,
+        "output": {
+          "bytes": 100890,
+          "quality": 89,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "2ac7690522da2abdebdef7598faa84f5db20fed519b42930ddb36044e624d1dc",
+          "rgb_sha256": "12c1ce01ee87cdde12056e2d65d6fcba10ce49a833ccbd6ede8c951203fd52c3"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 8
+      },
+      "uncached_edit": {
+        "seconds": 3.392959425999834,
+        "output": {
+          "bytes": 100890,
+          "quality": 89,
+          "width": 800,
+          "height": 800,
+          "jpeg_sha256": "2ac7690522da2abdebdef7598faa84f5db20fed519b42930ddb36044e624d1dc",
+          "rgb_sha256": "12c1ce01ee87cdde12056e2d65d6fcba10ce49a833ccbd6ede8c951203fd52c3"
+        },
+        "sampled_cpu_khz": [
+          1000000
+        ],
+        "clock_sample_count": 35
+      },
+      "edit_output_equal": true,
+      "cache_bytes": 3551286,
+      "cache_cleaned_on_close": true
+    }
+  ],
+  "cpu_khz": 1000000,
+  "temperature_c": 47.236,
+  "throttled": "throttled=0x0"
+}

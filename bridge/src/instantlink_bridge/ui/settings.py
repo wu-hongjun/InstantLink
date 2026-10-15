@@ -15,7 +15,7 @@ from instantlink_bridge.config import (
     UiAppearance,
     UiLanguage,
 )
-from instantlink_bridge.imaging.pipeline import FitMode
+from instantlink_bridge.imaging.models import FitMode
 
 
 class SettingKey(StrEnum):
@@ -23,10 +23,18 @@ class SettingKey(StrEnum):
 
     OPEN_PRINT = "open_print"
     OPEN_NETWORK = "open_network"
+    OPEN_FTP = "open_ftp"
+    OPEN_WIFI = "open_wifi"
+    OPEN_IPHONE = "open_iphone"
+    OPEN_CONNECTIONS = "open_connections"
     OPEN_SYSTEM = "open_system"
+    OPEN_SCREEN = "open_screen"
     # Print hub → sub-page openers (phase 1, plan 035).
     OPEN_PRINTER = "open_printer"
     OPEN_ADJUSTMENTS = "open_adjustments"
+    OPEN_POST = "open_post"
+    OPEN_CORRECTION = "open_correction"
+    CORRECTION_SATURATION = "correction_saturation"
     OPEN_TRANSFORM = "open_transform"
     OPEN_AUTO_PRINT = "open_auto_print"
     # Adjustments sub-page placeholder (phase 1 only; kept for back-compat but no
@@ -87,42 +95,42 @@ class SettingKey(StrEnum):
     SYSTEM_POWER_INFO = "system_power_info"
     SYSTEM_BATTERY_INFO = "system_battery_info"
     SYSTEM_IDLE_POWEROFF = "system_idle_poweroff"
+    UNLOCK_THREE_PRESSES = "unlock_three_presses"
     FONT_SIZE = "font_size"
     LANGUAGE = "language"
     APPEARANCE = "appearance"
     REFRESH_STATUS = "refresh_status"
     RESET_CREDENTIALS = "reset_credentials"
-    # iPhone sync (plan 050): delivery-destination picker on the Print hub
-    # and the QR pairing action on the Network page.
+    # Delivery mode is a top-level Settings row; iPhone pairing is on Network.
     SYNC_DESTINATION = "sync_destination"
     SYNC_PAIRING = "sync_pairing"
-    # Sync-token rotation (plan 051 P3.11): destructive action row on the
-    # Network page, next to RESET_CREDENTIALS.
+    # Sync-token rotation lives in Network > iPhone; camera credentials live in FTP.
     RESET_SYNC_TOKEN = "reset_sync_token"
 
 
 class SettingsPage(StrEnum):
-    """Settings menu pages.
+    """Settings pages shared by physical and virtual LCDs.
 
-    PRINTER (pairing/print options) and CAMERA (FTP credentials) merged
-    into PRINT and NETWORK respectively; the obsolete enum values were
-    removed. MAIN now has four top-level entries: Print, Network, System,
-    Accessibility.
-
-    Phase 1 (plan 035): PRINT becomes a hub with four sub-pages —
-    PRINTER, ADJUSTMENTS, TRANSFORM, AUTO_PRINT. BACK from any sub-page
-    returns to PRINT (wired via SETTINGS_PARENT_PAGE), and BACK from
-    PRINT returns to MAIN.
+    MAIN contains Print, Network, System and Mode. Print exposes everyday
+    fit/review choices directly and keeps image quality and Printer options
+    on their existing advanced pages. Post retains Looks and Correction.
     """
 
     MAIN = "main"
     NETWORK = "network"
+    FTP = "ftp"
+    WIFI = "wifi"
+    IPHONE = "iphone"
+    CONNECTIONS = "connections"
     PRINT = "print"
     SYSTEM = "system"
+    SCREEN = "screen"
     ABOUT = "about"
     # Print sub-pages (plan 035 phase 1).
     PRINTER = "printer"
     ADJUSTMENTS = "adjustments"
+    POST = "post"
+    CORRECTION = "correction"
     TRANSFORM = "transform"
     AUTO_PRINT = "auto_print"
 
@@ -148,18 +156,21 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.OPEN_PRINT,
         SettingKey.OPEN_NETWORK,
         SettingKey.OPEN_SYSTEM,
-    ),
-    # PRINT is now a 4-row hub (plan 035 phase 1). Each row opens a
-    # dedicated sub-page; BACK from any sub-page returns here.
-    SettingsPage.PRINT: (
-        SettingKey.OPEN_PRINTER,
-        SettingKey.OPEN_ADJUSTMENTS,
-        SettingKey.OPEN_TRANSFORM,
-        SettingKey.OPEN_AUTO_PRINT,
-        # Delivery destination (plan 050): a page-level routing decision, so
-        # it sits below the four sub-page openers rather than inside one.
         SettingKey.SYNC_DESTINATION,
     ),
+    # Daily choices are direct pickers; existing diagnostic pages remain
+    # under Advanced so common edits need one fewer navigation step.
+    SettingsPage.PRINT: (
+        SettingKey.OPEN_POST,
+        SettingKey.IMAGE_FIT,
+        SettingKey.AUTO_PRINT_DELAY,
+        SettingKey.OPEN_PRINTER,
+        SettingKey.PRINT_ADVANCED_HEADER,
+        SettingKey.OPEN_TRANSFORM,
+        SettingKey.OPEN_AUTO_PRINT,
+    ),
+    SettingsPage.POST: (SettingKey.OPEN_ADJUSTMENTS, SettingKey.OPEN_CORRECTION),
+    SettingsPage.CORRECTION: (SettingKey.CORRECTION_SATURATION,),
     # PRINTER: pairing actions and model selection.
     # PAIR_PRINTER is the single pair/re-pair surface: when no printer is
     # saved it shows "Pair" and starts a scan; when one is saved it shows
@@ -173,6 +184,7 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.PAIR_PRINTER,
         SettingKey.RESET_PRINTER_LINK,
         SettingKey.FORGET_PRINTER,
+        SettingKey.PRINT_ADVANCED_HEADER,
         SettingKey.PRINTER_MODEL,
     ),
     # ADJUSTMENTS: preset picker (top) + four colour/tone knobs + two overlay
@@ -192,65 +204,53 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
         SettingKey.ADJUST_WATERMARK,
         SettingKey.ADJUST_SAVE_CUSTOM,
     ),
-    # TRANSFORM: image-fit mode and JPEG encode quality.
-    SettingsPage.TRANSFORM: (
-        SettingKey.IMAGE_FIT,
-        SettingKey.JPEG_QUALITY,
-    ),
-    # AUTO_PRINT: workflow behaviour and BLE polling knobs.
-    # PRINT_ADVANCED_HEADER separates the power-user polling knobs
-    # (Keepalive, Search rate) from the common workflow options so they
-    # read as developer knobs rather than everyday settings (plan 034
-    # item 18, Option B; kept here under the Auto print sub-page).
+    # TRANSFORM keeps the advanced encoding choice on its existing page.
+    SettingsPage.TRANSFORM: (SettingKey.JPEG_QUALITY,),
+    # AUTO_PRINT keeps diagnostics and polling intervals off the daily page.
     SettingsPage.AUTO_PRINT: (
-        SettingKey.AUTO_PRINT_DELAY,
         SettingKey.ALLOW_PRINT_WITHOUT_FILM,
-        SettingKey.PRINT_ADVANCED_HEADER,
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
     ),
-    # NETWORK subsumes the old Connect (camera FTP) page. Camera-setup block
-    # (Wi-Fi Mode → FTP PIN) comes first — these are the values the user
-    # literally types into the Sony a7C II FTP settings. The
-    # NETWORK_DIAGNOSTICS_HEADER row acts as a visual separator before the
-    # read-only diagnostic rows (Bluetooth, Same Wi-Fi adv, USB IP) so they
-    # read as status info, not credentials to enter (plan 034 item 9).
-    # The two destructive escape hatches close the page in escalation
-    # order: RESET_SYNC_TOKEN (unpairs iPhones) then RESET_CREDENTIALS
-    # (regenerates Wi-Fi + FTP credentials) last.
     SettingsPage.NETWORK: (
+        SettingKey.OPEN_FTP,
+        SettingKey.OPEN_WIFI,
+        SettingKey.OPEN_IPHONE,
+        SettingKey.OPEN_CONNECTIONS,
+    ),
+    SettingsPage.FTP: (
         SettingKey.FTP_RECEIVE_MODE,
-        SettingKey.NETWORK_HOTSPOT_SSID_INFO,
-        SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
         SettingKey.FTP_HOST_INFO,
         SettingKey.FTP_USERNAME_INFO,
         SettingKey.FTP_PASSWORD_INFO,
-        # iPhone pairing QR (plan 050) — an onboarding action, so it lives
-        # with the camera-setup block above the read-only diagnostics.
-        SettingKey.SYNC_PAIRING,
-        SettingKey.NETWORK_DIAGNOSTICS_HEADER,
-        SettingKey.NETWORK_BLUETOOTH_INFO,
-        SettingKey.NETWORK_WIFI_INFO,
-        SettingKey.NETWORK_ETHERNET_INFO,
-        # Sync-token rotation (plan 051 P3.11): revokes a photographed
-        # pairing QR without touching the Wi-Fi/FTP credentials.
-        SettingKey.RESET_SYNC_TOKEN,
         SettingKey.RESET_CREDENTIALS,
     ),
-    # SYSTEM holds operational rows AND personalisation knobs after the
-    # Accessibility page was folded in (3 rows on a standalone page was
-    # thin justification for its own MAIN slot). Order: device-state
-    # info → power toggles → manual refresh → personalisation →
-    # versions/about behind a final chevron.
+    SettingsPage.WIFI: (
+        SettingKey.NETWORK_HOTSPOT_SSID_INFO,
+        SettingKey.NETWORK_HOTSPOT_PASSWORD_INFO,
+        SettingKey.NETWORK_WIFI_INFO,
+    ),
+    SettingsPage.IPHONE: (
+        SettingKey.SYNC_PAIRING,
+        SettingKey.RESET_SYNC_TOKEN,
+    ),
+    SettingsPage.CONNECTIONS: (
+        SettingKey.NETWORK_BLUETOOTH_INFO,
+        SettingKey.NETWORK_ETHERNET_INFO,
+    ),
+    # System keeps power, refresh and About direct; Screen groups personalisation and unlock.
     SettingsPage.SYSTEM: (
         SettingKey.SYSTEM_BATTERY_INFO,
         SettingKey.SYSTEM_IDLE_POWEROFF,
+        SettingKey.OPEN_SCREEN,
         SettingKey.REFRESH_STATUS,
-        SettingKey.SYSTEM_PERSONALISATION_HEADER,
+        SettingKey.OPEN_ABOUT,
+    ),
+    SettingsPage.SCREEN: (
+        SettingKey.UNLOCK_THREE_PRESSES,
         SettingKey.APPEARANCE,
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
-        SettingKey.OPEN_ABOUT,
     ),
     # Live system stats (CPU/RAM/Storage/SoC temp) are sandwiched between the
     # identity rows and the static version block so the user sees "what is this
@@ -271,24 +271,38 @@ SETTINGS_BY_PAGE: dict[SettingsPage, tuple[SettingKey, ...]] = {
 PAGE_TITLES: dict[SettingsPage, str] = {
     SettingsPage.MAIN: "Settings",
     SettingsPage.NETWORK: "Network",
+    SettingsPage.FTP: "FTP",
+    SettingsPage.WIFI: "Wi-Fi",
+    SettingsPage.IPHONE: "iPhone",
+    SettingsPage.CONNECTIONS: "Connections",
     SettingsPage.PRINT: "Print",
     SettingsPage.SYSTEM: "System",
+    SettingsPage.SCREEN: "Screen",
     SettingsPage.ABOUT: "About",
     # Print sub-page titles (plan 035 phase 1).
     SettingsPage.PRINTER: "Printer",
-    SettingsPage.ADJUSTMENTS: "Adjustments",
-    SettingsPage.TRANSFORM: "Transform",
-    SettingsPage.AUTO_PRINT: "Auto print",
+    SettingsPage.ADJUSTMENTS: "Looks",
+    SettingsPage.POST: "Post",
+    SettingsPage.CORRECTION: "Correction",
+    SettingsPage.TRANSFORM: "Image quality",
+    SettingsPage.AUTO_PRINT: "Printer options",
 }
 
 PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
     SettingKey.OPEN_NETWORK: SettingsPage.NETWORK,
+    SettingKey.OPEN_FTP: SettingsPage.FTP,
+    SettingKey.OPEN_WIFI: SettingsPage.WIFI,
+    SettingKey.OPEN_IPHONE: SettingsPage.IPHONE,
+    SettingKey.OPEN_CONNECTIONS: SettingsPage.CONNECTIONS,
     SettingKey.OPEN_PRINT: SettingsPage.PRINT,
     SettingKey.OPEN_SYSTEM: SettingsPage.SYSTEM,
+    SettingKey.OPEN_SCREEN: SettingsPage.SCREEN,
     SettingKey.OPEN_ABOUT: SettingsPage.ABOUT,
     # Print hub → sub-page openers (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: SettingsPage.PRINTER,
     SettingKey.OPEN_ADJUSTMENTS: SettingsPage.ADJUSTMENTS,
+    SettingKey.OPEN_POST: SettingsPage.POST,
+    SettingKey.OPEN_CORRECTION: SettingsPage.CORRECTION,
     SettingKey.OPEN_TRANSFORM: SettingsPage.TRANSFORM,
     SettingKey.OPEN_AUTO_PRINT: SettingsPage.AUTO_PRINT,
 }
@@ -297,10 +311,17 @@ PAGE_FOR_OPEN_KEY: dict[SettingKey, SettingsPage] = {
 # below a non-MAIN parent need an explicit entry; everything else defaults to
 # MAIN in the controller back-nav branch.
 SETTINGS_PARENT_PAGE: dict[SettingsPage, SettingsPage] = {
+    SettingsPage.FTP: SettingsPage.NETWORK,
+    SettingsPage.WIFI: SettingsPage.NETWORK,
+    SettingsPage.IPHONE: SettingsPage.NETWORK,
+    SettingsPage.CONNECTIONS: SettingsPage.NETWORK,
     SettingsPage.ABOUT: SettingsPage.SYSTEM,
+    SettingsPage.SCREEN: SettingsPage.SYSTEM,
     # Print sub-pages all return to the Print hub (plan 035 phase 1).
     SettingsPage.PRINTER: SettingsPage.PRINT,
-    SettingsPage.ADJUSTMENTS: SettingsPage.PRINT,
+    SettingsPage.ADJUSTMENTS: SettingsPage.POST,
+    SettingsPage.POST: SettingsPage.PRINT,
+    SettingsPage.CORRECTION: SettingsPage.POST,
     SettingsPage.TRANSFORM: SettingsPage.PRINT,
     SettingsPage.AUTO_PRINT: SettingsPage.PRINT,
 }
@@ -373,9 +394,11 @@ ADJUSTABLE_SETTING_KEYS: frozenset[SettingKey] = frozenset(
         SettingKey.KEEPALIVE,
         SettingKey.SEARCH_INTERVAL,
         SettingKey.SYSTEM_IDLE_POWEROFF,
+        SettingKey.UNLOCK_THREE_PRESSES,
         SettingKey.FONT_SIZE,
         SettingKey.LANGUAGE,
         SettingKey.APPEARANCE,
+        SettingKey.CORRECTION_SATURATION,
         # Adjustments sub-page pickers (plan 035 phase 3).
         SettingKey.ADJUST_SATURATION,
         SettingKey.ADJUST_EXPOSURE,
@@ -457,7 +480,7 @@ FIT_OPTIONS: tuple[FitMode, ...] = (
     FitMode.STRETCH,
 )
 QUALITY_OPTIONS: tuple[int, ...] = (70, 75, 80, 85, 90, 95, 100)
-AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 5.0)
+AUTO_PRINT_DELAY_OPTIONS: tuple[float | None, ...] = (None, 0.0, 1.0, 5.0)
 BOOL_OPTIONS: tuple[bool, ...] = (False, True)
 KEEPALIVE_OPTIONS: tuple[float, ...] = (5.0, 10.0, 15.0, 30.0)
 FONT_SIZE_OPTIONS: tuple[FontSize, ...] = (FontSize.SMALL, FontSize.MEDIUM, FontSize.LARGE)
@@ -467,8 +490,7 @@ APPEARANCE_OPTIONS: tuple[UiAppearance, ...] = (
     UiAppearance.DARK,
     UiAppearance.AUTO,
 )
-# Total scan period options. The minimum (5s) equals the active-scan window, so it scans
-# continuously (0 gap); larger values insert an idle gap between scans to save power.
+# Dark-screen search periods. Awake discovery uses a fixed one-second scan/retry policy.
 SEARCH_INTERVAL_OPTIONS: tuple[float, ...] = (5.0, 15.0, 30.0, 60.0)
 # Mutually exclusive delivery modes for received camera images (plan 055).
 SYNC_DESTINATION_OPTIONS: tuple[SyncDestination, ...] = (
@@ -521,14 +543,22 @@ def setting_action_hint(key: SettingKey) -> str:
 
 SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.OPEN_NETWORK: "Wi-Fi, FTP credentials, Bluetooth, USB",
+    SettingKey.OPEN_FTP: "Camera uploads and FTP credentials",
+    SettingKey.OPEN_WIFI: "Bridge Wi-Fi credentials and joined network",
+    SettingKey.OPEN_IPHONE: "Pair and manage iPhone access",
+    SettingKey.OPEN_CONNECTIONS: "Bluetooth and USB status",
     SettingKey.OPEN_PRINT: "Pairing and photo/print options",
-    SettingKey.OPEN_SYSTEM: "Bridge health, personalisation, updates",
+    SettingKey.OPEN_SYSTEM: "Screen, lock and shutdown settings",
+    SettingKey.OPEN_SCREEN: "Appearance, text and unlock settings",
     SettingKey.OPEN_ABOUT: "Versions and device identity",
     # Print hub → sub-page opener help strings (plan 035 phase 1).
     SettingKey.OPEN_PRINTER: "Pairing and printer model",
-    SettingKey.OPEN_ADJUSTMENTS: "Colour and overlay adjustments",
-    SettingKey.OPEN_TRANSFORM: "Fit-to-film and JPEG quality",
-    SettingKey.OPEN_AUTO_PRINT: "Auto-print delay and connection knobs",
+    SettingKey.OPEN_ADJUSTMENTS: "Creative colour and overlay adjustments",
+    SettingKey.OPEN_POST: "Looks and independent Printer correction",
+    SettingKey.OPEN_CORRECTION: "Compensate film colour without changing Looks",
+    SettingKey.CORRECTION_SATURATION: "Printer output compensation; independent of Looks",
+    SettingKey.OPEN_TRANSFORM: "JPEG encoding quality",
+    SettingKey.OPEN_AUTO_PRINT: "No-film testing and connection intervals",
     # Adjustments placeholder help (phase 1 only — no longer surfaced in any page).
     SettingKey.ADJUSTMENTS_COMING_SOON: "Saturation, exposure, sharpness coming in v2",
     # Adjustments sub-page rows (plan 035 phase 3). Help strings explain
@@ -561,7 +591,7 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.ADJUST_WATERMARK: "Stamp a short label in the bottom-left corner",
     # Preset picker and save action (plan 035 phase 5; updated plan 036 phase 5).
     SettingKey.ADJUST_PRESET: "Choose a look, or tweak the sliders below",
-    SettingKey.ADJUST_SAVE_CUSTOM: "Save as preset. K3 hold a slot to overwrite or delete.",
+    SettingKey.ADJUST_SAVE_CUSTOM: "Save as preset. Right on a saved slot to manage.",
     SettingKey.FTP_RECEIVE_MODE: "Hotspot: bridge AP. Client: join existing.",
     SettingKey.PAIR_PRINTER: "Pair an Instax printer, or re-pair to swap",
     SettingKey.RESET_PRINTER_LINK: "Reconnect to the saved printer",
@@ -600,20 +630,21 @@ SETTING_HELP_TEXT: dict[SettingKey, str] = {
     SettingKey.SYSTEM_OS_VERSION: "Operating system release",
     SettingKey.SYSTEM_POWER_INFO: "Bridge battery/UPS hardware (legacy)",
     SettingKey.SYSTEM_BATTERY_INFO: "Battery charge if telemetry available",
-    SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after 10 min idle",
+    SettingKey.UNLOCK_THREE_PRESSES: "Press the same button three times to avoid accidental unlock",
+    SettingKey.SYSTEM_IDLE_POWEROFF: "Shuts down after the configured idle timeout",
     SettingKey.FONT_SIZE: "Screen text size",
     SettingKey.LANGUAGE: "Screen language (中文 / English)",
     SettingKey.APPEARANCE: "Auto: light 07-19, dark overnight",
     SettingKey.REFRESH_STATUS: "Re-check printer and FTP now",
     SettingKey.RESET_CREDENTIALS: "Generate new Wi-Fi & FTP credentials",
     # iPhone sync (plans 050/055). The two rows live on different Settings pages
-    # (Mode on Print, iPhone pairing on Network), so each help text
+    # (Mode on the main page, iPhone pairing on Network), so each help text
     # cross-references the other (plan 051 P2.7).
-    SettingKey.SYNC_DESTINATION: "Print or sync received photos · Pair iPhone: Network page",
-    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Mode: Print page",
+    SettingKey.SYNC_DESTINATION: "Print or sync received photos · Pair iPhone: Network > iPhone",
+    SettingKey.SYNC_PAIRING: "Show a QR code to pair your iPhone · Mode: Settings page",
     # Token rotation (plan 051 P3.11) — honest about the blast radius: every
     # paired iPhone loses access until it scans the new QR.
-    SettingKey.RESET_SYNC_TOKEN: "New pairing token; unpairs all iPhones",
+    SettingKey.RESET_SYNC_TOKEN: "Paired iPhones will need to scan a new QR code.",
     # Separator rows — info-only, no interactive action.
     SettingKey.NETWORK_DIAGNOSTICS_HEADER: "Read-only connection diagnostics",
     SettingKey.PRINT_ADVANCED_HEADER: "Power-user polling intervals",
@@ -637,6 +668,8 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
             SettingOption("Hotspot", FtpReceiveMode.HOTSPOT),
             SettingOption("Client", FtpReceiveMode.PEER),
         )
+    if key is SettingKey.CORRECTION_SATURATION:
+        return tuple(SettingOption(format_int_with_sign(v), v) for v in range(-100, 101, 10))
     if key is SettingKey.PRINTER_MODEL:
         return tuple(SettingOption(model_label(value), value) for value in MODEL_OPTIONS)
     if key is SettingKey.IMAGE_FIT:
@@ -645,8 +678,10 @@ def setting_options(key: SettingKey) -> tuple[SettingOption, ...]:
         return tuple(SettingOption(str(value), value) for value in QUALITY_OPTIONS)
     if key is SettingKey.AUTO_PRINT_DELAY:
         return tuple(
-            SettingOption(seconds_label(value), value) for value in AUTO_PRINT_DELAY_OPTIONS
+            SettingOption(workflow_label(value), value) for value in AUTO_PRINT_DELAY_OPTIONS
         )
+    if key is SettingKey.UNLOCK_THREE_PRESSES:
+        return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.ALLOW_PRINT_WITHOUT_FILM:
         return tuple(SettingOption(bool_label(value), value) for value in BOOL_OPTIONS)
     if key is SettingKey.KEEPALIVE:
@@ -749,6 +784,8 @@ def config_with_setting_value(
         return replace(config, printer=replace(config.printer, keepalive_interval_s=value))
     if key is SettingKey.SEARCH_INTERVAL and isinstance(value, float):
         return replace(config, printer=replace(config.printer, search_interval_s=value))
+    if key is SettingKey.UNLOCK_THREE_PRESSES and isinstance(value, bool):
+        return replace(config, ui=replace(config.ui, unlock_requires_three_presses=value))
     if key is SettingKey.SYSTEM_IDLE_POWEROFF and isinstance(value, bool):
         return replace(config, power=replace(config.power, idle_poweroff_enabled=value))
     if key is SettingKey.FONT_SIZE and isinstance(value, FontSize):
@@ -757,6 +794,8 @@ def config_with_setting_value(
         return replace(config, ui=replace(config.ui, language=value))
     if key is SettingKey.APPEARANCE and isinstance(value, UiAppearance):
         return replace(config, ui=replace(config.ui, appearance=value))
+    if key is SettingKey.CORRECTION_SATURATION and isinstance(value, int):
+        return replace(config, correction=replace(config.correction, saturation=value))
     if key is SettingKey.ADJUST_SATURATION and isinstance(value, int):
         return replace(config, adjustments=replace(config.adjustments, saturation=value))
     if key is SettingKey.ADJUST_EXPOSURE and isinstance(value, int):
@@ -832,6 +871,15 @@ def sync_destination_label(destination: SyncDestination) -> str:
     return labels[destination]
 
 
+def workflow_label(value: float | None) -> str:
+    """Describe the actual confirmation behavior without changing stored values."""
+    if value is None:
+        return "Confirm each"
+    if value == 0:
+        return "Print immediately"
+    return f"Review {value:g}s"
+
+
 def seconds_label(value: float | None) -> str:
     """Return compact LCD label for a second value."""
 
@@ -863,6 +911,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.printer.keepalive_interval_s
     if key is SettingKey.SEARCH_INTERVAL:
         return config.printer.search_interval_s
+    if key is SettingKey.UNLOCK_THREE_PRESSES:
+        return config.ui.unlock_requires_three_presses
     if key is SettingKey.SYSTEM_IDLE_POWEROFF:
         return config.power.idle_poweroff_enabled
     if key is SettingKey.FONT_SIZE:
@@ -871,6 +921,8 @@ def _setting_value(config: BridgeConfig, key: SettingKey) -> object:
         return config.ui.language
     if key is SettingKey.APPEARANCE:
         return config.ui.appearance
+    if key is SettingKey.CORRECTION_SATURATION:
+        return config.correction.saturation
     if key is SettingKey.ADJUST_SATURATION:
         return config.adjustments.saturation
     if key is SettingKey.ADJUST_EXPOSURE:
@@ -941,3 +993,13 @@ def language_label(language: UiLanguage) -> str:
         UiLanguage.ZH_HANS: "中文",
     }
     return labels[language]
+
+
+def idle_shutdown_duration(seconds: float) -> str:
+    """Format the actual configured shutdown timeout in compact units."""
+
+    if seconds % 3600 == 0:
+        return f"{seconds / 3600:g}h"
+    if seconds % 60 == 0:
+        return f"{seconds / 60:g}min"
+    return f"{seconds:g}s"

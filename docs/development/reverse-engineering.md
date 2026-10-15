@@ -219,10 +219,16 @@ Key observations from the community:
 ### Adding support for new models:
 1. Capture BLE traffic with the official app
 2. Query Image Support Info — response dimensions identify Mini, Square, and Wide
-3. For Mini Link 3, prefer the DIS model hint (`FI033`) before falling back to dimensions
+3. For Mini Link 3, require exact ASCII-trimmed DIS `FI033` alongside `600x800` dimensions.
+   Exact `FI017` requires `800x800` Square dimensions. Reject conflicts and ambiguous
+   `FI033` strings; other unknown hints fall back to dimensions.
 4. Test with known chunk sizes (900B for mini/wide, 1808B for square)
 5. If a new model uses different chunk sizes, the DOWNLOAD_START response may contain the requested block size
 6. Verify JPEG quality limits — they may differ by model
+
+The native BLE startup path can resend `Image Support Info` once after a one-second ACK
+wait, within the original ten-second deadline. This is a serialized read-only retry;
+it does not replay failed image or print commands. A failed capability query retires the link.
 
 ## Community References
 

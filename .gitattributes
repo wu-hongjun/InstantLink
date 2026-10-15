@@ -1,0 +1,2 @@
+# Preserve the verified upstream patch's required context prefix and blank context lines.
+bridge/patches/brcmfmac-ap-management-ie-aba23b0a.patch -whitespace

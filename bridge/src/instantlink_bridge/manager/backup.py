@@ -6,13 +6,14 @@ release slots, stop services, or create exported support bundles.
 
 from __future__ import annotations
 
+import configparser
 import hashlib
 import json
 import os
 import re
 import stat
 import tarfile
-import tempfile
+import tomllib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -97,7 +98,153 @@ DEFAULT_BACKUP_SOURCES: tuple[BackupSource, ...] = (
     BackupSource(Path("/var/lib/InstantLinkBridge/printer.json"), required=False),
     BackupSource(Path("/var/lib/InstantLinkBridge/management"), required=False),
 )
-# TODO: Add selected-printer BlueZ bond metadata when the adapter-local path is safe to discover.
+_BLUEZ_ADDRESS_RE = re.compile(r"^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$")
+_BLUEZ_INFO_RE = re.compile(
+    r"^var/lib/bluetooth/[0-9A-F]{2}(?::[0-9A-F]{2}){5}/"
+    r"[0-9A-F]{2}(?::[0-9A-F]{2}){5}/info$"
+)
+
+
+def is_bluez_pairing_path(path: str) -> bool:
+    """Recognize the only BlueZ secret file included in local backups."""
+    return (
+        _BLUEZ_INFO_RE.fullmatch(path) is not None
+        or re.fullmatch(r"var/lib/bluetooth/[0-9A-F]{2}(?::[0-9A-F]{2}){5}/identity", path)
+        is not None
+    )
+
+
+def _reject_symlink_components(path: Path, root: Path) -> None:
+    current = root
+    try:
+        parts = path.relative_to(root).parts
+    except ValueError as exc:
+        raise BackupPathError("backup source escapes root") from exc
+    for part in parts:
+        current = current / part
+        if current.is_symlink():
+            raise BackupPathError("backup source contains a symlink")
+
+
+def _bounded_source_text(path: Path, root: Path) -> str:
+    with _open_backup_file(path, root) as handle:
+        content = handle.read(65537)
+    if len(content) > 65536:
+        raise BackupManifestError("backup identity metadata is too large")
+    return content.decode("utf-8")
+
+
+def _selected_printer_identity(root: Path) -> tuple[str | None, str | None]:
+    selected_path = root / "var/lib/InstantLinkBridge/printer.json"
+    config_path = root / "etc/InstantLinkBridge/config.toml"
+    address: str | None = None
+    name: str | None = None
+    for path in (selected_path, config_path):
+        _reject_symlink_components(path, root)
+    if selected_path.is_file():
+        try:
+            selected = json.loads(_bounded_source_text(selected_path, root))
+            if isinstance(selected, dict):
+                raw_address = selected.get("address")
+                raw_name = selected.get("name")
+                if isinstance(raw_address, str) and _BLUEZ_ADDRESS_RE.fullmatch(
+                    raw_address.upper()
+                ):
+                    address = raw_address.upper()
+                if isinstance(raw_name, str):
+                    name = _printer_identity_name(raw_name)
+        except (ValueError, UnicodeError) as exc:
+            raise BackupManifestError("saved Printer identity is invalid") from exc
+    if config_path.is_file():
+        try:
+            config = tomllib.loads(_bounded_source_text(config_path, root))
+            printer = config.get("printer", {})
+            configured = printer.get("device_name") if isinstance(printer, dict) else None
+            if isinstance(configured, str) and configured.strip():
+                configured_name = _printer_identity_name(configured)
+                if configured_name != name:
+                    address = None
+                name = configured_name
+        except (ValueError, UnicodeError) as exc:
+            raise BackupManifestError("Printer configuration is invalid") from exc
+    return address, name
+
+
+def _printer_identity_name(name: str) -> str | None:
+    normalized = re.sub(r"\s*\((IOS|ANDROID)\)$", "", name.strip(), flags=re.IGNORECASE)
+    if re.fullmatch(r"INSTAX-[0-9A-Za-z]+", normalized, flags=re.IGNORECASE):
+        return normalized.casefold()
+    return None
+
+
+def selected_printer_pairing_sources(*, root: str | Path = Path("/")) -> tuple[BackupSource, ...]:
+    """Discover selected Printer info and its adapter privacy identity, never scan cache.
+
+    BlueZ stores bonds under the local adapter MAC. Ambiguous adapters/identities
+    fail closed; an unpaired Printer or absent BlueZ storage is a normal empty set.
+    """
+    root_path = _resolved_root(root)
+    address, name = _selected_printer_identity(root_path)
+    if address is None and name is None:
+        return ()
+    bluetooth = root_path / "var/lib/bluetooth"
+    _reject_symlink_components(bluetooth, root_path)
+    if not bluetooth.exists():
+        return ()
+    adapters = sorted(
+        path for path in bluetooth.iterdir() if _BLUEZ_ADDRESS_RE.fullmatch(path.name)
+    )
+    if len(adapters) > 1:
+        raise BackupPathError("selected Printer backup has ambiguous Bluetooth adapters")
+    if not adapters:
+        return ()
+    adapter = adapters[0]
+    _reject_symlink_components(adapter, root_path)
+    matches: list[Path] = []
+    # Only persisted device directories are inspected; cache may contain thousands of scans.
+    for device in sorted(adapter.iterdir()):
+        if _BLUEZ_ADDRESS_RE.fullmatch(device.name) is None:
+            continue
+        info = device / "info"
+        _reject_symlink_components(info, root_path)
+        if not info.exists():
+            continue
+        if not info.is_file():
+            raise BackupPathError("Bluetooth Printer info is not a regular file")
+        if address is not None and device.name == address:
+            return _pairing_sources_with_identity(info, root_path)
+        if address is None and name is not None:
+            parser = configparser.ConfigParser(interpolation=None, strict=True)
+            try:
+                parser.read_string(_bounded_source_text(info, root_path))
+            except (configparser.Error, UnicodeError) as exc:
+                raise BackupManifestError("persisted Bluetooth device info is invalid") from exc
+            if any(
+                _printer_identity_name(parser.get("General", key, fallback="")) == name
+                for key in ("Name", "Alias")
+            ):
+                matches.append(info)
+    if len(matches) > 1:
+        raise BackupPathError("selected Printer backup has ambiguous Bluetooth identities")
+    return _pairing_sources_with_identity(matches[0], root_path) if matches else ()
+
+
+def _pairing_sources_with_identity(info: Path, root: Path) -> tuple[BackupSource, ...]:
+    sources = [BackupSource(info)]
+    parser = configparser.ConfigParser(interpolation=None, strict=True)
+    try:
+        parser.read_string(_bounded_source_text(info, root))
+    except (configparser.Error, UnicodeError) as exc:
+        raise BackupManifestError("selected Printer Bluetooth info is invalid") from exc
+    if any(
+        parser.has_section(section)
+        for section in ("LinkKey", "LongTermKey", "PeripheralLongTermKey")
+    ):
+        identity = info.parent.parent / "identity"
+        _reject_symlink_components(identity, root)
+        if identity.exists():
+            sources.append(BackupSource(identity))
+    return tuple(sources)
 
 
 @dataclass(frozen=True, slots=True)
@@ -424,7 +571,7 @@ def default_backup_sources(*, root: str | Path = Path("/")) -> tuple[BackupSourc
     return tuple(
         BackupSource(path=_default_path_for_root(source.path, root_path), required=source.required)
         for source in DEFAULT_BACKUP_SOURCES
-    )
+    ) + selected_printer_pairing_sources(root=root_path)
 
 
 def default_excluded_paths(*, root: str | Path = Path("/")) -> tuple[Path, ...]:
@@ -461,16 +608,25 @@ def create_backup_archive(
 
     directory = Path(backups_dir)
     directory.mkdir(parents=True, exist_ok=True)
+    if directory.is_symlink():
+        raise BackupPathError("backup directory must not be a symlink")
+    directory.chmod(0o700)
     archive_path = directory / f"{manifest.backup_id}.tar.gz"
     manifest_path = directory / f"{manifest.backup_id}.manifest.json"
     if archive_path.exists() or manifest_path.exists():
         raise BackupError(f"backup artifact already exists: {manifest.backup_id}")
 
-    _write_backup_tar_archive(archive_path, manifest, root_path)
-    archive_sha256 = sha256_file(archive_path)
-    manifest_with_digest = _manifest_with_archive_digest(manifest, archive_sha256)
-    verify_backup_archive(archive_path, manifest_with_digest, raise_on_error=True)
-    write_backup_manifest(manifest_path, manifest_with_digest)
+    owned_archive: tuple[int, int] | None = None
+    try:
+        owned_archive = _write_backup_tar_archive(archive_path, manifest, root_path)
+        archive_sha256 = sha256_file(archive_path)
+        manifest_with_digest = _manifest_with_archive_digest(manifest, archive_sha256)
+        verify_backup_archive(archive_path, manifest_with_digest, raise_on_error=True)
+        write_backup_manifest(manifest_path, manifest_with_digest)
+    except Exception:
+        if owned_archive is not None:
+            _unlink_owned_artifact(archive_path, owned_archive)
+        raise
     return CreatedBackupArchive(
         manifest=manifest_with_digest,
         manifest_path=manifest_path,
@@ -580,11 +736,7 @@ def verify_backup_archive(
     )
     result = BackupArchiveVerificationResult(
         ok=not (
-            archive_digest_mismatch
-            or missing_paths
-            or extra_paths
-            or mismatches
-            or invalid_paths
+            archive_digest_mismatch or missing_paths or extra_paths or mismatches or invalid_paths
         ),
         archive_sha256=archive_sha256,
         checked_paths=tuple(checked_paths),
@@ -747,9 +899,25 @@ def read_backup_manifest(path: str | Path) -> BackupManifest:
     return BackupManifest.from_dict(value)
 
 
+def _unlink_owned_artifact(path: Path, identity: tuple[int, int]) -> None:
+    try:
+        current = path.lstat()
+        if (current.st_dev, current.st_ino) == identity:
+            path.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def write_backup_manifest(path: str | Path, manifest: BackupManifestLike) -> None:
     backup_manifest = _coerce_manifest(manifest)
-    Path(path).write_text(backup_manifest.to_json(), encoding="utf-8")
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    created = os.fstat(descriptor)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(backup_manifest.to_json())
+    except Exception:
+        _unlink_owned_artifact(Path(path), (created.st_dev, created.st_ino))
+        raise
 
 
 def sha256_file(path: str | Path) -> str:
@@ -902,14 +1070,37 @@ def _add_directory_entries(
                 files.append(_backup_entry_for_file(file_path, root_path))
 
 
+def _open_backup_file(path: Path, root: Path) -> IO[bytes]:
+    """Open beneath root without following any component, including races."""
+    descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        parts = path.relative_to(root).parts
+        for part in parts[:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        file_descriptor = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW, dir_fd=descriptor)
+        if not stat.S_ISREG(os.fstat(file_descriptor).st_mode):
+            os.close(file_descriptor)
+            raise BackupPathError("backup source must be a regular file")
+        return os.fdopen(file_descriptor, "rb")
+    except OSError as exc:
+        raise BackupPathError("backup source cannot be opened safely") from exc
+    finally:
+        os.close(descriptor)
+
+
 def _backup_entry_for_file(file_path: Path, root_path: Path) -> BackupFileEntry:
-    file_stat = file_path.stat()
+    with _open_backup_file(file_path, root_path) as handle:
+        file_stat = os.fstat(handle.fileno())
+        _, digest = _hash_tar_file(handle)
+    relative = _backup_relative_path(file_path, root_path)
     return BackupFileEntry(
-        path=_backup_relative_path(file_path, root_path),
+        path=relative,
         source_path=str(file_path),
         size_bytes=file_stat.st_size,
-        sha256=sha256_file(file_path),
-        mode=_safe_file_mode(file_stat.st_mode),
+        sha256=digest,
+        mode=0o600 if is_bluez_pairing_path(relative) else _safe_file_mode(file_stat.st_mode),
     )
 
 
@@ -917,28 +1108,39 @@ def _write_backup_tar_archive(
     archive_path: Path,
     manifest: BackupManifest,
     root_path: Path,
-) -> None:
-    with tarfile.open(archive_path, mode="w:gz") as archive:
-        for entry in manifest.files:
-            relative_path = _safe_relative_posix_path(entry.path)
-            file_path = _existing_path_under_root(
-                root_path / Path(relative_path.as_posix()),
-                root_path,
-            )
-            file_stat = file_path.stat(follow_symlinks=False)
-            if not stat.S_ISREG(file_stat.st_mode):
-                raise BackupManifestError(f"backup source is not a regular file: {file_path}")
-            mode = entry.mode if entry.mode is not None else _safe_file_mode(file_stat.st_mode)
-            tar_info = tarfile.TarInfo(entry.path)
-            tar_info.size = file_stat.st_size
-            tar_info.mode = mode
-            tar_info.mtime = int(file_stat.st_mtime)
-            tar_info.uid = 0
-            tar_info.gid = 0
-            tar_info.uname = ""
-            tar_info.gname = ""
-            with file_path.open("rb") as handle:
-                archive.addfile(tar_info, handle)
+) -> tuple[int, int]:
+    descriptor = os.open(archive_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    created = os.fstat(descriptor)
+    identity = (created.st_dev, created.st_ino)
+    try:
+        with (
+            os.fdopen(descriptor, "wb") as archive_handle,
+            tarfile.open(fileobj=archive_handle, mode="w:gz") as archive,
+        ):
+            for entry in manifest.files:
+                relative_path = _safe_relative_posix_path(entry.path)
+                file_path = _existing_path_under_root(
+                    root_path / Path(relative_path.as_posix()),
+                    root_path,
+                )
+                file_stat = file_path.stat(follow_symlinks=False)
+                if not stat.S_ISREG(file_stat.st_mode):
+                    raise BackupManifestError(f"backup source is not a regular file: {file_path}")
+                mode = entry.mode if entry.mode is not None else _safe_file_mode(file_stat.st_mode)
+                tar_info = tarfile.TarInfo(entry.path)
+                tar_info.size = file_stat.st_size
+                tar_info.mode = mode
+                tar_info.mtime = int(file_stat.st_mtime)
+                tar_info.uid = 0
+                tar_info.gid = 0
+                tar_info.uname = ""
+                tar_info.gname = ""
+                with _open_backup_file(file_path, root_path) as handle:
+                    archive.addfile(tar_info, handle)
+    except Exception:
+        _unlink_owned_artifact(archive_path, identity)
+        raise
+    return identity
 
 
 def _manifest_with_archive_digest(manifest: BackupManifest, archive_sha256: str) -> BackupManifest:
@@ -1042,38 +1244,59 @@ def _restore_target_path(root_path: Path, relative_path: PurePosixPath) -> Path:
     return target_path
 
 
+def _restore_parent_descriptor(path: Path, root: Path, *, create: bool) -> int:
+    """Walk directory descriptors so a concurrent rename cannot redirect root I/O."""
+    descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in path.relative_to(root).parts:
+            try:
+                child = os.open(
+                    part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor
+                )
+            except FileNotFoundError:
+                if not create:
+                    raise
+                os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                child = os.open(
+                    part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor
+                )
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
 def _restore_tar_file(handle: IO[bytes], entry: BackupRestoreEntry, root_path: Path) -> None:
     target_path = _restore_target_path(root_path, _safe_relative_posix_path(entry.path))
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256()
-    size_bytes = 0
-    tmp_path: Path | None = None
+    if is_bluez_pairing_path(entry.path) and entry.mode != 0o600:
+        raise BackupPathError("Bluetooth pairing info must have mode 0600")
+    parent = _restore_parent_descriptor(target_path.parent, root_path, create=True)
+    temporary = ".instantlink-restore-" + os.urandom(12).hex()
     try:
-        with tempfile.NamedTemporaryFile(
-            "wb",
-            dir=target_path.parent,
-            prefix=f".{target_path.name}.tmp-",
-            delete=False,
-        ) as tmp_file:
-            tmp_path = Path(tmp_file.name)
+        if is_bluez_pairing_path(entry.path):
+            os.fchmod(parent, 0o700)
+        descriptor = os.open(
+            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent
+        )
+        with os.fdopen(descriptor, "wb") as output:
+            digest = hashlib.sha256()
+            size_bytes = 0
             for chunk in iter(lambda: handle.read(_READ_CHUNK_SIZE), b""):
                 size_bytes += len(chunk)
                 digest.update(chunk)
-                tmp_file.write(chunk)
-        actual_sha256 = digest.hexdigest()
-        if size_bytes != entry.size_bytes or actual_sha256 != entry.sha256:
-            raise BackupVerificationError(
-                f"backup archive member changed during restore: {entry.path}"
-            )
-        tmp_path.chmod(entry.mode)
-        os.replace(tmp_path, target_path)
-    except Exception:
-        if tmp_path is not None:
-            try:
-                tmp_path.unlink()
-            except FileNotFoundError:
-                pass
-        raise
+                output.write(chunk)
+            if size_bytes != entry.size_bytes or digest.hexdigest() != entry.sha256:
+                raise BackupVerificationError("backup archive member changed during restore")
+            os.fchmod(output.fileno(), entry.mode)
+        os.replace(temporary, target_path.name, src_dir_fd=parent, dst_dir_fd=parent)
+    finally:
+        try:
+            os.unlink(temporary, dir_fd=parent)
+        except FileNotFoundError:
+            pass
+        os.close(parent)
 
 
 def _backup_relative_path(path: Path, root_path: Path) -> str:
@@ -1086,16 +1309,19 @@ def _backup_relative_path(path: Path, root_path: Path) -> str:
 
 def _source_path_under_root(path: str | Path, root_path: Path) -> Path:
     candidate = Path(path)
+    if ".." in candidate.parts:
+        raise BackupPathError("backup source contains parent traversal")
     if not candidate.is_absolute():
         candidate = root_path / candidate
-    candidate = candidate.resolve(strict=False)
+    _reject_symlink_components(candidate, root_path)
     if not _is_relative_to(candidate, root_path):
         raise BackupPathError(f"backup source path escapes root: {path}")
     return candidate
 
 
 def _existing_path_under_root(path: str | Path, root_path: Path) -> Path:
-    candidate = Path(path).resolve(strict=True)
+    _reject_symlink_components(Path(path), root_path)
+    candidate = Path(path)
     if not _is_relative_to(candidate, root_path):
         raise BackupPathError(f"backup source path escapes root: {path}")
     return candidate

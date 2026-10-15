@@ -1,0 +1,16 @@
+{
+  "timestamp_utc": "2026-10-13T23:31:12.047829+00:00",
+  "normal_service_restored": true,
+  "audit_dropin_removed": true,
+  "audit_socket_removed": true,
+  "removed": [
+    "/tmp/instantlink-watch-runtime-observer-085.py",
+    "/tmp/instantlink-watch-client-085.py",
+    "/tmp/instantlink-watch-startup-085.py",
+    "/tmp/instantlink-watch-reconnect-085.py",
+    "/tmp/instantlink-watch-ui-smoke-085.py",
+    "/var/tmp/instantlink-watch-source-085",
+    "/var/tmp/instantlink-watch-source-085.tar.gz",
+    "/tmp/instantlink-watch-health-085.py"
+  ]
+}

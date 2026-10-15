@@ -26,6 +26,18 @@ struct InstantLinkMacOSTestRunner {
             ("AppRuntimeServicesTests.testCompareVersionsHandlesPrefixesSuffixesAndDifferentLengths", {
                 try AppRuntimeServicesTests().testCompareVersionsHandlesPrefixesSuffixesAndDifferentLengths()
             }),
+            ("BridgeFirmwareBundleTests.testPackageHashesEmptyAndChunkBoundaryArchives", {
+                try BridgeFirmwareBundleTests().testPackageHashesEmptyAndChunkBoundaryArchives()
+            }),
+            ("BridgeFirmwareBundleTests.testPackageRevalidatesEveryArtifactAfterReplacement", {
+                try BridgeFirmwareBundleTests().testPackageRevalidatesEveryArtifactAfterReplacement()
+            }),
+            ("BridgeFirmwareBundleTests.testPackageRejectsMissingAndUnreadableArtifacts", {
+                try BridgeFirmwareBundleTests().testPackageRejectsMissingAndUnreadableArtifacts()
+            }),
+            ("BridgeFirmwareBundleTests.testPackagePreservesSchemaAndArtifactPathValidation", {
+                try BridgeFirmwareBundleTests().testPackagePreservesSchemaAndArtifactPathValidation()
+            }),
             ("BridgeFirmwareBundleTests.testPackageLoadsBundledFirmwareMetadata", {
                 try BridgeFirmwareBundleTests().testPackageLoadsBundledFirmwareMetadata()
             }),
@@ -490,6 +502,21 @@ struct InstantLinkMacOSTestRunner {
             }),
             ("BridgeDiagnosticsCoordinatorTests.testDismissRecoveryFromRecoveredReturnsToOK", {
                 try await BridgeDiagnosticsCoordinatorTests().testDismissRecoveryFromRecoveredReturnsToOK()
+            }),
+            ("CurvesLevelsPipelineTests.testLUTBytesMatchFrozenOriginal", {
+                try CurvesLevelsPipelineTests().testLUTBytesMatchFrozenOriginal()
+            }),
+            ("CurvesLevelsPipelineTests.testLevelsSamplesPreserveDoubleResults", {
+                try CurvesLevelsPipelineTests().testLevelsSamplesPreserveDoubleResults()
+            }),
+            ("CurvesLevelsPipelineTests.testInactiveSectionsReturnOriginalImage", {
+                try CurvesLevelsPipelineTests().testInactiveSectionsReturnOriginalImage()
+            }),
+            ("CurvesLevelsPipelineTests.testRenderedPixelsMatchFrozenOriginal", {
+                try CurvesLevelsPipelineTests().testRenderedPixelsMatchFrozenOriginal()
+            }),
+            ("CurvesLevelsPipelineTests.testConcurrentLUTConstructionMatchesOriginal", {
+                try CurvesLevelsPipelineTests().testConcurrentLUTConstructionMatchesOriginal()
             }),
             ("EditorAdjustmentPipelineTests.testBlackAndWhitePipelineSkipsWhenSectionDisabled", {
                 try EditorAdjustmentPipelineTests().testBlackAndWhitePipelineSkipsWhenSectionDisabled()

@@ -21,6 +21,7 @@ SOURCES=(
   "$REPO_ROOT/macos/InstantLink/Features/Editor/State/CropState.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Editor/State/AdjustmentHistory.swift"
   "$REPO_ROOT/macos/InstantLink/Features/Editor/Pipeline/Sections/BlackAndWhitePipeline.swift"
+  "$REPO_ROOT/macos/InstantLink/Features/Editor/Pipeline/Sections/CurvesLevelsPipeline.swift"
   "$REPO_ROOT/macos/InstantLink/Core/AppModels.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeFirmwareBundle.swift"
   "$REPO_ROOT/macos/InstantLink/Core/BridgeConfig.swift"

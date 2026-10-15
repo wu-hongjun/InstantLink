@@ -1,0 +1,327 @@
+{
+  "host": "Apple M3 Max",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+  "architecture": "arm64",
+  "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "production_source_sha256": "5a3ddc63afd18dfdbed35db24a499f2b7daf3a15e1aa1b5fc61b3b3ba3a934f6",
+  "baseline_source_sha256": "623ffd2452f333639bed980e087a3ce0940adb4b0bdae69e5db6f3403c98c387",
+  "compiler_flags": [
+    "-O",
+    "-target",
+    "arm64-apple-macosx15.0"
+  ],
+  "chunk_bytes": 1048576,
+  "trials_per_variant_per_size": 5,
+  "method": "Fresh child per sample; one discarded warmup per variant/size; alternating order",
+  "cache": "Warm filesystem cache; fixture creation and warmups precede samples",
+  "rss": "Darwin /usr/bin/time -l maximum resident set size, bytes, whole child process",
+  "cases": [
+    {
+      "archive_mib": 16,
+      "digests": {
+        "archive_sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+        "manifest_sha256": "c5d130e87e377f65c0f77eda3629f01de137de88cd3b0a181aa1b6fda001afdc",
+        "checksum_sha256": "6bcbf06fb0a1156acba27ab47deca081ec76f202ffb1134bf7723844fea573ec"
+      },
+      "order": [
+        [
+          "baseline",
+          "streamed"
+        ],
+        [
+          "streamed",
+          "baseline"
+        ],
+        [
+          "baseline",
+          "streamed"
+        ],
+        [
+          "streamed",
+          "baseline"
+        ],
+        [
+          "baseline",
+          "streamed"
+        ]
+      ],
+      "samples": {
+        "baseline": [
+          {
+            "seconds": 0.01684108329936862,
+            "peak_rss_bytes": 23642112
+          },
+          {
+            "seconds": 0.014951291726902127,
+            "peak_rss_bytes": 23642112
+          },
+          {
+            "seconds": 0.013727291719987988,
+            "peak_rss_bytes": 23609344
+          },
+          {
+            "seconds": 0.015155958477407694,
+            "peak_rss_bytes": 23658496
+          },
+          {
+            "seconds": 0.013575874967500567,
+            "peak_rss_bytes": 23592960
+          }
+        ],
+        "streamed": [
+          {
+            "seconds": 0.017523333430290222,
+            "peak_rss_bytes": 10076160
+          },
+          {
+            "seconds": 0.01231941650621593,
+            "peak_rss_bytes": 7913472
+          },
+          {
+            "seconds": 0.012776791583746672,
+            "peak_rss_bytes": 9060352
+          },
+          {
+            "seconds": 0.01404433324933052,
+            "peak_rss_bytes": 10076160
+          },
+          {
+            "seconds": 0.01323274988681078,
+            "peak_rss_bytes": 7946240
+          }
+        ]
+      },
+      "summary": {
+        "baseline": {
+          "median_seconds": 0.014951291726902127,
+          "seconds_range": [
+            0.013575874967500567,
+            0.01684108329936862
+          ],
+          "median_peak_rss_bytes": 23642112,
+          "peak_rss_bytes_range": [
+            23592960,
+            23658496
+          ]
+        },
+        "streamed": {
+          "median_seconds": 0.01323274988681078,
+          "seconds_range": [
+            0.01231941650621593,
+            0.017523333430290222
+          ],
+          "median_peak_rss_bytes": 9060352,
+          "peak_rss_bytes_range": [
+            7913472,
+            10076160
+          ]
+        }
+      }
+    },
+    {
+      "archive_mib": 64,
+      "digests": {
+        "archive_sha256": "281e519df3077b557c6b03f5da83c4e8d397219259615dd7c3308f89cae8f2a6",
+        "manifest_sha256": "c5d130e87e377f65c0f77eda3629f01de137de88cd3b0a181aa1b6fda001afdc",
+        "checksum_sha256": "1a8c4761875e233fca47c4a42dae06087a352b60b2f867e183a22afa98da1bd9"
+      },
+      "order": [
+        [
+          "baseline",
+          "streamed"
+        ],
+        [
+          "streamed",
+          "baseline"
+        ],
+        [
+          "baseline",
+          "streamed"
+        ],
+        [
+          "streamed",
+          "baseline"
+        ],
+        [
+          "baseline",
+          "streamed"
+        ]
+      ],
+      "samples": {
+        "baseline": [
+          {
+            "seconds": 0.057304666843265295,
+            "peak_rss_bytes": 73891840
+          },
+          {
+            "seconds": 0.058495041681453586,
+            "peak_rss_bytes": 73940992
+          },
+          {
+            "seconds": 0.05901612504385412,
+            "peak_rss_bytes": 73957376
+          },
+          {
+            "seconds": 0.051635958487167954,
+            "peak_rss_bytes": 73891840
+          },
+          {
+            "seconds": 0.04890837497077882,
+            "peak_rss_bytes": 73940992
+          }
+        ],
+        "streamed": [
+          {
+            "seconds": 0.06058895820751786,
+            "peak_rss_bytes": 10108928
+          },
+          {
+            "seconds": 0.05442616669461131,
+            "peak_rss_bytes": 10076160
+          },
+          {
+            "seconds": 0.04957999987527728,
+            "peak_rss_bytes": 10043392
+          },
+          {
+            "seconds": 0.05063608335331082,
+            "peak_rss_bytes": 10076160
+          },
+          {
+            "seconds": 0.045683708274737,
+            "peak_rss_bytes": 10076160
+          }
+        ]
+      },
+      "summary": {
+        "baseline": {
+          "median_seconds": 0.057304666843265295,
+          "seconds_range": [
+            0.04890837497077882,
+            0.05901612504385412
+          ],
+          "median_peak_rss_bytes": 73940992,
+          "peak_rss_bytes_range": [
+            73891840,
+            73957376
+          ]
+        },
+        "streamed": {
+          "median_seconds": 0.05063608335331082,
+          "seconds_range": [
+            0.045683708274737,
+            0.06058895820751786
+          ],
+          "median_peak_rss_bytes": 10076160,
+          "peak_rss_bytes_range": [
+            10043392,
+            10108928
+          ]
+        }
+      }
+    },
+    {
+      "archive_mib": 256,
+      "digests": {
+        "archive_sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+        "manifest_sha256": "c5d130e87e377f65c0f77eda3629f01de137de88cd3b0a181aa1b6fda001afdc",
+        "checksum_sha256": "6876f2e73af759663ca88f4217c330f4be6f9bae5a6219c87775910518cdbeed"
+      },
+      "order": [
+        [
+          "baseline",
+          "streamed"
+        ],
+        [
+          "streamed",
+          "baseline"
+        ],
+        [
+          "baseline",
+          "streamed"
+        ],
+        [
+          "streamed",
+          "baseline"
+        ],
+        [
+          "baseline",
+          "streamed"
+        ]
+      ],
+      "samples": {
+        "baseline": [
+          {
+            "seconds": 0.1694972498808056,
+            "peak_rss_bytes": 275218432
+          },
+          {
+            "seconds": 0.17300691665150225,
+            "peak_rss_bytes": 275218432
+          },
+          {
+            "seconds": 0.17820512503385544,
+            "peak_rss_bytes": 275267584
+          },
+          {
+            "seconds": 0.18849929166026413,
+            "peak_rss_bytes": 275267584
+          },
+          {
+            "seconds": 0.18077587499283254,
+            "peak_rss_bytes": 275218432
+          }
+        ],
+        "streamed": [
+          {
+            "seconds": 0.15950875007547438,
+            "peak_rss_bytes": 10059776
+          },
+          {
+            "seconds": 0.14640399999916553,
+            "peak_rss_bytes": 8962048
+          },
+          {
+            "seconds": 0.1454414166510105,
+            "peak_rss_bytes": 8994816
+          },
+          {
+            "seconds": 0.13733520824462175,
+            "peak_rss_bytes": 9011200
+          },
+          {
+            "seconds": 0.15405824990011752,
+            "peak_rss_bytes": 8994816
+          }
+        ]
+      },
+      "summary": {
+        "baseline": {
+          "median_seconds": 0.17820512503385544,
+          "seconds_range": [
+            0.1694972498808056,
+            0.18849929166026413
+          ],
+          "median_peak_rss_bytes": 275218432,
+          "peak_rss_bytes_range": [
+            275218432,
+            275267584
+          ]
+        },
+        "streamed": {
+          "median_seconds": 0.14640399999916553,
+          "seconds_range": [
+            0.13733520824462175,
+            0.15950875007547438
+          ],
+          "median_peak_rss_bytes": 8994816,
+          "peak_rss_bytes_range": [
+            8962048,
+            10059776
+          ]
+        }
+      }
+    }
+  ],
+  "python": "3.14.6"
+}
